@@ -78,7 +78,7 @@ contract ERC20 is Context, IERC20 {
      *
      * Requirements:
      *
-     * - `spender` cannot be the zero address.
+     * - `spender` cannot be the zero address.approve(address spender, uint256 amount)
      */
     function approve(address spender, uint256 amount) public virtual override returns (bool) {
         _approve(_msgSender(), spender, amount);
@@ -351,6 +351,11 @@ contract FRAXStablecoin is ERC20 {
     oracle_address = _oracle_address;
 }
 
+    //used by pools when user redeems1t1
+    function poolBurn(uint256 amount) public onlyPools {
+        _burn(tx.origin, amount);
+    }
+
     //adds collateral addresses supported, such as tether and busd, must be ERC20 
     function setNewPool(address pool_address) public onlyByOracle {
         frax_pools[pool_address] = true; 
@@ -406,7 +411,7 @@ contract FRAXStablecoin is ERC20 {
     }
     
     //mint wrapper only to be used by the hop and backstep constract
-        function hop_step_mint(address m_address, uint256 m_amount) public onlyMonPol {
+    function hop_step_mint(address m_address, uint256 m_amount) public onlyMonPol {
         super._mint(m_address, m_amount);
     }
     

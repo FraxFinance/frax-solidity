@@ -44,21 +44,21 @@ contract frax_pool_tether {
     
     //one way to shut off 1t1 minting is for oracles on the Frax contract to remove pool address from the mapping 
     function mintFrax1t1(uint256 collateral_amount) public payable {
-    //first we must check if the collateral_ratio is  at 100%, if it is not, 1t1 minting is not active
-    
-    collateral_token.transferFrom(msg.sender, address(this), collateral_amount); 
+        
+        //first we must check if the collateral_ratio is  at 100%, if it is not, 1t1 minting is not active
+        collateral_token.transferFrom(msg.sender, address(this), collateral_amount); 
+        
         FRAX.pool_mint(tx.origin, collateral_amount); //then mints 1:1 to the caller and increases total supply 
     }
     
     
-    function redeem1t1(uint256 frax_amount) public  {
+    function redeem1t1(uint256 frax_amount) public payable {
         
-        //collaer must allow contract to burn frax from their balance first
-        //why does _burn not work? 
-        FRAX.burn(frax_amount);
+        //caller must allow contract to burn frax from their balance first
+        FRAX.poolBurn(frax_amount);
 
         //sends tether back to the frax holder 1t1 after burning the frax
-       collateral_token.transfer(tx.origin, frax_amount); 
+        collateral_token.transfer(tx.origin, frax_amount); 
         
     }
     
