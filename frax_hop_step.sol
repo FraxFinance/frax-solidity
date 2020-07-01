@@ -1,7 +1,16 @@
+pragma solidity ^0.6.6;
+
 import "./SafeMath.sol";
 import "./fxs.sol";
 import "./frax.sol";
+/*
 
+6/30 push
+    -fixed the error in calling FRAX.mint(new_supply) line 37 by implementing a public, non-internal mint() function in FRAXStablecoin
+    -fixed bug in line 73, calls FRAX_price() instead of FRAX_price
+    -kicked the can down the road for line 74 .div(10000)
+    -successfully compiles and deploys now
+*/
 contract frax_hop_step {
  
 address hopBidder;
@@ -27,7 +36,7 @@ function fraxHop() public {
     //frax doesn't hop to fractionality unless the price is above $1 with this
     if (FRAX.n_collateral_ratio() <= 1 && FRAX.FRAX_price() > 1e18) {
         uint256 new_supply = FRAX.totalSupply() / 10000; //MAKE SAFE MATH .div(10000);
-        FRAX._mint(address(this), new_supply);
+        FRAX.mint(new_supply);
         last_hop_time = block.timestamp; //set the time of the last expansion
     }
 }
@@ -63,8 +72,8 @@ function fraxHop() public {
     }
     
     // Start contraction
-    if (FRAX.n_collateral_ratio() > 1 && FRAX.FRAX_price < 1e18) {
-        backHopAmount = FRAX.totalSupply().div(10000);
+    if (FRAX.n_collateral_ratio() > 1 && FRAX.FRAX_price() < 1e18) {
+        backHopAmount = FRAX.totalSupply() / 10000; // MAKE SAFE MATH .div(10000)
         last_back_hop_time = block.timestamp; //set the time of the last contraction
     }
 }   

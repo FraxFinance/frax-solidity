@@ -351,9 +351,14 @@ contract FRAXStablecoin is ERC20 {
     oracle_address = _oracle_address;
 }
 
+    //public implementation of internal _mint()
+    function mint(uint256 amount) public virtual onlyMonPol {
+        _mint(msg.sender, amount);
+    }
+
     //used by pools when user redeems1t1
     function poolBurn(uint256 amount) public onlyPools {
-        _burn(tx.origin, amount);
+        _burn(tx.origin,amount);
     }
 
     //adds collateral addresses supported, such as tether and busd, must be ERC20 
