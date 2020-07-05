@@ -8,10 +8,13 @@ contract frax_pool_tether {
     ERC20 collateral_token;
     address fxs_address;
     address frax_address;
+    address frax_pool_address;
     address pool_oracle;
     FRAXShares FXS;
     FRAXStablecoin FRAX;
     uint256 public pool_col_price;
+    //pool_ceiling is the total amount of collateral that a pool contract can hold
+    uint256 pool_ceiling;
     
         constructor(
      address _oracle_address) 
@@ -26,6 +29,9 @@ contract frax_pool_tether {
         _;
     }
     
+    function setPoolCeiling(uint256 new_ceiling) public onlyByOracle {
+        pool_ceiling = new_ceiling;
+    }
 
     function setOracle(address new_oracle) public onlyByOracle {
         pool_oracle = new_oracle;
@@ -51,7 +57,17 @@ contract frax_pool_tether {
         FRAX.pool_mint(tx.origin, collateral_amount); //then mints 1:1 to the caller and increases total supply 
     }
     
-    
+    //
+    function mintFractionalFrax(uint256 collateral_amount, uint256 FXS_amount) public payable {
+        
+        //first we must check if the collateral_ratio is  at 100%, if it is not, 1t1 minting is not active
+        collateral_token.transferFrom(msg.sender, address(this), collateral_amount); 
+        FXS.transferFrom(msg.sender, address(frax_pool_address), FXS_amount);
+        
+        FRAX.pool_mint(tx.origin, collateral_amount); //then mints 1:1 to the caller and increases total supply 
+    }
+
+
     function redeem1t1(uint256 frax_amount) public payable {
         
         //caller must allow contract to burn frax from their balance first
