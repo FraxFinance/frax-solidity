@@ -289,6 +289,7 @@ contract FRAXStablecoin is ERC20 {
     address[] public owners;
     uint256 ownerCount; //number of different addresses that hold FRAX
     mapping(address => uint256) public balances;
+
     
     //an array of frax pool addresses for future use
     //the addresses in this array are added by the oracle and these contracts are able to mint frax
@@ -304,6 +305,7 @@ contract FRAXStablecoin is ERC20 {
     uint256 last_hop_time; //epoch time of last FRAX expansion
     uint256 public FRAX_price;
     uint256 public FXS_price;
+    uint256 public global_collateral_ratio;
     address oracle_address; //this is the address that can change the FRAX and FXS price
     ERC20 collateral_token;
 
@@ -320,22 +322,6 @@ contract FRAXStablecoin is ERC20 {
         _;
     } 
     
-    modifier onlyWhileOpen() {
-        require(n_collateral_ratio() == 100000000, "frax not in 100% phase");
-        _;
-    }
-
-    //the fraxhop function can only be poked during the fractional phase and only when: 1) FRAX price is above $1 OR 2) 175200 blocks from successful hop
-    modifier onlyWhenTime() {
-        require(n_collateral_ratio() < 100000000 && (FRAX_price > 1 || block.timestamp - last_hop_time <= 2592000) , "not the right time for a frax hop");
-        _;
-    }
-    
-    //only callable when FRAX supply needs to retract, when the price is below $1
-    modifier onlyWhenRetraction() {
-        require(FRAX_price < 1, "no retraction in supply necessary");
-        _;
-    }
     
     modifier onlyByOracle() {
         require(msg.sender == oracle_address, "you're not the oracle :p");
@@ -382,43 +368,21 @@ contract FRAXStablecoin is ERC20 {
         FXS_price = FXS_p;
     }
     
-
+    function setGlobalCollateralRatio(uint256 coll_ra) public onlyByOracle {
+        global_collateral_ratio = coll_ra;
+    }
 
     function setOracle(address new_oracle) public onlyByOracle {
         oracle_address = new_oracle;
     }
 
-    function mintFrax1t1(uint256 collateral_amount) public onlyWhileOpen {
-    //first we must check if the collateral_ratio is  at 100%, if it is not, 1t1 minting is not active
-    
-    //caller must allow the frax contract to move collateral to the frax contract so that frax can be
-   collateral_token.transferFrom(msg.sender, address(this), collateral_amount); //moves collateral to contract
-    _mint(tx.origin, collateral_amount); //then mints 1:1 to the caller and increases total supply 
-    
-    }
-    
-    
-    
-    
-    function redeem1t1(uint256 frax_amount) public onlyWhileOpen {
-        
-        //collaer must allow contract to burn frax from their balance first
-        _burn(tx.origin, frax_amount);
 
-        //sends tether back to the frax holder 1t1 after burning the frax
-       collateral_token.transfer(tx.origin, frax_amount); 
-        
-    }
     
     function n_collateral_ratio() public view returns (uint256) {
         return  collateral_token.balanceOf(address(this)).div(totalSupply());
         
     }
     
-    //mint wrapper only to be used by the hop and backstep constract
-    function hop_step_mint(address m_address, uint256 m_amount) public onlyMonPol {
-        super._mint(m_address, m_amount);
-    }
     
     
     //this function is what other frax pools will call to mint new FRAX 
