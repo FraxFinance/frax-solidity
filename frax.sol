@@ -308,6 +308,7 @@ contract FRAXStablecoin is ERC20 {
     uint256 public global_collateral_ratio;
     address oracle_address; //this is the address that can change the FRAX and FXS price
     ERC20 collateral_token;
+    uint256 public redemption_fee;
 
     uint256 lastCollectionTime; //last time user collected interest on their frax
     uint256 interestRatePerDay; //the current interest rate offered for frax paid in FXS
@@ -376,6 +377,9 @@ contract FRAXStablecoin is ERC20 {
         oracle_address = new_oracle;
     }
 
+    function setRedemptionFee(uint256 red_fee) public onlyByOracle {
+        redemption_fee = red_fee;
+    }
 
     
     function n_collateral_ratio() public view returns (uint256) {
