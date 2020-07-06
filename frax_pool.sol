@@ -6,6 +6,7 @@ import "./frax.sol";
 
 contract frax_pool_tether {
     ERC20 collateral_token;
+    address collateral_address;
     address fxs_address;
     address frax_address;
     address frax_pool_address;
@@ -37,7 +38,7 @@ contract frax_pool_tether {
         pool_oracle = new_oracle;
     }
     
-    function setCollateralAddress(address collateral_address) public onlyByOracle {
+    function setCollateralAdd(address collateral_address) public onlyByOracle {
         collateral_token = ERC20(collateral_address);
     }
     
@@ -45,37 +46,30 @@ contract frax_pool_tether {
         FRAX = FRAXStablecoin(frax_contract_address);
     }
     
-    
-    //these functions need modifiers to close them if phase 1 is over 
-    
-    //one way to shut off 1t1 minting is for oracles on the Frax contract to remove pool address from the mapping 
-    function mintFrax1t1(uint256 collateral_amount) public payable {
-        
-        //first we must check if the collateral_ratio is  at 100%, if it is not, 1t1 minting is not active
-        collateral_token.transferFrom(msg.sender, address(this), collateral_amount); 
-        
-        FRAX.pool_mint(tx.origin, collateral_amount); //then mints 1:1 to the caller and increases total supply 
+    function getCollateralAdd() public {
+        return collateral_address;
     }
     
-    //
-    function mintFractionalFrax(uint256 collateral_amount, uint256 FXS_amount) public payable {
+    function mintFrax(uint256 collateral_amount, uint256 FXS_amount) public payable {
         
-        //first we must check if the collateral_ratio is  at 100%, if it is not, 1t1 minting is not active
-        collateral_token.transferFrom(msg.sender, address(this), collateral_amount); 
-        FXS.transferFrom(msg.sender, address(frax_pool_address), FXS_amount);
+        collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
+        require(collateral_amount == 1 && FXS_amount == (1 - 1), "the amount of collateral and FXS you're sending does not match the collateral ratio"); 
+        {
+            FXS.transferFrom(msg.sender, address(frax_pool_address), FXS_amount);
+            
+            FRAX.pool_mint(tx.origin, collateral_amount); //then mints 1:1 to the caller and increases total supply 
+        }
+
         
-        FRAX.pool_mint(tx.origin, collateral_amount); //then mints 1:1 to the caller and increases total supply 
     }
 
-
-    function redeem1t1(uint256 frax_amount) public payable {
+    function redeemFrax(uint256 FRAX_amount) public payable {
         
-        //caller must allow contract to burn frax from their balance first
-        FRAX.poolBurn(frax_amount);
-
-        //sends tether back to the frax holder 1t1 after burning the frax
-        collateral_token.transfer(tx.origin, frax_amount); 
+        collateral_token.transferFrom(msg.sender, address(this), (1/FRAX_amount)); 
+    //    FXS.transferFrom(msg.sender, address(frax_pool_address), (FXS_amount);
         
+        FRAX.burn(FRAX_amount); 
     }
+
     
 }
