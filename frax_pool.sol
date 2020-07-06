@@ -4,7 +4,7 @@ import "./SafeMath.sol";
 import "./fxs.sol";
 import "./frax.sol";
 
-contract frax_pool_tether {
+contract frax_pool {
     ERC20 collateral_token;
     address collateral_address;
     address fxs_address;
@@ -13,6 +13,7 @@ contract frax_pool_tether {
     address pool_oracle;
     FRAXShares FXS;
     FRAXStablecoin FRAX;
+    uint256 collateral_price; 
     uint256 public pool_col_price;
     //pool_ceiling is the total amount of collateral that a pool contract can hold
     uint256 pool_ceiling;
@@ -46,27 +47,42 @@ contract frax_pool_tether {
         FRAX = FRAXStablecoin(frax_contract_address);
     }
     
-    function getCollateralAdd() public {
-        return collateral_address;
+    function setPrice(uint256 c_price) public onlyByOracle {
+        collateral_price = c_price;
+
     }
+    
     
     function mintFrax(uint256 collateral_amount, uint256 FXS_amount) public payable {
         
-        collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
-        require(collateral_amount == 1 && FXS_amount == (1 - 1), "the amount of collateral and FXS you're sending does not match the collateral ratio"); 
-        {
-            FXS.transferFrom(msg.sender, address(frax_pool_address), FXS_amount);
-            
-            FRAX.pool_mint(tx.origin, collateral_amount); //then mints 1:1 to the caller and increases total supply 
+        uint256 c_amount = (collateral_amount * collateral_price) / FRAX.global_collateral_ratio();
+        uint256 f_amount = (FXS_amount * FRAX.FXS_price()) / (1 - FRAX.global_collateral_ratio());
+        
+        if (c_amount < f_amount) {
+            collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
+            uint256 fxs_needed = c_amount * (1-FRAX.global_collateral_ratio());
+            FXS.transferFrom(msg.sender, address(frax_pool_address), fxs_needed);
+            FRAX.pool_mint(msg.sender, collateral_amount);
+            FXS.burn(fxs_needed);
         }
+        
+        else {
+            uint256 collateral_needed = f_amount * FRAX.global_collateral_ratio();
+            collateral_token.transferFrom(msg.sender, address(this), collateral_needed);
+            FXS.transferFrom(msg.sender, address(frax_pool_address), FXS_amount);
+            FRAX.pool_mint(msg.sender, f_amount); 
+            FXS.burn(FXS_amount);
+        }
+        
 
         
     }
 
     function redeemFrax(uint256 FRAX_amount) public payable {
         
-        collateral_token.transferFrom(msg.sender, address(this), (1/FRAX_amount)); 
-    //    FXS.transferFrom(msg.sender, address(frax_pool_address), (FXS_amount);
+        FRAX.transferFrom(msg.sender, address(this), FRAX_amount);
+        collateral_token.transferFrom(address(this), msg.sender, (FRAX_amount * FRAX.global_collateral_ratio())); 
+        FXS.pool_mint(tx.origin, (FRAX_amount * (1 - (FRAX.global_collateral_ratio()))));
         
         FRAX.burn(FRAX_amount); 
     }
