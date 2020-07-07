@@ -293,6 +293,9 @@ contract FRAXStablecoin is ERC20 {
     
     //an array of frax pool addresses for future use
     //the addresses in this array are added by the oracle and these contracts are able to mint frax
+    address[] frax_pools_array;
+
+    //mapping is also used for faster verification
     mapping(address => bool) public frax_pools; 
     
     mapping(address => uint256) public pool_prices;
@@ -351,6 +354,7 @@ contract FRAXStablecoin is ERC20 {
     //adds collateral addresses supported, such as tether and busd, must be ERC20 
     function setNewPool(address pool_address) public onlyByOracle {
         frax_pools[pool_address] = true; 
+        frax_pools_array.push(pool_address);
     }
 
     //adds the monetary policy contracts, hop, backstep etc 
