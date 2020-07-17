@@ -13,3 +13,7 @@ Set FRAX & FXS prices as oracle in FRAXStablecoin
 Deploy frax_pool (frax_pool.sol)
 
 Add frax_pool address to FRAXStablecoin contract's frax_pools mapping
+
+
+#app.js (WIP)
+Node.js script that compiles & deploys the contracts locally
