@@ -1,4 +1,4 @@
-//using infura provider on ropsten, currently access does not require whitelist (open to public)
+//using infura provider on ropsten, currently access is open to public
 var Web3 = require('web3');
 var web3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io/v3/0a5b1633380b415d9b7342823baad798"))
 
@@ -6,6 +6,7 @@ const solc = require('solc');
 const fs = require ('fs');
 const path = require('path');
 
+//prepare input .sol files into JSON-input-output interface for solc compiler (https://solidity.readthedocs.io/en/v0.6.0/using-the-compiler.html#compiler-input-and-output-json-description)
 var input = {
 	language: 'Solidity',
 	sources: {
@@ -40,6 +41,7 @@ var input = {
 	}
 };
 
+//compile contracts
 var output = JSON.parse(solc.compile(JSON.stringify(input)));
 
 
@@ -64,8 +66,7 @@ const ethEnabled = () => {
 }
 
 
-
-//creating accounts
+//creating account and storing its values into vars
 var deploy_account = web3.eth.accounts.create();
 var deploy_account_address = deploy_account.address;
 var deploy_account_privkey = deploy_account.privateKey;
@@ -82,13 +83,18 @@ console.log(`account: ` + tetherAccount);
 */
 
 
+//console.log('tether contract ABI: ' + output.contracts['tether_sample.sol']['tether'].evm.bytecode.object);
 
+
+
+
+/* deploying */
+
+//grab ABI of compiled contract
 var tether_sample = new Contract(output.contracts['tether_sample.sol']['tether'].abi);
 
+//deploy ABI of contract using its bytecode
 tether_sample.deploy({
-	data: output.contracts['tether_sample.sol']['tether'].evm.bytecode,
-	arguments: ['USDT', '10000', web3.eth.getAccounts().then(e => {
-		firstAccount = e[0];
-		console.log('A: ' + firstAccount)
-	})]
+	data: output.contracts['tether_sample.sol']['tether'].evm.bytecode.object,
+	arguments: ['USDT', '10000', deploy_account_address]
 });
