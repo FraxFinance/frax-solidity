@@ -47,7 +47,7 @@ function mint(address to, uint256 amount) public {
     }
 
     modifier onlyPools() {
-       require(frax_pools[msg.sender] = true, "only frax pools can mint new FRAX");
+       require(frax_pools[msg.sender] == true, "only frax pools can mint new FRAX");
         _;
     } 
     

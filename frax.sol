@@ -43,12 +43,12 @@ contract FRAXStablecoin is ERC20 {
     uint256 interestRatePerDay; //the current interest rate offered for frax paid in FXS
      
     modifier onlyMonPol() {
-       require(frax_monetary_policy_contracts[msg.sender] = true, "only frax expansion-retraction contracts can use this!");
+       require(frax_monetary_policy_contracts[msg.sender] == true, "only frax expansion-retraction contracts can use this!");
         _;
     } 
      
     modifier onlyPools() {
-       require(frax_pools[msg.sender] = true, "only frax pools can mint new FRAX");
+       require(frax_pools[msg.sender] == true, "only frax pools can mint new FRAX");
         _;
     } 
     
