@@ -1,9 +1,12 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.0 <0.7.0;
 
-import "./Context.sol";
-import "./IERC20.sol";
-import "./SafeMath.sol";
+import "../Common/Context.sol";
+import "../ERC20/IERC20.sol";
+import "../Math/SafeMath.sol";
+import "../Utils/Address.sol";
 
+// Due to compiling issues, _name, _symbol, and _decimals were removed
 
 
 /**
@@ -30,14 +33,32 @@ import "./SafeMath.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract ERC20 is Context, IERC20 {
+contract FakeCollateral is Context, IERC20 {
     using SafeMath for uint256;
+    string public symbol;
+    uint8 public decimals;
+    address public creator_address;
+    uint256 public genesis_supply;
 
     mapping (address => uint256) private _balances;
 
     mapping (address => mapping (address => uint256)) private _allowances;
 
     uint256 private _totalSupply;
+
+
+    constructor(
+        address _creator_address,
+        uint256 _genesis_supply,
+        string memory _symbol,
+        uint8 _decimals
+    ) public {
+        genesis_supply = _genesis_supply;
+        creator_address = _creator_address;
+        symbol = _symbol;
+        decimals = _decimals;
+        _mint(creator_address, genesis_supply);
+    }
 
     /**
      * @dev See {IERC20-totalSupply}.
@@ -78,7 +99,7 @@ contract ERC20 is Context, IERC20 {
      *
      * Requirements:
      *
-     * - `spender` cannot be the zero address.
+     * - `spender` cannot be the zero address.approve(address spender, uint256 amount)
      */
     function approve(address spender, uint256 amount) public virtual override returns (bool) {
         _approve(_msgSender(), spender, amount);
@@ -279,40 +300,4 @@ contract ERC20 is Context, IERC20 {
      * To learn more about hooks, head to xref:ROOT:using-hooks.adoc[Using Hooks].
      */
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
-}
-
-
-contract tether is ERC20 {
-    using SafeMath for uint256;
-    string public symbol;
-    uint8 public decimals = 18;
-    address public FRAXStablecoinAdd;
-//    address[] public owners;
-    uint256 genesis_supply;
-//    uint256 ownerCount; //number of different addresses that hold FXS
-//    mapping(address => uint256) public balances;
-//    mapping(address => mapping (address => uint256)) allowed;
-    address owner_address;
-
-    constructor(
-    string memory _symbol, 
-    uint256 _genesis_supply,
-    address _owner_address) 
-    public 
-    {
-    symbol = _symbol;
-    genesis_supply = _genesis_supply;
-    owner_address = _owner_address;
-
-    _mint(owner_address, genesis_supply);
-
-
-}
-
-function mint(address to, uint256 amount) public {
-        require(msg.sender == FRAXStablecoinAdd);
-        _mint(to, amount);
-    }
-
-    
 }

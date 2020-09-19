@@ -1,9 +1,12 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.0 <0.7.0;
 
-import "./Context.sol";
-import "./IERC20.sol";
-import "./SafeMath.sol";
-import "./fxs.sol";
+import "../Common/Context.sol";
+import "../ERC20/IERC20.sol";
+import "../Math/SafeMath.sol";
+import "../Utils/Address.sol";
+
+// Due to compiling issues, _name, _symbol, and _decimals were removed
 
 
 /**
@@ -30,14 +33,32 @@ import "./fxs.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract ERC20 is Context, IERC20 {
+contract FakeCollateral_USDC is Context, IERC20 {
     using SafeMath for uint256;
+    string public symbol;
+    uint8 public decimals;
+    address public creator_address;
+    uint256 public genesis_supply;
 
     mapping (address => uint256) private _balances;
 
     mapping (address => mapping (address => uint256)) private _allowances;
 
     uint256 private _totalSupply;
+
+
+    constructor(
+        address _creator_address,
+        uint256 _genesis_supply,
+        string memory _symbol,
+        uint8 _decimals
+    ) public {
+        genesis_supply = _genesis_supply;
+        creator_address = _creator_address;
+        symbol = _symbol;
+        decimals = _decimals;
+        _mint(creator_address, genesis_supply);
+    }
 
     /**
      * @dev See {IERC20-totalSupply}.
@@ -279,162 +300,4 @@ contract ERC20 is Context, IERC20 {
      * To learn more about hooks, head to xref:ROOT:using-hooks.adoc[Using Hooks].
      */
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
-}
-
-
-contract FRAXStablecoin is ERC20 {
-    using SafeMath for uint256;
-    string public symbol;
-    uint8 public decimals = 18;
-    address[] public owners;
-    uint256 ownerCount; //number of different addresses that hold FRAX
-    mapping(address => uint256) public balances;
-    
-    //an array of frax pool addresses for future use
-    //the addresses in this array are added by the oracle and these contracts are able to mint frax
-    mapping(address => bool) public frax_pools; 
-    
-    mapping(address => uint256) public pool_prices;
-    //add frax hop and backstep contracts here and other future monetary policy contracts 
-    mapping(address => bool) public frax_monetary_policy_contracts;
-
-    
-
-    uint256 phase2_startTime; //epoch time of phase 2 start, fractional phase 
-    uint256 last_hop_time; //epoch time of last FRAX expansion
-    uint256 public FRAX_price;
-    uint256 public FXS_price;
-    address oracle_address; //this is the address that can change the FRAX and FXS price
-    ERC20 collateral_token;
-
-    uint256 lastCollectionTime; //last time user collected interest on their frax
-    uint256 interestRatePerDay; //the current interest rate offered for frax paid in FXS
-     
-    modifier onlyMonPol() {
-       require(frax_monetary_policy_contracts[msg.sender] = true, "only frax expansion-retraction contracts can use this!");
-        _;
-    } 
-     
-    modifier onlyPools() {
-       require(frax_pools[msg.sender] = true, "only frax pools can mint new FRAX");
-        _;
-    } 
-    
-    modifier onlyWhileOpen() {
-        require(n_collateral_ratio() == 100000000, "frax not in 100% phase");
-        _;
-    }
-
-    //the fraxhop function can only be poked during the fractional phase and only when: 1) FRAX price is above $1 OR 2) 175200 blocks from successful hop
-    modifier onlyWhenTime() {
-        require(n_collateral_ratio() < 100000000 && (FRAX_price > 1 || block.timestamp - last_hop_time <= 2592000) , "not the right time for a frax hop");
-        _;
-    }
-    
-    //only callable when FRAX supply needs to retract, when the price is below $1
-    modifier onlyWhenRetraction() {
-        require(FRAX_price < 1, "no retraction in supply necessary");
-        _;
-    }
-    
-    modifier onlyByOracle() {
-        require(msg.sender == oracle_address, "you're not the oracle :p");
-        _;
-    }
-    
-    constructor(
-    string memory _symbol, 
-    address _oracle_address) 
-    public 
-    {
-    symbol = _symbol;
-    oracle_address = _oracle_address;
-}
-
-    //public implementation of internal _mint()
-    function mint(uint256 amount) public virtual onlyMonPol {
-        _mint(msg.sender, amount);
-    }
-
-    //used by pools when user redeems1t1
-    function poolBurn(uint256 amount) public onlyPools {
-        _burn(tx.origin,amount);
-    }
-
-    //adds collateral addresses supported, such as tether and busd, must be ERC20 
-    function setNewPool(address pool_address) public onlyByOracle {
-        frax_pools[pool_address] = true; 
-    }
-
-    //adds the monetary policy contracts, hop, backstep etc 
-    function setMonetaryPolicyContract(address con_address) public onlyByOracle {
-        frax_monetary_policy_contracts[con_address] = true; 
-    }
-
-
-
-    // the updated price must be within 10% of the old price
-    // this is to prevent accidental mispricings 
-    // a change of greater than 10% requires multiple transactions
-    //need to create this logic
-    function setPrices(uint256 FRAX_p,uint256 FXS_p) public onlyByOracle {
-        FRAX_price = FRAX_p;
-        FXS_price = FXS_p;
-    }
-    
-
-
-    function setOracle(address new_oracle) public onlyByOracle {
-        oracle_address = new_oracle;
-    }
-
-    function mintFrax1t1(uint256 collateral_amount) public onlyWhileOpen {
-    //first we must check if the collateral_ratio is  at 100%, if it is not, 1t1 minting is not active
-    
-    //caller must allow the frax contract to move collateral to the frax contract so that frax can be
-   collateral_token.transferFrom(msg.sender, address(this), collateral_amount); //moves collateral to contract
-    _mint(tx.origin, collateral_amount); //then mints 1:1 to the caller and increases total supply 
-    
-    }
-    
-    
-    
-    
-    function redeem1t1(uint256 frax_amount) public onlyWhileOpen {
-        
-        //collaer must allow contract to burn frax from their balance first
-        _burn(tx.origin, frax_amount);
-
-        //sends tether back to the frax holder 1t1 after burning the frax
-       collateral_token.transfer(tx.origin, frax_amount); 
-        
-    }
-    
-    function n_collateral_ratio() public view returns (uint256) {
-        return  collateral_token.balanceOf(address(this)).div(totalSupply());
-        
-    }
-    
-    //mint wrapper only to be used by the hop and backstep constract
-    function hop_step_mint(address m_address, uint256 m_amount) public onlyMonPol {
-        super._mint(m_address, m_amount);
-    }
-    
-    
-    //this function is what other frax pools will call to mint new FRAX 
-    function pool_mint(address m_address, uint256 m_amount) public onlyPools {
-        super._mint(m_address, m_amount);
-    }
-    
-    //this function also needs to be called any time there is a transfer of FRAX so that interest is paid
-    function collect_interest() public {
-    uint256 daysSinceLastCollect = now.sub(lastCollectionTime).div(86400); // 86400 sec in 1 day
-    uint256 newInterests = daysSinceLastCollect.mul(interestRatePerDay).mul(balanceOf(msg.sender));
-
-    _mint(msg.sender, newInterests);
-
-    lastCollectionTime = now;
-}
-
-    
 }

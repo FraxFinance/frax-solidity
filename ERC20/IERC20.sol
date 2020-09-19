@@ -1,4 +1,8 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.0 <0.7.0;
+
+import "../Common/Context.sol";
+import "../Math/SafeMath.sol";
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP. Does not include
@@ -74,3 +78,4 @@ interface IERC20 {
      */
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
+
