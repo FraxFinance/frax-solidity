@@ -36,9 +36,17 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     uint256 public global_collateral_ratio; // 6 decimals of precision, e.g. 924102 = 0.924102
     uint256 public redemption_fee; // 6 decimals of precision, divide by 1000000 in calculations for fee
     uint256 public minting_fee; // 6 decimals of precision, divide by 1000000 in calculations for fee
+    
+    bytes32 public constant COLLATERAL_RATIO_PAUSER = keccak256("COLLATERAL_RATIO_PAUSER");
+    bool collateral_ratio_paused = false;
 
     /* ========== MODIFIERS ========== */
 
+    modifier onlyCollateralRatioPauser() {
+        require(hasRole(COLLATERAL_RATIO_PAUSER, msg.sender));
+        _;
+    }
+    
     modifier onlyPools() {
        require(frax_pools[msg.sender] == true, "Only frax pools can mint new FRAX");
         _;
@@ -72,6 +80,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         creator_address = _creator_address;
         owners.push(creator_address);
         _mint(creator_address, genesis_supply);
+        grantRole(COLLATERAL_RATIO_PAUSER, tx.origin);
     }
 
     /* ========== VIEWS ========== */
@@ -157,6 +166,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     // There needs to be a time interval that this can be called. Otherwise it can be called multiple times per expansion.
     uint256 last_call_time; // Last time the setNewCollateralRatio function was called
     function setNewCollateralRatio() public {
+        require(collateral_ratio_paused == false, "Collateral Ratio has been paused");
         require(block.timestamp - last_call_time >= 3600 && frax_price() != 1000000);  // 3600 seconds means can be called once per hour, 86400 seconds is per day, callable only if FRAX price is not $1
         
         uint256 tot_collat_value =  globalCollateralValue();
@@ -253,6 +263,16 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
 
     function setFXSAddress(address _fxs_address) public onlyByOwner {
         fxs_address = _fxs_address;
+    }
+    
+    function pauseCollateralRatio() public onlyCollateralRatioPauser {
+        require(collateral_ratio_paused == false, "Collateral Ratio is already paused");
+        collateral_ratio_paused = true;
+    }
+    
+    function resumeMinting() public onlyMintPauser {
+        require(collateral_ratio_paused == true, "Collateral Ratio is already resumed");
+        collateral_ratio_paused = false;
     }
 
     /* ========== EVENTS ========== */
