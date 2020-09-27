@@ -270,7 +270,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         collateral_ratio_paused = true;
     }
     
-    function resumeMinting() public onlyMintPauser {
+    function resumeCollateralRatio() public onlyCollateralRatioPauser {
         require(collateral_ratio_paused == true, "Collateral Ratio is already resumed");
         collateral_ratio_paused = false;
     }
