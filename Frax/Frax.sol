@@ -22,6 +22,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     address[] public owners;
     address governance_address;
     address public creator_address;
+    address public timelock_address;
     address public fxs_address;
     uint256 public genesis_supply = 1000000e18; // 1M. This is to help with establishing the Uniswap pools, as they need liquidity
 
@@ -74,13 +75,17 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
 
     constructor(
         string memory _symbol,
-        address _creator_address
+        address _creator_address,
+        address _timelock_address
     ) public {
         symbol = _symbol;
         creator_address = _creator_address;
+        timelock_address = _timelock_address
         owners.push(creator_address);
+        owners.push(timelock_address);
         _mint(creator_address, genesis_supply);
-        grantRole(COLLATERAL_RATIO_PAUSER, tx.origin);
+        grantRole(COLLATERAL_RATIO_PAUSER, creator_address);
+        grantRole(COLLATERAL_RATIO_PAUSER, timelock_address);
     }
 
     /* ========== VIEWS ========== */

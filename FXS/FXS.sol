@@ -21,8 +21,9 @@ contract FRAXShares is ERC20Custom {
     uint256 public maximum_supply; // No FXS can be minted under any condition past this number
     uint256 public FXS_DAO_min; // Minimum FXS required to join DAO groups 
 
-    address owner_address;
-    address oracle_address;
+    address public owner_address;
+    address public oracle_address;
+    address public timelock_address;
     FRAXStablecoin FRAX;
 
     // A checkpoint for marking number of votes from a given block
@@ -45,7 +46,7 @@ contract FRAXShares is ERC20Custom {
     } 
     
     modifier onlyByOracle() {
-        require(msg.sender == oracle_address, "You're not the oracle :p");
+        require(msg.sender == oracle_address || msg.sender == timelock_address, "You're not the oracle :p");
         _;
     }
 
@@ -56,13 +57,15 @@ contract FRAXShares is ERC20Custom {
         uint256 _genesis_supply,
         uint256 _maximum_supply,
         address _oracle_address,
-        address _owner_address
+        address _owner_address,
+        address _timelock_address
     ) public {
         symbol = _symbol;
         genesis_supply = _genesis_supply;
         maximum_supply = _maximum_supply; 
         owner_address = _owner_address;
         oracle_address = _oracle_address;
+        timelock_address = _timelock_address;
         _mint(owner_address, genesis_supply);
     }
 

@@ -21,10 +21,10 @@ contract GovernorAlpha {
     /// @notice The duration of voting on a proposal, in blocks
     function votingPeriod() public pure returns (uint) { return 17280; } // ~3 days in blocks (assuming 15s blocks)
 
-    /// @notice The address of the Compound Protocol Timelock
+    /// @notice The address of the Frax Protocol Timelock
     TimelockInterface public timelock;
 
-    /// @notice The address of the Compound governance token
+    /// @notice The address of the Frax governance token
     FXSInterface public comp;
 
     /// @notice The address of the Governor Guardian

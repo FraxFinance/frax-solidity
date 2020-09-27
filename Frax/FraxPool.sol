@@ -14,6 +14,7 @@ contract FraxPool is AccessControl {
 
     ERC20 collateral_token;
     address pool_oracle;
+    address timelock_address;
     FRAXShares FXS;
     FRAXStablecoin FRAX;
     uint256 public collateral_price_int; // 6 decimals of precision, e.g. 1050000 represents $1.050
@@ -56,11 +57,16 @@ contract FraxPool is AccessControl {
  
     /* ========== CONSTRUCTOR ========== */
     
-    constructor(address _oracle_address) public {
+    constructor(address _oracle_address, address _timelock_address) public {
         pool_oracle = _oracle_address;
-        grantRole(MINT_PAUSER, tx.origin);
-        grantRole(REDEEM_PAUSER, tx.origin);
-        grantRole(BUYBACK_PAUSER, tx.origin);
+        timelock_address = _timelock_address;
+
+        grantRole(MINT_PAUSER, pool_oracle);
+        grantRole(MINT_PAUSER, timelock_address);
+        grantRole(REDEEM_PAUSER, pool_oracle);
+        grantRole(REDEEM_PAUSER, timelock_address);
+        grantRole(BUYBACK_PAUSER, pool_oracle);
+        grantRole(BUYBACK_PAUSER, timelock_address);
     }
 
     /* ========== VIEWS ========== */
