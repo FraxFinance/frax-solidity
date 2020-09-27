@@ -5,8 +5,9 @@ import "../Math/SafeMath.sol";
 import "../FXS/FXS.sol";
 import "../Frax/Frax.sol";
 import "../ERC20/ERC20.sol";
+import "../Governance/AccessControl.sol";
 
-contract FraxPool {
+contract FraxPool is AccessControl {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -19,6 +20,16 @@ contract FraxPool {
     
     // Pool_ceiling is the total units of collateral that a pool contract can hold
     uint256 pool_ceiling;
+    
+    // AccessControl Roles
+    bytes32 public constant MINT_PAUSER = keccak256("MINT_PAUSER");
+    bytes32 public constant REDEEM_PAUSER = keccak256("REDEEM_PAUSER");
+    bytes32 public constant BUYBACK_PAUSER = keccak256("BUYBACK_PAUSER");
+    
+    // AccessControl state variables
+    bool mintPaused = false;
+    bool redeemPaused = false;
+    bool buyBackPaused = false;
 
     /* ========== MODIFIERS ========== */
 
@@ -26,11 +37,30 @@ contract FraxPool {
         require(msg.sender == pool_oracle, "You are not the oracle :p");
         _;
     }
+    
+    // AccessControl Modifiers
+    modifier onlyMintPauser() {
+        require(hasRole(MINT_PAUSER, msg.sender));
+        _;
+    }
+
+    modifier onlyRedeemPauser() {
+        require(hasRole(REDEEM_PAUSER, msg.sender));
+        _;
+    }
+
+    modifier onlyBuyBackPauser() {
+        require(hasRole(BUYBACK_PAUSER, msg.sender));
+        _;
+    }
  
     /* ========== CONSTRUCTOR ========== */
     
     constructor(address _oracle_address) public {
         pool_oracle = _oracle_address;
+        grantRole(MINT_PAUSER, tx.origin);
+        grantRole(REDEEM_PAUSER, tx.origin);
+        grantRole(BUYBACK_PAUSER, tx.origin);
     }
 
     /* ========== VIEWS ========== */
@@ -48,6 +78,7 @@ contract FraxPool {
     // We separate out the 1t1, fractional and algorithmic minting functions for gas efficiency 
     // 100% collateral-backed
     function mint1t1FRAX(uint256 collateral_amount_d18) public {
+        require(mintPaused == false, "Minting is currently paused");
         require(FRAX.global_collateral_ratio() == 1000000, "Collateral ratio must be 1");
         require((collateral_token.balanceOf(address(this))) + collateral_amount_d18 < pool_ceiling, "[Pool's Closed]: Pool ceiling reached, no more FRAX can be minted with this collateral");
         
@@ -62,6 +93,7 @@ contract FraxPool {
 
     // 0% collateral-backed
     function mintAlgorithmicFRAX(uint256 fxs_amount_d18) public {
+        require(mintPaused == false, "Minting is currently paused");
         require(FRAX.global_collateral_ratio() == 0, "Collateral ratio must be 0");
         
         uint256 mint_fee = FRAX.minting_fee(); 
@@ -75,6 +107,7 @@ contract FraxPool {
     // Will fail if fully collateralized or fully algorithmic
     // > 0% and < 100% collateral-backed
     function mintFractionalFRAX(uint256 collateral_amount, uint256 fxs_amount) public {
+        require(mintPaused == false, "Minting is currently paused");
         require(FRAX.global_collateral_ratio() < 1000000 && FRAX.global_collateral_ratio() > 0, "Collateral ratio needs to be between .000001 and .999999");
         // Since solidity truncates division, every division operation must be the last operation in the equation to ensure minimum error
         // The contract must check the proper ratio was sent to mint FRAX. We do this by seeing the minimum mintable FRAX based on each amount 
@@ -116,6 +149,7 @@ contract FraxPool {
 
     // Redeem collateral. 100% collateral-backed
     function redeem1t1FRAX(uint256 FRAX_amount) public {
+        require(redeemPaused == false, "Redeeming is currently paused");
         require(FRAX.global_collateral_ratio() == 1000000, "Collateral ratio must be 1");
         uint256 red_fee = FRAX.redemption_fee(); 
         uint256 col_price = collateral_price_int;
@@ -129,6 +163,7 @@ contract FraxPool {
     // Will fail if fully collateralized or algorithmic
     // Redeem FRAX for collateral and FXS. .000001% - .999999% collateral-backed
     function redeemFractionalFRAX(uint256 FRAX_amount) public {
+        require(redeemPaused == false, "Redeeming is currently paused");
         uint256 col_ratio = FRAX.global_collateral_ratio();
         require(col_ratio < 1000000 && col_ratio > 0, "Collateral ratio needs to be between .000001 and .999999");
 
@@ -144,6 +179,7 @@ contract FraxPool {
 
     // Redeem FRAX for FXS. 0% collateral-backed
     function redeemAlgorithmicFRAX(uint256 FRAX_amount) public {
+        require(redeemPaused == false, "Redeeming is currently paused");
         uint256 col_ratio = FRAX.global_collateral_ratio();
         require(col_ratio == 0, "Collateral ratio must be 0");     
         uint256 frax_dollar_value_d18 = (FRAX_amount.mul(FRAX.frax_price())).div(1e6);
@@ -155,6 +191,7 @@ contract FraxPool {
 
     // Function can be called by an FXS holder to have the protocol buy back FXS with excess collateral value from a desired collateral pool
     function buyBackFXS(uint256 FXS_amount) public {
+        require(buyBackPaused == false, "Buyback is currently paused");
         uint256 buyback_fee = FRAX.redemption_fee(); 
         uint256 total_FRAX_dollar_value_d18 = (FRAX.totalSupply().mul(FRAX.frax_price())).div(1e6); 
         uint256 required_collat_dollar_value_d18 = (total_FRAX_dollar_value_d18.mul(FRAX.global_collateral_ratio())).div(1e6);
@@ -178,6 +215,36 @@ contract FraxPool {
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
+    
+    function pauseMinting() public onlyMintPauser {
+        require(mintPaused == false, "Minting is already paused");
+        mintPaused = true;
+    }
+    
+    function resumeMinting() public onlyMintPauser {
+        require(mintPaused == true, "Minting is already resumed");
+        mintPaused = false;
+    }
+    
+    function pauseRedeeming() public onlyRedeemPauser {
+        require(redeemPaused == false, "Redeeming is already paused");
+        redeemPaused = true;
+    }
+    
+    function resumeRedeeming() public onlyRedeemPauser {
+        require(redeemPaused == true, "Redeeming is already resumed");
+        redeemPaused = false;
+    }
+    
+    function pauseBuyBack() public onlyBuyBackPauser {
+        require(buyBackPaused == false, "BuyBack is already paused");
+        buyBackPaused = true;
+    }
+    
+    function resumeBuyBack() public onlyBuyBackPauser {
+        require(buyBackPaused == true, "BuyBack is already resumed");
+        buyBackPaused = false;
+    }
 
     function setPoolCeiling(uint256 new_ceiling) public onlyByOracle {
         pool_ceiling = new_ceiling;

@@ -9,8 +9,9 @@ import "../Math/SafeMath.sol";
 import "../FXS/FXS.sol";
 import "../Frax/FraxPool.sol";
 import "../Oracle/UniswapPairOracle.sol";
+import "../Governance/AccessControl.sol";
 
-contract FRAXStablecoin is ERC20Custom {
+contract FRAXStablecoin is ERC20Custom, AccessControl {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -60,7 +61,7 @@ contract FRAXStablecoin is ERC20Custom {
         require(found, "You're not an owner");
         _;
     }
-
+    
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
