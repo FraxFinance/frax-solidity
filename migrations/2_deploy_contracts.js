@@ -106,7 +106,7 @@ module.exports = async function(deployer, network, accounts) {
 	const COLLATERAL_SEED_DEC18 = new BigNumber(339000e18);
 	
 	const REDEMPTION_FEE = 400; // 0.04%
-	const MINTING_FEE = 400; // 0.04%
+	const MINTING_FEE = 300; // 0.03%
 	const COLLATERAL_PRICE = 1040000; // $1.04
 	const FRAX_PRICE = 980000; // $0.98
 	const FXS_PRICE = 210000; // $0.21
@@ -420,7 +420,7 @@ module.exports = async function(deployer, network, accounts) {
 	// Set the redemption fee to 0.04%
 	await fraxInstance.setRedemptionFee(REDEMPTION_FEE, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-	// Set the minting fee to 0.04%
+	// Set the minting fee to 0.03%
 	await fraxInstance.setMintingFee(MINTING_FEE, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// ======== Set FRAX and FXS oracles ========
@@ -558,14 +558,14 @@ module.exports = async function(deployer, network, accounts) {
 	
 		// ======== Make some governance proposals ========
 	
-		// Minting fee 0.04% -> 0.1%
+		// Minting fee 0.03% -> 0.1%
 		await governanceInstance.propose(
 			[fraxInstance.address],
 			[0],
 			['setMintingFee(uint256)'],
 			[web3.eth.abi.encodeParameters(['uint256'], [1000])], // 0.1%
 			"Minting fee increase",
-			"I hereby propose to increase the minting fee from 0.04% to 0.1%",
+			"I hereby propose to increase the minting fee from 0.03% to 0.1%",
 			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
 		);
 		
