@@ -77,9 +77,10 @@ library FraxPoolLibrary {
     }
 
     function calcRedeem1t1FRAX(uint256 frax_price_usd, uint256 col_price_usd, uint256 FRAX_amount, uint256 redemption_fee) public pure returns (uint256) {
-        uint256 frax_dollar_value_d18 = FRAX_amount.mul(1e6).div(frax_price_usd);
-        uint256 collateral_needed_d18 = frax_dollar_value_d18.mul(col_price_usd).div(1e6);
-        return collateral_needed_d18.sub((collateral_needed_d18.mul(redemption_fee)).div(1e6));
+        //uint256 frax_dollar_value_d18 = FRAX_amount.mul(1e6).div(frax_price_usd);
+        //uint256 collateral_needed_d18 = frax_dollar_value_d18.mul(col_price_usd).div(1e6);
+        //return collateral_needed_d18.sub((collateral_needed_d18.mul(redemption_fee)).div(1e6));
+        return (FRAX_amount.mul(1e6).mul(1000000-redemption_fee).div(1e6).div(col_price_usd)); // returns FRAX_amount worth of collateral in USD, minus redemption fee
     }
 
     // Must be internal because of the struct

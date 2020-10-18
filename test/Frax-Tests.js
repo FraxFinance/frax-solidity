@@ -515,7 +515,7 @@ contract('FRAX', async (accounts) => {
 	// GOVERNANCE TEST [PART 1]
 	// ================================================================
 	it('Propose changing the minting fee', async () => {
-		console.log("======== Minting fee 0.04% -> 0.1% ========");
+		console.log("======== Minting fee 0.03% -> 0.1% ========");
 
 		// Temporarily set the voting period to 10 blocks
 		await governanceInstance.__setVotingPeriod(10, { from: GOVERNOR_GUARDIAN_ADDRESS });
@@ -535,7 +535,7 @@ contract('FRAX', async (accounts) => {
 			['setMintingFee(uint256)'],
 			[web3.eth.abi.encodeParameters(['uint256'], [1000])], // 0.1%
 			"Minting fee change",
-			"I hereby propose to increase the minting fee from 0.04% to 0.1%",
+			"I hereby propose to increase the minting fee from 0.03% to 0.1%",
 			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
 		);
 
@@ -604,8 +604,8 @@ contract('FRAX', async (accounts) => {
 
 	// GOVERNANCE TEST [PART 2]
 	// ================================================================
-	it('Change the minting fee back to 0.04%', async () => {
-		console.log("======== Minting fee 0.1% -> 0.04% ========");
+	it('Change the minting fee back to 0.03%', async () => {
+		console.log("======== Minting fee 0.1% -> 0.03% ========");
 		// Temporarily set the voting period to 10 blocks
 		await governanceInstance.__setVotingPeriod(10, { from: GOVERNOR_GUARDIAN_ADDRESS });
 
@@ -622,9 +622,9 @@ contract('FRAX', async (accounts) => {
 			[fraxInstance.address],
 			[0],
 			['setMintingFee(uint256)'],
-			[web3.eth.abi.encodeParameters(['uint256'], [400])], // 0.04%
+			[web3.eth.abi.encodeParameters(['uint256'], [300])], // 0.03%
 			"Minting fee revert back to old value",
-			"I hereby propose to decrease the minting fee back to 0.04% from 0.1%",
+			"I hereby propose to decrease the minting fee back to 0.03% from 0.1%",
 			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
 		);
 
@@ -996,6 +996,7 @@ contract('FRAX', async (accounts) => {
 		console.log("bal_frax: ", bal_frax.toNumber());
 		console.log("col_bal_usdc: ", col_bal_usdc.toNumber());
 		console.log("pool_bal_usdc: ", pool_bal_usdc.toNumber());
+		console.log("FRAX price: " , new BigNumber(await fraxInstance.frax_price.call()).div(BIG6).toNumber());
 
 		// Need to approve first so the pool contract can use transfer
 		const frax_amount = new BigNumber("100e18");
