@@ -210,12 +210,14 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
 
     // Adds collateral addresses supported, such as tether and busd, must be ERC20 
     function addPool(address pool_address) public onlyByOwnerOrGovernance {
+        require(frax_pools[pool_address] == false, "address already exists");
         frax_pools[pool_address] = true; 
         frax_pools_array.push(pool_address);
     }
 
     // Remove a pool 
     function removePool(address pool_address) public onlyByOwnerOrGovernance {
+        require(frax_pools[pool_address] == true, "address doesn't exist already");
         // Delete from the mapping
         delete frax_pools[pool_address];
 

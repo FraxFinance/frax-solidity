@@ -277,10 +277,14 @@ contract FraxPool is AccessControl {
     // to take out FRAX/collateral from the system, use an AMM to trade the new price, and then mint back into the system.
     function collectRedemption() public {
         require(lastRedeemed[msg.sender] < block.number, "must wait at least one block before collecting redemption");
-        bool sendFXS, sendCollateral = false;
+        bool sendFXS = false;
+        bool sendCollateral = false;
+        uint FXSAmount;
+        uint CollateralAmount;
+
+        // Use Checks-Effects-Interactions pattern
         if(redeemFXSBalances[msg.sender] > 0){
-        	//Checks-Effects-Interactions pattern
-        	uint FXSAmount = redeemFXSBalances[msg.sender];
+        	FXSAmount = redeemFXSBalances[msg.sender];
         	redeemFXSBalances[msg.sender] = 0;
         	unclaimedPoolFXS -= FXSAmount;
 
@@ -288,8 +292,7 @@ contract FraxPool is AccessControl {
         }
         
         if(redeemCollateralBalances[msg.sender] > 0){
-        	//Checks-Effects-Interactions pattern
-        	uint CollateralAmount = redeemCollateralBalances[msg.sender];
+        	CollateralAmount = redeemCollateralBalances[msg.sender];
         	redeemCollateralBalances[msg.sender] = 0;
         	unclaimedPoolCollateral -= CollateralAmount;
 
