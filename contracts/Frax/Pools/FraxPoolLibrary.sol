@@ -35,9 +35,9 @@ library FraxPoolLibrary {
 
     function calcMint1t1FRAX(uint256 col_price, uint256 frax_price, uint256 mint_fee, uint256 collateral_amount_d18) public pure returns (uint256) {
         uint256 col_price_usd = col_price.mul(1e6).div(frax_price);
-        //uint256 c_dollar_value_d18 = (collateral_amount_d18.mul(1e6)).div(col_price_usd);
-        //return c_dollar_value_d18.sub((c_dollar_value_d18.mul(mint_fee)).div(1e6));
-        return collateral_amount_d18.mul(1000000-mint_fee).mul(col_price_usd).div(1e12); //to figure this out, look at line 84 (calcRedeem1t1FRAX) and solve the equation for FRAX_amount
+        uint256 c_dollar_value_d18 = (collateral_amount_d18.mul(1e6)).div(col_price_usd);
+        return c_dollar_value_d18.sub((c_dollar_value_d18.mul(mint_fee)).div(1e6));
+        //return collateral_amount_d18.mul(1000000-mint_fee).mul(col_price_usd).div(1e12);
     }
 
     function calcMintAlgorithmicFRAX(uint256 mint_fee, uint256 fxs_price_usd, uint256 fxs_amount_d18) public pure returns (uint256) {
