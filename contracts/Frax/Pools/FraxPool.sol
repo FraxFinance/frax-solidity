@@ -278,15 +278,21 @@ contract FraxPool is AccessControl {
     function collectRedemption() public {
         require(lastRedeemed[msg.sender] < block.number, "must wait at least one block before collecting redemption");
         if(redeemFXSBalances[msg.sender] > 0){
-            FXS.transfer(msg.sender, redeemFXSBalances[msg.sender]);
-            unclaimedPoolFXS -= redeemFXSBalances[msg.sender];
-            redeemFXSBalances[msg.sender] = 0;
+        	//Checks-Effects-Interactions pattern
+        	uint FXSAmount = redeemFXSBalances[msg.sender];
+        	redeemFXSBalances[msg.sender] = 0;
+        	unclaimedPoolFXS -= FXSAmount;
+
+            FXS.transfer(msg.sender, FXSAmount);
         }
         
         if(redeemCollateralBalances[msg.sender] > 0){
+        	//Checks-Effects-Interactions pattern
+        	uint CollateralAmount = redeemCollateralBalances[msg.sender];
+        	redeemCollateralBalances[msg.sender] = 0;
+        	unclaimedPoolCollateral -= CollateralAmount;
+        	
             collateral_token.transfer(msg.sender, redeemCollateralBalances[msg.sender]);
-            unclaimedPoolCollateral -= redeemCollateralBalances[msg.sender];
-            redeemCollateralBalances[msg.sender] = 0;
         }
     }
 
