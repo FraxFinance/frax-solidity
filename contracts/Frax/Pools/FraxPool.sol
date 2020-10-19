@@ -132,9 +132,6 @@ contract FraxPool is AccessControl {
                                 .div(FRAX.frax_price());
     }
 
-
-    // (uint256 frax_price, uint256 fxs_price, uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, uint256 minting_fee, uint256 redemption_fee) = FRAX.frax_info();
-
     function availableExcessCollatDV() public view returns (uint256) {
         (uint256 frax_price, , uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ) = FRAX.frax_info();
         //uint256 total_FRAX_dollar_value_d18 = total_supply.mul(1e6).div(frax_price); 

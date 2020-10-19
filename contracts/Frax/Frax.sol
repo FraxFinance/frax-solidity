@@ -165,7 +165,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     uint256 last_call_time; // Last time the refreshCollateralRatio function was called
     function refreshCollateralRatio() public {
         require(collateral_ratio_paused == false, "Collateral Ratio has been paused");
-        require(block.timestamp - last_call_time >= 3600 && frax_price() != 1000000);  // 3600 seconds means can be called once per hour, 86400 seconds is per day, callable only if FRAX price is not $1
+        require(block.timestamp - last_call_time >= 3600 && frax_price() != 1000000, "Must wait >= one hour since last refresh and FRAX price must be >$1 to refresh collateral ratio");  // 3600 seconds means can be called once per hour, 86400 seconds is per day, callable only if FRAX price is not $1
         
         uint256 tot_collat_value =  globalCollateralValue();
 
