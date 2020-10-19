@@ -158,7 +158,7 @@ contract FraxPool is AccessControl {
             frax_price,
             minting_fee,
             collateral_amount_d18
-        );
+        ); //1 FRAX for each $1 worth of collateral
 
         // TransferHelper.safeTransferFrom(collateral_address, msg.sender, address(this), collateral_amount_d18);
         collateral_token.transferFrom(msg.sender, address(this), collateral_amount_d18);
@@ -234,7 +234,7 @@ contract FraxPool is AccessControl {
     function redeemFractionalFRAX(uint256 FRAX_amount) external notRedeemPaused {
         (uint256 frax_price, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee) = FRAX.frax_info();
         require(global_collateral_ratio < 1000000 && global_collateral_ratio > 0, "Collateral ratio needs to be between .000001 and .999999");
-        uint256 frax_dollar_value_d18 = FRAX_amount.mul(1e6).div(frax_price);
+        uint256 frax_dollar_value_d18 = FRAX_amount.mul(1e6).div(1e6); //changing .div(frax_price) to .div(1e6)
         uint256 col_price_usd = oracle.consult(frax_contract_address, 1e6).mul(1e6).div(frax_price);
 
         frax_dollar_value_d18 = frax_dollar_value_d18.sub((frax_dollar_value_d18.mul(redemption_fee)).div(1e6));
@@ -259,7 +259,7 @@ contract FraxPool is AccessControl {
     function redeemAlgorithmicFRAX(uint256 FRAX_amount) external notRedeemPaused {
         (uint256 frax_price, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee) = FRAX.frax_info();
         require(global_collateral_ratio == 0, "Collateral ratio must be 0"); 
-        uint256 frax_dollar_value_d18 = FRAX_amount.mul(1e6).div(frax_price);
+        uint256 frax_dollar_value_d18 = FRAX_amount.mul(1e6).div(1e6); //changing .div(frax_price) to .div(1e6)
         frax_dollar_value_d18 = frax_dollar_value_d18.sub((frax_dollar_value_d18.mul(redemption_fee)).div(1e6));
 
         FXS.pool_mint(address(this), frax_dollar_value_d18.mul(fxs_price).div(1e6));
