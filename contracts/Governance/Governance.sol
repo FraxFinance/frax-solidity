@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0 <0.7.0;
+pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
 
 import "../FXS/FXS.sol";
@@ -115,8 +115,6 @@ contract GovernorAlpha {
     /// @notice The official record of all proposals ever proposed
     mapping (uint => Proposal) public proposals;
 
-    uint[] public proposal_ids; // List of all proposal ids. Use in tandem with the proposals mapping
-
     /// @notice The latest proposal for each proposer
     mapping (address => uint) public latestProposalIds;
 
@@ -184,7 +182,6 @@ contract GovernorAlpha {
 
         proposals[newProposal.id] = newProposal;
         latestProposalIds[newProposal.proposer] = newProposal.id;
-        proposal_ids.push(newProposal.id);
 
         emit ProposalCreated(newProposal.id, msg.sender, targets, values, signatures, calldatas, startBlock, endBlock, description);
         return newProposal.id;

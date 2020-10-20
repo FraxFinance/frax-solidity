@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0 <0.7.0;
+pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
 
 import "../Common/Context.sol";
@@ -17,13 +17,13 @@ contract FRAXShares is ERC20Custom, AccessControl {
     uint8 public constant decimals = 18;
     address public FRAXStablecoinAdd;
     
-    uint256 genesis_supply;
+    uint256 public constant genesis_supply = 100000000e18; // 100M. 51M goes to the staking pool
     uint256 public maximum_supply; // No FXS can be minted under any condition past this number
     uint256 public FXS_DAO_min; // Minimum FXS required to join DAO groups 
 
     address public owner_address;
     address public oracle_address;
-    address public timelock_address;
+    address public timelock_address; // Governance timelock address
     FRAXStablecoin private FRAX;
 
     // A checkpoint for marking number of votes from a given block
@@ -45,8 +45,8 @@ contract FRAXShares is ERC20Custom, AccessControl {
         _;
     } 
     
-    modifier onlyByOracle() {
-        require(msg.sender == oracle_address || msg.sender == timelock_address, "You're not the oracle :p");
+    modifier onlyByOwnerOrGovernance() {
+        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not an owner or the governance timelock");
         _;
     }
 
@@ -54,14 +54,12 @@ contract FRAXShares is ERC20Custom, AccessControl {
 
     constructor(
         string memory _symbol, 
-        uint256 _genesis_supply,
         uint256 _maximum_supply,
         address _oracle_address,
         address _owner_address,
         address _timelock_address
     ) public {
         symbol = _symbol;
-        genesis_supply = _genesis_supply;
         maximum_supply = _maximum_supply; 
         owner_address = _owner_address;
         oracle_address = _oracle_address;
@@ -75,16 +73,24 @@ contract FRAXShares is ERC20Custom, AccessControl {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function setOracle(address new_oracle) external onlyByOracle {
+    function setOracle(address new_oracle) external onlyByOwnerOrGovernance {
         oracle_address = new_oracle;
     }
+
+    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        timelock_address = new_timelock;
+    }
     
-    function setFRAXAddress(address frax_contract_address) external onlyByOracle {
+    function setFRAXAddress(address frax_contract_address) external onlyByOwnerOrGovernance {
         FRAX = FRAXStablecoin(frax_contract_address);
     }
     
-    function setFXSMinDAO(uint256 min_FXS) external onlyByOracle {
+    function setFXSMinDAO(uint256 min_FXS) external onlyByOwnerOrGovernance {
         FXS_DAO_min = min_FXS;
+    }
+
+    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+        owner_address = _owner_address;
     }
 
     function mint(address to, uint256 amount) public onlyPools {
@@ -95,14 +101,14 @@ contract FRAXShares is ERC20Custom, AccessControl {
     // This function is what other frax pools will call to mint new FXS (similar to the FRAX mint) 
     function pool_mint(address m_address, uint256 m_amount) external onlyPools {
         require(totalSupply() + m_amount < maximum_supply, "No more FXS can be minted, max supply reached");
-        _moveDelegates(address(this), m_address, uint96(m_amount));
+        trackVotes(address(this), m_address, uint96(m_amount));
         super._mint(m_address, m_amount);
     }
 
     // This function is what other frax pools will call to burn FXS 
     function pool_burn_from(address b_address, uint256 b_amount) external onlyPools {
         super._burnFrom(b_address, b_amount);
-        _moveDelegates(b_address, address(this), uint96(b_amount)); //NOTE: this doesn't actually burn the votes from existence, only moves them back to FXS contract; need to add this in
+        trackVotes(b_address, address(this), uint96(b_amount)); //NOTE: this doesn't actually burn the votes from existence, only moves them back to FXS contract; need to add this in
         emit FXSBurned(b_address, msg.sender, b_amount);
     }
 
@@ -112,7 +118,7 @@ contract FRAXShares is ERC20Custom, AccessControl {
         _transfer(_msgSender(), recipient, amount);
 
         // Keep track of votes. "Delegates" is a misnomer here
-        _moveDelegates(_msgSender(), recipient, uint96(amount));
+        trackVotes(_msgSender(), recipient, uint96(amount));
         return true;
     }
 
@@ -121,7 +127,7 @@ contract FRAXShares is ERC20Custom, AccessControl {
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
 
         // Keep track of votes. "Delegates" is a misnomer here
-        _moveDelegates(sender, recipient, uint96(amount));
+        trackVotes(sender, recipient, uint96(amount));
         return true;
     }
 
@@ -182,7 +188,7 @@ contract FRAXShares is ERC20Custom, AccessControl {
 
     // From compound's _moveDelegates
     // Keep track of votes. "Delegates" is a misnomer here
-    function _moveDelegates(address srcRep, address dstRep, uint96 amount) internal {
+    function trackVotes(address srcRep, address dstRep, uint96 amount) internal {
         if (srcRep != dstRep && amount > 0) {
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];

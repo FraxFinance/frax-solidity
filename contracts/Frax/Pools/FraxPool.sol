@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0 <0.7.0;
+pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
 
 import "../../Math/SafeMath.sol";
@@ -19,11 +19,11 @@ contract FraxPool is AccessControl {
 
     ERC20 private collateral_token;
     address private collateral_address;
-    address[] private owners;
+    address private owner_address;
     address private oracle_address;
     address private frax_contract_address;
     address private fxs_contract_address;
-    address private timelock_address;
+    address private timelock_address; // Timelock address for the governance contract
     FRAXShares private FXS;
     FRAXStablecoin private FRAX;
     UniswapPairOracle private oracle;
@@ -33,6 +33,10 @@ contract FraxPool is AccessControl {
     uint256 public unclaimedPoolCollateral;
     uint256 public unclaimedPoolFXS;
     mapping (address => uint256) lastRedeemed;
+
+    // Constants for various precisions
+    uint256 private constant PRICE_PRECISION = 1e6;
+    uint256 private constant COLLATERAL_RATIO_PRECISION = 1e6;
     
     // Pool_ceiling is the total units of collateral that a pool contract can hold
     uint256 private pool_ceiling = 0;
@@ -50,15 +54,7 @@ contract FraxPool is AccessControl {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        // Loop through the owners until one is found
-        bool found = false;
-        for (uint i = 0; i < owners.length; i++){ 
-            if (owners[i] == msg.sender) {
-                found = true;
-                break;
-            }
-        }
-        require(found, "You're not an owner");
+        require(msg.sender == timelock_address || msg.sender == owner_address, "You are not the owner or the governance timelock");
         _;
     }
 
@@ -100,8 +96,7 @@ contract FraxPool is AccessControl {
         collateral_address = _collateral_address;
         oracle_address = _oracle_address;
         timelock_address = _timelock_address;
-        owners.push(_creator_address);
-        owners.push(_timelock_address);
+        owner_address = _creator_address;
         oracle = UniswapPairOracle(_oracle_address);
         collateral_token = ERC20(_collateral_address);
         pool_ceiling = _pool_ceiling;
@@ -128,15 +123,14 @@ contract FraxPool is AccessControl {
 
     function collatDollarBalance() public view returns (uint256) {
         return (collateral_token.balanceOf(address(this)) - unclaimedPoolCollateral)
-                                .mul(oracle.consult(frax_contract_address, 1e6))  // X FRAX / 1 COLLAT
+                                .mul(oracle.consult(frax_contract_address, PRICE_PRECISION))  // X FRAX / 1 COLLAT
                                 .div(FRAX.frax_price());
     }
 
     function availableExcessCollatDV() public view returns (uint256) {
-        (uint256 frax_price, , uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ) = FRAX.frax_info();
-        //uint256 total_FRAX_dollar_value_d18 = total_supply.mul(1e6).div(frax_price); 
-        if (global_collateral_ratio > 1e6) global_collateral_ratio = 1e6; // Handles an overcollateralized contract with CR > 1
-        uint256 required_collat_dollar_value_d18 = (total_supply.mul(global_collateral_ratio)).div(1e6); //calculates collateral needed to back each 1 FRAX with $1 of collateral at current collat ratio
+        (, , uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ) = FRAX.frax_info();
+        if (global_collateral_ratio > COLLATERAL_RATIO_PRECISION) global_collateral_ratio = COLLATERAL_RATIO_PRECISION; // Handles an overcollateralized contract with CR > 1
+        uint256 required_collat_dollar_value_d18 = (total_supply.mul(global_collateral_ratio)).div(COLLATERAL_RATIO_PRECISION); //calculates collateral needed to back each 1 FRAX with $1 of collateral at current collat ratio
         if (global_collat_value > required_collat_dollar_value_d18) return global_collat_value.sub(required_collat_dollar_value_d18);
         else return 0;
     }
@@ -151,7 +145,7 @@ contract FraxPool is AccessControl {
         require((collateral_token.balanceOf(address(this))) + collateral_amount_d18 <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
         
         (uint256 frax_amount_d18) = FraxPoolLibrary.calcMint1t1FRAX(
-            oracle.consult(frax_contract_address, 1e6), // X FRAX / 1 COLLAT
+            oracle.consult(frax_contract_address, PRICE_PRECISION), // X FRAX / 1 COLLAT
             frax_price,
             minting_fee,
             collateral_amount_d18
@@ -187,7 +181,7 @@ contract FraxPool is AccessControl {
             minting_fee, 
             fxs_price, // X FXS / 1 USD
             frax_price,
-            oracle.consult(frax_contract_address, 1e6),
+            oracle.consult(frax_contract_address, PRICE_PRECISION),
             fxs_amount,
             collateral_amount,
             (collateral_token.balanceOf(address(this))),
@@ -211,18 +205,19 @@ contract FraxPool is AccessControl {
         require(global_collateral_ratio >= 1000000, "Collateral ratio must be >= 1");
 
         (uint256 collateral_needed) = FraxPoolLibrary.calcRedeem1t1FRAX(
-            frax_price,
-            oracle.consult(frax_contract_address, 1e6).mul(1e6).div(frax_price),
+            oracle.consult(frax_contract_address, PRICE_PRECISION).mul(PRICE_PRECISION).div(frax_price),
             FRAX_amount,
             redemption_fee
         );
 
-        collateral_token.approve(msg.sender, collateral_needed);
+        
         redeemCollateralBalances[msg.sender] += collateral_needed;
         unclaimedPoolCollateral += collateral_needed;
         
         lastRedeemed[msg.sender] = block.number;
 
+        // Move all external functions to the end to avoid re-entrancy attacks
+        collateral_token.approve(msg.sender, collateral_needed);
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
     }
 
@@ -231,41 +226,43 @@ contract FraxPool is AccessControl {
     function redeemFractionalFRAX(uint256 FRAX_amount) external notRedeemPaused {
         (uint256 frax_price, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee) = FRAX.frax_info();
         require(global_collateral_ratio < 1000000 && global_collateral_ratio > 0, "Collateral ratio needs to be between .000001 and .999999");
-        uint256 frax_dollar_value_d18 = FRAX_amount.mul(1e6).div(1e6); //changing .div(frax_price) to .div(1e6)
-        uint256 col_price_usd = oracle.consult(frax_contract_address, 1e6).mul(1e6).div(frax_price);
+        uint256 frax_dollar_value_d18 = FRAX_amount; //changing .div(frax_price) to .div(PRICE_PRECISION)
+        uint256 col_price_usd = oracle.consult(frax_contract_address, PRICE_PRECISION).mul(PRICE_PRECISION).div(frax_price);
 
-        frax_dollar_value_d18 = frax_dollar_value_d18.sub((frax_dollar_value_d18.mul(redemption_fee)).div(1e6));
-        uint256 collateral_dollar_value_d18 = frax_dollar_value_d18.mul(global_collateral_ratio).div(1e6);
+        frax_dollar_value_d18 = frax_dollar_value_d18.sub((frax_dollar_value_d18.mul(redemption_fee)).div(PRICE_PRECISION));
+        uint256 collateral_dollar_value_d18 = frax_dollar_value_d18.mul(global_collateral_ratio).div(PRICE_PRECISION);
         uint256 fxs_dollar_value_d18 = frax_dollar_value_d18.sub(collateral_dollar_value_d18);
 
-        collateral_token.approve(msg.sender, collateral_dollar_value_d18.mul(col_price_usd).div(1e6));
-        redeemCollateralBalances[msg.sender] += collateral_dollar_value_d18.mul(col_price_usd).div(1e6);
-        unclaimedPoolCollateral += collateral_dollar_value_d18.mul(col_price_usd).div(1e6);
+        redeemCollateralBalances[msg.sender] += collateral_dollar_value_d18.mul(col_price_usd).div(PRICE_PRECISION);
+        unclaimedPoolCollateral += collateral_dollar_value_d18.mul(col_price_usd).div(PRICE_PRECISION);
 
-        FXS.pool_mint(address(this), fxs_dollar_value_d18.mul(fxs_price).div(1e6));
-        FXS.approve(msg.sender, fxs_dollar_value_d18.mul(fxs_price).div(1e6));
-        redeemFXSBalances[msg.sender] += fxs_dollar_value_d18.mul(fxs_price).div(1e6);
-        unclaimedPoolFXS += fxs_dollar_value_d18.mul(fxs_price).div(1e6);
+        redeemFXSBalances[msg.sender] += fxs_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION);
+        unclaimedPoolFXS += fxs_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION);
         
         lastRedeemed[msg.sender] = block.number;
 
+        // Move all external functions to the end to avoid re-entrancy attacks
+        collateral_token.approve(msg.sender, collateral_dollar_value_d18.mul(col_price_usd).div(PRICE_PRECISION));
+        FXS.pool_mint(address(this), fxs_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION));
+        FXS.approve(msg.sender, fxs_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION));
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
     }
 
     // Redeem FRAX for FXS. 0% collateral-backed
     function redeemAlgorithmicFRAX(uint256 FRAX_amount) external notRedeemPaused {
-        (uint256 frax_price, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee) = FRAX.frax_info();
+        (, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee) = FRAX.frax_info();
         require(global_collateral_ratio == 0, "Collateral ratio must be 0"); 
-        uint256 frax_dollar_value_d18 = FRAX_amount.mul(1e6).div(1e6); //changing .div(frax_price) to .div(1e6)
-        frax_dollar_value_d18 = frax_dollar_value_d18.sub((frax_dollar_value_d18.mul(redemption_fee)).div(1e6));
+        uint256 frax_dollar_value_d18 = FRAX_amount; //changing .div(frax_price) to .div(PRICE_PRECISION)
+        frax_dollar_value_d18 = frax_dollar_value_d18.sub((frax_dollar_value_d18.mul(redemption_fee)).div(PRICE_PRECISION));
 
-        FXS.pool_mint(address(this), frax_dollar_value_d18.mul(fxs_price).div(1e6));
-        FXS.approve(msg.sender, frax_dollar_value_d18.mul(fxs_price).div(1e6));
-        redeemFXSBalances[msg.sender] += frax_dollar_value_d18.mul(fxs_price).div(1e6);
-        unclaimedPoolFXS += frax_dollar_value_d18.mul(fxs_price).div(1e6);
+        redeemFXSBalances[msg.sender] += frax_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION);
+        unclaimedPoolFXS += frax_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION);
         
         lastRedeemed[msg.sender] = block.number;
         
+        // Move all external functions to the end to avoid re-entrancy attacks
+        FXS.pool_mint(address(this), frax_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION));
+        FXS.approve(msg.sender, frax_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION));
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
     }
 
@@ -315,7 +312,7 @@ contract FraxPool is AccessControl {
             redemption_fee,
             availableExcessCollatDV(),
             fxs_price,
-            oracle.consult(frax_contract_address, 1e6).mul(1e6).div(frax_price),
+            oracle.consult(frax_contract_address, PRICE_PRECISION).mul(PRICE_PRECISION).div(frax_price),
             FXS_amount
         );
 
@@ -348,9 +345,9 @@ contract FraxPool is AccessControl {
 
         (uint256 frax_price, uint256 fxs_price, , , , , ) = FRAX.frax_info();
         // The discount rate is the extra FXS they get for the collateral they put in, essentially an open arb opportunity 
-        uint256 col_price = oracle.consult(frax_contract_address, 1e6); // X FRAX / 1 COLLAT
-        uint256 col_price_usd = col_price.mul(1e6).div(frax_price);
-        uint256 c_dollar_value_d18 = (collateral_amount_d18.mul(col_price_usd)).div(1e6);
+        uint256 col_price = oracle.consult(frax_contract_address, PRICE_PRECISION); // X FRAX / 1 COLLAT
+        uint256 col_price_usd = col_price.mul(PRICE_PRECISION).div(frax_price);
+        uint256 c_dollar_value_d18 = (collateral_amount_d18.mul(col_price_usd)).div(PRICE_PRECISION);
         uint256 recol_am = recollateralizeAmount();
         
         if (recol_am >= c_dollar_value_d18)  recol_am = c_dollar_value_d18;
@@ -360,8 +357,8 @@ contract FraxPool is AccessControl {
         }
         uint256 fxs_col_value = c_dollar_value_d18.add(recol_am.div(1e2)); // Add the discount rate of 1% to the FXS amount 
         collateral_token.transferFrom(msg.sender, address(this), collateral_amount_d18);
-        FXS.pool_mint(tx.origin, fxs_col_value.mul(fxs_price).div(1e6));
 
+        FXS.pool_mint(tx.origin, fxs_col_value.mul(fxs_price).div(PRICE_PRECISION));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -386,12 +383,11 @@ contract FraxPool is AccessControl {
         oracle_address = new_oracle;
         oracle = UniswapPairOracle(oracle_address);
     }
-    
-    function setCollateralAdd(address _collateral_address) external onlyByOwnerOrGovernance {
-        collateral_address = _collateral_address;
-        collateral_token = ERC20(_collateral_address);
+
+    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        timelock_address = new_timelock;
     }
-    
+
     function setFRAXAddress(address _frax_contract_address) external onlyByOwnerOrGovernance {
         FRAX = FRAXStablecoin(_frax_contract_address);
         frax_contract_address = _frax_contract_address;
@@ -402,22 +398,10 @@ contract FraxPool is AccessControl {
         fxs_contract_address = _fxs_contract_address;
     }
 
-    // Adds an owner 
-    function addOwner(address owner_address) external onlyByOwnerOrGovernance {
-        owners.push(owner_address);
+    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+        owner_address = _owner_address;
     }
 
-    // Removes an owner 
-    function removeOwner(address owner_address) external onlyByOwnerOrGovernance {
-        // 'Delete' from the array by setting the address to 0x0
-        for (uint i = 0; i < owners.length; i++){ 
-            if (owners[i] == owner_address) {
-                owners[i] = address(0); // This will leave a null in the array and keep the indices the same
-                break;
-            }
-        }
-    }
-    
     /* ========== EVENTS ========== */
 
 }

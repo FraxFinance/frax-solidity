@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0 <0.7.0;
+pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
 
 import "../Common/Context.sol";
@@ -18,30 +18,32 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
 
     /* ========== STATE VARIABLES ========== */
     enum PriceChoice { FRAX, FXS }
-    PriceChoice price_choices;
-    ChainlinkETHUSDPriceConsumer eth_usd_pricer;
-    uint8 eth_usd_pricer_decimals;
-    UniswapPairOracle fraxEthOracle;
-    UniswapPairOracle fxsEthOracle;
+    ChainlinkETHUSDPriceConsumer private eth_usd_pricer;
+    uint8 private eth_usd_pricer_decimals;
+    UniswapPairOracle private fraxEthOracle;
+    UniswapPairOracle private fxsEthOracle;
     string public symbol;
     uint8 public constant decimals = 18;
-    address[] public owners;
+    address public owner_address;
     address public creator_address;
-    address public timelock_address;
+    address public timelock_address; // Governance timelock address
     address public fxs_address;
     address public frax_eth_oracle_address;
     address public fxs_eth_oracle_address;
     address public weth_address;
     address public eth_usd_consumer_address;
-    uint256 public constant genesis_supply = 1000000e18; // 1M. This is to help with establishing the Uniswap pools, as they need liquidity
+    uint256 public constant genesis_supply = 100000e18; // 100K. This is to help with establishing the Uniswap pools, as they need liquidity
 
     mapping(PriceChoice => address[]) private stablecoin_oracles; // 
 
     // The addresses in this array are added by the oracle and these contracts are able to mint frax
-    address[] frax_pools_array;
+    address[] public frax_pools_array;
 
     // Mapping is also used for faster verification
     mapping(address => bool) public frax_pools; 
+
+    // Constants for various precisions
+    uint256 private constant PRICE_PRECISION = 1e6;
     
     uint256 public global_collateral_ratio; // 6 decimals of precision, e.g. 924102 = 0.924102
     uint256 public redemption_fee; // 6 decimals of precision, divide by 1000000 in calculations for fee
@@ -64,15 +66,16 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     } 
     
     modifier onlyByOwnerOrGovernance() {
-        // Loop through the owners until one is found
-        bool found = false;
-        for (uint i = 0; i < owners.length; i++){ 
-            if (owners[i] == msg.sender) {
-                found = true;
-                break;
-            }
-        }
-        require(found, "You're not an owner");
+        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        _;
+    }
+
+    modifier onlyByOwnerGovernanceOrPool() {
+        require(
+            msg.sender == owner_address 
+            || msg.sender == timelock_address 
+            || frax_pools[msg.sender] == true, 
+            "You are not the owner, the governance timelock, or a pool");
         _;
     }
 
@@ -88,8 +91,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         timelock_address = _timelock_address;
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         DEFAULT_ADMIN_ADDRESS = _msgSender();
-        owners.push(creator_address);
-        owners.push(timelock_address);
+        owner_address = _creator_address;
         _mint(creator_address, genesis_supply);
         grantRole(COLLATERAL_RATIO_PAUSER, creator_address);
         grantRole(COLLATERAL_RATIO_PAUSER, timelock_address);
@@ -100,19 +102,19 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     // Choice = 'FRAX' or 'FXS' for now
     function oracle_price(PriceChoice choice) internal view returns (uint256) {
         // Get the ETH / USD price first, and cut it down to 1e6 precision
-        uint256 eth_usd_price = uint256(eth_usd_pricer.getLatestPrice()).mul(1e6).div(uint256(10) ** eth_usd_pricer_decimals);
+        uint256 eth_usd_price = uint256(eth_usd_pricer.getLatestPrice()).mul(PRICE_PRECISION).div(uint256(10) ** eth_usd_pricer_decimals);
         uint256 price_vs_eth;
 
         if (choice == PriceChoice.FRAX) {
-            price_vs_eth = uint256(fraxEthOracle.consult(weth_address, 1e6));
+            price_vs_eth = uint256(fraxEthOracle.consult(weth_address, PRICE_PRECISION));
         }
         else if (choice == PriceChoice.FXS) {
-            price_vs_eth = uint256(fxsEthOracle.consult(weth_address, 1e6));
+            price_vs_eth = uint256(fxsEthOracle.consult(weth_address, PRICE_PRECISION));
         }
         else revert("INVALID PRICE CHOICE. Needs to be either 0 (FRAX) or 1 (FXS)");
 
         // Will be in 1e6 format
-        return price_vs_eth.mul(1e6).div(eth_usd_price);
+        return price_vs_eth.mul(PRICE_PRECISION).div(eth_usd_price);
     }
 
     // Returns X FRAX = 1 USD
@@ -160,16 +162,16 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     function refreshCollateralRatio() public {
         require(collateral_ratio_paused == false, "Collateral Ratio has been paused");
         require(block.timestamp - last_call_time >= 3600 && frax_price() != 1000000, "Must wait >= one hour since last refresh and FRAX price must be >$1 to refresh collateral ratio");  // 3600 seconds means can be called once per hour, 86400 seconds is per day, callable only if FRAX price is not $1
-        
+
         uint256 tot_collat_value =  globalCollateralValue();
 
         // If tot_collat_value > totalSupply(), this will truncate to 0 and underflow below.
-        // Need to multiply by 1e6 to avoid this issue and divide by 1e6 later when used in other places
-        // uint256 globalC_ratio = (totalSupply().mul(1e6)).div(tot_collat_value); 
+        // Need to multiply by PRICE_PRECISION to avoid this issue and divide by PRICE_PRECISION later when used in other places
+        // uint256 globalC_ratio = (totalSupply().mul(PRICE_PRECISION)).div(tot_collat_value); 
         uint256 globalC_ratio;
         if (tot_collat_value == 0) globalC_ratio = 0;
         else {
-            globalC_ratio = (tot_collat_value.mul(1e6)).div(totalSupply()); 
+            globalC_ratio = (tot_collat_value.mul(PRICE_PRECISION)).div(totalSupply()); 
             
             // Step increments are .5% 
             if (frax_price() > 1000000) {
@@ -187,7 +189,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // Public implementation of internal _mint()
-    function mint(uint256 amount) public virtual onlyByOwnerOrGovernance {
+    function mint(uint256 amount) public virtual onlyByOwnerGovernanceOrPool {
         _mint(msg.sender, amount);
     }
 
@@ -212,6 +214,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     // Remove a pool 
     function removePool(address pool_address) public onlyByOwnerOrGovernance {
         require(frax_pools[pool_address] == true, "address doesn't exist already");
+        
         // Delete from the mapping
         delete frax_pools[pool_address];
 
@@ -240,20 +243,8 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         }
     }
 
-    // Adds an owner 
-    function addOwner(address owner_address) public onlyByOwnerOrGovernance {
-        owners.push(owner_address);
-    }
-
-    // Removes an owner 
-    function removeOwner(address owner_address) public onlyByOwnerOrGovernance {
-        // 'Delete' from the array by setting the address to 0x0
-        for (uint i = 0; i < owners.length; i++){ 
-            if (owners[i] == owner_address) {
-                owners[i] = address(0); // This will leave a null in the array and keep the indices the same
-                break;
-            }
-        }
+    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+        owner_address = _owner_address;
     }
 
     function setRedemptionFee(uint256 red_fee) public onlyByOwnerOrGovernance {
@@ -272,6 +263,10 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         eth_usd_consumer_address = _eth_usd_consumer_address;
         eth_usd_pricer = ChainlinkETHUSDPriceConsumer(eth_usd_consumer_address);
         eth_usd_pricer_decimals = eth_usd_pricer.getDecimals();
+    }
+
+    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        timelock_address = new_timelock;
     }
 
     // Sets the FRAX_ETH Uniswap oracle address 

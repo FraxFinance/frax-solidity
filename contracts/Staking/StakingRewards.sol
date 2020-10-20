@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0 <0.7.0;
+pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
 
 // Stolen with love from Synthetixio
@@ -30,18 +30,24 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     ERC20 public stakingToken;
     uint256 public periodFinish;
 
+    // Constants for various precisions
+    uint256 private constant PRICE_PRECISION = 1e6;
+
     // Max reward per second
-    uint256 public rewardRate = (uint256(51000000e18)).div(10 * (365 * 86400)); // 51M FXS over 10 years
+    uint256 public rewardRate = 161719939117199391; // (uint256(51000000e18)).div(10 * (365 * 86400)); // 51M FXS over 10 years
 
     // uint256 public rewardsDuration = 86400 hours;
-    uint256 public rewardsDuration = 7 * 86400; // 7 days
+    uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored = 0;
 
+    address public owner_address;
+    address public timelock_address; // Governance timelock address
+
     uint256 public locked_stake_max_multiplier = 3000000; // 6 decimals of precision. 1x = 1000000
     uint256 public locked_stake_time_for_max_multiplier = 365 * 86400; // 1 year
-    uint256 public locked_stake_min_time = 7 * 86400; // 7 days
+    uint256 public locked_stake_min_time = 604800; // 7 * 86400  (7 days)
     string public locked_stake_min_time_str = "604800"; // 7 days
 
     uint256 public cr_boost_max_multiplier = 2000000; // 6 decimals of precision. 1x = 0
@@ -71,13 +77,16 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         address _rewardsDistribution,
         address _rewardsToken,
         address _stakingToken,
-        address _frax_address
-    ) public Owned(_owner) {
+        address _frax_address,
+        address _timelock_address
+    ) public Owned(_owner){
+        owner_address = _owner;
         rewardsToken = ERC20(_rewardsToken);
         stakingToken = ERC20(_stakingToken);
         FRAX = FRAXStablecoin(_frax_address);
         rewardsDistribution = _rewardsDistribution;
         lastUpdateTime = block.timestamp;
+        timelock_address = _timelock_address;
     }
 
     /* ========== VIEWS ========== */
@@ -93,7 +102,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function crBoostMultiplier() public view returns (uint256) {
-        uint256 boost_to_subtract = cr_boost_max_multiplier.mul(FRAX.global_collateral_ratio()).div(1e6);
+        uint256 boost_to_subtract = cr_boost_max_multiplier.mul(FRAX.global_collateral_ratio()).div(PRICE_PRECISION);
         uint256 multiplier = (cr_boost_max_multiplier.sub(boost_to_subtract)).add(1);
         return multiplier;
     }
@@ -150,7 +159,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         else {
             // return lastTimeRewardApplicable().sub(lastUpdateTime);
             return rewardPerTokenStored.add(
-                lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate).mul(crBoostMultiplier()).mul(1e18).div(1e6).div(_staking_token_boosted_supply)
+                lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
             );
             // rewardPerTokenStored.add(
             //     lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate).div(_staking_token_supply)
@@ -167,7 +176,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     // }
 
     function getRewardForDuration() external override view returns (uint256) {
-        return rewardRate.mul(rewardsDuration).mul(crBoostMultiplier()).div(1e6);
+        return rewardRate.mul(rewardsDuration).mul(crBoostMultiplier()).div(PRICE_PRECISION);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -194,7 +203,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         require(secs >= locked_stake_min_time, StringHelpers.strConcat("Minimum stake time not met (", locked_stake_min_time_str, ")") );
 
         uint256 multiplier = stakingMultiplier(secs);
-        uint256 boostedAmount = amount.mul(multiplier).div(1e6);
+        uint256 boostedAmount = amount.mul(multiplier).div(PRICE_PRECISION);
         lockedStakes[msg.sender].push(LockedStake(
             keccak256(abi.encodePacked(msg.sender, block.timestamp, amount)),
             block.timestamp,
@@ -247,7 +256,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         require(block.timestamp >= thisStake.ending_timestamp, "Stake is still locked!");
 
         uint256 theAmount = thisStake.amount;
-        uint256 boostedAmount = theAmount.mul(thisStake.multiplier).div(1e6);
+        uint256 boostedAmount = theAmount.mul(thisStake.multiplier).div(PRICE_PRECISION);
         if (theAmount > 0){
             // Staking token supply and boosted supply
             _staking_token_supply = _staking_token_supply.sub(theAmount);
@@ -257,11 +266,11 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
             _balances[msg.sender] = _balances[msg.sender].sub(theAmount);
             _boosted_balances[msg.sender] = _boosted_balances[msg.sender].sub(boostedAmount);
 
-            // Give the tokens to the withdrawer
-            stakingToken.safeTransfer(msg.sender, theAmount);
-
             // Remove the stake from the array
             delete lockedStakes[msg.sender][theIndex];
+
+            // Give the tokens to the withdrawer
+            stakingToken.safeTransfer(msg.sender, theAmount);
 
             emit Withdrawn(msg.sender, theAmount);
             emit WithdrawnLocked(msg.sender, theAmount, kek_id);
@@ -300,7 +309,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
         uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / rewardsDuration; // Floor division to the nearest period
         uint balance = rewardsToken.balanceOf(address(this));
-        require(rewardRate.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(1e6) <= balance, "Not enough FXS available for rewards!");
+        require(rewardRate.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance, "Not enough FXS available for rewards!");
 
         // uint256 old_lastUpdateTime = lastUpdateTime;
         // uint256 new_lastUpdateTime = block.timestamp;
@@ -318,28 +327,31 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     // This notifies people that the reward is being changed
     function notifyRewardAmount(uint256 reward) external override onlyRewardsDistribution updateReward(address(0)) {
-        if (block.timestamp >= periodFinish) {
-            rewardRate = reward.mul(crBoostMultiplier()).div(rewardsDuration).div(1e6);
-        } else {
-            uint256 remaining = periodFinish.sub(block.timestamp);
-            uint256 leftover = remaining.mul(rewardRate);
-            rewardRate = reward.mul(crBoostMultiplier()).add(leftover).div(rewardsDuration).div(1e6);
-        }
+        // Needed to make compiler happy
 
-        // Ensure the provided reward amount is not more than the balance in the contract.
-        // This keeps the reward rate in the right range, preventing overflows due to
-        // very high values of rewardRate in the earned and rewardsPerToken functions;
-        // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
-        uint balance = rewardsToken.balanceOf(address(this));
-        require(rewardRate <= balance.div(rewardsDuration), "Provided reward too high");
+        
+        // if (block.timestamp >= periodFinish) {
+        //     rewardRate = reward.mul(crBoostMultiplier()).div(rewardsDuration).div(PRICE_PRECISION);
+        // } else {
+        //     uint256 remaining = periodFinish.sub(block.timestamp);
+        //     uint256 leftover = remaining.mul(rewardRate);
+        //     rewardRate = reward.mul(crBoostMultiplier()).add(leftover).div(rewardsDuration).div(PRICE_PRECISION);
+        // }
 
-        lastUpdateTime = block.timestamp;
-        periodFinish = block.timestamp.add(rewardsDuration);
-        emit RewardAdded(reward);
+        // // Ensure the provided reward amount is not more than the balance in the contract.
+        // // This keeps the reward rate in the right range, preventing overflows due to
+        // // very high values of rewardRate in the earned and rewardsPerToken functions;
+        // // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
+        // uint balance = rewardsToken.balanceOf(address(this));
+        // require(rewardRate <= balance.div(rewardsDuration), "Provided reward too high");
+
+        // lastUpdateTime = block.timestamp;
+        // periodFinish = block.timestamp.add(rewardsDuration);
+        // emit RewardAdded(reward);
     }
 
     // Added to support recovering LP Rewards from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyOwner {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // If it's FRAX we have to query the token symbol to ensure its not a proxy or underlying
         bool isFRAX = (keccak256(bytes("FRAX")) == keccak256(bytes(ERC20(tokenAddress).symbol())));
         // Cannot recover the staking token or the rewards token
@@ -351,7 +363,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         emit Recovered(tokenAddress, tokenAmount);
     }
 
-    function setRewardsDuration(uint256 _rewardsDuration) external onlyOwner {
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernance {
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
             "Previous rewards period must be complete before changing the duration for the new period"
@@ -360,32 +372,32 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         emit RewardsDurationUpdated(rewardsDuration);
     }
 
-    function setLockedStakeMaxMultiplierUpdated(uint256 _locked_stake_max_multiplier) external onlyOwner {
+    function setLockedStakeMaxMultiplierUpdated(uint256 _locked_stake_max_multiplier) external onlyByOwnerOrGovernance {
         require(_locked_stake_max_multiplier >= 1, "Multiplier must be greater than or equal to 1");
         locked_stake_max_multiplier = _locked_stake_max_multiplier;
         emit LockedStakeMaxMultiplierUpdated(locked_stake_max_multiplier);
     }
 
-    function setLockedStakeTimeForMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier) external onlyOwner {
+    function setLockedStakeTimeForMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier) external onlyByOwnerOrGovernance {
         require(_locked_stake_time_for_max_multiplier >= 1, "Multiplier Max Time must be greater than or equal to 1");
         locked_stake_time_for_max_multiplier = _locked_stake_time_for_max_multiplier;
         emit LockedStakeTimeForMaxMultiplier(locked_stake_time_for_max_multiplier);
     }
 
-    function setLockedStakeMinTime(uint256 _locked_stake_min_time) external onlyOwner {
+    function setLockedStakeMinTime(uint256 _locked_stake_min_time) external onlyByOwnerOrGovernance {
         require(_locked_stake_min_time >= 1, "Multiplier Max Time must be greater than or equal to 1");
         locked_stake_min_time = _locked_stake_min_time;
         locked_stake_min_time_str = StringHelpers.uint2str(_locked_stake_min_time);
         emit LockedStakeMinTime(_locked_stake_min_time);
     }
 
-    function setMaxCRBoostMultiplier(uint256 _max_boost_multiplier) external onlyOwner {
+    function setMaxCRBoostMultiplier(uint256 _max_boost_multiplier) external onlyByOwnerOrGovernance {
         require(_max_boost_multiplier >= 1, "Max CR Boost must be greater than or equal to 1");
         cr_boost_max_multiplier = _max_boost_multiplier;
         emit MaxCRBoostMultiplier(cr_boost_max_multiplier);
     }
 
-    function initializeDefault() external onlyOwner {
+    function initializeDefault() external onlyByOwnerOrGovernance {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
         emit DefaultInitialization();
@@ -406,6 +418,11 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
             rewards[account] = earned(account);
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
         }
+        _;
+    }
+
+    modifier onlyByOwnerOrGovernance() {
+        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
         _;
     }
 
