@@ -26,7 +26,6 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     string public symbol;
     uint8 public decimals = 18;
     address[] public owners;
-    address governance_address;
     address public creator_address;
     address public timelock_address;
     address public fxs_address;
@@ -64,11 +63,6 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         _;
     } 
     
-    modifier onlyByGovernance() {
-        require(msg.sender == governance_address, "You're not the governance contract :p");
-        _;
-    }
-
     modifier onlyByOwnerOrGovernance() {
         // Loop through the owners until one is found
         bool found = false;
