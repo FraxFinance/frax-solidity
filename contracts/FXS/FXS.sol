@@ -14,7 +14,7 @@ contract FRAXShares is ERC20Custom, AccessControl {
     /* ========== STATE VARIABLES ========== */
 
     string public symbol;
-    uint8 public decimals = 18;
+    uint8 public constant decimals = 18;
     address public FRAXStablecoinAdd;
     
     uint256 genesis_supply;

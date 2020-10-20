@@ -24,7 +24,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     UniswapPairOracle fraxEthOracle;
     UniswapPairOracle fxsEthOracle;
     string public symbol;
-    uint8 public decimals = 18;
+    uint8 public constant decimals = 18;
     address[] public owners;
     address public creator_address;
     address public timelock_address;
@@ -33,7 +33,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     address public fxs_eth_oracle_address;
     address public weth_address;
     address public eth_usd_consumer_address;
-    uint256 public genesis_supply = 1000000e18; // 1M. This is to help with establishing the Uniswap pools, as they need liquidity
+    uint256 public constant genesis_supply = 1000000e18; // 1M. This is to help with establishing the Uniswap pools, as they need liquidity
 
     mapping(PriceChoice => address[]) private stablecoin_oracles; // 
 
