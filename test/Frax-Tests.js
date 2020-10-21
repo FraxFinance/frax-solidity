@@ -85,6 +85,11 @@ const METAMASK_ADDRESS = "0x6A24A4EcA5Ed225CeaE6895e071a74344E2853F5";
 
 const REWARDS_DURATION = 7 * 86400; // 7 days
 
+let totalSupplyFRAX;
+let totalSupplyFXS;
+let globalCollateralRatio;
+let globalCollateralValue;
+
 contract('FRAX', async (accounts) => {
 	// Constants
 	let COLLATERAL_FRAX_AND_FXS_OWNER;
@@ -585,22 +590,26 @@ contract('FRAX', async (accounts) => {
 		let proposal_state_after = await governanceInstance.state.call(proposal_id);
 		console.log("proposal_state_after: ", new BigNumber(proposal_state_after).toNumber());
 
+		// Give control from TIMELOCK_ADMIN to GovernerAlpha
+		await timelockInstance.setPendingAdmin.call(governanceInstance.address, { from: timelockInstance.address });
+		await timelockInstance.acceptAdmin.call({ from: governanceInstance.address });
+
 		// Queue the execution
-		await governanceInstance.queue(proposal_id, { from: TIMELOCK_ADMIN });
+		await governanceInstance.queue.call(proposal_id, { from: TIMELOCK_ADMIN });
 
 		// Advance two days to the timelock is done
 		await time.increase((86400 * 2) + 1);
 		await time.advanceBlock();
 
 		// Execute the proposal
-		await governanceInstance.execute(proposal_id, { from: TIMELOCK_ADMIN });
+		await governanceInstance.execute.call(proposal_id, { from: TIMELOCK_ADMIN });
 
 		// Print the minting fee afterwards
 		let minting_fee_after = (new BigNumber(await fraxInstance.minting_fee.call())).div(BIG6).toNumber();
 		console.log("minting_fee_after: ", minting_fee_after);
 
 		// Set the voting period back to 17280 blocks
-		await governanceInstance.__setVotingPeriod(17280, { from: GOVERNOR_GUARDIAN_ADDRESS });
+		await governanceInstance.__setVotingPeriod.call(17280, { from: GOVERNOR_GUARDIAN_ADDRESS });
 
 	});
 
@@ -609,7 +618,7 @@ contract('FRAX', async (accounts) => {
 	it('Change the minting fee back to 0.03%', async () => {
 		console.log("======== Minting fee 0.1% -> 0.03% ========");
 		// Temporarily set the voting period to 10 blocks
-		await governanceInstance.__setVotingPeriod(10, { from: GOVERNOR_GUARDIAN_ADDRESS });
+		await governanceInstance.__setVotingPeriod.call(10, { from: GOVERNOR_GUARDIAN_ADDRESS });
 
 		// Determine the latest block
 		const latestBlock = (new BigNumber(await time.latestBlock())).toNumber();
@@ -620,7 +629,7 @@ contract('FRAX', async (accounts) => {
 		console.log("minting_fee_before: ", minting_fee_before);
 
 		// https://github.com/compound-finance/compound-protocol/blob/master/tests/Governance/GovernorAlpha/ProposeTest.js
-		await governanceInstance.propose(
+		await governanceInstance.propose.call(
 			[fraxInstance.address],
 			[0],
 			['setMintingFee(uint256)'],
@@ -647,11 +656,11 @@ contract('FRAX', async (accounts) => {
 		console.log("endBlock: ", proposal_details.endBlock.toString());
 		
 		// Have at least 4% of FXS holders vote (so the quorum is reached)
-		await governanceInstance.castVote(proposal_id, true, { from: POOL_CREATOR });
-		await governanceInstance.castVote(proposal_id, true, { from: TIMELOCK_ADMIN });
-		await governanceInstance.castVote(proposal_id, true, { from: GOVERNOR_GUARDIAN_ADDRESS });
-		await governanceInstance.castVote(proposal_id, true, { from: STAKING_OWNER });
-		await governanceInstance.castVote(proposal_id, true, { from: STAKING_REWARDS_DISTRIBUTOR });
+		await governanceInstance.castVote.call(proposal_id, true, { from: POOL_CREATOR });
+		await governanceInstance.castVote.call(proposal_id, true, { from: TIMELOCK_ADMIN });
+		await governanceInstance.castVote.call(proposal_id, true, { from: GOVERNOR_GUARDIAN_ADDRESS });
+		await governanceInstance.castVote.call(proposal_id, true, { from: STAKING_OWNER });
+		await governanceInstance.castVote.call(proposal_id, true, { from: STAKING_REWARDS_DISTRIBUTOR });
 
 		// Print the proposal after votes
 		proposal_details = await governanceInstance.proposals.call(proposal_id);
@@ -675,21 +684,21 @@ contract('FRAX', async (accounts) => {
 		console.log("proposal_state_after: ", new BigNumber(proposal_state_after).toNumber());
 
 		// Queue the execution
-		await governanceInstance.queue(proposal_id, { from: TIMELOCK_ADMIN });
+		await governanceInstance.queue.call(proposal_id, { from: TIMELOCK_ADMIN });
 
 		// Advance two days to the timelock is done
 		await time.increase((86400 * 2) + 1);
 		await time.advanceBlock();
 
 		// Execute the proposal
-		await governanceInstance.execute(proposal_id, { from: TIMELOCK_ADMIN });
+		await governanceInstance.execute.call(proposal_id, { from: TIMELOCK_ADMIN });
 
 		// Print the minting fee afterwards
 		let minting_fee_after = (new BigNumber(await fraxInstance.minting_fee.call())).div(BIG6).toNumber();
 		console.log("minting_fee_after: ", minting_fee_after);
 
 		// Set the voting period back to 17280 blocks
-		await governanceInstance.__setVotingPeriod(17280, { from: GOVERNOR_GUARDIAN_ADDRESS });
+		await governanceInstance.__setVotingPeriod.call(17280, { from: GOVERNOR_GUARDIAN_ADDRESS });
 
 	});
 
@@ -697,8 +706,17 @@ contract('FRAX', async (accounts) => {
 	// ================================================================
 
 	it('Mint some FRAX using FXS (collateral ratio = 0) [mintAlgorithmicFRAX]', async () => {
-		console.log("=========================mintAlgorithmicFRAX=========================");
-		
+		console.log("=========================mintAlgorithmicFRAX=========================");		
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
+
 		// IF YOU ARE RUNNING TESTS, YOU NEED TO COMMENT OUT THE RELEVANT PART IN THE DEPLOY SCRIPT!
 		// IF YOU ARE RUNNING TESTS, YOU NEED TO COMMENT OUT THE RELEVANT PART IN THE DEPLOY SCRIPT!
 		// IF YOU ARE RUNNING TESTS, YOU NEED TO COMMENT OUT THE RELEVANT PART IN THE DEPLOY SCRIPT!
@@ -744,6 +762,15 @@ contract('FRAX', async (accounts) => {
 
 	it('Redeem some FRAX for FXS (collateral ratio = 0) [redeemAlgorithmicFRAX]', async () => {
 		console.log("=========================redeemAlgorithmicFRAX=========================");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
 		
 		// Note the collateral ratio
 		const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
@@ -809,6 +836,15 @@ contract('FRAX', async (accounts) => {
 
 	it('Mint some FRAX using USDC as collateral (collateral ratio = 1) [mint1t1FRAX]', async () => {
 		console.log("=========================mint1t1FRAX=========================");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
 
 		// Note the collateral ratio
 		const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
@@ -860,6 +896,15 @@ contract('FRAX', async (accounts) => {
 
 	it('Have the pool buy back FXS with excess USDC (if available) [buyBackFXS]', async () => {
 		console.log("=========================buyBackFXS=========================");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
 		// This will push the collateral ratio below 1
 
 		// Note the collateral ratio
@@ -923,6 +968,15 @@ contract('FRAX', async (accounts) => {
 
 	it('Mint some FRAX using FXS and USDC (collateral ratio between .000001 and .999999) [mintFractionalFRAX]', async () => {
 		console.log("=========================mintFractionalFRAX=========================");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
 		
 		// Note the collateral ratio
 		const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
@@ -973,6 +1027,15 @@ contract('FRAX', async (accounts) => {
 
 	it('Redeem some FRAX for USDC (collateral ratio >= 1) [redeem1t1FRAX]', async () => {
 		console.log("=========================redeem1t1FRAX=========================");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
 		
 		// Deposit some collateral to move the collateral ratio above 1
 		await col_instance_USDC.transfer(pool_instance_USDC.address, THREE_THOUSAND_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -1025,6 +1088,15 @@ contract('FRAX', async (accounts) => {
 
 	it('Redeem some FRAX for FXS and USDC (collateral ratio between .000001 and .999999) [redeemFractionalFRAX]', async () => {
 		console.log("=========================redeemFractionalFRAX=========================");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
 		
 		// Mint some FRAX to move the ratio below 1
 		const collateral_amount = new BigNumber("2500000e18");
@@ -1087,6 +1159,15 @@ contract('FRAX', async (accounts) => {
 
 	it('recollateralizes the protocol using [recollateralizeFrax]', async () => {
 		console.log("=========================recollateralizeFrax=========================");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
 
 		const pre_redeem_collat_ratio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
 		console.log("pre-redeem collateral ratio: ", pre_redeem_collat_ratio.toNumber());
