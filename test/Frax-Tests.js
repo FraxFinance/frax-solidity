@@ -54,7 +54,8 @@ const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Fakes/UniswapPairOr
 const UniswapPairOracle_FXS_yUSD = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_yUSD");
 
 // Chainlink Price Consumer
-const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
+//const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
+const ChainlinkETHUSDPriceConsumerTest = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumerTest");
 
 // FRAX core
 const FRAXStablecoin = artifacts.require("Frax/FRAXStablecoin");
@@ -228,7 +229,8 @@ contract('FRAX', async (accounts) => {
 		oracle_instance_FXS_yUSD = await UniswapPairOracle_FXS_yUSD.deployed(); 
 
 		// Initialize ETH-USD Chainlink Oracle too
-		oracle_chainlink_ETH_USD = await ChainlinkETHUSDPriceConsumer.deployed();
+		//oracle_chainlink_ETH_USD = await ChainlinkETHUSDPriceConsumer.deployed();
+		oracle_chainlink_ETH_USD = await ChainlinkETHUSDPriceConsumerTest.deployed();
 
 		// Initialize the governance contract
 		governanceInstance = await GovernorAlpha.deployed();
