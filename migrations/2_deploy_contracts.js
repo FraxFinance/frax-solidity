@@ -438,8 +438,8 @@ module.exports = async function(deployer, network, accounts) {
 	// ======== Set the Frax Pools ========
 	console.log(chalk.yellow('===== FRAX POOLS ====='));
 	await deployer.link(StringHelpers, [Pool_USDC, Pool_USDT, Pool_yUSD]);
-	await deployer.deploy(Pool_USDC, col_instance_USDC.address, UniswapPairOracle_FRAX_USDC.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
-	await deployer.deploy(Pool_USDT, col_instance_USDT.address, UniswapPairOracle_FRAX_USDT.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
+	await deployer.deploy(Pool_USDC, col_instance_USDC.address, UniswapPairOracle_USDC_WETH.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
+	await deployer.deploy(Pool_USDT, col_instance_USDT.address, UniswapPairOracle_USDT_WETH.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
 	await deployer.deploy(Pool_yUSD, col_instance_yUSD.address, UniswapPairOracle_FRAX_yUSD.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18); 
 
 	// ======== Get the pool instances ========

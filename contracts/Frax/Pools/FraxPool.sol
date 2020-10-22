@@ -41,36 +41,25 @@ contract FraxPool is AccessControl {
     // Pool_ceiling is the total units of collateral that a pool contract can hold
     uint256 private pool_ceiling = 0;
 
+    // Stores price of the collateral, if price is paused
+    uint256 public pausedPrice = 0;
+
     // AccessControl Roles
     bytes32 private constant MINT_PAUSER = keccak256("MINT_PAUSER");
     bytes32 private constant REDEEM_PAUSER = keccak256("REDEEM_PAUSER");
     bytes32 private constant BUYBACK_PAUSER = keccak256("BUYBACK_PAUSER");
+    bytes32 private constant COLLATERAL_PRICE_PAUSER = keccak256("COLLATERAL_PRICE_PAUSER");
     
     // AccessControl state variables
-    bool mintPaused = false;
-    bool redeemPaused = false;
-    bool buyBackPaused = false;
+    bool public mintPaused = false;
+    bool public redeemPaused = false;
+    bool public buyBackPaused = false;
+    bool public collateralPricePaused = false;
 
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
         require(msg.sender == timelock_address || msg.sender == owner_address, "You are not the owner or the governance timelock");
-        _;
-    }
-
-    // AccessControl Modifiers
-    modifier onlyMintPauser() {
-        require(hasRole(MINT_PAUSER, msg.sender));
-        _;
-    }
-
-    modifier onlyRedeemPauser() {
-        require(hasRole(REDEEM_PAUSER, msg.sender));
-        _;
-    }
-
-    modifier onlyBuyBackPauser() {
-        require(hasRole(BUYBACK_PAUSER, msg.sender));
         _;
     }
 
@@ -108,6 +97,8 @@ contract FraxPool is AccessControl {
         grantRole(REDEEM_PAUSER, timelock_address);
         grantRole(BUYBACK_PAUSER, oracle_address);
         grantRole(BUYBACK_PAUSER, timelock_address);
+        grantRole(COLLATERAL_PRICE_PAUSER, oracle_address);
+        grantRole(COLLATERAL_PRICE_PAUSER, timelock_address);
     }
 
     /* ========== VIEWS ========== */
@@ -133,6 +124,15 @@ contract FraxPool is AccessControl {
         uint256 required_collat_dollar_value_d18 = (total_supply.mul(global_collateral_ratio)).div(COLLATERAL_RATIO_PRECISION); //calculates collateral needed to back each 1 FRAX with $1 of collateral at current collat ratio
         if (global_collat_value > required_collat_dollar_value_d18) return global_collat_value.sub(required_collat_dollar_value_d18);
         else return 0;
+    }
+
+
+    function getCollateralPrice() public view returns (uint256) {
+        if(collateralPricePaused == true){
+            return pausedPrice;
+        } else {
+            return oracle.consult(collateral_address, PRICE_PRECISION);
+        }
     }
 
     /* ========== PUBLIC FUNCTIONS ========== */
@@ -363,16 +363,30 @@ contract FraxPool is AccessControl {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function toggleMinting() external onlyMintPauser {
+    function toggleMinting() external {
+        require(hasRole(MINT_PAUSER, msg.sender));
         mintPaused = !mintPaused;
     }
     
-    function toggleRedeeming() external onlyRedeemPauser {
+    function toggleRedeeming() external {
+        require(hasRole(REDEEM_PAUSER, msg.sender));
         redeemPaused = !redeemPaused;
     }
     
-    function toggleBuyBack() external onlyBuyBackPauser {
+    function toggleBuyBack() external {
+        require(hasRole(BUYBACK_PAUSER, msg.sender));
         buyBackPaused = !buyBackPaused;
+    }
+
+    function toggleCollateralPrice() external {
+        require(hasRole(COLLATERAL_PRICE_PAUSER, msg.sender));
+        // If pausing, set paused price; else if unpausing, clear pausedPrice
+        if(collateralPricePaused == false){
+            pausedPrice = getCollateralPrice();
+        } else {
+            pausedPrice = 0;
+        }
+        collateralPricePaused = !collateralPricePaused;
     }
 
     function setPoolCeiling(uint256 new_ceiling) external onlyByOwnerOrGovernance {
