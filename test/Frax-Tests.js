@@ -1201,6 +1201,7 @@ contract('FRAX', async (accounts) => {
 
 	it('recollateralizes the protocol using [recollateralizeFrax]', async () => {
 		console.log("=========================recollateralizeFrax=========================");
+		//remember that at a price of >$1 this does nothing since recollateralizeAmount is 0 and Frax is decollateralizing
 		// Advance 1 hr so the collateral ratio can be recalculated
 		await time.increase(3600 + 1);
 		await time.advanceBlock();
@@ -1217,9 +1218,9 @@ contract('FRAX', async (accounts) => {
 		console.log("globalCollateralValue: ", globalCollateralValue);
 		console.log("");
 
-		const pre_redeem_collat_ratio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
-		console.log("pre-redeem collateral ratio: ", pre_redeem_collat_ratio.toNumber());
-		const pre_frax_supply = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG6);
+		const recollatAmount = new BigNumber(await pool_instance_USDC.recollateralizeAmount.call());
+		console.log("recollateralization amount before tx: ", recollatAmount.toNumber());
+
 
 		const pre_target_collat_value = (pre_frax_supply) * new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
 		console.log("target_collat_value: ", pre_target_collat_value);
@@ -1231,12 +1232,11 @@ contract('FRAX', async (accounts) => {
 		const frax_amount = new BigNumber("10000e18");
 		await fraxInstance.approve(pool_instance_USDC.address, frax_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		const frax_price = new BigNumber(await fraxInstance.frax_price.call()).div(BIG6);
-		console.log("frax price:", frax_price.toNumber());
+		//const frax_price = new BigNumber(await fraxInstance.frax_price.call()).div(BIG6);
+		//console.log("pre_recollat Frax Balance:", frax_price.toNumber());
 		
-		console.log("redeeming");
-		// Redeem some FRAX
-		await pool_instance_USDC.redeemFractionalFRAX(frax_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("recollateralizing");
+		await pool_instance_USDC.recollateralizeFrax(1*10^18);
 
 		// Advance 1 hr so the collateral ratio can be recalculated
 		await time.increase(3600 + 1);
@@ -1244,24 +1244,21 @@ contract('FRAX', async (accounts) => {
 		await fraxInstance.refreshCollateralRatio();
 
 		//start 0x01 - decomposing recollateralizeAmount
-		const frax_supply = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG6);
+		const fxs_after = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		console.log("fxs_after: ", fxs_after);
 
 		const target_collat_value = (frax_supply) * new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
 		console.log("target_collat_value: ", target_collat_value);
 
 		const global_collat_value = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG6);
-		console.log("global_collat_value", global_collat_value.toNumber());
+		console.log("post recollat global_collat_value", global_collat_value.toNumber());
 		//end 0x01
 
-		const post_redeem_collat_ratio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
-		console.log("post-redeem collateral ratio: ", post_redeem_collat_ratio.toNumber());
+		const post_recollat_collat_ratio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+		console.log("post-recollat collateral ratio: ", post_recollat_collat_ratio.toNumber());
 		
-		const recollatAmount = new BigNumber(await pool_instance_USDC.recollateralizeAmount.call());
-		console.log("recollateralization amount: ", recollatAmount.toNumber());
-
-
-		//await pool_instance_USDC.recollateralizeFrax(1*10^18);
-		//console.log("post-recollateralize collateral ratio: ", (await fraxInstance.global_collateral_ratio()).toString());
+		const after_recollatAmount = new BigNumber(await pool_instance_USDC.recollateralizeAmount.call());
+		console.log("recollateralization amount left after this tx: ", after_recollatAmount.toNumber());
 
 	});
 
