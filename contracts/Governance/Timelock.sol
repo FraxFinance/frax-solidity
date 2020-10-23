@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.11;
 
-import "../Utils/SafeMath.sol";
+import "../Math/SafeMath.sol";
 
 contract Timelock {
     using SafeMath for uint;
