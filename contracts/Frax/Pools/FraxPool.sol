@@ -323,32 +323,18 @@ contract FraxPool is AccessControl {
         FXS.burnFrom(msg.sender, FXS_amount);
     }
 
-    
     // When the protocol is recollateralizing, we need to give a discount of FXS to hit the new CR target
-    // Returns value of collateral that must increase to reach recollateralization target (if 0 means no recollateralization)
-    function recollateralizeAmount() public view returns (uint256 recollateralization_left) {
-        ( , , uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ) = FRAX.frax_info();
-        uint256 target_collat_value = total_supply.mul(global_collateral_ratio).div(1e12); // We want 6 degrees of precision so divide by 1e12 
-        // Subtract the current value of collateral from the target value needed, if higher than 0 then system needs to recollateralize
-        if (target_collat_value > global_collat_value) recollateralization_left = target_collat_value.sub(global_collat_value); 
-        
-        else recollateralization_left = 0;
-        
-        return(recollateralization_left);
-    }
-    
     // Thus, if the target collateral ratio is higher than the actual value of collateral, minters get FXS for adding collateral
     // This function simply rewards anyone that sends collateral to a pool with the same amount of FXS + 1% 
     // Anyone can call this function to recollateralize the protocol and take the hardcoded 1% arb opportunity
     function recollateralizeFrax(uint256 collateral_amount_d18) public {
-        require(recollateralizeAmount() > 0, "no extra collateral needed"); 
-
-        (uint256 frax_price, uint256 fxs_price, , , , , ) = FRAX.frax_info();
+        (uint256 frax_price, uint256 fxs_price, uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ) = FRAX.frax_info();
+        require(FraxPoolLibrary.recollateralizeAmount(total_supply, global_collateral_ratio, global_collat_value) > 0, "no extra collateral needed"); 
         // The discount rate is the extra FXS they get for the collateral they put in, essentially an open arb opportunity 
         uint256 col_price = oracle.consult(frax_contract_address, PRICE_PRECISION); // X FRAX / 1 COLLAT
         uint256 col_price_usd = col_price.mul(PRICE_PRECISION).div(frax_price);
         uint256 c_dollar_value_d18 = (collateral_amount_d18.mul(col_price_usd)).div(PRICE_PRECISION);
-        uint256 recol_am = recollateralizeAmount();
+        uint256 recol_am = FraxPoolLibrary.recollateralizeAmount(total_supply, global_collateral_ratio, global_collat_value);
         
         if (recol_am >= c_dollar_value_d18)  recol_am = c_dollar_value_d18;
         
