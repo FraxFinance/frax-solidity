@@ -322,7 +322,7 @@ contract FraxPool is AccessControl {
         collateral_token.transfer(msg.sender, collateral_equivalent_d18);
         FXS.burnFrom(msg.sender, FXS_amount);
     }
-
+/*
     // When the protocol is recollateralizing, we need to give a discount of FXS to hit the new CR target
     // Thus, if the target collateral ratio is higher than the actual value of collateral, minters get FXS for adding collateral
     // This function simply rewards anyone that sends collateral to a pool with the same amount of FXS + 1% 
@@ -346,7 +346,7 @@ contract FraxPool is AccessControl {
 
         FXS.pool_mint(tx.origin, fxs_col_value.mul(fxs_price).div(PRICE_PRECISION));
     }
-
+*/
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     function toggleMinting() external {
