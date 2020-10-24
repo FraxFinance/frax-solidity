@@ -161,7 +161,7 @@ contract FraxPool is AccessControl {
         require((collateral_token.balanceOf(address(this))) + collateral_amount_d18 <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
         
         (uint256 frax_amount_d18) = FraxPoolLibrary.calcMint1t1FRAX(
-            oracle.consult(frax_contract_address, PRICE_PRECISION), // X FRAX / 1 COLLAT
+            getCollateralPrice(),
             frax_price,
             minting_fee,
             collateral_amount_d18
@@ -197,7 +197,7 @@ contract FraxPool is AccessControl {
             minting_fee, 
             fxs_price, // X FXS / 1 USD
             frax_price,
-            oracle.consult(frax_contract_address, PRICE_PRECISION),
+            getCollateralPrice(),
             fxs_amount,
             collateral_amount,
             (collateral_token.balanceOf(address(this))),
@@ -221,7 +221,7 @@ contract FraxPool is AccessControl {
         require(global_collateral_ratio >= 1000000, "Collateral ratio must be >= 1");
 
         (uint256 collateral_needed) = FraxPoolLibrary.calcRedeem1t1FRAX(
-            oracle.consult(frax_contract_address, PRICE_PRECISION).mul(PRICE_PRECISION).div(frax_price),
+            getCollateralPrice(),
             FRAX_amount,
             redemption_fee
         );
@@ -243,7 +243,7 @@ contract FraxPool is AccessControl {
         (uint256 frax_price, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee,) = FRAX.frax_info();
         require(global_collateral_ratio < 1000000 && global_collateral_ratio > 0, "Collateral ratio needs to be between .000001 and .999999");
         uint256 frax_dollar_value_d18 = FRAX_amount; //changing .div(frax_price) to .div(PRICE_PRECISION)
-        uint256 col_price_usd = oracle.consult(frax_contract_address, PRICE_PRECISION).mul(PRICE_PRECISION).div(frax_price);
+        uint256 col_price_usd = getCollateralPrice();
 
         frax_dollar_value_d18 = frax_dollar_value_d18.sub((frax_dollar_value_d18.mul(redemption_fee)).div(PRICE_PRECISION));
         uint256 collateral_dollar_value_d18 = frax_dollar_value_d18.mul(global_collateral_ratio).div(PRICE_PRECISION);
@@ -328,7 +328,7 @@ contract FraxPool is AccessControl {
             redemption_fee,
             availableExcessCollatDV(),
             fxs_price,
-            oracle.consult(frax_contract_address, PRICE_PRECISION).mul(PRICE_PRECISION).div(frax_price),
+            getCollateralPrice(),
             FXS_amount
         );
 
