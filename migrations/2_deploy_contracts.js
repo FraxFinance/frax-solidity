@@ -495,6 +495,8 @@ module.exports = async function(deployer, network, accounts) {
 	await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	await pool_instance_USDT.setCollatETHOracle(oracle_instance_USDT_WETH.address, wethInstance.address, { from: POOL_CREATOR });
+	await pool_instance_USDC.setCollatETHOracle(oracle_instance_USDC_WETH.address, wethInstance.address, { from: POOL_CREATOR });
 
 	// ======== Link FXS oracles ========
 	console.log(chalk.yellow('===== LINK FXS ORACLES ====='));

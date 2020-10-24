@@ -34,7 +34,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     address public eth_usd_consumer_address;
     uint256 public constant genesis_supply = 1000000e18; // 1M. This is to help with establishing the Uniswap pools, as they need liquidity
 
-    mapping(PriceChoice => address[]) private stablecoin_oracles; // 
+    mapping(PriceChoice => address[]) private stablecoin_oracles;
 
     // The addresses in this array are added by the oracle and these contracts are able to mint frax
     address[] public frax_pools_array;
@@ -129,7 +129,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
 
     // This is needed to avoid costly repeat calls to different getter functions
     // It is cheaper gas-wise to just dump everything and only use some of the info
-    function frax_info() public view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
+    function frax_info() public view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
         return (
             oracle_price(PriceChoice.FRAX), // frax_price()
             oracle_price(PriceChoice.FXS), // fxs_price()
@@ -137,7 +137,8 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
             global_collateral_ratio, // global_collateral_ratio()
             globalCollateralValue(), // globalCollateralValue
             minting_fee, // minting_fee()
-            redemption_fee // redemption_fee()
+            redemption_fee, // redemption_fee()
+            uint256(eth_usd_pricer.getLatestPrice()).mul(PRICE_PRECISION).div(uint256(10) ** eth_usd_pricer_decimals) //eth_usd_price
         );
     }
 
