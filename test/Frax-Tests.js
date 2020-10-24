@@ -31,6 +31,7 @@ const UniswapV2Library = artifacts.require("Uniswap/UniswapV2Library");
 const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary");
 const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
 const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_Modified");
+const TestSwap = artifacts.require("Uniswap/TestSwap");
 
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
@@ -112,6 +113,8 @@ contract('FRAX', async (accounts) => {
 	let col_instance_USDC;
 	let col_instance_USDT;
 	let col_instance_yUSD;
+
+	let TestSwap_instance;
 
 	// Initialize the Uniswap Router Instance
 	let routerInstance; 
@@ -219,6 +222,8 @@ contract('FRAX', async (accounts) => {
 		col_instance_USDT = await FakeCollateral_USDT.deployed(); 
 		col_instance_yUSD = await FakeCollateral_yUSD.deployed(); 
 
+		TestSwap_instance = await TestSwap.deployed();
+
 		// Fill the Uniswap Router Instance
 		routerInstance = await UniswapV2Router02_Modified.deployed(); 
 
@@ -268,6 +273,8 @@ contract('FRAX', async (accounts) => {
 		pair_addr_FXS_USDC = await uniswapFactoryInstance.getPair(fxsInstance.address, FakeCollateral_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		pair_addr_FXS_USDT = await uniswapFactoryInstance.getPair(fxsInstance.address, FakeCollateral_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		pair_addr_FXS_yUSD = await uniswapFactoryInstance.getPair(fxsInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		pair_addr_USDT_WETH = await uniswapFactoryInstance.getPair(FakeCollateral_USDT.address, WETH.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		pair_addr_USDC_WETH = await uniswapFactoryInstance.getPair(FakeCollateral_USDC.address, WETH.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Get instances of the pairs
 		pair_instance_FRAX_WETH = await UniswapV2Pair.at(pair_addr_FRAX_WETH);
@@ -278,6 +285,8 @@ contract('FRAX', async (accounts) => {
 		pair_instance_FXS_USDC = await UniswapV2Pair.at(pair_addr_FXS_USDC);
 		pair_instance_FXS_USDT = await UniswapV2Pair.at(pair_addr_FXS_USDT);
 		pair_instance_FXS_yUSD = await UniswapV2Pair.at(pair_addr_FXS_yUSD); 
+		pair_instance_USDT_WETH = await UniswapV2Pair.at(pair_addr_USDT_WETH);
+		pair_instance_USDC_WETH = await UniswapV2Pair.at(pair_addr_USDC_WETH);
 
 		// Get the pair order results
 		fraxfxs_first_FRAX_WETH = await oracle_instance_FRAX_WETH.token0();
@@ -336,8 +345,8 @@ contract('FRAX', async (accounts) => {
 		let fxs_price_from_FXS_USDC = (new BigNumber(await oracle_instance_FXS_USDC.consult.call(FakeCollateral_USDC.address, 1e6))).div(BIG6).toNumber();
 		let fxs_price_from_FXS_USDT = (new BigNumber(await oracle_instance_FXS_USDT.consult.call(FakeCollateral_USDT.address, 1e6))).div(BIG6).toNumber();
 		let fxs_price_from_FXS_yUSD = (new BigNumber(await oracle_instance_FXS_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
-		let USDT_price_from_USDT_WETH = (new BigNumber(await oracle_instance_USDT_WETH.consult.call(WETH.address, 1e6))).div(1).toNumber();
-		let USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(WETH.address, 1e6))).div(1).toNumber();
+		let USDT_price_from_USDT_WETH = (new BigNumber(await oracle_instance_USDT_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
+		let USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
 
 		// Print the prices
 		console.log("frax_price_from_FRAX_WETH: ", frax_price_from_FRAX_WETH.toString(), " FRAX = 1 WETH");
@@ -348,8 +357,8 @@ contract('FRAX', async (accounts) => {
 		console.log("fxs_price_from_FXS_USDC: ", fxs_price_from_FXS_USDC.toString(), " FXS = 1 USDC");
 		console.log("fxs_price_from_FXS_USDT: ", fxs_price_from_FXS_USDT.toString(), " FXS = 1 USDT");
 		console.log("fxs_price_from_FXS_yUSD: ", fxs_price_from_FXS_yUSD.toString(), " FXS = 1 yUSD");
-		console.log("USDT_price_from_USDT_WETH: ", USDT_price_from_USDT_WETH.toString(), " USDT (div 1e6) = 1 WETH");
-		console.log("USDC_price_from_USDC_WETH: ", USDC_price_from_USDC_WETH.toString(), " USDC (div 1e6) = 1 WETH");
+		console.log("USDT_price_from_USDT_WETH: ", USDT_price_from_USDT_WETH.toString(), " USDT = 1 WETH");
+		console.log("USDC_price_from_USDC_WETH: ", USDC_price_from_USDC_WETH.toString(), " USDC = 1 WETH");
 
 		// Add allowances to the Uniswap Router
 		await wethInstance.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -516,8 +525,8 @@ contract('FRAX', async (accounts) => {
 		fxs_price_from_FXS_USDC = (new BigNumber(await oracle_instance_FXS_USDC.consult.call(FakeCollateral_USDC.address, 1e6))).div(BIG6).toNumber();
 		fxs_price_from_FXS_USDT = (new BigNumber(await oracle_instance_FXS_USDT.consult.call(FakeCollateral_USDT.address, 1e6))).div(BIG6).toNumber();
 		fxs_price_from_FXS_yUSD = (new BigNumber(await oracle_instance_FXS_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
-		USDT_price_from_USDT_WETH = (new BigNumber(await oracle_instance_USDT_WETH.consult.call(WETH.address, 1e6))).div(1).toNumber();
-		USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(WETH.address, 1e6))).div(1).toNumber();
+		USDT_price_from_USDT_WETH = (new BigNumber(await oracle_instance_USDT_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
+		USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
 
 		// Print the new prices
 		console.log("frax_price_from_FRAX_WETH: ", frax_price_from_FRAX_WETH.toString(), " FRAX = 1 WETH");
@@ -528,12 +537,23 @@ contract('FRAX', async (accounts) => {
 		console.log("fxs_price_from_FXS_USDC: ", fxs_price_from_FXS_USDC.toString(), " FXS = 1 USDC");
 		console.log("fxs_price_from_FXS_USDT: ", fxs_price_from_FXS_USDT.toString(), " FXS = 1 USDT");
 		console.log("fxs_price_from_FXS_yUSD: ", fxs_price_from_FXS_yUSD.toString(), " FXS = 1 yUSD");
-		console.log("USDT_price_from_USDT_WETH: ", USDT_price_from_USDT_WETH.toString(), " USDT (div 1e6) = 1 WETH");
-		console.log("USDC_price_from_USDC_WETH: ", USDC_price_from_USDC_WETH.toString(), " USDC (div 1e6) = 1 WETH");
+		console.log("USDT_price_from_USDT_WETH: ", USDT_price_from_USDT_WETH.toString(), " USDT = 1 WETH");
+		console.log("USDC_price_from_USDC_WETH: ", USDC_price_from_USDC_WETH.toString(), " USDC = 1 WETH");
 
 
 	});
 
+	it("Changes the price of USDT through swapping on the USDT-ETH Uniswap pair", async () => {
+		console.log("=========================Uniswapv2Router.swapExactETHForTokens=========================");
+		console.log("test4");
+		col_instance_USDT.approve(TestSwap.address, 1000, {from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("test5");
+		const path = await TestSwap_instance.getPath();
+		console.log("test6");
+		routerInstance.swapExactTokensForETH.call(1000, 1, path, COLLATERAL_FRAX_AND_FXS_OWNER.address, 2105300114, {from: TestSwap_instance});
+		console.log("swapped");
+	});
+/*
 	// GOVERNANCE TEST [PART 1]
 	// ================================================================
 	it('Propose changing the minting fee', async () => {
@@ -1556,4 +1576,5 @@ contract('FRAX', async (accounts) => {
 		console.log("STAKING FXS EARNED [9]: ", staking_fxs_earned_180_9.toString());
 
 	});
+	*/
 });

@@ -30,6 +30,7 @@ const UniswapV2Library = artifacts.require("Uniswap/UniswapV2Library");
 const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary");
 const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
 const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_Modified");
+const TestSwap = artifacts.require("Uniswap/TestSwap");
 
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
@@ -441,6 +442,9 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.deploy(Pool_USDC, col_instance_USDC.address, UniswapPairOracle_FRAX_USDC.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
 	await deployer.deploy(Pool_USDT, col_instance_USDT.address, UniswapPairOracle_FRAX_USDT.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
 	await deployer.deploy(Pool_yUSD, col_instance_yUSD.address, UniswapPairOracle_FRAX_yUSD.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18); 
+
+	// Uniswap Test Swap
+	await deployer.deploy(TestSwap, col_instance_USDT.address, WETH.address, UniswapV2Router02_Modified.address);
 
 	// ======== Get the pool instances ========
 	console.log(chalk.yellow('===== POOL INSTANCES ====='));
