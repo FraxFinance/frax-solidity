@@ -117,8 +117,8 @@ contract FraxPool is AccessControl {
 
     function collatDollarBalance() public view returns (uint256) {
         return (collateral_token.balanceOf(address(this)) - unclaimedPoolCollateral)
-                                .mul(oracle.consult(frax_contract_address, PRICE_PRECISION))  // X FRAX / 1 COLLAT
-                                .div(FRAX.frax_price());
+                                .mul(oracle.consult(frax_contract_address, PRICE_PRECISION))
+                                .div(FRAX.frax_price()); //FIX THIS
     }
 
     function availableExcessCollatDV() public view returns (uint256) {
