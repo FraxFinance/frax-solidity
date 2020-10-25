@@ -545,15 +545,17 @@ contract('FRAX', async (accounts) => {
 
 	it("Changes the price of USDT through swapping on the USDT-ETH Uniswap pair", async () => {
 		console.log("=========================Uniswapv2Router.swapExactETHForTokens=========================");
-		console.log("test4");
-		col_instance_USDT.approve(TestSwap.address, 1000, {from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("test5");
-		const path = await TestSwap_instance.getPath();
-		console.log("test6");
-		routerInstance.swapExactTokensForETH.call(1000, 1, path, COLLATERAL_FRAX_AND_FXS_OWNER.address, 2105300114, {from: TestSwap_instance});
+		const amountIn = 1000;
+		const amountOutMin = 1;
+		await col_instance_USDT.approve.call(TestSwap.address, amountIn, {from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("approved TestSwap for", amountIn, "USDT");
+		//const path = await TestSwap_instance.getPath.call();
+		//console.log("test6");
+		const result = await TestSwap_instance.swapUSDTforETH.call(amountIn, amountOutMin, {from: COLLATERAL_FRAX_AND_FXS_OWNER});
 		console.log("swapped");
+		console.log(result);
 	});
-/*
+
 	// GOVERNANCE TEST [PART 1]
 	// ================================================================
 	it('Propose changing the minting fee', async () => {
@@ -1576,5 +1578,5 @@ contract('FRAX', async (accounts) => {
 		console.log("STAKING FXS EARNED [9]: ", staking_fxs_earned_180_9.toString());
 
 	});
-	*/
+
 });
