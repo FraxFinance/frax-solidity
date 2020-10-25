@@ -265,14 +265,14 @@ contract FraxPool is AccessControl {
         uint256 frax_dollar_value_d18 = FRAX_amount; //changing .div(frax_price) to .div(PRICE_PRECISION)
         frax_dollar_value_d18 = frax_dollar_value_d18.sub((frax_dollar_value_d18.mul(redemption_fee)).div(PRICE_PRECISION));
 
-        redeemFXSBalances[msg.sender] += frax_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION);
-        unclaimedPoolFXS += frax_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION);
+        redeemFXSBalances[msg.sender] += frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price);
+        unclaimedPoolFXS += frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price);
         
         lastRedeemed[msg.sender] = block.number;
         
         // Move all external functions to the end to avoid re-entrancy attacks
-        FXS.pool_mint(address(this), frax_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION));
-        FXS.approve(msg.sender, frax_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION));
+        FXS.pool_mint(address(this), frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price));
+        FXS.approve(msg.sender, frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price));
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
     }
 

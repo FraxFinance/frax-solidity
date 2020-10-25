@@ -774,8 +774,8 @@ contract('FRAX', async (accounts) => {
 		const frax_before = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		bal_fxs = fxs_before;
 		bal_frax = frax_before;
-		console.log("bal_fxs: ", bal_fxs.toNumber());
-		console.log("bal_frax: ", bal_frax.toNumber());
+		console.log("accounts[0] FXS balance before:", fxs_before.toNumber());
+		console.log("accounts[0] FRAX balance before:", frax_before.toNumber());
 
 		// Need to approve first so the pool contract can use transferFrom
 		const fxs_amount = new BigNumber("10000e18");
@@ -783,6 +783,7 @@ contract('FRAX', async (accounts) => {
 
 		// Mint some FRAX
 		await pool_instance_USDC.mintAlgorithmicFRAX(fxs_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("accounts[0] mintAlgorithmicFRAX() using 10,000 FXS");
 
 		// Advance 1 hr so the collateral ratio can be recalculated
 		await time.increase(3600 + 1);
@@ -792,8 +793,8 @@ contract('FRAX', async (accounts) => {
 		// Note the FXS and FRAX amounts after minting
 		const fxs_after = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const frax_after = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		console.log("fxs_after change: ", fxs_after.toNumber() - bal_fxs);
-		console.log("frax_after change: ", frax_after.toNumber() - bal_frax);
+		console.log("accounts[0] FXS balance after:", fxs_after.toNumber() - fxs_before.toNumber());
+		console.log("accounts[0] FRAX balance after:", frax_after.toNumber() - frax_before.toNumber());
 
 		// Note the new collateral ratio
 		const collateral_ratio_after = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
@@ -828,8 +829,8 @@ contract('FRAX', async (accounts) => {
 		// Note the FXS, FRAX, and FAKE amounts before minting
 		const fxs_before = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const frax_before = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		console.log("fxs_before: ", fxs_before.toNumber());
-		console.log("frax_before: ", frax_before.toNumber());
+		console.log("accounts[0] FXS balance before:", fxs_before.toNumber());
+		console.log("accounts[0] FRAX balance before:", frax_before.toNumber());
 
 		// Need to approve first so the pool contract can use transfer
 		const frax_amount = new BigNumber("1000e18");
@@ -837,6 +838,8 @@ contract('FRAX', async (accounts) => {
 
 		// Redeem some FRAX
 		await pool_instance_USDC.redeemAlgorithmicFRAX(frax_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("accounts[0] redeemAlgorithmicFRAX() using 1,000 FRAX");
+
 		// Collect redemption
 		await time.advanceBlock();
 		await pool_instance_USDC.collectRedemption({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -850,9 +853,11 @@ contract('FRAX', async (accounts) => {
 		const fxs_after = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const frax_after = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		//const fxs_unclaimed = new BigNumber(await pool_instance_USDC.getRedeemFXSBalance.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		console.log("bal_fxs change: ", fxs_after.toNumber() - bal_fxs);
+		//console.log("bal_fxs change: ", fxs_after.toNumber() - bal_fxs);
 		//console.log("bal_fxs sitting inside Pool_USDC waiting to be claimed by COLLATERAL_FRAX_AND_FXS_OWNER: ", fxs_unclaimed);
-		console.log("bal_frax change: ", frax_after.toNumber() - bal_frax);
+		//console.log("bal_frax change: ", frax_after.toNumber() - bal_frax);
+		console.log("accounts[0] FXS change:", fxs_after.toNumber() - fxs_before.toNumber());
+		console.log("accounts[0] FRAX change:", frax_after.toNumber() - frax_before.toNumber());
 	});
 
 
@@ -871,6 +876,11 @@ contract('FRAX', async (accounts) => {
 		// Refresh the collateral ratio
 		const totalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18);
 		console.log("totalCollateralValue: ", totalCollateralValue.toNumber());
+
+		// Advance 1 hr so the collateral ratio can be recalculated
+		await time.increase(3600 + 1);
+		await time.advanceBlock();
+		await fraxInstance.refreshCollateralRatio();
 
 		// Advance 1 hr so the collateral ratio can be recalculated
 		await time.increase(3600 + 1);
