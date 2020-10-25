@@ -137,10 +137,10 @@ contract FraxPool is AccessControl {
             return pausedPrice;
         } else {
             ( , , , , , , , uint256 eth_usd_price) = FRAX.frax_info();
-            return collatEthOracle.consult(weth_address, PRICE_PRECISION).mul(PRICE_PRECISION).div(eth_usd_price);
+            return eth_usd_price.mul(PRICE_PRECISION).div(collatEthOracle.consult(weth_address, PRICE_PRECISION));
         }
     }
-    
+
     function setCollatETHOracle(address _collateral_address, address _weth_address) external onlyByOwnerOrGovernance {
         collat_eth_oracle_address = _collateral_address;
         collatEthOracle = UniswapPairOracle(_collateral_address);

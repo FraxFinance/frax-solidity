@@ -117,7 +117,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         else revert("INVALID PRICE CHOICE. Needs to be either 0 (FRAX) or 1 (FXS)");
 
         // Will be in 1e6 format
-        return price_vs_eth.mul(PRICE_PRECISION).div(eth_usd_price);
+        return eth_usd_price.mul(PRICE_PRECISION).div(price_vs_eth);
     }
 
     // Returns X FRAX = 1 USD
