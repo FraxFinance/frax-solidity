@@ -123,6 +123,17 @@ contract FraxPool is AccessControl {
         return (collateral_token.balanceOf(address(this)) - unclaimedPoolCollateral)
                                 .mul(oracle.consult(frax_contract_address, PRICE_PRECISION))
                                 .div(FRAX.frax_price()); //FIX THIS
+        uint256 error = getCollateralPrice(); //fails
+        //uint256 test2 = FRAX.eth_usd_price().mul(PRICE_PRECISION).div(collatEthOracle.consult(weth_address, PRICE_PRECISION)); //fails
+        //uint256 test3 = collatEthOracle.consult(collateral_address, PRICE_PRECISION); //fails
+        UniswapPairOracle test4 = collatEthOracle; //safe
+        //uint256 test5 = test4.consult(weth_address, PRICE_PRECISION); //fails
+
+        //so, this function cannot in any way call collatEthOracle.consult() else it will cause all functions that call it to revert
+
+        //uint256 eth_usd_price = FRAX.eth_usd_price(); //safe
+        //uint256 collat_to_eth = collatEthOracle.consult(weth_address, PRICE_PRECISION); //fails, but we need collatEthOracle to get collat-ETH price
+        return uint256((collateral_token.balanceOf(address(this)) - unclaimedPoolCollateral)); //.mul(getCollateralPrice()).div(1e6);
     }
 
     function availableExcessCollatDV() public view returns (uint256) {
