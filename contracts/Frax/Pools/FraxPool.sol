@@ -155,7 +155,7 @@ contract FraxPool is AccessControl {
     // 100+% collateral-backed
     function mint1t1FRAX(uint256 collateral_amount_d18) external notMintPaused {
         (uint256 frax_price, , , uint256 global_collateral_ratio, , uint256 minting_fee, ,) = FRAX.frax_info();
-        require(global_collateral_ratio >= , "Collateral ratio must be >= 1");
+        require(global_collateral_ratio >= COLLATERAL_RATIO_MAX, "Collateral ratio must be >= 1");
         require((collateral_token.balanceOf(address(this))) - unclaimedPoolCollateral + collateral_amount_d18 <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
         
         (uint256 frax_amount_d18) = FraxPoolLibrary.calcMint1t1FRAX(
@@ -209,7 +209,7 @@ contract FraxPool is AccessControl {
 
         // TransferHelper.safeTransferFrom(collateral_address, msg.sender, address(this), collateral_needed);
         collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
-        FXS.burnFrom(msg.sender, fxs_needed);
+        FXS.burnFrom(msg.sender, fxs_needed); //pool_burn_from
         FRAX.pool_mint(msg.sender, mint_amount);
     }
 
@@ -336,14 +336,14 @@ contract FraxPool is AccessControl {
 
         // Give the sender their desired collateral and burn the FXS
         collateral_token.transfer(msg.sender, collateral_equivalent_d18);
-        FXS.burnFrom(msg.sender, FXS_amount);
+        FXS.burnFrom(msg.sender, FXS_amount); //pool_burn_from
     }
 
     // When the protocol is recollateralizing, we need to give a discount of FXS to hit the new CR target
     // Thus, if the target collateral ratio is higher than the actual value of collateral, minters get FXS for adding collateral
     // This function simply rewards anyone that sends collateral to a pool with the same amount of FXS + 1% 
     // Anyone can call this function to recollateralize the protocol and take the hardcoded 1% arb opportunity
-    function recollateralizeFrax(uint256 collateral_amount_d18) public {
+    function recollateralizeFrax(uint256 collateral_amount_d18) external {
         (uint256 frax_price, uint256 fxs_price, uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ,) = FRAX.frax_info();
         //require(FraxPoolLibrary.recollateralizeAmount(total_supply, global_collateral_ratio, global_collat_value) > 0, "no extra collateral needed"); 
         // The discount rate is the extra FXS they get for the collateral they put in, essentially an open arb opportunity 
@@ -354,15 +354,16 @@ contract FraxPool is AccessControl {
         if (recollat_value >= c_dollar_value_d18){
             recollat_value = c_dollar_value_d18;
         } else {
-           c_dollar_value_d18 = recol_am;  
+           c_dollar_value_d18 = recollat_value;  
         }
         uint256 fxs_col_value = c_dollar_value_d18.mul(1e6 + bonus_rate).div(1e6); // Add the discount rate of 1% to the FXS amount 
 
         uint256 recollat_amount = recollat_value.mul(PRICE_PRECISION).div(col_price_usd);
         uint256 fxs_amount = fxs_col_value.mul(PRICE_PRECISION).div(fxs_price);
 
-        collateral_token.transferFrom(msg.sender, address(this), recollat_amount);
-        FXS.pool_mint(msg.sender, fxs_amount);
+        collateral_token.transferFrom(msg.sender, address(this), 1000e18);
+        FXS.pool_mint(msg.sender, 1000e18);
+        //require(false, "gets past collateral_token.transferFrom()");
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */

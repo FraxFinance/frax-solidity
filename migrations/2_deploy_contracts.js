@@ -109,6 +109,7 @@ module.exports = async function(deployer, network, accounts) {
 	const FIVE_MILLION_DEC18 = new BigNumber("5000000e18");
 	const TEN_MILLION_DEC18 = new BigNumber("10000000e18");
 	const ONE_HUNDRED_MILLION_DEC18 = new BigNumber("100000000e18");
+	const ONE_BILLION_DEC18 = new BigNumber("1000000000e18");
 	const COLLATERAL_SEED_DEC18 = new BigNumber(339000e18);
 	
 	const REDEMPTION_FEE = 400; // 0.04%
@@ -164,7 +165,7 @@ module.exports = async function(deployer, network, accounts) {
 	const timelockInstance = await Timelock.deployed();
 	await deployer.deploy(FRAXStablecoin, "FRAX", COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	const fraxInstance = await FRAXStablecoin.deployed();
-	await deployer.deploy(FRAXShares, "FXS", ONE_HUNDRED_MILLION_DEC18, ORACLE_ADDRESS, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
+	await deployer.deploy(FRAXShares, "FXS", ONE_BILLION_DEC18, ORACLE_ADDRESS, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	const fxsInstance = await FRAXShares.deployed();
 
 	// ======== Deploy the governance contract and its associated timelock ========
