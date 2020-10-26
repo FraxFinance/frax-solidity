@@ -109,13 +109,9 @@ library FraxPoolLibrary {
 
     // Returns value of collateral that must increase to reach recollateralization target (if 0 means no recollateralization)
     function recollateralizeAmount(uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value) public pure returns (uint256 recollateralization_left) {
-        //( , , uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ) = FRAX.frax_info();
-        uint256 target_collat_value = total_supply.mul(global_collateral_ratio).div(1e12); // We want 6 degrees of precision so divide by 1e12 
+        uint256 target_collat_value = total_supply.mul(global_collateral_ratio).div(1e18); // We want 6 degrees of precision so divide by 1e18; total_supply is 1e18 and global_collateral_ratio is 1e6
         // Subtract the current value of collateral from the target value needed, if higher than 0 then system needs to recollateralize
-        if (target_collat_value > global_collat_value) recollateralization_left = target_collat_value.sub(global_collat_value); 
-        
-        else recollateralization_left = 0;
-        
+        uint256 recollateralization_left = target_collat_value.sub(global_collat_value); // If recollateralization is not needed, throws a subtraction underflow
         return(recollateralization_left);
     }
 

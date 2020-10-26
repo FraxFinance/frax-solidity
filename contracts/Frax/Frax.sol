@@ -167,19 +167,13 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         require(collateral_ratio_paused == false, "Collateral Ratio has been paused");
         require(block.timestamp - last_call_time >= 3600 && frax_price() != 1000000, "Must wait >= one hour since last refresh and FRAX price must be >$1 to refresh collateral ratio");  // 3600 seconds means can be called once per hour, 86400 seconds is per day, callable only if FRAX price is not $1
 
-        uint256 tot_collat_value = globalCollateralValue();
-
-        // If tot_collat_value > totalSupply(), this will truncate to 0 and underflow below.
-        // Need to multiply by PRICE_PRECISION to avoid this issue and divide by PRICE_PRECISION later when used in other places
-        // uint256 globalC_ratio = (totalSupply().mul(PRICE_PRECISION)).div(tot_collat_value); 
-        uint256 globalC_ratio;
-        if (tot_collat_value == 0) globalC_ratio = 0;
-        else {
-            // Step increments are 0.25% (upon genesis, changable by setFraxStep()) 
-            if (frax_price() > 1000000) {
-                global_collateral_ratio = global_collateral_ratio.sub(frax_step);
-            }    
-            else {
+        // Step increments are 0.25% (upon genesis, changable by setFraxStep()) 
+        if (frax_price() > 1000000) {
+            global_collateral_ratio = global_collateral_ratio.sub(frax_step);
+        } else {
+            if(global_collateral_ratio.add(frax_step) >= 1000000){
+                global_collateral_ratio = 1000000; // cap collateral ratio at 1.000000
+            } else {
                 global_collateral_ratio = global_collateral_ratio.add(frax_step);
             }
         }
