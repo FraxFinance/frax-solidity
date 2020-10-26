@@ -180,7 +180,7 @@ contract FraxPool is AccessControl {
             fxs_amount_d18
         );
 
-        FXS.burnFrom(msg.sender, fxs_amount_d18); //pool_burn_from
+        FXS.pool_burn_from(msg.sender, fxs_amount_d18);
         FRAX.pool_mint(msg.sender, frax_amount_d18);
     }
 
@@ -204,8 +204,8 @@ contract FraxPool is AccessControl {
 
         (uint256 mint_amount, uint256 fxs_needed) = FraxPoolLibrary.calcMintFractionalFRAX(input_params);
 
+        FXS.pool_burn_from(msg.sender, fxs_needed);
         collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
-        FXS.burnFrom(msg.sender, fxs_needed); //pool_burn_from
         FRAX.pool_mint(msg.sender, mint_amount);
     }
 
@@ -227,8 +227,8 @@ contract FraxPool is AccessControl {
         lastRedeemed[msg.sender] = block.number;
 
         // Move all external functions to the end
-        collateral_token.approve(msg.sender, collateral_needed);
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
+        collateral_token.approve(msg.sender, collateral_needed);
     }
 
     // Will fail if fully collateralized or algorithmic
@@ -273,9 +273,9 @@ contract FraxPool is AccessControl {
         lastRedeemed[msg.sender] = block.number;
         
         // Move all external functions to the end
-        FXS.pool_mint(address(this), frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price));
-        FXS.approve(msg.sender, frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price));
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
+        FXS.approve(msg.sender, frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price));
+        FXS.pool_mint(address(this), frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price));
     }
 
     // After a redemption happens, transfer the newly minted FXS and owed collateral from this pool
@@ -331,7 +331,7 @@ contract FraxPool is AccessControl {
         (uint256 collateral_equivalent_d18) = FraxPoolLibrary.calcBuyBackFXS(input_params);
 
         // Give the sender their desired collateral and burn the FXS
-        FXS.burnFrom(msg.sender, FXS_amount); //pool_burn_from
+        FXS.pool_burn_from(msg.sender, FXS_amount);
         collateral_token.transfer(msg.sender, collateral_equivalent_d18);
     }
 
