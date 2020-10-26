@@ -335,8 +335,8 @@ contract FraxPool is AccessControl {
         (uint256 collateral_equivalent_d18) = FraxPoolLibrary.calcBuyBackFXS(input_params);
 
         // Give the sender their desired collateral and burn the FXS
-        collateral_token.transfer(msg.sender, collateral_equivalent_d18);
         FXS.burnFrom(msg.sender, FXS_amount); //pool_burn_from
+        collateral_token.transfer(msg.sender, collateral_equivalent_d18);
     }
 
     // When the protocol is recollateralizing, we need to give a discount of FXS to hit the new CR target
