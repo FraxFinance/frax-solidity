@@ -35,7 +35,7 @@ contract FraxPool is AccessControl {
     mapping (address => uint256) private redeemCollateralBalances;
     uint256 public unclaimedPoolCollateral;
     uint256 public unclaimedPoolFXS;
-    mapping (address => uint256) lastRedeemed;
+    mapping (address => uint256) public lastRedeemed;
 
     // Constants for various precisions
     uint256 private constant PRICE_PRECISION = 1e6;
