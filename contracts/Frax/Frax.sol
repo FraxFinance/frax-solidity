@@ -130,6 +130,10 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         return oracle_price(PriceChoice.FXS);
     }
 
+    function eth_usd_price() public view returns (uint256) {
+        return uint256(eth_usd_pricer.getLatestPrice()).mul(PRICE_PRECISION).div(uint256(10) ** eth_usd_pricer_decimals);
+    }
+
     // This is needed to avoid costly repeat calls to different getter functions
     // It is cheaper gas-wise to just dump everything and only use some of the info
     function frax_info() public view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
