@@ -36,7 +36,7 @@ library FraxPoolLibrary {
 
     // ================ Functions ================
 
-    function calcMint1t1FRAX(uint256 col_price, uint256 frax_price, uint256 mint_fee, uint256 collateral_amount_d18) public pure returns (uint256) {
+    function calcMint1t1FRAX(uint256 col_price, uint256 mint_fee, uint256 collateral_amount_d18) public pure returns (uint256) {
         uint256 col_price_usd = col_price;
         uint256 c_dollar_value_d18 = (collateral_amount_d18.mul(col_price_usd)).div(1e6);
         return c_dollar_value_d18.sub((c_dollar_value_d18.mul(mint_fee)).div(1e6));
@@ -52,8 +52,6 @@ library FraxPoolLibrary {
     function calcMintFractionalFRAX(MintFF_Params memory params) internal pure returns (uint256, uint256) {
         // Since solidity truncates division, every division operation must be the last operation in the equation to ensure minimum error
         // The contract must check the proper ratio was sent to mint FRAX. We do this by seeing the minimum mintable FRAX based on each amount 
-        uint256 fxs_needed;
-        //uint256 collateral_needed;
         uint256 fxs_dollar_value_d18;
         uint256 c_dollar_value_d18;
         
@@ -63,11 +61,7 @@ library FraxPoolLibrary {
             fxs_dollar_value_d18 = params.fxs_amount.mul(params.fxs_price_usd).div(1e6);
             c_dollar_value_d18 = params.collateral_amount.mul(params.col_price_usd).div(1e6);
 
-            // Recalculate and round down
-            // collateral_needed = c_dollar_value_d18.mul(1e6).div(params.col_price_usd); //not needed
         }
-        //require(params.collateral_token_balance + params.collateral_amount < params.pool_ceiling, "Pool ceiling reached, no more FRAX can be minted with this collateral");
-        
         uint calculated_fxs_dollar_value_d18 = 
                     (c_dollar_value_d18.mul(1e6).div(params.col_ratio))
                     .sub(c_dollar_value_d18);
@@ -108,7 +102,7 @@ library FraxPoolLibrary {
 
 
     // Returns value of collateral that must increase to reach recollateralization target (if 0 means no recollateralization)
-    function recollateralizeAmount(uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value) public pure returns (uint256 recollateralization_left) {
+    function recollateralizeAmount(uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value) public pure returns (uint256) {
         uint256 target_collat_value = total_supply.mul(global_collateral_ratio).div(1e6); // We want 18 decimals of precision so divide by 1e6; total_supply is 1e18 and global_collateral_ratio is 1e6
         // Subtract the current value of collateral from the target value needed, if higher than 0 then system needs to recollateralize
         uint256 recollateralization_left = target_collat_value.sub(global_collat_value); // If recollateralization is not needed, throws a subtraction underflow

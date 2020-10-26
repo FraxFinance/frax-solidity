@@ -5,6 +5,8 @@ import "../FakeCollateral/FakeCollateral_USDT.sol";
 import "../FakeCollateral/FakeCollateral_WETH.sol";
 import "./UniswapV2Router02_Modified.sol";
 
+/* IGNORE THIS CONTRACT, ONLY USED FOR TESTING PURPOSES */
+/*
 contract TestSwap {
 	address public USDT_address;
 	address public WETH_address;
@@ -40,4 +42,4 @@ contract TestSwap {
 		router.swapExactTokensForETH(amountIn, amountOutMin, path, msg.sender, block.timestamp);
 	}
 
-}
+}*/

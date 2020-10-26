@@ -126,7 +126,7 @@ contract FraxPool is AccessControl {
     }
 
     function availableExcessCollatDV() public view returns (uint256) {
-        (, , uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ,) = FRAX.frax_info();
+        ( , , uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ,) = FRAX.frax_info();
         if (global_collateral_ratio > COLLATERAL_RATIO_PRECISION) global_collateral_ratio = COLLATERAL_RATIO_PRECISION; // Handles an overcollateralized contract with CR > 1
         uint256 required_collat_dollar_value_d18 = (total_supply.mul(global_collateral_ratio)).div(COLLATERAL_RATIO_PRECISION); //calculates collateral needed to back each 1 FRAX with $1 of collateral at current collat ratio
         if (global_collat_value > required_collat_dollar_value_d18) return global_collat_value.sub(required_collat_dollar_value_d18);
@@ -154,13 +154,12 @@ contract FraxPool is AccessControl {
     // We separate out the 1t1, fractional and algorithmic minting functions for gas efficiency 
     // 100+% collateral-backed
     function mint1t1FRAX(uint256 collateral_amount_d18) external notMintPaused {
-        (uint256 frax_price, , , uint256 global_collateral_ratio, , uint256 minting_fee, ,) = FRAX.frax_info();
+        ( , , , uint256 global_collateral_ratio, , uint256 minting_fee, ,) = FRAX.frax_info();
         require(global_collateral_ratio >= COLLATERAL_RATIO_MAX, "Collateral ratio must be >= 1");
         require((collateral_token.balanceOf(address(this))) - unclaimedPoolCollateral + collateral_amount_d18 <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
         
         (uint256 frax_amount_d18) = FraxPoolLibrary.calcMint1t1FRAX(
             getCollateralPrice(),
-            frax_price,
             minting_fee,
             collateral_amount_d18
         ); //1 FRAX for each $1 worth of collateral
@@ -172,7 +171,7 @@ contract FraxPool is AccessControl {
 
     // 0% collateral-backed
     function mintAlgorithmicFRAX(uint256 fxs_amount_d18) external notMintPaused {
-        (, uint256 fxs_price, , uint256 global_collateral_ratio, , uint256 minting_fee, ,) = FRAX.frax_info();
+        ( , uint256 fxs_price, , uint256 global_collateral_ratio, , uint256 minting_fee, ,) = FRAX.frax_info();
         require(global_collateral_ratio == 0, "Collateral ratio must be 0");
         
         (uint256 frax_amount_d18) = FraxPoolLibrary.calcMintAlgorithmicFRAX(
@@ -181,7 +180,7 @@ contract FraxPool is AccessControl {
             fxs_amount_d18
         );
 
-        FXS.pool_burn_from(msg.sender, fxs_amount_d18);
+        FXS.burnFrom(msg.sender, fxs_amount_d18); //pool_burn_from
         FRAX.pool_mint(msg.sender, frax_amount_d18);
     }
 
@@ -205,9 +204,6 @@ contract FraxPool is AccessControl {
 
         (uint256 mint_amount, uint256 fxs_needed) = FraxPoolLibrary.calcMintFractionalFRAX(input_params);
 
-        //require((collateral_token.balanceOf(address(this))) - unclaimedPoolCollateral + collateral_amount <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
-
-        // TransferHelper.safeTransferFrom(collateral_address, msg.sender, address(this), collateral_needed);
         collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
         FXS.burnFrom(msg.sender, fxs_needed); //pool_burn_from
         FRAX.pool_mint(msg.sender, mint_amount);
@@ -215,7 +211,7 @@ contract FraxPool is AccessControl {
 
     // Redeem collateral. 100+% collateral-backed
     function redeem1t1FRAX(uint256 FRAX_amount) external notRedeemPaused {
-        (uint256 frax_price, , , uint256 global_collateral_ratio, , , uint256 redemption_fee,) = FRAX.frax_info();
+        (, , , uint256 global_collateral_ratio, , , uint256 redemption_fee,) = FRAX.frax_info();
         require(global_collateral_ratio == COLLATERAL_RATIO_MAX, "Collateral ratio must be == 1");
 
         (uint256 collateral_needed) = FraxPoolLibrary.calcRedeem1t1FRAX(
@@ -238,7 +234,7 @@ contract FraxPool is AccessControl {
     // Will fail if fully collateralized or algorithmic
     // Redeem FRAX for collateral and FXS. .000001% - .999999% collateral-backed
     function redeemFractionalFRAX(uint256 FRAX_amount) external notRedeemPaused {
-        (uint256 frax_price, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee,) = FRAX.frax_info();
+        (, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee,) = FRAX.frax_info();
         require(global_collateral_ratio < COLLATERAL_RATIO_MAX && global_collateral_ratio > 0, "Collateral ratio needs to be between .000001 and .999999");
         uint256 col_price_usd = getCollateralPrice();
 
@@ -322,7 +318,7 @@ contract FraxPool is AccessControl {
     // This can also happen if the collateral ratio > 1
     function buyBackFXS(uint256 FXS_amount) external {
         require(buyBackPaused == false, "Buyback is paused");
-        (uint256 frax_price, uint256 fxs_price, , , , , uint256 redemption_fee,) = FRAX.frax_info();
+        (, uint256 fxs_price, , , , , uint256 redemption_fee,) = FRAX.frax_info();
         
         FraxPoolLibrary.BuybackFXS_Params memory input_params = FraxPoolLibrary.BuybackFXS_Params(
             redemption_fee,
@@ -344,7 +340,7 @@ contract FraxPool is AccessControl {
     // This function simply rewards anyone that sends collateral to a pool with the same amount of FXS + 1% 
     // Anyone can call this function to recollateralize the protocol and take the hardcoded 1% arb opportunity
     function recollateralizeFrax(uint256 collateral_amount_d18) external {
-        (uint256 frax_price, uint256 fxs_price, uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ,) = FRAX.frax_info();
+        (, uint256 fxs_price, uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ,) = FRAX.frax_info();
         //require(FraxPoolLibrary.recollateralizeAmount(total_supply, global_collateral_ratio, global_collat_value) > 0, "no extra collateral needed"); 
         // The discount rate is the extra FXS they get for the collateral they put in, essentially an open arb opportunity 
         uint256 col_price_usd = getCollateralPrice();
@@ -361,8 +357,8 @@ contract FraxPool is AccessControl {
         uint256 recollat_amount = recollat_value.mul(PRICE_PRECISION).div(col_price_usd);
         uint256 fxs_amount = fxs_col_value.mul(PRICE_PRECISION).div(fxs_price);
 
-        collateral_token.transferFrom(msg.sender, address(this), 1000e18);
-        FXS.pool_mint(msg.sender, 1000e18);
+        collateral_token.transferFrom(msg.sender, address(this), recollat_amount);
+        FXS.pool_mint(msg.sender, fxs_amount);
         //require(false, "gets past collateral_token.transferFrom()");
     }
 
