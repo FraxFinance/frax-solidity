@@ -18,7 +18,7 @@ library FraxPoolLibrary {
         uint256 mint_fee; 
         uint256 fxs_price_usd; 
         uint256 frax_price_usd; 
-        uint256 col_price_frax;
+        uint256 col_price_usd;
         uint256 fxs_amount;
         uint256 collateral_amount;
         uint256 collateral_token_balance;
@@ -49,34 +49,34 @@ library FraxPoolLibrary {
     }
 
     // Must be internal because of the struct
-    function calcMintFractionalFRAX(MintFF_Params memory params) internal pure returns (uint256, uint256, uint256) {
+    function calcMintFractionalFRAX(MintFF_Params memory params) internal pure returns (uint256, uint256) {
         // Since solidity truncates division, every division operation must be the last operation in the equation to ensure minimum error
         // The contract must check the proper ratio was sent to mint FRAX. We do this by seeing the minimum mintable FRAX based on each amount 
         uint256 fxs_needed;
-        uint256 collateral_needed;
+        //uint256 collateral_needed;
         uint256 fxs_dollar_value_d18;
         uint256 c_dollar_value_d18;
         
         // Scoping for stack concerns
-        {
-            uint256 col_price_usd = params.col_price_frax;
-        
+        {    
             // USD amounts of the collateral and the FXS
-            fxs_dollar_value_d18 = params.fxs_amount.mul(1e6).div(params.fxs_price_usd);
-            c_dollar_value_d18 = params.collateral_amount.mul(1e6).div(col_price_usd);
+            fxs_dollar_value_d18 = params.fxs_amount.mul(params.fxs_price_usd).div(1e6);
+            c_dollar_value_d18 = params.collateral_amount.mul(params.col_price_usd).div(1e6);
 
             // Recalculate and round down
-            collateral_needed = c_dollar_value_d18.mul(col_price_usd).div(1e6);
+            // collateral_needed = c_dollar_value_d18.mul(1e6).div(params.col_price_usd); //not needed
         }
-        require(params.collateral_token_balance + collateral_needed < params.pool_ceiling, "Pool ceiling reached, no more FRAX can be minted with this collateral");
+        //require(params.collateral_token_balance + params.collateral_amount < params.pool_ceiling, "Pool ceiling reached, no more FRAX can be minted with this collateral");
         
-        fxs_needed = ((c_dollar_value_d18.mul(1e6).div(params.col_ratio)).sub(c_dollar_value_d18)).mul(params.fxs_price_usd).div(1e6);
-        fxs_dollar_value_d18 = fxs_needed.mul(1e6).div(params.fxs_price_usd);
+        uint calculated_fxs_dollar_value_d18 = 
+                    (c_dollar_value_d18.mul(1e6).div(params.col_ratio))
+                    .sub(c_dollar_value_d18);
+
+        uint calculated_fxs_needed = calculated_fxs_dollar_value_d18.mul(1e6).div(params.fxs_price_usd);
 
         return (
-            collateral_needed,
-            (c_dollar_value_d18 + fxs_dollar_value_d18).sub(((c_dollar_value_d18 + fxs_dollar_value_d18).mul(params.mint_fee)).div(1e6)),
-            fxs_needed
+            (c_dollar_value_d18 + calculated_fxs_dollar_value_d18).sub(((c_dollar_value_d18 + calculated_fxs_dollar_value_d18).mul(params.mint_fee)).div(1e6)),
+            calculated_fxs_needed
         );
     }
 

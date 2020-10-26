@@ -152,7 +152,7 @@ contract FraxPool is AccessControl {
     function mint1t1FRAX(uint256 collateral_amount_d18) external notMintPaused {
         (uint256 frax_price, , , uint256 global_collateral_ratio, , uint256 minting_fee, ,) = FRAX.frax_info();
         require(global_collateral_ratio >= 1000000, "Collateral ratio must be >= 1");
-        require((collateral_token.balanceOf(address(this))) + collateral_amount_d18 <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
+        require((collateral_token.balanceOf(address(this))) - unclaimedPoolCollateral + collateral_amount_d18 <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
         
         (uint256 frax_amount_d18) = FraxPoolLibrary.calcMint1t1FRAX(
             getCollateralPrice(),
@@ -186,7 +186,7 @@ contract FraxPool is AccessControl {
     function mintFractionalFRAX(uint256 collateral_amount, uint256 fxs_amount) external notMintPaused {
         (uint256 frax_price, uint256 fxs_price, , uint256 global_collateral_ratio, , uint256 minting_fee, ,) = FRAX.frax_info();
         require(global_collateral_ratio < 1000000 && global_collateral_ratio > 0, "Collateral ratio needs to be between .000001 and .999999");
-        
+        require(collateral_token.balanceOf(address(this)) - unclaimedPoolCollateral + collateral_amount <= pool_ceiling, "Pool ceiling reached, no more FRAX can be minted with this collateral");
         FraxPoolLibrary.MintFF_Params memory input_params = FraxPoolLibrary.MintFF_Params(
             minting_fee, 
             fxs_price, // X FXS / 1 USD
@@ -194,19 +194,19 @@ contract FraxPool is AccessControl {
             getCollateralPrice(),
             fxs_amount,
             collateral_amount,
-            (collateral_token.balanceOf(address(this))),
+            (collateral_token.balanceOf(address(this)) - unclaimedPoolCollateral),
             pool_ceiling,
             global_collateral_ratio
         );
 
-        (uint256 collateral_needed, uint256 mint_amount, uint256 fxs_needed) = FraxPoolLibrary.calcMintFractionalFRAX(input_params);
+        (uint256 mint_amount, uint256 fxs_needed) = FraxPoolLibrary.calcMintFractionalFRAX(input_params);
 
-        require((collateral_token.balanceOf(address(this))) + collateral_needed <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
+        //require((collateral_token.balanceOf(address(this))) - unclaimedPoolCollateral + collateral_amount <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
 
         // TransferHelper.safeTransferFrom(collateral_address, msg.sender, address(this), collateral_needed);
-        collateral_token.transferFrom(msg.sender, address(this), collateral_needed);
-        FRAX.pool_mint(msg.sender, mint_amount);
+        collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
         FXS.burnFrom(msg.sender, fxs_needed);
+        FRAX.pool_mint(msg.sender, mint_amount);
     }
 
     // Redeem collateral. 100+% collateral-backed
@@ -226,7 +226,7 @@ contract FraxPool is AccessControl {
         
         lastRedeemed[msg.sender] = block.number;
 
-        // Move all external functions to the end to avoid re-entrancy attacks
+        // Move all external functions to the end
         collateral_token.approve(msg.sender, collateral_needed);
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
     }
@@ -236,33 +236,35 @@ contract FraxPool is AccessControl {
     function redeemFractionalFRAX(uint256 FRAX_amount) external notRedeemPaused {
         (uint256 frax_price, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee,) = FRAX.frax_info();
         require(global_collateral_ratio < 1000000 && global_collateral_ratio > 0, "Collateral ratio needs to be between .000001 and .999999");
-        uint256 frax_dollar_value_d18 = FRAX_amount; //changing .div(frax_price) to .div(PRICE_PRECISION)
         uint256 col_price_usd = getCollateralPrice();
 
-        frax_dollar_value_d18 = frax_dollar_value_d18.sub((frax_dollar_value_d18.mul(redemption_fee)).div(PRICE_PRECISION));
-        uint256 collateral_dollar_value_d18 = frax_dollar_value_d18.mul(global_collateral_ratio).div(PRICE_PRECISION);
-        uint256 fxs_dollar_value_d18 = frax_dollar_value_d18.sub(collateral_dollar_value_d18);
+        FRAX_amount = FRAX_amount.sub((FRAX_amount.mul(redemption_fee)).div(PRICE_PRECISION));
+        uint256 collateral_dollar_value_d18 = FRAX_amount.mul(global_collateral_ratio).div(PRICE_PRECISION);
+        uint256 fxs_dollar_value_d18 = FRAX_amount.sub(collateral_dollar_value_d18);
 
-        redeemCollateralBalances[msg.sender] += collateral_dollar_value_d18.mul(col_price_usd).div(PRICE_PRECISION);
-        unclaimedPoolCollateral += collateral_dollar_value_d18.mul(col_price_usd).div(PRICE_PRECISION);
+        uint256 collateral_amount = collateral_dollar_value_d18.mul(PRICE_PRECISION).div(col_price_usd);
+        uint256 fxs_amount = fxs_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price);
 
-        redeemFXSBalances[msg.sender] += fxs_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION);
-        unclaimedPoolFXS += fxs_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION);
-        
+        redeemCollateralBalances[msg.sender] += collateral_amount;
+        unclaimedPoolCollateral += collateral_amount;
+
+        redeemFXSBalances[msg.sender] += fxs_amount;
+        unclaimedPoolFXS += fxs_amount;
+
         lastRedeemed[msg.sender] = block.number;
 
-        // Move all external functions to the end to avoid re-entrancy attacks
-        collateral_token.approve(msg.sender, collateral_dollar_value_d18.mul(col_price_usd).div(PRICE_PRECISION));
-        FXS.pool_mint(address(this), fxs_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION));
-        FXS.approve(msg.sender, fxs_dollar_value_d18.mul(fxs_price).div(PRICE_PRECISION));
+        // Move all external functions to the end
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
+        FXS.pool_mint(address(this), fxs_amount);
+        collateral_token.approve(msg.sender, collateral_amount);
+        FXS.approve(msg.sender, fxs_amount);
     }
 
     // Redeem FRAX for FXS. 0% collateral-backed
     function redeemAlgorithmicFRAX(uint256 FRAX_amount) external notRedeemPaused {
         (, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee,) = FRAX.frax_info();
         require(global_collateral_ratio == 0, "Collateral ratio must be 0"); 
-        uint256 frax_dollar_value_d18 = FRAX_amount; //changing .div(frax_price) to .div(PRICE_PRECISION)
+        uint256 frax_dollar_value_d18 = FRAX_amount;
         frax_dollar_value_d18 = frax_dollar_value_d18.sub((frax_dollar_value_d18.mul(redemption_fee)).div(PRICE_PRECISION));
 
         redeemFXSBalances[msg.sender] += frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price);
@@ -270,7 +272,7 @@ contract FraxPool is AccessControl {
         
         lastRedeemed[msg.sender] = block.number;
         
-        // Move all external functions to the end to avoid re-entrancy attacks
+        // Move all external functions to the end
         FXS.pool_mint(address(this), frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price));
         FXS.approve(msg.sender, frax_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price));
         FRAX.pool_burn_from(msg.sender, FRAX_amount);

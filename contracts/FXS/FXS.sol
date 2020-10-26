@@ -101,14 +101,22 @@ contract FRAXShares is ERC20Custom, AccessControl {
     // This function is what other frax pools will call to mint new FXS (similar to the FRAX mint) 
     function pool_mint(address m_address, uint256 m_amount) external onlyPools {
         require(totalSupply() + m_amount < maximum_supply, "No more FXS can be minted, max supply reached");
+        uint32 srcRepNum = numCheckpoints[address(this)];
+        uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
+        uint96 srcRepNew = srcRepOld + uint96(m_amount);
+        _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew);
         trackVotes(address(this), m_address, uint96(m_amount));
         super._mint(m_address, m_amount);
     }
 
     // This function is what other frax pools will call to burn FXS 
     function pool_burn_from(address b_address, uint256 b_amount) external onlyPools {
-        super._burnFrom(b_address, b_amount);
+        uint32 srcRepNum = numCheckpoints[address(this)];
+        uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
+        uint96 srcRepNew = srcRepOld - uint96(b_amount);
+        _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew);
         trackVotes(b_address, address(this), uint96(b_amount)); //NOTE: this doesn't actually burn the votes from existence, only moves them back to FXS contract; need to add this in
+        super._burnFrom(b_address, b_amount);
         emit FXSBurned(b_address, msg.sender, b_amount);
     }
 
