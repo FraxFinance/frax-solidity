@@ -48,7 +48,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     uint256 public global_collateral_ratio; // 6 decimals of precision, e.g. 924102 = 0.924102
     uint256 public redemption_fee; // 6 decimals of precision, divide by 1000000 in calculations for fee
     uint256 public minting_fee; // 6 decimals of precision, divide by 1000000 in calculations for fee
-    uint256 public frax_step; //amount to change the collateralization ratio by upon refreshCollateralRatio()
+    uint256 public frax_step; // Amount to change the collateralization ratio by upon refreshCollateralRatio()
 
     address public DEFAULT_ADMIN_ADDRESS;
     bytes32 public constant COLLATERAL_RATIO_PAUSER = keccak256("COLLATERAL_RATIO_PAUSER");
@@ -109,10 +109,10 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         uint256 price_vs_eth;
 
         if (choice == PriceChoice.FRAX) {
-            price_vs_eth = uint256(fraxEthOracle.consult(weth_address, PRICE_PRECISION));
+            price_vs_eth = uint256(fraxEthOracle.consult(weth_address, PRICE_PRECISION)); // How much FRAX if you put in PRICE_PRECISION WETH
         }
         else if (choice == PriceChoice.FXS) {
-            price_vs_eth = uint256(fxsEthOracle.consult(weth_address, PRICE_PRECISION));
+            price_vs_eth = uint256(fxsEthOracle.consult(weth_address, PRICE_PRECISION)); // How much FXS if you put in PRICE_PRECISION WETH
         }
         else revert("INVALID PRICE CHOICE. Needs to be either 0 (FRAX) or 1 (FXS)");
 
@@ -169,12 +169,15 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     uint256 last_call_time; // Last time the refreshCollateralRatio function was called
     function refreshCollateralRatio() public {
         require(collateral_ratio_paused == false, "Collateral Ratio has been paused");
-        require(block.timestamp - last_call_time >= 3600 && frax_price() != 1000000, "Must wait >= one hour since last refresh and FRAX price must be >$1 to refresh collateral ratio");  // 3600 seconds means can be called once per hour, 86400 seconds is per day, callable only if FRAX price is not $1
+        uint256 frax_price_cur = frax_price();
+        require(block.timestamp - last_call_time >= 3600 && frax_price_cur != 1000000, "Must wait >= one hour since last refresh, and current ratio must not be 1");  // 3600 seconds means can be called once per hour, 86400 seconds is per day, callable only if FRAX price is not $1
 
         // Step increments are 0.25% (upon genesis, changable by setFraxStep()) 
-        if (frax_price() > 1000000) {
+        
+        if (frax_price_cur > 1000000) {
             global_collateral_ratio = global_collateral_ratio.sub(frax_step);
-        } else {
+        } 
+        else {
             if(global_collateral_ratio.add(frax_step) >= 1000000){
                 global_collateral_ratio = 1000000; // cap collateral ratio at 1.000000
             } else {
@@ -273,16 +276,16 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     }
 
     // Sets the FRAX_ETH Uniswap oracle address 
-    function setFRAXEthOracle(address _frax_addr, address _weth_address) public onlyByOwnerOrGovernance {
-        frax_eth_oracle_address = _frax_addr;
-        fraxEthOracle = UniswapPairOracle(_frax_addr); 
+    function setFRAXEthOracle(address _frax_oracle_addr, address _weth_address) public onlyByOwnerOrGovernance {
+        frax_eth_oracle_address = _frax_oracle_addr;
+        fraxEthOracle = UniswapPairOracle(_frax_oracle_addr); 
         weth_address = _weth_address;
     }
 
     // Sets the FXS_ETH Uniswap oracle address 
-    function setFXSEthOracle(address _fxs_addr, address _weth_address) public onlyByOwnerOrGovernance {
-        fxs_eth_oracle_address = _fxs_addr;
-        fxsEthOracle = UniswapPairOracle(_fxs_addr);
+    function setFXSEthOracle(address _fxs_oracle_addr, address _weth_address) public onlyByOwnerOrGovernance {
+        fxs_eth_oracle_address = _fxs_oracle_addr;
+        fxsEthOracle = UniswapPairOracle(_fxs_oracle_addr);
         weth_address = _weth_address;
     }
 

@@ -99,7 +99,7 @@ contract ChainlinkETHUSDPriceConsumerTest {
         // You can can multiply the "true" price by 1e6 to get the frax ecosystem 'price'
         // return price;
 
-        return 39063000000;
+        return 39100000000;
     }
 
     function getDecimals() public view returns (uint8) {

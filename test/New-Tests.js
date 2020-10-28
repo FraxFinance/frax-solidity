@@ -37,22 +37,22 @@ const TestSwap = artifacts.require("Uniswap/TestSwap");
 const WETH = artifacts.require("ERC20/WETH");
 const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
 const FakeCollateral_USDT = artifacts.require("FakeCollateral/FakeCollateral_USDT");
-const FakeCollateral_yUSD = artifacts.require("FakeCollateral/FakeCollateral_yUSD");
+// const FakeCollateral_yUSD = artifacts.require("FakeCollateral/FakeCollateral_yUSD");
 
 // Collateral Pools
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 const Pool_USDT = artifacts.require("Frax/Pools/Pool_USDT");
-const Pool_yUSD = artifacts.require("Frax/Pools/Pool_yUSD");
+// const Pool_yUSD = artifacts.require("Frax/Pools/Pool_yUSD");
 
 // Oracles
 const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_WETH");
 const UniswapPairOracle_FRAX_USDT = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_USDT");
 const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_USDC");
-const UniswapPairOracle_FRAX_yUSD = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_yUSD");
+// const UniswapPairOracle_FRAX_yUSD = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_yUSD");
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_WETH");
 const UniswapPairOracle_FXS_USDT = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_USDT");
 const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_USDC");
-const UniswapPairOracle_FXS_yUSD = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_yUSD");
+// const UniswapPairOracle_FXS_yUSD = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_yUSD");
 const UniswapPairOracle_USDT_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_USDT_WETH");
 const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_USDC_WETH");
 
@@ -66,18 +66,18 @@ const FRAXShares = artifacts.require("FXS/FRAXShares");
 const StakingRewards_FRAX_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_WETH.sol");
 const StakingRewards_FRAX_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDC.sol");
 const StakingRewards_FRAX_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDT.sol");
-const StakingRewards_FRAX_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_yUSD.sol");
+// const StakingRewards_FRAX_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_yUSD.sol");
 const StakingRewards_FXS_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FXS_WETH.sol");
 const StakingRewards_FXS_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDC.sol");
 const StakingRewards_FXS_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDT.sol");
-const StakingRewards_FXS_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FXS_yUSD.sol");
+// const StakingRewards_FXS_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FXS_yUSD.sol");
 
 // Governance related
 const GovernorAlpha = artifacts.require("Governance/GovernorAlpha");
 const Timelock = artifacts.require("Governance/Timelock");
 
 const ONE_MILLION_DEC18 = new BigNumber(1000000e18);
-const COLLATERAL_SEED_DEC18 = new BigNumber(339000e18);
+const COLLATERAL_SEED_DEC18 = new BigNumber(508500e18);
 const ONE_THOUSAND_DEC18 = new BigNumber(1000e18);
 const THREE_THOUSAND_DEC18 = new BigNumber(3000e18);
 const BIG6 = new BigNumber("1e6");
@@ -112,7 +112,7 @@ contract('FRAX', async (accounts) => {
 	let wethInstance;
 	let col_instance_USDC;
 	let col_instance_USDT;
-	let col_instance_yUSD;
+	// let col_instance_yUSD;
 
 	let TestSwap_instance;
 
@@ -136,11 +136,11 @@ contract('FRAX', async (accounts) => {
 	let oracle_instance_FRAX_WETH;
 	let oracle_instance_FRAX_USDC;
 	let oracle_instance_FRAX_USDT;
-	let oracle_instance_FRAX_yUSD;
+	// let oracle_instance_FRAX_yUSD;
 	let oracle_instance_FXS_WETH;
 	let oracle_instance_FXS_USDC;
 	let oracle_instance_FXS_USDT;
-	let oracle_instance_FXS_yUSD;
+	// let oracle_instance_FXS_yUSD;
 
 	// Initialize ETH-USD Chainlink Oracle too
 	let oracle_chainlink_ETH_USD;
@@ -151,47 +151,47 @@ contract('FRAX', async (accounts) => {
 	// Initialize pool instances
 	let pool_instance_USDC;
 	let pool_instance_USDT;
-	let pool_instance_yUSD;
+	// let pool_instance_yUSD;
 
 	// Initialize pair addresses
 	let pair_addr_FRAX_WETH;
 	let pair_addr_FRAX_USDC;
 	let pair_addr_FRAX_USDT;
-	let pair_addr_FRAX_yUSD;
+	// let pair_addr_FRAX_yUSD;
 	let pair_addr_FXS_WETH;
 	let pair_addr_FXS_USDC;
 	let pair_addr_FXS_USDT;
-	let pair_addr_FXS_yUSD;
+	// let pair_addr_FXS_yUSD;
 
 	// Initialize pair contracts
 	let pair_instance_FRAX_WETH;
 	let pair_instance_FRAX_USDC;
 	let pair_instance_FRAX_USDT;
-	let pair_instance_FRAX_yUSD;
+	// let pair_instance_FRAX_yUSD;
 	let pair_instance_FXS_WETH;
 	let pair_instance_FXS_USDC;
 	let pair_instance_FXS_USDT;
-	let pair_instance_FXS_yUSD;
+	// let pair_instance_FXS_yUSD;
 
 	// Initialize pair orders
 	let fraxfxs_first_FRAX_WETH;
 	let fraxfxs_first_FRAX_USDC;
 	let fraxfxs_first_FRAX_USDT;
-	let fraxfxs_first_FRAX_yUSD;
+	// let fraxfxs_first_FRAX_yUSD;
 	let fraxfxs_first_FXS_WETH;
 	let fraxfxs_first_FXS_USDC;
 	let fraxfxs_first_FXS_USDT;
-	let fraxfxs_first_FXS_yUSD;
+	// let fraxfxs_first_FXS_yUSD;
 
 	// Initialize staking instances
 	let stakingInstance_FRAX_WETH;
 	let stakingInstance_FRAX_USDC;
 	let stakingInstance_FRAX_USDT;
-	let stakingInstance_FRAX_yUSD;
+	// let stakingInstance_FRAX_yUSD;
 	let stakingInstance_FXS_WETH;
 	let stakingInstance_FXS_USDC;
 	let stakingInstance_FXS_USDT;
-	let stakingInstance_FXS_yUSD;
+	// let stakingInstance_FXS_yUSD;
 
 	// Initialize running balances
 	let bal_frax = 0;
@@ -220,7 +220,7 @@ contract('FRAX', async (accounts) => {
 		wethInstance = await WETH.deployed();
 		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
 		col_instance_USDT = await FakeCollateral_USDT.deployed(); 
-		col_instance_yUSD = await FakeCollateral_yUSD.deployed(); 
+		// col_instance_yUSD = await FakeCollateral_yUSD.deployed(); 
 
 		TestSwap_instance = await TestSwap.deployed();
 
@@ -234,11 +234,11 @@ contract('FRAX', async (accounts) => {
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.deployed();
 		oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.deployed(); 
 		oracle_instance_FRAX_USDT = await UniswapPairOracle_FRAX_USDT.deployed(); 
-		oracle_instance_FRAX_yUSD = await UniswapPairOracle_FRAX_yUSD.deployed(); 
+		// oracle_instance_FRAX_yUSD = await UniswapPairOracle_FRAX_yUSD.deployed(); 
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
 		oracle_instance_FXS_USDC = await UniswapPairOracle_FXS_USDC.deployed(); 
 		oracle_instance_FXS_USDT = await UniswapPairOracle_FXS_USDT.deployed(); 
-		oracle_instance_FXS_yUSD = await UniswapPairOracle_FXS_yUSD.deployed(); 
+		// oracle_instance_FXS_yUSD = await UniswapPairOracle_FXS_yUSD.deployed(); 
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.deployed();
 		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.deployed();
 
@@ -252,7 +252,7 @@ contract('FRAX', async (accounts) => {
 		// Fill pool instances
 		pool_instance_USDC = await Pool_USDC.deployed();
 		pool_instance_USDT = await Pool_USDT.deployed();
-		pool_instance_yUSD = await Pool_yUSD.deployed();
+		// pool_instance_yUSD = await Pool_yUSD.deployed();
 
 		// Initialize the Uniswap Factory Instance
 		uniswapFactoryInstance = await UniswapV2Factory.deployed(); 
@@ -268,11 +268,11 @@ contract('FRAX', async (accounts) => {
 		pair_addr_FRAX_WETH = await uniswapFactoryInstance.getPair(fraxInstance.address, WETH.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		pair_addr_FRAX_USDC = await uniswapFactoryInstance.getPair(fraxInstance.address, FakeCollateral_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		pair_addr_FRAX_USDT = await uniswapFactoryInstance.getPair(fraxInstance.address, FakeCollateral_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		pair_addr_FRAX_yUSD = await uniswapFactoryInstance.getPair(fraxInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// pair_addr_FRAX_yUSD = await uniswapFactoryInstance.getPair(fraxInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		pair_addr_FXS_WETH = await uniswapFactoryInstance.getPair(fxsInstance.address, WETH.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		pair_addr_FXS_USDC = await uniswapFactoryInstance.getPair(fxsInstance.address, FakeCollateral_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		pair_addr_FXS_USDT = await uniswapFactoryInstance.getPair(fxsInstance.address, FakeCollateral_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		pair_addr_FXS_yUSD = await uniswapFactoryInstance.getPair(fxsInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// pair_addr_FXS_yUSD = await uniswapFactoryInstance.getPair(fxsInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		pair_addr_USDT_WETH = await uniswapFactoryInstance.getPair(FakeCollateral_USDT.address, WETH.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		pair_addr_USDC_WETH = await uniswapFactoryInstance.getPair(FakeCollateral_USDC.address, WETH.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
@@ -280,11 +280,11 @@ contract('FRAX', async (accounts) => {
 		pair_instance_FRAX_WETH = await UniswapV2Pair.at(pair_addr_FRAX_WETH);
 		pair_instance_FRAX_USDC = await UniswapV2Pair.at(pair_addr_FRAX_USDC);
 		pair_instance_FRAX_USDT = await UniswapV2Pair.at(pair_addr_FRAX_USDT);
-		pair_instance_FRAX_yUSD = await UniswapV2Pair.at(pair_addr_FRAX_yUSD);
+		// pair_instance_FRAX_yUSD = await UniswapV2Pair.at(pair_addr_FRAX_yUSD);
 		pair_instance_FXS_WETH = await UniswapV2Pair.at(pair_addr_FXS_WETH);
 		pair_instance_FXS_USDC = await UniswapV2Pair.at(pair_addr_FXS_USDC);
 		pair_instance_FXS_USDT = await UniswapV2Pair.at(pair_addr_FXS_USDT);
-		pair_instance_FXS_yUSD = await UniswapV2Pair.at(pair_addr_FXS_yUSD); 
+		// pair_instance_FXS_yUSD = await UniswapV2Pair.at(pair_addr_FXS_yUSD); 
 		pair_instance_USDT_WETH = await UniswapV2Pair.at(pair_addr_USDT_WETH);
 		pair_instance_USDC_WETH = await UniswapV2Pair.at(pair_addr_USDC_WETH);
 
@@ -292,30 +292,30 @@ contract('FRAX', async (accounts) => {
 		fraxfxs_first_FRAX_WETH = await oracle_instance_FRAX_WETH.token0();
 		fraxfxs_first_FRAX_USDC = await oracle_instance_FRAX_USDC.token0();
 		fraxfxs_first_FRAX_USDT = await oracle_instance_FRAX_USDT.token0();
-		fraxfxs_first_FRAX_yUSD = await oracle_instance_FRAX_yUSD.token0();
+		// fraxfxs_first_FRAX_yUSD = await oracle_instance_FRAX_yUSD.token0();
 		fraxfxs_first_FXS_WETH = await oracle_instance_FXS_WETH.token0();
 		fraxfxs_first_FXS_USDC = await oracle_instance_FXS_USDC.token0();
 		fraxfxs_first_FXS_USDT = await oracle_instance_FXS_USDT.token0();
-		fraxfxs_first_FXS_yUSD = await oracle_instance_FXS_yUSD.token0();
+		// fraxfxs_first_FXS_yUSD = await oracle_instance_FXS_yUSD.token0();
 
 		fraxfxs_first_FRAX_WETH = fraxInstance.address == fraxfxs_first_FRAX_WETH;
 		fraxfxs_first_FRAX_USDC = fraxInstance.address == fraxfxs_first_FRAX_USDC;
 		fraxfxs_first_FRAX_USDT = fraxInstance.address == fraxfxs_first_FRAX_USDT;
-		fraxfxs_first_FRAX_yUSD = fraxInstance.address == fraxfxs_first_FRAX_yUSD;
+		// fraxfxs_first_FRAX_yUSD = fraxInstance.address == fraxfxs_first_FRAX_yUSD;
 		fraxfxs_first_FXS_WETH = fxsInstance.address == fraxfxs_first_FXS_WETH;
 		fraxfxs_first_FXS_USDC = fxsInstance.address == fraxfxs_first_FXS_USDC;
 		fraxfxs_first_FXS_USDT = fxsInstance.address == fraxfxs_first_FXS_USDT;
-		fraxfxs_first_FXS_yUSD = fxsInstance.address == fraxfxs_first_FXS_yUSD;
+		// fraxfxs_first_FXS_yUSD = fxsInstance.address == fraxfxs_first_FXS_yUSD;
 
 		// Fill the staking rewards instances
 		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
 		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.deployed();
 		stakingInstance_FRAX_USDT = await StakingRewards_FRAX_USDT.deployed();
-		stakingInstance_FRAX_yUSD = await StakingRewards_FRAX_yUSD.deployed();
+		// stakingInstance_FRAX_yUSD = await StakingRewards_FRAX_yUSD.deployed();
 		stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.deployed();
 		stakingInstance_FXS_USDC = await StakingRewards_FXS_USDC.deployed();
 		stakingInstance_FXS_USDT = await StakingRewards_FXS_USDT.deployed();
-		stakingInstance_FXS_yUSD = await StakingRewards_FXS_yUSD.deployed();
+		// stakingInstance_FXS_yUSD = await StakingRewards_FXS_yUSD.deployed();
     });
 
 	// INITIALIZATION
@@ -329,22 +329,25 @@ contract('FRAX', async (accounts) => {
 		await oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await oracle_instance_FRAX_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await oracle_instance_FRAX_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_FRAX_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await oracle_instance_FRAX_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await oracle_instance_FXS_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await oracle_instance_FXS_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await oracle_instance_FXS_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_FXS_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await oracle_instance_FXS_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		await oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await oracle_instance_USDC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Get the prices
 		// Price is in collateral needed for 1 FRAX
 		let frax_price_from_FRAX_WETH = (new BigNumber(await oracle_instance_FRAX_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
 		let frax_price_from_FRAX_USDC = (new BigNumber(await oracle_instance_FRAX_USDC.consult.call(FakeCollateral_USDC.address, 1e6))).div(BIG6).toNumber();
 		let frax_price_from_FRAX_USDT = (new BigNumber(await oracle_instance_FRAX_USDT.consult.call(FakeCollateral_USDT.address, 1e6))).div(BIG6).toNumber();
-		let frax_price_from_FRAX_yUSD = (new BigNumber(await oracle_instance_FRAX_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
+		// let frax_price_from_FRAX_yUSD = (new BigNumber(await oracle_instance_FRAX_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
 		let fxs_price_from_FXS_WETH = (new BigNumber(await oracle_instance_FXS_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
 		let fxs_price_from_FXS_USDC = (new BigNumber(await oracle_instance_FXS_USDC.consult.call(FakeCollateral_USDC.address, 1e6))).div(BIG6).toNumber();
 		let fxs_price_from_FXS_USDT = (new BigNumber(await oracle_instance_FXS_USDT.consult.call(FakeCollateral_USDT.address, 1e6))).div(BIG6).toNumber();
-		let fxs_price_from_FXS_yUSD = (new BigNumber(await oracle_instance_FXS_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
+		// let fxs_price_from_FXS_yUSD = (new BigNumber(await oracle_instance_FXS_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
 		let USDT_price_from_USDT_WETH = (new BigNumber(await oracle_instance_USDT_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
 		let USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
 
@@ -352,11 +355,11 @@ contract('FRAX', async (accounts) => {
 		console.log("frax_price_from_FRAX_WETH: ", frax_price_from_FRAX_WETH.toString(), " FRAX = 1 WETH");
 		console.log("frax_price_from_FRAX_USDC: ", frax_price_from_FRAX_USDC.toString(), " FRAX = 1 USDC");
 		console.log("frax_price_from_FRAX_USDT: ", frax_price_from_FRAX_USDT.toString(), " FRAX = 1 USDT");
-		console.log("frax_price_from_FRAX_yUSD: ", frax_price_from_FRAX_yUSD.toString(), " FRAX = 1 yUSD");
+		// console.log("frax_price_from_FRAX_yUSD: ", frax_price_from_FRAX_yUSD.toString(), " FRAX = 1 yUSD");
 		console.log("fxs_price_from_FXS_WETH: ", fxs_price_from_FXS_WETH.toString(), " FXS = 1 WETH");
 		console.log("fxs_price_from_FXS_USDC: ", fxs_price_from_FXS_USDC.toString(), " FXS = 1 USDC");
 		console.log("fxs_price_from_FXS_USDT: ", fxs_price_from_FXS_USDT.toString(), " FXS = 1 USDT");
-		console.log("fxs_price_from_FXS_yUSD: ", fxs_price_from_FXS_yUSD.toString(), " FXS = 1 yUSD");
+		// console.log("fxs_price_from_FXS_yUSD: ", fxs_price_from_FXS_yUSD.toString(), " FXS = 1 yUSD");
 		console.log("USDT_price_from_USDT_WETH: ", USDT_price_from_USDT_WETH.toString(), " USDT = 1 WETH");
 		console.log("USDC_price_from_USDC_WETH: ", USDC_price_from_USDC_WETH.toString(), " USDC = 1 WETH");
 
@@ -364,7 +367,7 @@ contract('FRAX', async (accounts) => {
 		await wethInstance.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await col_instance_USDC.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await col_instance_USDT.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await col_instance_yUSD.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await col_instance_yUSD.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await fraxInstance.approve(routerInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await fxsInstance.approve(routerInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
@@ -372,159 +375,159 @@ contract('FRAX', async (accounts) => {
 		await wethInstance.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await col_instance_USDC.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await col_instance_USDT.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await col_instance_yUSD.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await col_instance_yUSD.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await fraxInstance.approve(swapToPriceInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await fxsInstance.approve(swapToPriceInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 
-		console.log("===============FIRST SWAPS===============");
+		// console.log("===============FIRST SWAPS===============");
 		
-		//--- FRAX
+		// //--- FRAX
 
-		// Handle FRAX / WETH
-		// Targeting 324 FRAX / 1 WETH
-		await swapToPriceInstance.swapToPrice(
-			fraxInstance.address,
-			wethInstance.address,
-			new BigNumber(324e6),
-			new BigNumber(1e6),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
+		// // Handle FRAX / WETH
+		// // Targeting 390.6 FRAX / 1 WETH
+		// await swapToPriceInstance.swapToPrice(
+		// 	fraxInstance.address,
+		// 	wethInstance.address,
+		// 	new BigNumber(3906e5),
+		// 	new BigNumber(1e6),
+		// 	new BigNumber(100e18),
+		// 	new BigNumber(100e18),
+		// 	COLLATERAL_FRAX_AND_FXS_OWNER,
+		// 	new BigNumber(2105300114),
+		// 	{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		// )
 
-		// Handle FRAX / USDC
-		// Targeting 1.003 FRAX / 1 USDC
-		await swapToPriceInstance.swapToPrice(
-			fraxInstance.address,
-			col_instance_USDC.address,
-			new BigNumber(1003e3),
-			new BigNumber(997e3),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
+		// // Handle FRAX / USDC
+		// // Targeting 1.003 FRAX / 1 USDC
+		// await swapToPriceInstance.swapToPrice(
+		// 	fraxInstance.address,
+		// 	col_instance_USDC.address,
+		// 	new BigNumber(1003e3),
+		// 	new BigNumber(997e3),
+		// 	new BigNumber(100e18),
+		// 	new BigNumber(100e18),
+		// 	COLLATERAL_FRAX_AND_FXS_OWNER,
+		// 	new BigNumber(2105300114),
+		// 	{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		// )
 
-		// Handle FRAX / USDT
-		// Targeting 0.995 FRAX / 1 USDT
-		await swapToPriceInstance.swapToPrice(
-			fraxInstance.address,
-			col_instance_USDT.address,
-			new BigNumber(995e3),
-			new BigNumber(1005e3),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
+		// // Handle FRAX / USDT
+		// // Targeting 0.995 FRAX / 1 USDT
+		// await swapToPriceInstance.swapToPrice(
+		// 	fraxInstance.address,
+		// 	col_instance_USDT.address,
+		// 	new BigNumber(995e3),
+		// 	new BigNumber(1005e3),
+		// 	new BigNumber(100e18),
+		// 	new BigNumber(100e18),
+		// 	COLLATERAL_FRAX_AND_FXS_OWNER,
+		// 	new BigNumber(2105300114),
+		// 	{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		// )
 
-		// Handle FRAX / yUSD
-		// Targeting 0.998 FRAX / 1 yUSD
-		await swapToPriceInstance.swapToPrice(
-			fraxInstance.address,
-			col_instance_yUSD.address,
-			new BigNumber(998e3),
-			new BigNumber(1002e3),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
+		// // Handle FRAX / yUSD
+		// // Targeting 0.998 FRAX / 1 yUSD
+		// // await swapToPriceInstance.swapToPrice(
+		// // 	fraxInstance.address,
+		// // 	col_instance_yUSD.address,
+		// // 	new BigNumber(998e3),
+		// // 	new BigNumber(1002e3),
+		// // 	new BigNumber(100e18),
+		// // 	new BigNumber(100e18),
+		// // 	COLLATERAL_FRAX_AND_FXS_OWNER,
+		// // 	new BigNumber(2105300114),
+		// // 	{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		// // )
 
-		//--- FXS
+		// //--- FXS
 
-		// Handle FXS / WETH
-		// Targeting 1620 FXS / 1 WETH
-		await swapToPriceInstance.swapToPrice(
-			fxsInstance.address,
-			wethInstance.address,
-			new BigNumber(1620e6),
-			new BigNumber(1e6),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
+		// // Handle FXS / WETH
+		// // Targeting 1955 FXS / 1 WETH
+		// await swapToPriceInstance.swapToPrice(
+		// 	fxsInstance.address,
+		// 	wethInstance.address,
+		// 	new BigNumber(1955e6),
+		// 	new BigNumber(1e6),
+		// 	new BigNumber(100e18),
+		// 	new BigNumber(100e18),
+		// 	COLLATERAL_FRAX_AND_FXS_OWNER,
+		// 	new BigNumber(2105300114),
+		// 	{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		// )
 
-		// Handle FXS / USDC
-		// Targeting 5.2 FXS / 1 USDC
-		await swapToPriceInstance.swapToPrice(
-			fxsInstance.address,
-			col_instance_USDC.address,
-			new BigNumber(52e5),
-			new BigNumber(1e6),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
+		// // Handle FXS / USDC
+		// // Targeting 5.2 FXS / 1 USDC
+		// await swapToPriceInstance.swapToPrice(
+		// 	fxsInstance.address,
+		// 	col_instance_USDC.address,
+		// 	new BigNumber(52e5),
+		// 	new BigNumber(1e6),
+		// 	new BigNumber(100e18),
+		// 	new BigNumber(100e18),
+		// 	COLLATERAL_FRAX_AND_FXS_OWNER,
+		// 	new BigNumber(2105300114),
+		// 	{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		// )
 
 
-		// Handle FXS / USDT
-		// Targeting 5.1 FXS / 1 USDT
-		await swapToPriceInstance.swapToPrice(
-			fxsInstance.address,
-			col_instance_USDT.address,
-			new BigNumber(51e5),
-			new BigNumber(1e6),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
+		// // Handle FXS / USDT
+		// // Targeting 5.1 FXS / 1 USDT
+		// await swapToPriceInstance.swapToPrice(
+		// 	fxsInstance.address,
+		// 	col_instance_USDT.address,
+		// 	new BigNumber(51e5),
+		// 	new BigNumber(1e6),
+		// 	new BigNumber(100e18),
+		// 	new BigNumber(100e18),
+		// 	COLLATERAL_FRAX_AND_FXS_OWNER,
+		// 	new BigNumber(2105300114),
+		// 	{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		// )
 
-		// Handle FXS / yUSD
-		// Targeting 4.9 FXS / 1 yUSD
-		await swapToPriceInstance.swapToPrice(
-			fxsInstance.address,
-			col_instance_yUSD.address,
-			new BigNumber(49e5),
-			new BigNumber(1e6),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
+		// // Handle FXS / yUSD
+		// // Targeting 4.9 FXS / 1 yUSD
+		// // await swapToPriceInstance.swapToPrice(
+		// // 	fxsInstance.address,
+		// // 	col_instance_yUSD.address,
+		// // 	new BigNumber(49e5),
+		// // 	new BigNumber(1e6),
+		// // 	new BigNumber(100e18),
+		// // 	new BigNumber(100e18),
+		// // 	COLLATERAL_FRAX_AND_FXS_OWNER,
+		// // 	new BigNumber(2105300114),
+		// // 	{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		// // )
 
-		// Advance 24 hrs so the period can be computed
-		await time.increase(86400 + 1);
-		await time.advanceBlock();
+		// // Advance 24 hrs so the period can be computed
+		// await time.increase(86400 + 1);
+		// await time.advanceBlock();
 
-		// Make sure the prices are updated
-		await oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_FRAX_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_FRAX_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_FRAX_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_FXS_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_FXS_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_FXS_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_FXS_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await oracle_instance_USDC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// // Make sure the prices are updated
+		// await oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await oracle_instance_FRAX_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await oracle_instance_FRAX_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// // await oracle_instance_FRAX_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await oracle_instance_FXS_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await oracle_instance_FXS_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await oracle_instance_FXS_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// // await oracle_instance_FXS_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await oracle_instance_USDC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		// Advance 24 hrs so the period can be computed
-		await time.increase(86400 + 1);
-		await time.advanceBlock();
+		// // Advance 24 hrs so the period can be computed
+		// await time.increase(86400 + 1);
+		// await time.advanceBlock();
 
 		// Get the prices
 		frax_price_from_FRAX_WETH = (new BigNumber(await oracle_instance_FRAX_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
 		frax_price_from_FRAX_USDC = (new BigNumber(await oracle_instance_FRAX_USDC.consult.call(FakeCollateral_USDC.address, 1e6))).div(BIG6).toNumber();
 		frax_price_from_FRAX_USDT = (new BigNumber(await oracle_instance_FRAX_USDT.consult.call(FakeCollateral_USDT.address, 1e6))).div(BIG6).toNumber();
-		frax_price_from_FRAX_yUSD = (new BigNumber(await oracle_instance_FRAX_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
+		// frax_price_from_FRAX_yUSD = (new BigNumber(await oracle_instance_FRAX_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
 		fxs_price_from_FXS_WETH = (new BigNumber(await oracle_instance_FXS_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
 		fxs_price_from_FXS_USDC = (new BigNumber(await oracle_instance_FXS_USDC.consult.call(FakeCollateral_USDC.address, 1e6))).div(BIG6).toNumber();
 		fxs_price_from_FXS_USDT = (new BigNumber(await oracle_instance_FXS_USDT.consult.call(FakeCollateral_USDT.address, 1e6))).div(BIG6).toNumber();
-		fxs_price_from_FXS_yUSD = (new BigNumber(await oracle_instance_FXS_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
+		// fxs_price_from_FXS_yUSD = (new BigNumber(await oracle_instance_FXS_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
 		USDT_price_from_USDT_WETH = (new BigNumber(await oracle_instance_USDT_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
 		USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
 
@@ -753,7 +756,7 @@ contract('FRAX', async (accounts) => {
 		// Link the FAKE collateral pool to the FRAX contract
 		await col_instance_USDC.transfer(pool_instance_USDC.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await col_instance_USDT.transfer(pool_instance_USDT.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await col_instance_yUSD.transfer(pool_instance_yUSD.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await col_instance_yUSD.transfer(pool_instance_yUSD.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Refresh the collateral ratio
 		const totalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18);
@@ -783,8 +786,8 @@ contract('FRAX', async (accounts) => {
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
 		console.log("globalCollateralRatio: ", globalCollateralRatio);
@@ -839,8 +842,8 @@ contract('FRAX', async (accounts) => {
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
 		console.log("globalCollateralRatio: ", globalCollateralRatio);
@@ -850,7 +853,7 @@ contract('FRAX', async (accounts) => {
 		// Deposit some collateral to move the collateral ratio above 1
 		await col_instance_USDC.transfer(pool_instance_USDC.address, THREE_THOUSAND_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await col_instance_USDT.transfer(pool_instance_USDT.address, THREE_THOUSAND_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await col_instance_yUSD.transfer(pool_instance_yUSD.address, THREE_THOUSAND_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await col_instance_yUSD.transfer(pool_instance_yUSD.address, THREE_THOUSAND_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Note the collateral ratio
 		const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
@@ -866,7 +869,7 @@ contract('FRAX', async (accounts) => {
 		console.log("bal_frax: ", bal_frax.toNumber());
 		console.log("col_bal_usdc: ", col_bal_usdc.toNumber());
 		console.log("pool_bal_usdc: ", pool_bal_usdc.toNumber());
-		console.log("FRAX price: " , new BigNumber(await fraxInstance.frax_price.call()).div(BIG6).toNumber());
+		console.log("FRAX price (USD): " , new BigNumber(await fraxInstance.frax_price.call()).div(BIG6).toNumber());
 
 		// Need to approve first so the pool contract can use transfer
 		const frax_amount = new BigNumber("100e18");
@@ -893,34 +896,70 @@ contract('FRAX', async (accounts) => {
 	});
 
 
-/*
+
 	// REDUCE COLLATERAL RATIO, ignore this
 	it("Reduces the collateral ratio: 1-to-1 Phase => Fractional Phase", async () => {
 		console.log("=========================Reducing the collateral ratio=========================")
-		const tokensToMint = (new BigNumber(1000000e18)).toString();
-		await fraxInstance.mint(tokensToMint, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("global_collateral_ratio:", (new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6)).toNumber());
-		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
-		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		// const tokensToMint = new BigNumber(1000000e18);
+		// await fraxInstance.mint(tokensToMint, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		// console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+
+
+		// Add allowances to the swapToPrice contract
+		await wethInstance.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await fraxInstance.approve(swapToPriceInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Print the current FRAX price
+		frax_price_from_FRAX_WETH = (new BigNumber(await oracle_instance_FRAX_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
+		console.log("frax_price_from_FRAX_WETH (before): ", frax_price_from_FRAX_WETH.toString(), " FRAX = 1 WETH");
+		
+		// Swap the FRAX price upwards
+		// Targeting 350 FRAX / 1 WETH
+		await swapToPriceInstance.swapToPrice(
+			fraxInstance.address,
+			wethInstance.address,
+			new BigNumber(350e6),
+			new BigNumber(1e6),
+			new BigNumber(100e18),
+			new BigNumber(100e18),
+			COLLATERAL_FRAX_AND_FXS_OWNER,
+			new BigNumber(2105300114),
+			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		)
+
+		// Advance 24 hrs so the period can be computed
+		await time.increase(86400 + 1);
+		await time.advanceBlock();
+
+		// Make sure the price is updated
+		await oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Print the new FRAX price
+		frax_price_from_FRAX_WETH = (new BigNumber(await oracle_instance_FRAX_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
+		console.log("frax_price_from_FRAX_WETH (after): ", frax_price_from_FRAX_WETH.toString(), " FRAX = 1 WETH");
+		
+		for(let i = 0; i < 13; i++){ // Drop the collateral ratio by 13 * 0.25%
+			await time.increase(3600 + 1);
+			await time.advanceBlock();
+			await fraxInstance.refreshCollateralRatio();
+			console.log("global_collateral_ratio:", (new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6)).toNumber());
+		}
+
 	});
-*/
+
+
 	// MINTING PART 2
 	// ================================================================
 
 	it('Mint some FRAX using FXS and USDC (collateral ratio between .000001 and .999999) [mintFractionalFRAX]', async () => {
 		console.log("=========================mintFractionalFRAX=========================");
-		for(let i = 0; i < 13; i++){ //drop the collateral ratio by 13 * 0.25%
-			await time.increase(3600 + 1);
-			await time.advanceBlock();
-			await fraxInstance.refreshCollateralRatio();
-		}
-
 		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
 		console.log("globalCollateralRatio: ", globalCollateralRatio);
@@ -969,6 +1008,8 @@ contract('FRAX', async (accounts) => {
 		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
 
 	});
+
+
 /*
 	it('SHOULD FAIL: Mint some FRAX using FXS and USDC, but doesn\'t send in enough FXS [mintFractionalFRAX]', async () => {
 		console.log("=========================mintFractionalFRAX=========================");
@@ -977,8 +1018,8 @@ contract('FRAX', async (accounts) => {
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
 		console.log("globalCollateralRatio: ", globalCollateralRatio);
@@ -1034,8 +1075,8 @@ contract('FRAX', async (accounts) => {
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
 		console.log("globalCollateralRatio: ", globalCollateralRatio);
@@ -1093,8 +1134,8 @@ contract('FRAX', async (accounts) => {
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
 		console.log("globalCollateralRatio: ", globalCollateralRatio);
@@ -1157,8 +1198,8 @@ contract('FRAX', async (accounts) => {
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("USDC price: ", (new BigNumber(await pool_instance_USDC.getCollateralPrice.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
@@ -1211,8 +1252,8 @@ contract('FRAX', async (accounts) => {
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("USDC price: ", (new BigNumber(await pool_instance_USDC.getCollateralPrice.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
@@ -1233,6 +1274,9 @@ contract('FRAX', async (accounts) => {
 			await time.increase(3600 + 1);
 			await time.advanceBlock();
 			await fraxInstance.refreshCollateralRatio();
+			if (i % 20 == 0) { 
+				console.log("global_collateral_ratio:", (new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6)).toNumber());
+			}
 		}
 		
 		// drop it 3 more times
@@ -1250,8 +1294,8 @@ contract('FRAX', async (accounts) => {
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
 		console.log("globalCollateralRatio: ", globalCollateralRatio);
@@ -1304,8 +1348,8 @@ contract('FRAX', async (accounts) => {
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
 		console.log("globalCollateralRatio: ", globalCollateralRatio);
@@ -1353,8 +1397,8 @@ contract('FRAX', async (accounts) => {
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
 		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
-		console.log("FRAX price: ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
-		console.log("FXS price: ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
 		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
 		console.log("totalSupplyFXS: ", totalSupplyFXS);
 		console.log("globalCollateralRatio: ", globalCollateralRatio);
@@ -1395,6 +1439,7 @@ contract('FRAX', async (accounts) => {
 		console.log("fxs_price: $", fxs_price.toNumber());
 
 		// Buy back some FRAX
+		console.log("accounts[0] buyBackFXS() using 40,000 FXS");
 		await pool_instance_USDC.buyBackFXS(fxs_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		/*
@@ -1417,7 +1462,7 @@ contract('FRAX', async (accounts) => {
 		// Note the new collateral ratio
 		const collateral_ratio_after = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
 		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
-		console.log("getCollateralPrice() from FRAX_pool_USDC: ", (new BigNumber(await pool_instance_USDC.getCollateralPrice.call())).toNumber());
+		console.log("getCollateralPrice() from FRAX_pool_USDC: ", (new BigNumber(await pool_instance_USDC.getCollateralPrice.call()).div(BIG6)).toNumber());
 	});
 
 
