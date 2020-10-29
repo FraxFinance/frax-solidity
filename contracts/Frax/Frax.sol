@@ -49,6 +49,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     uint256 public redemption_fee; // 6 decimals of precision, divide by 1000000 in calculations for fee
     uint256 public minting_fee; // 6 decimals of precision, divide by 1000000 in calculations for fee
     uint256 public frax_step; // Amount to change the collateralization ratio by upon refreshCollateralRatio()
+    uint256 public refresh_cooldown; // Seconds to wait before being able to run refreshCollateralRatio() again
 
     address public DEFAULT_ADMIN_ADDRESS;
     bytes32 public constant COLLATERAL_RATIO_PAUSER = keccak256("COLLATERAL_RATIO_PAUSER");
@@ -98,6 +99,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         grantRole(COLLATERAL_RATIO_PAUSER, timelock_address);
         frax_step = 2500; //6 decimals of precision, equal to 0.25%
         global_collateral_ratio = 1000000; //frax system starts off fully collateralized (6 decimals of precision)
+        refresh_cooldown = 3600; //refresh cooldown period is set to 1 hour (3600 seconds) at genesis
     }
 
     /* ========== VIEWS ========== */
@@ -170,7 +172,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     function refreshCollateralRatio() public {
         require(collateral_ratio_paused == false, "Collateral Ratio has been paused");
         uint256 frax_price_cur = frax_price();
-        require(block.timestamp - last_call_time >= 3600 && frax_price_cur != 1000000, "Must wait >= one hour since last refresh, and current ratio must not be 1");  // 3600 seconds means can be called once per hour, 86400 seconds is per day, callable only if FRAX price is not $1
+        require(block.timestamp - last_call_time >= refresh_cooldown && frax_price_cur != 1000000, "Must wait out for the refresh cooldown since last refresh, and current FRAX price must not be 1");
 
         // Step increments are 0.25% (upon genesis, changable by setFraxStep()) 
         
@@ -260,6 +262,10 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     function setFraxStep(uint256 _new_step) public onlyByOwnerOrGovernance {
         frax_step = _new_step;
     }  
+
+    function setRefreshCooldown(uint256 _new_cooldown) public onlyByOwnerOrGovernance {
+    	refresh_cooldown = _new_cooldown;
+    }
 
     function setFXSAddress(address _fxs_address) public onlyByOwnerOrGovernance {
         fxs_address = _fxs_address;
