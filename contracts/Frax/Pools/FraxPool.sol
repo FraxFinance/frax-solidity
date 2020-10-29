@@ -316,6 +316,33 @@ contract FraxPool is AccessControl {
     }
 
 
+    // When the protocol is recollateralizing, we need to give a discount of FXS to hit the new CR target
+    // Thus, if the target collateral ratio is higher than the actual value of collateral, minters get FXS for adding collateral
+    // This function simply rewards anyone that sends collateral to a pool with the same amount of FXS + the bonus rate
+    // Anyone can call this function to recollateralize the protocol and take the extra FXS value from the bonus rate as an arb opportunity
+    function recollateralizeFrax(uint256 _collateral_amount) public {
+        ( , uint256 fxs_price, uint256 frax_total_supply , uint256 global_collateral_ratio, uint256 global_collat_value, , , ) = FRAX.frax_info();
+        uint256 collat_value_attempted = _collateral_amount.mul(getCollateralPrice()).div(1e6);
+
+        uint256 effective_collateral_ratio = global_collat_value.mul(1e6).div(frax_total_supply); //returns it in 1e6
+
+        uint256 recollat_possible = (global_collateral_ratio.mul(frax_total_supply).sub(frax_total_supply.mul(effective_collateral_ratio))).div(1e6);
+
+        uint256 amount_to_recollat;
+        if(collat_value_attempted <= recollat_possible){
+            amount_to_recollat = collat_value_attempted;
+        } else {
+            amount_to_recollat = recollat_possible;
+        }
+
+        uint256 collateral_units = amount_to_recollat.mul(1e6).div(getCollateralPrice());
+        uint256 fxs_paid_back = amount_to_recollat.mul(1e6 + bonus_rate).div(fxs_price);
+
+        collateral_token.transferFrom(msg.sender, address(this), collateral_units);
+        FXS.pool_mint(msg.sender, fxs_paid_back);
+        
+    }
+
     // Function can be called by an FXS holder to have the protocol buy back FXS with excess collateral value from a desired collateral pool
     // This can also happen if the collateral ratio > 1
     function buyBackFXS(uint256 FXS_amount) external {
@@ -335,33 +362,6 @@ contract FraxPool is AccessControl {
         // Give the sender their desired collateral and burn the FXS
         FXS.pool_burn_from(msg.sender, FXS_amount);
         collateral_token.transfer(msg.sender, collateral_equivalent_d18);
-    }
-
-    // When the protocol is recollateralizing, we need to give a discount of FXS to hit the new CR target
-    // Thus, if the target collateral ratio is higher than the actual value of collateral, minters get FXS for adding collateral
-    // This function simply rewards anyone that sends collateral to a pool with the same amount of FXS + 1% 
-    // Anyone can call this function to recollateralize the protocol and take the hardcoded 1% arb opportunity
-    function recollateralizeFrax(uint256 collateral_amount_d18) external {
-        (, uint256 fxs_price, uint256 total_supply, uint256 global_collateral_ratio, uint256 global_collat_value, , ,) = FRAX.frax_info();
-
-        // The discount rate is the extra FXS they get for the collateral they put in, essentially an open arb opportunity 
-        uint256 col_price_usd = getCollateralPrice();
-        uint256 c_dollar_value_d18 = (collateral_amount_d18.mul(col_price_usd)).div(PRICE_PRECISION);
-        uint256 recollat_value = FraxPoolLibrary.recollateralizeAmount(total_supply, global_collateral_ratio, global_collat_value);
-        
-        if (recollat_value >= c_dollar_value_d18){
-            recollat_value = c_dollar_value_d18;
-        } else {
-           c_dollar_value_d18 = recollat_value;  
-        }
-        uint256 fxs_col_value = c_dollar_value_d18.mul(1e6 + bonus_rate).div(1e6); // Add the discount rate of 1% to the FXS amount 
-
-        uint256 recollat_amount = recollat_value.mul(PRICE_PRECISION).div(col_price_usd);
-        uint256 fxs_amount = fxs_col_value.mul(PRICE_PRECISION).div(fxs_price);
-
-        FXS.pool_mint(msg.sender, fxs_amount);
-        collateral_token.transferFrom(msg.sender, address(this), recollat_amount);
-        //require(false, "gets past collateral_token.transferFrom()");
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
