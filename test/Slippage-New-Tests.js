@@ -778,7 +778,7 @@ contract('FRAX', async (accounts) => {
 		console.log("collateral_ratio_refreshed: ", collateral_ratio_refreshed.toNumber());
 		col_rat = collateral_ratio_refreshed;
 	});
-
+/*
 	it('Mint some FRAX using USDC as collateral (collateral ratio = 1) [mint1t1FRAX]', async () => {
 		console.log("=========================mint1t1FRAX=========================");
 		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
@@ -816,6 +816,62 @@ contract('FRAX', async (accounts) => {
 		console.log("accounts[0] mint1t1FRAX() with 100 USDC; slippage limit of 1%");
 		const collateral_price = (new BigNumber(await pool_instance_USDC.getCollateralPrice.call()).div(BIG6)).toNumber()
 		const FRAX_out_min = new BigNumber(collateral_amount.times(collateral_price).times(0.99)); // 1% slippage
+		await pool_instance_USDC.mint1t1FRAX(collateral_amount, FRAX_out_min, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Note the collateral and FRAX amounts after minting
+		const frax_after = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const pool_collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(pool_instance_USDC.address)).div(BIG18);
+		// assert.equal(frax_after, 103.9584);
+		// assert.equal(collateral_after, 8999900);
+		// assert.equal(pool_collateral_after, 1000100);
+		console.log("accounts[0] frax change: ", frax_after.toNumber() - frax_before.toNumber());
+		console.log("accounts[0] collateral change: ", collateral_after.toNumber() - collateral_before.toNumber());
+		console.log("FRAX_pool_USDC collateral change: ", pool_collateral_after.toNumber() - pool_collateral_before.toNumber());
+
+		// Note the new collateral ratio
+		const collateral_ratio_after = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
+
+	});
+
+	it('SHOULD FAIL: Mint some FRAX using USDC as collateral, sets too high of an expectation for FRAX output [mint1t1FRAX]', async () => {
+		console.log("=========================mint1t1FRAX=========================");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
+		console.log("");
+
+		// Note the collateral ratio
+		const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+		console.log("collateral_ratio_before: ", collateral_ratio_before.toNumber());
+
+		// Note the collateral and FRAX amounts before minting
+		const frax_before = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const collateral_before = new BigNumber(await col_instance_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const pool_collateral_before = new BigNumber(await col_instance_USDC.balanceOf.call(pool_instance_USDC.address)).div(BIG18);
+
+		bal_frax = frax_before;
+		col_bal_usdc = collateral_before;
+		pool_bal_usdc = pool_collateral_before;
+		console.log("bal_frax: ", bal_frax.toNumber());
+		console.log("col_bal_usdc: ", col_bal_usdc.toNumber());
+		console.log("pool_bal_usdc: ", pool_bal_usdc.toNumber());
+
+		// Need to approve first so the pool contract can use transferFrom
+		const collateral_amount = new BigNumber("100e18");
+		await col_instance_USDC.approve(pool_instance_USDC.address, collateral_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// Mint some FRAX
+		console.log("accounts[0] mint1t1FRAX() with 100 USDC; slippage limit of 1%");
+		const collateral_price = (new BigNumber(await pool_instance_USDC.getCollateralPrice.call()).div(BIG6)).toNumber()
+		const FRAX_out_min = new BigNumber(collateral_amount.times(collateral_price).times(1.01)); // Expects more FRAX than current price levels
 		await pool_instance_USDC.mint1t1FRAX(collateral_amount, FRAX_out_min, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Note the collateral and FRAX amounts after minting
@@ -896,7 +952,7 @@ contract('FRAX', async (accounts) => {
 	});
 
 
-
+*/
 	// REDUCE COLLATERAL RATIO
 	it("Reduces the collateral ratio: 1-to-1 Phase => Fractional Phase", async () => {
 		console.log("=========================Reducing the collateral ratio=========================")
@@ -947,7 +1003,7 @@ contract('FRAX', async (accounts) => {
 		}
 
 	});
-
+/*
 
 	// MINTING PART 2
 	// ================================================================
@@ -1127,8 +1183,8 @@ contract('FRAX', async (accounts) => {
 		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
 
 	});
-
-	it('Mint some FRAX using FXS and USDC (collateral ratio between .000001 and .999999) [mintFractionalFRAX]', async () => {
+*/
+	it('Mint some FRAX using FXS and USDC, TESTS SLIPPAGE BY MOVING PRICE (collateral ratio between .000001 and .999999) [mintFractionalFRAX]', async () => {
 		console.log("=========================mintFractionalFRAX=========================");
 		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
 		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
@@ -1165,9 +1221,10 @@ contract('FRAX', async (accounts) => {
 		await fxsInstance.approve(pool_instance_USDC.address, fxs_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		const collateral_amount = new BigNumber("10000e18");
 		await col_instance_USDC.approve(pool_instance_USDC.address, collateral_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		const FRAX_out_min = new BigNumber(collateral_amount.div(await pool_instance_USDC.getCollateralPrice()).minus(1)).idiv(BIG6).idiv(BIG6);
 
-		await pool_instance_USDC.mintFractionalFRAX(collateral_amount, fxs_amount, new BigNumber("10e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("accounts[0] mintFractionalFRAX() with 10,000 USDC and 50,000 FXS");
+		console.log("accounts[0] mintFractionalFRAX() with 10,000 USDC and 50,000 FXS; FRAX_out_min: ", FRAX_out_min.toNumber());
+		await pool_instance_USDC.mintFractionalFRAX(collateral_amount, fxs_amount, FRAX_out_min, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Note the FXS, FRAX, and FAKE amounts after minting
 		const fxs_after = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
@@ -1184,6 +1241,123 @@ contract('FRAX', async (accounts) => {
 		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
 	});
 
+	it('Mint some FRAX using FXS and USDC, TESTS SLIPPAGE BY MOVING PRICE (collateral ratio between .000001 and .999999) [mintFractionalFRAX]', async () => {
+		console.log("=========================mintFractionalFRAX=========================");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
+		console.log("");
+		
+		// Note the collateral ratio
+		const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+		console.log("collateral_ratio_before: ", collateral_ratio_before.toNumber());
+
+		// Note the FXS, FRAX, and FAKE amounts before minting
+		const fxs_before = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const frax_before = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const collateral_before = new BigNumber(await col_instance_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const pool_collateral_before = new BigNumber(await col_instance_USDC.balanceOf.call(pool_instance_USDC.address)).div(BIG18);
+		bal_fxs = fxs_before;
+		bal_frax = frax_before;
+		col_bal_usdc = collateral_before;
+		pool_bal_usdc = pool_collateral_before;
+		console.log("bal_fxs: ", bal_fxs.toNumber());
+		console.log("bal_frax: ", bal_frax.toNumber());
+		console.log("col_bal_usdc: ", col_bal_usdc.toNumber());
+		console.log("pool_bal_usdc: ", pool_bal_usdc.toNumber());
+
+		// Need to approve first so the pool contract can use transferFrom
+		const fxs_amount = new BigNumber("50000e18");
+		await fxsInstance.approve(pool_instance_USDC.address, fxs_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		const collateral_amount = new BigNumber("10000e18");
+		await col_instance_USDC.approve(pool_instance_USDC.address, collateral_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		const FRAX_out_min = new BigNumber(collateral_amount.times(await pool_instance_USDC.getCollateralPrice()).div(globalCollateralRatio)).idiv(BIG6).idiv(BIG6).idiv(BIG6).plus(20);
+		const FRAX_out_min_2 = new BigNumber("10306e18");
+
+		console.log("accounts[0] mintFractionalFRAX() with 10,000 USDC and 50,000 FXS; FRAX_out_min_2: ", FRAX_out_min_2.toNumber());
+		await pool_instance_USDC.mintFractionalFRAX(collateral_amount, fxs_amount, FRAX_out_min_2, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Note the FXS, FRAX, and FAKE amounts after minting
+		const fxs_after = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const frax_after = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const pool_collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(pool_instance_USDC.address)).div(BIG18);
+		console.log("accounts[0] USDC balance change: ", collateral_after.toNumber() - collateral_before.toNumber());
+		console.log("accounts[0] FXS balance change: ", fxs_after.toNumber() - fxs_before.toNumber());
+		console.log("accounts[0] FRAX balance change: ", frax_after.toNumber() - frax_before.toNumber());
+		console.log("FRAX_pool_USDC balance change: ", pool_collateral_after.toNumber() - pool_collateral_before.toNumber());
+
+		// Note the new collateral ratio
+		const collateral_ratio_after = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
+	});
+
+
+	it('Mint some FRAX using FXS and USDC, TESTS SLIPPAGE BY MOVING PRICE (collateral ratio between .000001 and .999999) [mintFractionalFRAX]', async () => {
+		console.log("=========================mintFractionalFRAX=========================");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
+		console.log("");
+		
+		// Note the collateral ratio
+		const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+		console.log("collateral_ratio_before: ", collateral_ratio_before.toNumber());
+
+		// Note the FXS, FRAX, and FAKE amounts before minting
+		const fxs_before = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const frax_before = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const collateral_before = new BigNumber(await col_instance_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const pool_collateral_before = new BigNumber(await col_instance_USDC.balanceOf.call(pool_instance_USDC.address)).div(BIG18);
+		bal_fxs = fxs_before;
+		bal_frax = frax_before;
+		col_bal_usdc = collateral_before;
+		pool_bal_usdc = pool_collateral_before;
+		console.log("bal_fxs: ", bal_fxs.toNumber());
+		console.log("bal_frax: ", bal_frax.toNumber());
+		console.log("col_bal_usdc: ", col_bal_usdc.toNumber());
+		console.log("pool_bal_usdc: ", pool_bal_usdc.toNumber());
+
+		// Need to approve first so the pool contract can use transferFrom
+		const fxs_amount = new BigNumber("50000e18");
+		await fxsInstance.approve(pool_instance_USDC.address, fxs_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		const collateral_amount = new BigNumber("10000e18");
+		await col_instance_USDC.approve(pool_instance_USDC.address, collateral_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		const FRAX_out_min = new BigNumber(collateral_amount.times(await pool_instance_USDC.getCollateralPrice()).div(globalCollateralRatio)).idiv(BIG6).idiv(BIG6).idiv(BIG6).plus(20);
+		const FRAX_out_min_3 = new BigNumber("10307e18");
+
+		console.log("accounts[0] mintFractionalFRAX() with 10,000 USDC and 50,000 FXS; FRAX_out_min_3: ", FRAX_out_min_3.toNumber());
+		await pool_instance_USDC.mintFractionalFRAX(collateral_amount, fxs_amount, FRAX_out_min_3, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Note the FXS, FRAX, and FAKE amounts after minting
+		const fxs_after = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const frax_after = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const pool_collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(pool_instance_USDC.address)).div(BIG18);
+		console.log("accounts[0] USDC balance change: ", collateral_after.toNumber() - collateral_before.toNumber());
+		console.log("accounts[0] FXS balance change: ", fxs_after.toNumber() - fxs_before.toNumber());
+		console.log("accounts[0] FRAX balance change: ", frax_after.toNumber() - frax_before.toNumber());
+		console.log("FRAX_pool_USDC balance change: ", pool_collateral_after.toNumber() - pool_collateral_before.toNumber());
+
+		// Note the new collateral ratio
+		const collateral_ratio_after = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
+	});
+/*
 
 
 	it('Recollateralizes the system using recollateralizeFrax()', async () => {
@@ -1379,7 +1553,7 @@ contract('FRAX', async (accounts) => {
 	});
 
 
-	it("Buys back collateral using FXS [should fail if CR = 0]", async () => {
+	it("Buys back collateral using FXS", async () => {
 		console.log("=========================buyBackFXS=========================");
 		// Advance 1 hr so the collateral ratio can be recalculated
 		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
@@ -1431,7 +1605,6 @@ contract('FRAX', async (accounts) => {
 		console.log("accounts[0] buyBackFXS() using 40,000 FXS");
 		await pool_instance_USDC.buyBackFXS(fxs_amount, new BigNumber("10e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		
 
 		// Note the FXS and FAKE amounts after buying back
 		const fxs_after = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
@@ -1729,5 +1902,5 @@ contract('FRAX', async (accounts) => {
 		console.log("STAKING FXS EARNED [9]: ", staking_fxs_earned_180_9.toString());
 
 	});
-
+*/
 });
