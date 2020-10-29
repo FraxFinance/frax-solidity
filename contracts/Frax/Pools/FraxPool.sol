@@ -235,7 +235,7 @@ contract FraxPool is AccessControl {
 
     // Will fail if fully collateralized or algorithmic
     // Redeem FRAX for collateral and FXS. > 0% and < 100% collateral-backed
-    function redeemFractionalFRAX(uint256 FRAX_amount, uint256 COLLATERAL_out_min, uint256 FXS_out_min) external notRedeemPaused {
+    function redeemFractionalFRAX(uint256 FRAX_amount, uint256 FXS_out_min, uint256 COLLATERAL_out_min) external notRedeemPaused {
         (, uint256 fxs_price, , uint256 global_collateral_ratio, , , uint256 redemption_fee,) = FRAX.frax_info();
         require(global_collateral_ratio < COLLATERAL_RATIO_MAX && global_collateral_ratio > 0, "Collateral ratio needs to be between .000001 and .999999");
         uint256 col_price_usd = getCollateralPrice();
