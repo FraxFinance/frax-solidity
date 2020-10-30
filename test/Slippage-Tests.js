@@ -1552,8 +1552,8 @@ contract('FRAX', async (accounts) => {
 /*
 
 
-	it('Recollateralizes the system using recollateralizeFrax()', async () => {
-		console.log("=========================recollateralizeFrax=========================");
+	it('Recollateralizes the system using recollateralizeFRAX()', async () => {
+		console.log("=========================recollateralizeFRAX=========================");
 		let totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
 		let totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
 		let globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
@@ -1596,8 +1596,8 @@ contract('FRAX', async (accounts) => {
 		await col_instance_USDC.approve(pool_instance_USDC.address, USDC_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Redeem some FRAX
-		await pool_instance_USDC.recollateralizeFrax(USDC_amount, new BigNumber("10e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("accounts[0] recollateralizeFrax() with 10,000 USDC");
+		await pool_instance_USDC.recollateralizeFRAX(USDC_amount, new BigNumber("10e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("accounts[0] recollateralizeFRAX() with 10,000 USDC");
 
 		// Note the FXS, FRAX, and FAKE amounts after redeeming
 		const fxs_after = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);

@@ -8,6 +8,7 @@ const BIG6 = new BigNumber("1e6");
 const BIG18 = new BigNumber("1e18");
 const chalk = require('chalk');
 
+
 const Address = artifacts.require("Utils/Address");
 const BlockMiner = artifacts.require("Utils/BlockMiner");
 const StringHelpers = artifacts.require("Utils/StringHelpers");
@@ -67,7 +68,6 @@ const FRAXShares = artifacts.require("FXS/FRAXShares");
 // Governance related
 const GovernorAlpha = artifacts.require("Governance/GovernorAlpha");
 const Timelock = artifacts.require("Governance/Timelock");
-const TimelockGovernance = artifacts.require("Governance/TimelockGovernance");
 
 // Staking contracts
 const StakingRewards_FRAX_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_WETH.sol");
@@ -90,8 +90,8 @@ module.exports = async function(deployer, network, accounts) {
     // if (!host || !port) {
     //   throw new Error(`Unable to find provider for network: ${network}`)
     // }
-    // window.web3 = new Web3.providers.HttpProvider(`http://${host}:${port}`);
-
+	// window.web3 = new Web3.providers.HttpProvider(`http://${host}:${port}`);
+	
 	// ======== Set the addresses ========
 	console.log(chalk.yellow('===== SET THE ADDRESSES ====='));
 	const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
@@ -143,7 +143,7 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.deploy(Math);
 	await deployer.link(Math, [StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDT,StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FXS_USDT, StakingRewards_FXS_USDC, UniswapV2ERC20, UniswapV2Pair]);
 	await deployer.deploy(SafeMath);
-	await deployer.link(SafeMath, [ERC20, ERC20Custom, SafeERC20, WETH, FakeCollateral_USDC, FakeCollateral_USDT, FRAXStablecoin, Pool_USDC, Pool_USDT, FRAXShares, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDT,StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FXS_USDT, StakingRewards_FXS_USDC, UniswapV2ERC20, UniswapV2Library, UniswapV2Router02_Modified, SwapToPrice, Timelock, TimelockGovernance]);
+	await deployer.link(SafeMath, [ERC20, ERC20Custom, SafeERC20, WETH, FakeCollateral_USDC, FakeCollateral_USDT, FRAXStablecoin, Pool_USDC, Pool_USDT, FRAXShares, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDT,StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FXS_USDT, StakingRewards_FXS_USDC, UniswapV2ERC20, UniswapV2Library, UniswapV2Router02_Modified, SwapToPrice, Timelock]);
 	await deployer.deploy(TransferHelper);
 	await deployer.link(TransferHelper, [UniswapV2Router02_Modified, SwapToPrice, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDT,StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FXS_USDT, StakingRewards_FXS_USDC, Pool_USDC, Pool_USDT]);
 	await deployer.deploy(UniswapV2ERC20);
@@ -173,6 +173,42 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.deploy(GovernorAlpha, timelockInstance.address, fxsInstance.address, GOVERNOR_GUARDIAN_ADDRESS);
 	const governanceInstance = await GovernorAlpha.deployed();
 	await governanceInstance.__setTimelockAddress(timelockInstance.address, { from: GOVERNOR_GUARDIAN_ADDRESS });
+
+	// ======== Set the Governance contract as the timelock admin ========
+	console.log(chalk.yellow('===== SET THE GOVERNANCE CONTRACT AS THE TIMELOCK ADMIN ====='));
+	console.log("GOVERNANCE_ADDRESS [BEFORE]: ", governanceInstance.address );
+	let timelock_admin_address = await timelockInstance.admin.call();
+	console.log("timelock_admin [BEFORE]: ", timelock_admin_address)
+
+	// // Give control from TIMELOCK_ADMIN to GovernorAlpha
+	const current_timestamp = (await time.latest()).toNumber();
+	const timelock_delay = (await timelockInstance.delay.call()).toNumber();
+
+	console.log("timelock_delay: ", timelock_delay);
+	console.log("current_timestamp: ", current_timestamp);
+	console.log("current_timestamp + timelock_delay: ", current_timestamp + timelock_delay);
+
+	const tx_nugget = [
+		timelockInstance.address, 
+		0, 
+		"setPendingAdmin(address)",
+		web3.eth.abi.encodeParameters(['address'], [governanceInstance.address]),
+		current_timestamp + timelock_delay,
+		{ from: TIMELOCK_ADMIN }
+	]
+	await timelockInstance.queueTransaction(...tx_nugget);
+
+	// Advance timelock_delay until the timelock is done
+	await time.increase(timelock_delay + 1);
+	await time.advanceBlock();
+
+	await timelockInstance.executeTransaction(...tx_nugget);
+
+	await governanceInstance.__acceptAdmin({ from: GOVERNOR_GUARDIAN_ADDRESS });
+
+	timelock_admin_address = await timelockInstance.admin.call();
+	console.log("timelock_admin [AFTER]: ", timelock_admin_address)
+	
 
 	// ======== Set FRAX FXS address ========
 	console.log(chalk.yellow('===== FRAX FXS ADDRESS ====='));
@@ -306,9 +342,9 @@ module.exports = async function(deployer, network, accounts) {
 	await routerInstance.addLiquidity(
 		fraxInstance.address, 
 		wethInstance.address,
-		new BigNumber(391000e18), 
+		new BigNumber(392000e18), 
 		new BigNumber(1000e18), 
-		new BigNumber(391000e18), 
+		new BigNumber(392000e18), 
 		new BigNumber(1000e18), 
 		COLLATERAL_FRAX_AND_FXS_OWNER, 
 		new BigNumber(2105300114), 

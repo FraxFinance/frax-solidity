@@ -568,7 +568,8 @@ contract('FRAX', async (accounts) => {
 	// GOVERNANCE TEST [PART 1]
 	// ================================================================
 	it('Propose changing the minting fee', async () => {
-		console.log("======== Minting fee 0.03% -> 0.1% ========");
+        console.log("======== Minting fee 0.03% -> 0.1% ========");
+        const timelock_delay = (await timelockInstance.delay.call()).toNumber();
 
 		// Temporarily set the voting period to 10 blocks
 		await governanceInstance.__setVotingPeriod(10, { from: GOVERNOR_GUARDIAN_ADDRESS });
@@ -607,6 +608,113 @@ contract('FRAX', async (accounts) => {
 		console.log("againstVotes: ", new BigNumber(proposal_details.againstVotes).div(BIG18).toNumber());
 		console.log("startBlock: ", proposal_details.startBlock.toString());
 		console.log("endBlock: ", proposal_details.endBlock.toString());
+        
+        // Print the proposal state
+		let proposal_state_during_voting = await governanceInstance.state.call(proposal_id);
+		console.log("proposal_state_during_voting: ", new BigNumber(proposal_state_during_voting).toNumber());
+
+		// Have at least 4% of FXS holders vote (so the quorum is reached)
+		await governanceInstance.castVote(proposal_id, true, { from: POOL_CREATOR });
+		await governanceInstance.castVote(proposal_id, true, { from: TIMELOCK_ADMIN });
+		await governanceInstance.castVote(proposal_id, true, { from: GOVERNOR_GUARDIAN_ADDRESS });
+		await governanceInstance.castVote(proposal_id, true, { from: STAKING_OWNER });
+		await governanceInstance.castVote(proposal_id, true, { from: STAKING_REWARDS_DISTRIBUTOR });
+
+		// Print the proposal after votes
+		proposal_details = await governanceInstance.proposals.call(proposal_id);
+		// console.log(util.inspect(proposal_details, false, null, true));
+		console.log("id: ", proposal_details.id.toString());
+		console.log("forVotes: ", new BigNumber(proposal_details.forVotes).div(BIG18).toNumber());
+		console.log("againstVotes: ", new BigNumber(proposal_details.againstVotes).div(BIG18).toNumber());
+		console.log("startBlock: ", proposal_details.startBlock.toString());
+		console.log("endBlock: ", proposal_details.endBlock.toString());
+
+		// Print the proposal state
+		let proposal_state_before = await governanceInstance.state.call(proposal_id);
+		console.log("proposal_state_before: ", new BigNumber(proposal_state_before).toNumber());
+
+		// Advance 10 blocks so the voting ends
+		await time.increase(10 * 15); // ~15 sec per block
+		await time.advanceBlockTo(latestBlock + 10 + 5);
+
+		// Print the proposal state
+		let proposal_state_after = await governanceInstance.state.call(proposal_id);
+		console.log("proposal_state_after: ", new BigNumber(proposal_state_after).toNumber());
+
+		// Queue the execution
+		await governanceInstance.queue(proposal_id, { from: TIMELOCK_ADMIN });
+
+		// Advance timelock_delay until the timelock is done
+		await time.increase(timelock_delay + 1);
+        await time.advanceBlock();
+        
+        let proposal_state_after_queue = await governanceInstance.state.call(proposal_id);
+		console.log("proposal_state_after_queue: ", new BigNumber(proposal_state_after_queue).toNumber());
+
+		// Execute the proposal
+        await governanceInstance.execute(proposal_id, { from: TIMELOCK_ADMIN });
+        
+        // Advance one block to sync
+		await time.increase(15);
+		await time.advanceBlock();
+
+		// Print the minting fee afterwards
+		let minting_fee_after = (new BigNumber(await fraxInstance.minting_fee.call())).div(BIG6).toNumber();
+		console.log("minting_fee_after: ", minting_fee_after);
+
+		// Set the voting period back to 17280 blocks
+		await governanceInstance.__setVotingPeriod(17280, { from: GOVERNOR_GUARDIAN_ADDRESS });
+
+	});
+
+
+	// GOVERNANCE TEST [PART 2]
+	// ================================================================
+	it('Change the minting fee back to 0.03%', async () => {
+        console.log("======== Minting fee 0.1% -> 0.03% ========");
+        const timelock_delay = (await timelockInstance.delay.call()).toNumber();
+
+		// Temporarily set the voting period to 10 blocks
+		await governanceInstance.__setVotingPeriod(10, { from: GOVERNOR_GUARDIAN_ADDRESS });
+
+		// Determine the latest block
+		const latestBlock = (new BigNumber(await time.latestBlock())).toNumber();
+		console.log("Latest block: ", latestBlock);
+
+		// Print the minting fee beforehand
+		let minting_fee_before = (new BigNumber(await fraxInstance.minting_fee.call())).div(BIG6).toNumber();
+		console.log("minting_fee_before: ", minting_fee_before);
+
+		// https://github.com/compound-finance/compound-protocol/blob/master/tests/Governance/GovernorAlpha/ProposeTest.js
+		await governanceInstance.propose(
+			[fraxInstance.address],
+			[0],
+			['setMintingFee(uint256)'],
+			[web3.eth.abi.encodeParameters(['uint256'], [300])], // 0.03%
+			"Minting fee revert back to old value",
+			"I hereby propose to decrease the minting fee back to 0.03% from 0.1%",
+			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		);
+
+		// Advance one block so the voting can begin
+		await time.increase(15);
+		await time.advanceBlock();
+
+		// Print the proposal count
+		let proposal_id = await governanceInstance.latestProposalIds.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+
+		// Print the proposal before
+		let proposal_details = await governanceInstance.proposals.call(proposal_id);
+		// console.log(util.inspect(proposal_details, false, null, true));
+		console.log("id: ", proposal_details.id.toNumber());
+		console.log("forVotes: ", new BigNumber(proposal_details.forVotes).div(BIG18).toNumber());
+		console.log("againstVotes: ", new BigNumber(proposal_details.againstVotes).div(BIG18).toNumber());
+		console.log("startBlock: ", proposal_details.startBlock.toString());
+        console.log("endBlock: ", proposal_details.endBlock.toString());
+        
+        // Print the proposal state
+		let proposal_state_during_voting = await governanceInstance.state.call(proposal_id);
+		console.log("proposal_state_during_voting: ", new BigNumber(proposal_state_during_voting).toNumber());
 		
 		// Have at least 4% of FXS holders vote (so the quorum is reached)
 		await governanceInstance.castVote(proposal_id, true, { from: POOL_CREATOR });
@@ -636,119 +744,32 @@ contract('FRAX', async (accounts) => {
 		let proposal_state_after = await governanceInstance.state.call(proposal_id);
 		console.log("proposal_state_after: ", new BigNumber(proposal_state_after).toNumber());
 
-		// Give control from TIMELOCK_ADMIN to GovernerAlpha
-		await timelockInstance.setPendingAdmin.call(governanceInstance.address, { from: timelockInstance.address });
-		await timelockInstance.acceptAdmin.call({ from: governanceInstance.address });
-
 		// Queue the execution
-		await governanceInstance.queue.call(proposal_id, { from: TIMELOCK_ADMIN });
+		await governanceInstance.queue(proposal_id, { from: TIMELOCK_ADMIN });
 
-		// Advance two days to the timelock is done
-		await time.increase((86400 * 2) + 1);
-		await time.advanceBlock();
+		// Advance timelock_delay until the timelock is done
+		await time.increase(timelock_delay + 1);
+        await time.advanceBlock();
+        
+        let proposal_state_after_queue = await governanceInstance.state.call(proposal_id);
+		console.log("proposal_state_after_queue: ", new BigNumber(proposal_state_after_queue).toNumber());
 
 		// Execute the proposal
-		await governanceInstance.execute.call(proposal_id, { from: TIMELOCK_ADMIN });
-
-		// Print the minting fee afterwards
-		let minting_fee_after = (new BigNumber(await fraxInstance.minting_fee.call())).div(BIG6).toNumber();
-		console.log("minting_fee_after: ", minting_fee_after);
-
-		// Set the voting period back to 17280 blocks
-		await governanceInstance.__setVotingPeriod.call(17280, { from: GOVERNOR_GUARDIAN_ADDRESS });
-
-	});
-
-
-	// GOVERNANCE TEST [PART 2]
-	// ================================================================
-	it('Change the minting fee back to 0.03%', async () => {
-		console.log("======== Minting fee 0.1% -> 0.03% ========");
-		// Temporarily set the voting period to 10 blocks
-		await governanceInstance.__setVotingPeriod.call(10, { from: GOVERNOR_GUARDIAN_ADDRESS });
-
-		// Determine the latest block
-		const latestBlock = (new BigNumber(await time.latestBlock())).toNumber();
-		console.log("Latest block: ", latestBlock);
-
-		// Print the minting fee beforehand
-		let minting_fee_before = (new BigNumber(await fraxInstance.minting_fee.call())).div(BIG6).toNumber();
-		console.log("minting_fee_before: ", minting_fee_before);
-
-		// https://github.com/compound-finance/compound-protocol/blob/master/tests/Governance/GovernorAlpha/ProposeTest.js
-		await governanceInstance.propose.call(
-			[fraxInstance.address],
-			[0],
-			['setMintingFee(uint256)'],
-			[web3.eth.abi.encodeParameters(['uint256'], [300])], // 0.03%
-			"Minting fee revert back to old value",
-			"I hereby propose to decrease the minting fee back to 0.03% from 0.1%",
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		);
-
-		// Advance one block so the voting can begin
+        await governanceInstance.execute(proposal_id, { from: TIMELOCK_ADMIN });
+        
+        // Advance one block to sync
 		await time.increase(15);
 		await time.advanceBlock();
 
-		// Print the proposal count
-		let proposal_id = await governanceInstance.latestProposalIds.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-
-		// Print the proposal before
-		let proposal_details = await governanceInstance.proposals.call(proposal_id);
-		// console.log(util.inspect(proposal_details, false, null, true));
-		console.log("id: ", proposal_details.id.toNumber());
-		console.log("forVotes: ", new BigNumber(proposal_details.forVotes).div(BIG18).toNumber());
-		console.log("againstVotes: ", new BigNumber(proposal_details.againstVotes).div(BIG18).toNumber());
-		console.log("startBlock: ", proposal_details.startBlock.toString());
-		console.log("endBlock: ", proposal_details.endBlock.toString());
-		
-		// Have at least 4% of FXS holders vote (so the quorum is reached)
-		await governanceInstance.castVote.call(proposal_id, true, { from: POOL_CREATOR });
-		await governanceInstance.castVote.call(proposal_id, true, { from: TIMELOCK_ADMIN });
-		await governanceInstance.castVote.call(proposal_id, true, { from: GOVERNOR_GUARDIAN_ADDRESS });
-		await governanceInstance.castVote.call(proposal_id, true, { from: STAKING_OWNER });
-		await governanceInstance.castVote.call(proposal_id, true, { from: STAKING_REWARDS_DISTRIBUTOR });
-
-		// Print the proposal after votes
-		proposal_details = await governanceInstance.proposals.call(proposal_id);
-		// console.log(util.inspect(proposal_details, false, null, true));
-		console.log("id: ", proposal_details.id.toString());
-		console.log("forVotes: ", new BigNumber(proposal_details.forVotes).div(BIG18).toNumber());
-		console.log("againstVotes: ", new BigNumber(proposal_details.againstVotes).div(BIG18).toNumber());
-		console.log("startBlock: ", proposal_details.startBlock.toString());
-		console.log("endBlock: ", proposal_details.endBlock.toString());
-
-		// Print the proposal state
-		let proposal_state_before = await governanceInstance.state.call(proposal_id);
-		console.log("proposal_state_before: ", new BigNumber(proposal_state_before).toNumber());
-
-		// Advance 10 blocks so the voting ends
-		await time.increase(10 * 15); // ~15 sec per block
-		await time.advanceBlockTo(latestBlock + 10 + 5);
-
-		// Print the proposal state
-		let proposal_state_after = await governanceInstance.state.call(proposal_id);
-		console.log("proposal_state_after: ", new BigNumber(proposal_state_after).toNumber());
-
-		// Queue the execution
-		await governanceInstance.queue.call(proposal_id, { from: TIMELOCK_ADMIN });
-
-		// Advance two days to the timelock is done
-		await time.increase((86400 * 2) + 1);
-		await time.advanceBlock();
-
-		// Execute the proposal
-		await governanceInstance.execute.call(proposal_id, { from: TIMELOCK_ADMIN });
-
 		// Print the minting fee afterwards
 		let minting_fee_after = (new BigNumber(await fraxInstance.minting_fee.call())).div(BIG6).toNumber();
 		console.log("minting_fee_after: ", minting_fee_after);
 
 		// Set the voting period back to 17280 blocks
-		await governanceInstance.__setVotingPeriod.call(17280, { from: GOVERNOR_GUARDIAN_ADDRESS });
+		await governanceInstance.__setVotingPeriod(17280, { from: GOVERNOR_GUARDIAN_ADDRESS });
 
-	});
-/*
+    });
+    
 
 	it('Seed the collateral pools some collateral to start off with', async () => {
 		console.log("========================Collateral Seed========================");
@@ -762,7 +783,7 @@ contract('FRAX', async (accounts) => {
 		const totalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18);
 		console.log("totalCollateralValue: ", totalCollateralValue.toNumber());
 
-		
+		/*
 		// Advance 1 hr so the collateral ratio can be recalculated
 		await time.increase(3600 + 1);
 		await time.advanceBlock();
@@ -772,7 +793,7 @@ contract('FRAX', async (accounts) => {
 		await time.increase(3600 + 1);
 		await time.advanceBlock();
 		await fraxInstance.refreshCollateralRatio();
-		
+		*/
 
 		const collateral_ratio_refreshed = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
 		console.log("collateral_ratio_refreshed: ", collateral_ratio_refreshed.toNumber());
@@ -1729,5 +1750,5 @@ contract('FRAX', async (accounts) => {
 		console.log("STAKING FXS EARNED [9]: ", staking_fxs_earned_180_9.toString());
 
 	});
-*/
+
 });
