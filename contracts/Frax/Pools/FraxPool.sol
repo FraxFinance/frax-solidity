@@ -48,8 +48,8 @@ contract FraxPool is AccessControl {
     // Stores price of the collateral, if price is paused
     uint256 public pausedPrice = 0;
 
-    // Bonus rate on FXS minted during recollateralizeFrax(); 6 decimals of precision, set to 1% on genesis
-    uint256 public bonus_rate = 10000;
+    // Bonus rate on FXS minted during recollateralizeFRAX(); 6 decimals of precision, set to 0.75% on genesis
+    uint256 public bonus_rate = 7500;
 
     // AccessControl Roles
     bytes32 private constant MINT_PAUSER = keccak256("MINT_PAUSER");
@@ -324,7 +324,7 @@ contract FraxPool is AccessControl {
     // Thus, if the target collateral ratio is higher than the actual value of collateral, minters get FXS for adding collateral
     // This function simply rewards anyone that sends collateral to a pool with the same amount of FXS + the bonus rate
     // Anyone can call this function to recollateralize the protocol and take the extra FXS value from the bonus rate as an arb opportunity
-    function recollateralizeFrax(uint256 collateral_amount, uint256 FXS_out_min) public {
+    function recollateralizeFRAX(uint256 collateral_amount, uint256 FXS_out_min) public {
         ( , uint256 fxs_price, uint256 frax_total_supply , uint256 global_collateral_ratio, uint256 global_collat_value, , , ) = FRAX.frax_info();
         uint256 collat_value_attempted = collateral_amount.mul(getCollateralPrice()).div(1e6);
 
