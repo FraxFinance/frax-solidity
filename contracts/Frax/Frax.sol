@@ -50,6 +50,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     uint256 public minting_fee; // 6 decimals of precision, divide by 1000000 in calculations for fee
     uint256 public frax_step; // Amount to change the collateralization ratio by upon refreshCollateralRatio()
     uint256 public refresh_cooldown; // Seconds to wait before being able to run refreshCollateralRatio() again
+    uint256 public price_target; // The price of FRAX at which the collateral ratio will respond to; this value is only used for the collateral ratio mechanism and not for minting and redeeming which are hardcoded at $1
 
     address public DEFAULT_ADMIN_ADDRESS;
     bytes32 public constant COLLATERAL_RATIO_PAUSER = keccak256("COLLATERAL_RATIO_PAUSER");
@@ -97,9 +98,10 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         _mint(creator_address, genesis_supply);
         grantRole(COLLATERAL_RATIO_PAUSER, creator_address);
         grantRole(COLLATERAL_RATIO_PAUSER, timelock_address);
-        frax_step = 2500; //6 decimals of precision, equal to 0.25%
-        global_collateral_ratio = 1000000; //frax system starts off fully collateralized (6 decimals of precision)
-        refresh_cooldown = 3600; //refresh cooldown period is set to 1 hour (3600 seconds) at genesis
+        frax_step = 2500; // 6 decimals of precision, equal to 0.25%
+        global_collateral_ratio = 1000000; // Frax system starts off fully collateralized (6 decimals of precision)
+        refresh_cooldown = 3600; // Refresh cooldown period is set to 1 hour (3600 seconds) at genesis
+        price_target = 1000000; // Collateral ratio will adjust according to the $1 price target at genesis
     }
 
     /* ========== VIEWS ========== */
@@ -172,15 +174,15 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     function refreshCollateralRatio() public {
         require(collateral_ratio_paused == false, "Collateral Ratio has been paused");
         uint256 frax_price_cur = frax_price();
-        require(block.timestamp - last_call_time >= refresh_cooldown && frax_price_cur != 1000000, "Must wait out for the refresh cooldown since last refresh, and current FRAX price must not be 1");
+        require(block.timestamp - last_call_time >= refresh_cooldown && frax_price_cur != price_target, "Must wait out for the refresh cooldown since last refresh, and current FRAX price must not already be at the target");
 
         // Step increments are 0.25% (upon genesis, changable by setFraxStep()) 
         
-        if (frax_price_cur > 1000000) {
+        if (frax_price_cur > price_target) {
             global_collateral_ratio = global_collateral_ratio.sub(frax_step);
         } 
         else {
-            if(global_collateral_ratio.add(frax_step) >= 1000000){
+            if(global_collateral_ratio.add(frax_step) >= price_target){
                 global_collateral_ratio = 1000000; // cap collateral ratio at 1.000000
             } else {
                 global_collateral_ratio = global_collateral_ratio.add(frax_step);
@@ -262,6 +264,10 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     function setFraxStep(uint256 _new_step) public onlyByOwnerOrGovernance {
         frax_step = _new_step;
     }  
+
+    function setPriceTarget (uint256 _new_price_target) public onlyByOwnerOrGovernance {
+        price_target = _new_price_target;
+    }
 
     function setRefreshCooldown(uint256 _new_cooldown) public onlyByOwnerOrGovernance {
     	refresh_cooldown = _new_cooldown;
