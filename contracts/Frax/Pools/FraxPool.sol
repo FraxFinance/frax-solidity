@@ -288,7 +288,7 @@ contract FraxPool is AccessControl {
     // contract to the user. Redemption is split into two functions to prevent flash loans from being able
     // to take out FRAX/collateral from the system, use an AMM to trade the new price, and then mint back into the system.
     function collectRedemption() public {
-        require(lastRedeemed[msg.sender] < block.number, "must wait at least one block before collecting redemption");
+        require((lastRedeemed[msg.sender] + 3) <= block.number, "Must wait at least three blocks before collecting redemption");
         bool sendFXS = false;
         bool sendCollateral = false;
         uint FXSAmount;
