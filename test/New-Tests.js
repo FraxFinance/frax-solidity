@@ -899,7 +899,9 @@ contract('FRAX', async (accounts) => {
 		// Redeem some FRAX
 		await pool_instance_USDC.redeem1t1FRAX(frax_amount, new BigNumber("10e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // Get at least 10 USDC out, roughly 90% slippage limit (testing purposes)
 		console.log("accounts[0] redeem1t1() with 100 FRAX");
-		// Collect redemption
+		// Collect redemption; need to wait at least 3 blocks
+		await time.advanceBlock();
+		await time.advanceBlock();
 		await time.advanceBlock();
 		await pool_instance_USDC.collectRedemption({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
@@ -1130,6 +1132,8 @@ contract('FRAX', async (accounts) => {
 		await pool_instance_USDC.redeemFractionalFRAX(frax_amount, new BigNumber("10e18"), new BigNumber("10e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		console.log("accounts[0] redeemFractionalFRAX() with 135.24253 FRAX");
 		// Collect redemption
+		await time.advanceBlock();
+		await time.advanceBlock();
 		await time.advanceBlock();
 		await pool_instance_USDC.collectRedemption({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
@@ -1385,6 +1389,8 @@ contract('FRAX', async (accounts) => {
 		console.log("accounts[0] redeemAlgorithmicFRAX() using 1,000 FRAX");
 
 		// Collect redemption
+		await time.advanceBlock();
+		await time.advanceBlock();
 		await time.advanceBlock();
 		await pool_instance_USDC.collectRedemption({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
