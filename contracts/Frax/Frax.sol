@@ -34,8 +34,6 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     address public eth_usd_consumer_address;
     uint256 public constant genesis_supply = 2000000e18; // 1M. This is to help with establishing the Uniswap pools, as they need liquidity
 
-    mapping(PriceChoice => address[]) private stablecoin_oracles;
-
     // The addresses in this array are added by the oracle and these contracts are able to mint frax
     address[] public frax_pools_array;
 
@@ -228,22 +226,6 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         for (uint i = 0; i < frax_pools_array.length; i++){ 
             if (frax_pools_array[i] == pool_address) {
                 frax_pools_array[i] = address(0); // This will leave a null in the array and keep the indices the same
-                break;
-            }
-        }
-    }
-
-    // Adds a new stablecoin oracle 
-    function addStablecoinOracle(PriceChoice choice, address oracle_address) public onlyByOwnerOrGovernance {
-        stablecoin_oracles[choice].push(oracle_address);
-    }
-
-    // Removes an oracle 
-    function removeStablecoinOracle(PriceChoice choice, address oracle_address) public onlyByOwnerOrGovernance {
-        // 'Delete' from the array by setting the address to 0x0
-        for (uint i = 0; i < stablecoin_oracles[choice].length; i++){ 
-            if (stablecoin_oracles[choice][i] == oracle_address) {
-                stablecoin_oracles[choice][i] = address(0); // This will leave a null in the array and keep the indices the same
                 break;
             }
         }
