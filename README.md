@@ -6,8 +6,6 @@
 
 <p align="center">
 
-🕹 **Front-end Interface** – https://app.frax.finance
-
 📖 **Documentation** – https://docs.frax.finance
 
 📲 **Telegram** – https://t.me/fraxfinance
