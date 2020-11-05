@@ -1,11 +1,17 @@
 # Frax Finance – Solidity Implementation
 
-![Universal Currency Symbol](https://i.ibb.co/D5cPKvH/Webp-net-resizeimage-1.png)
+<p align="center">
+  <img width="200" height="200" src="https://i.ibb.co/9HHVcGV/frax-logo.png">
+</p>
 
-Documentation – https://docs.frax.finance
+<p align="center">
 
-Front-end Interface – https://app.frax.finance
+📖 **Documentation** – https://docs.frax.finance
 
+🕹 **Front-end Interface** – https://app.frax.finance
+
+📲 **Telegram** – https://t.me/fraxfinance
+</p>
 
 ## What is Frax?
 Frax is the first fractional-algorithmic stablecoin protocol. Frax is open-source, permissionless, and entirely on-chain – currently implemented on Ethereum (with possible cross chain implementations in the future). The end goal of the Frax protocol is to provide a highly scalable, decentralized, algorithmic money in place of fixed-supply digital assets like BTC. 
@@ -24,6 +30,3 @@ Fully on-chain oracles – Frax v1 uses Uniswap (ETH, USDT, USDC time-weighted a
 ## Local Development
 
 We recommend using Truffle to set up a development environment and Ganache to run a chain.
-  
-## Community Feedback
-Ping us on Telegram – https://t.me/fraxfinance
