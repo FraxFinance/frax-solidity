@@ -21,6 +21,8 @@ Frax is the first fractional-algorithmic stablecoin protocol. Frax is open-sourc
   * <b>Decentralized & Governance-minimized</b> – Community governed and emphasizing a highly autonomous, algorithmic approach with no active management. 
 Fully on-chain oracles – Frax v1 uses Uniswap (ETH, USDT, USDC time-weighted average prices) and Chainlink (USD price) oracles. 
 
+  * <b>Fully on-chain oracles</b> – Frax v1 uses Uniswap (ETH, USDT, USDC time-weighted average prices) and Chainlink (USD price) oracles. 
+
   * <b>Two Tokens</b> – FRAX is the stablecoin targeting a tight band around $1/coin. Frax Shares (FXS) is the governance token which accrues fees, seigniorage revenue, and excess collateral value.
 
   * <b>Swap-based Monetary Policy</b> – Frax uses principles from automated market makers like Uniswap to create swap-based price discovery and real-time stabilization incentives through arbitrage.
