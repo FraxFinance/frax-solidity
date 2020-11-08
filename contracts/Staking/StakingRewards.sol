@@ -46,7 +46,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     address public timelock_address; // Governance timelock address
 
     uint256 public locked_stake_max_multiplier = 3000000; // 6 decimals of precision. 1x = 1000000
-    uint256 public locked_stake_time_for_max_multiplier = 365 * 86400; // 1 year
+    uint256 public locked_stake_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
     uint256 public locked_stake_min_time = 604800; // 7 * 86400  (7 days)
     string public locked_stake_min_time_str = "604800"; // 7 days
 
@@ -352,11 +352,11 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     // Added to support recovering LP Rewards from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
-        // If it's FRAX we have to query the token symbol to ensure its not a proxy or underlying
-        bool isFRAX = (keccak256(bytes("FRAX")) == keccak256(bytes(ERC20(tokenAddress).symbol())));
+        // Cannot withdraw LP token
+        bool isLPToken = tokenAddress == address(stakingToken);
         // Cannot recover the staking token or the rewards token
         require(
-            tokenAddress != address(stakingToken) && tokenAddress != address(rewardsToken) && !isFRAX,
+            tokenAddress != address(stakingToken) && tokenAddress != address(rewardsToken) && !isLPToken,
             "Cannot withdraw the staking or rewards tokens"
         );
         ERC20(tokenAddress).safeTransfer(owner, tokenAmount);
