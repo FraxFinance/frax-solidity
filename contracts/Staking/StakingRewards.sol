@@ -162,7 +162,9 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         }
         else {
             // return lastTimeRewardApplicable().sub(lastUpdateTime);
-            return (lastTimeRewardApplicable().sub(lastUpdateTime)).mul(rewardRate).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
+            return rewardPerTokenStored.mul(
+                lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
+            );
             // rewardPerTokenStored.add(
             //     lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate).div(_staking_token_supply)
             // );
