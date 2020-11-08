@@ -510,8 +510,11 @@ module.exports = async function(deployer, network, accounts) {
 	// ======== Set the Frax Pools ========
 	console.log(chalk.yellow('===== FRAX POOLS ====='));
 	await deployer.link(StringHelpers, [Pool_USDC, Pool_USDT]);
-	await deployer.deploy(Pool_USDC, fraxInstance.address, fxsInstance.address, col_instance_USDC.address, UniswapPairOracle_FRAX_USDC.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
-	await deployer.deploy(Pool_USDT, fraxInstance.address, fxsInstance.address, col_instance_USDT.address, UniswapPairOracle_FRAX_USDT.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
+	// await deployer.deploy(Pool_USDC, fraxInstance.address, fxsInstance.address, col_instance_USDC.address, UniswapPairOracle_FRAX_USDC.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
+	// await deployer.deploy(Pool_USDT, fraxInstance.address, fxsInstance.address, col_instance_USDT.address, UniswapPairOracle_FRAX_USDT.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
+	await deployer.deploy(Pool_USDC, fraxInstance.address, fxsInstance.address, col_instance_USDC.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
+	await deployer.deploy(Pool_USDT, fraxInstance.address, fxsInstance.address, col_instance_USDT.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
+	
 	// await deployer.deploy(Pool_yUSD, col_instance_yUSD.address, UniswapPairOracle_FRAX_yUSD.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18); 
 
 	// Uniswap Test Swap
@@ -567,8 +570,8 @@ module.exports = async function(deployer, network, accounts) {
 
 	// Link the FRAX oracles
 	await fraxInstance.setFRAXEthOracle(oracle_instance_FRAX_WETH.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	//await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	//await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await pool_instance_USDT.setCollatETHOracle(oracle_instance_USDT_WETH.address, wethInstance.address, { from: POOL_CREATOR });
 	await pool_instance_USDC.setCollatETHOracle(oracle_instance_USDC_WETH.address, wethInstance.address, { from: POOL_CREATOR });
@@ -578,8 +581,8 @@ module.exports = async function(deployer, network, accounts) {
 
 	// Link the FXS oracles
 	await fraxInstance.setFXSEthOracle(oracle_instance_FXS_WETH.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await fraxInstance.addStablecoinOracle(1, oracle_instance_FXS_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await fraxInstance.addStablecoinOracle(1, oracle_instance_FXS_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	//await fraxInstance.addStablecoinOracle(1, oracle_instance_FXS_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	//await fraxInstance.addStablecoinOracle(1, oracle_instance_FXS_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// await fraxInstance.addStablecoinOracle(1, oracle_instance_FXS_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// ======== Set the Chainlink oracle ========
@@ -897,6 +900,7 @@ module.exports = async function(deployer, network, accounts) {
 				FRAX: fraxInstance.address,
 				FXS: fxsInstance.address
 			},
+			weth: wethInstance.address,
 			oracles: {
 				FRAX_WETH: oracle_instance_FRAX_WETH.address,
 				FRAX_USDC: oracle_instance_FRAX_USDC.address,
