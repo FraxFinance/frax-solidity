@@ -50,7 +50,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     uint256 public locked_stake_min_time = 604800; // 7 * 86400  (7 days)
     string public locked_stake_min_time_str = "604800"; // 7 days
 
-    uint256 public cr_boost_max_multiplier = 2000000; // 6 decimals of precision. 1x = 0
+    uint256 public cr_boost_max_multiplier = 3000000; // 6 decimals of precision. 1x = 0
 
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -96,14 +96,14 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function stakingMultiplier(uint256 secs) public view returns (uint256) {
-        uint256 multiplier = 1000000 + secs.mul(locked_stake_max_multiplier.sub(1)).div(locked_stake_time_for_max_multiplier);
+        uint256 multiplier = secs.mul(locked_stake_max_multiplier).div(locked_stake_time_for_max_multiplier);
         if (multiplier > locked_stake_max_multiplier) multiplier = locked_stake_max_multiplier;
         return multiplier;
     }
 
     function crBoostMultiplier() public view returns (uint256) {
         uint256 boost_to_subtract = cr_boost_max_multiplier.mul(FRAX.global_collateral_ratio()).div(PRICE_PRECISION);
-        uint256 multiplier = (cr_boost_max_multiplier.sub(boost_to_subtract)).add(1);
+        uint256 multiplier = (cr_boost_max_multiplier.sub(boost_to_subtract));
         return multiplier;
     }
 
@@ -158,7 +158,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         }
         else {
             // return lastTimeRewardApplicable().sub(lastUpdateTime);
-            return rewardPerTokenStored.add(
+            return rewardPerTokenStored.mul(
                 lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
             );
             // rewardPerTokenStored.add(
