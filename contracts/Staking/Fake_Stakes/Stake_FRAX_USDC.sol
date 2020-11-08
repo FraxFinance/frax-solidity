@@ -11,8 +11,9 @@ contract Stake_FRAX_USDC is StakingRewards {
         address _rewardsToken,
         address _stakingToken,
         address _frax_address,
-        address _timelock_address
+        address _timelock_address,
+        uint256 _pool_weight
     ) 
-    StakingRewards(_owner, _rewardsDistribution, _rewardsToken, _stakingToken, _frax_address, _timelock_address)
+    StakingRewards(_owner, _rewardsDistribution, _rewardsToken, _stakingToken, _frax_address, _timelock_address, _pool_weight)
     public {}
 }

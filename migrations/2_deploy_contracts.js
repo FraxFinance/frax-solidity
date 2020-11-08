@@ -72,12 +72,13 @@ const Timelock = artifacts.require("Governance/Timelock");
 // Staking contracts
 const StakingRewards_FRAX_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_WETH.sol");
 const StakingRewards_FRAX_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDC.sol");
-const StakingRewards_FRAX_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDT.sol");
+//const StakingRewards_FRAX_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDT.sol");
 // const StakingRewards_FRAX_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_yUSD.sol");
 const StakingRewards_FXS_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FXS_WETH.sol");
-const StakingRewards_FXS_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDC.sol");
-const StakingRewards_FXS_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDT.sol");
-// const StakingRewards_FXS_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FXS_yUSD.sol");
+//const StakingRewards_FXS_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDC.sol");
+//const StakingRewards_FXS_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDT.sol");
+//const StakingRewards_FXS_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FXS_yUSD.sol");
+const StakingRewards_FRAX_FXS = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_FXS.sol");
 
 const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 
@@ -141,11 +142,11 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.link(FixedPoint, [UniswapV2OracleLibrary, UniswapPairOracle_FRAX_WETH, UniswapPairOracle_FRAX_USDT, UniswapPairOracle_FRAX_USDC, UniswapPairOracle_FXS_WETH, UniswapPairOracle_FXS_USDT, UniswapPairOracle_FXS_USDC, UniswapPairOracle_USDT_WETH, UniswapPairOracle_USDC_WETH]);
 	await deployer.link(Address, [ERC20, ERC20Custom, SafeERC20, WETH, FakeCollateral_USDC, FakeCollateral_USDT]);
 	await deployer.deploy(Math);
-	await deployer.link(Math, [StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDT,StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FXS_USDT, StakingRewards_FXS_USDC, UniswapV2ERC20, UniswapV2Pair]);
+	await deployer.link(Math, [StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FRAX_FXS, UniswapV2ERC20, UniswapV2Pair]);
 	await deployer.deploy(SafeMath);
-	await deployer.link(SafeMath, [ERC20, ERC20Custom, SafeERC20, WETH, FakeCollateral_USDC, FakeCollateral_USDT, FRAXStablecoin, Pool_USDC, Pool_USDT, FRAXShares, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDT,StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FXS_USDT, StakingRewards_FXS_USDC, UniswapV2ERC20, UniswapV2Library, UniswapV2Router02_Modified, SwapToPrice, Timelock]);
+	await deployer.link(SafeMath, [ERC20, ERC20Custom, SafeERC20, WETH, FakeCollateral_USDC, FakeCollateral_USDT, FRAXStablecoin, Pool_USDC, Pool_USDT, FRAXShares, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FRAX_FXS, UniswapV2ERC20, UniswapV2Library, UniswapV2Router02_Modified, SwapToPrice, Timelock]);
 	await deployer.deploy(TransferHelper);
-	await deployer.link(TransferHelper, [UniswapV2Router02_Modified, SwapToPrice, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDT,StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FXS_USDT, StakingRewards_FXS_USDC, Pool_USDC, Pool_USDT]);
+	await deployer.link(TransferHelper, [UniswapV2Router02_Modified, SwapToPrice, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FRAX_FXS, Pool_USDC, Pool_USDT]);
 	await deployer.deploy(UniswapV2ERC20);
 	await deployer.link(UniswapV2ERC20, [UniswapV2Pair]);
 	await deployer.deploy(UniswapV2OracleLibrary);
@@ -156,7 +157,7 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.link(UniswapV2Pair, [UniswapV2Factory]);
 	await deployer.deploy(UniswapV2Factory, DUMP_ADDRESS);
 	await deployer.deploy(SafeERC20);
-	await deployer.link(SafeERC20, [WETH, FakeCollateral_USDC, FakeCollateral_USDT, FRAXStablecoin, Pool_USDC, Pool_USDT, FRAXShares, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDT,StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FXS_USDT, StakingRewards_FXS_USDC]);
+	await deployer.link(SafeERC20, [WETH, FakeCollateral_USDC, FakeCollateral_USDT, FRAXStablecoin, Pool_USDC, Pool_USDT, FRAXShares, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FRAX_FXS]);
 	await deployer.deploy(FraxPoolLibrary);
 	await deployer.link(FraxPoolLibrary, [Pool_USDC, Pool_USDT]);
 	await deployer.deploy(Owned, COLLATERAL_FRAX_AND_FXS_OWNER);
@@ -246,6 +247,7 @@ module.exports = async function(deployer, network, accounts) {
 	// await uniswapFactoryInstance.createPair(fxsInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await uniswapFactoryInstance.createPair(col_instance_USDT.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await uniswapFactoryInstance.createPair(col_instance_USDC.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	await uniswapFactoryInstance.createPair(fraxInstance.address, fxsInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// ======== Get the addresses of the pairs ========
 	console.log(chalk.yellow('===== GET THE ADDRESSES OF THE PAIRS ====='));
@@ -259,27 +261,31 @@ module.exports = async function(deployer, network, accounts) {
 	// const pair_addr_FXS_yUSD = await uniswapFactoryInstance.getPair(fxsInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	const pair_addr_USDT_WETH = await uniswapFactoryInstance.getPair(col_instance_USDT.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	const pair_addr_USDC_WETH = await uniswapFactoryInstance.getPair(col_instance_USDC.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	const pair_addr_FRAX_FXS = await uniswapFactoryInstance.getPair(fraxInstance.address, fxsInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// ======== Deploy the staking contracts ========
 	console.log(chalk.yellow('===== DEPLOY THE STAKING CONTRACTS ====='));
-	await deployer.link(FRAXStablecoin, [StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDT,StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FXS_USDT, StakingRewards_FXS_USDC]);
-	await deployer.link(StringHelpers, [StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDT,StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FXS_USDT, StakingRewards_FXS_USDC]);
-	await deployer.deploy(StakingRewards_FRAX_WETH, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_WETH, FRAXStablecoin.address, timelockInstance.address);
-	await deployer.deploy(StakingRewards_FRAX_USDC, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_USDC, FRAXStablecoin.address, timelockInstance.address);
-	await deployer.deploy(StakingRewards_FRAX_USDT, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_USDT, FRAXStablecoin.address, timelockInstance.address);
+	await deployer.link(FRAXStablecoin, [StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FRAX_FXS]);
+	await deployer.link(StringHelpers, [StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FRAX_FXS]);
+	await deployer.deploy(StakingRewards_FRAX_WETH, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_WETH, FRAXStablecoin.address, timelockInstance.address, 250000);
+	await deployer.deploy(StakingRewards_FRAX_USDC, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_USDC, FRAXStablecoin.address, timelockInstance.address, 150000);
+	//await deployer.deploy(StakingRewards_FRAX_USDT, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_USDT, FRAXStablecoin.address, timelockInstance.address);
 	// await deployer.deploy(StakingRewards_FRAX_yUSD, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_yUSD, FRAXStablecoin.address, timelockInstance.address);
-	await deployer.deploy(StakingRewards_FXS_WETH, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_WETH, FRAXStablecoin.address, timelockInstance.address);
-	await deployer.deploy(StakingRewards_FXS_USDC, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_USDC, FRAXStablecoin.address, timelockInstance.address);
-	await deployer.deploy(StakingRewards_FXS_USDT, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_USDT, FRAXStablecoin.address, timelockInstance.address);
-	// await deployer.deploy(StakingRewards_FXS_yUSD, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_yUSD, FRAXStablecoin.address, timelockInstance.address);
+	await deployer.deploy(StakingRewards_FXS_WETH, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_WETH, FRAXStablecoin.address, timelockInstance.address, 250000);
+	//await deployer.deploy(StakingRewards_FXS_USDC, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_USDC, FRAXStablecoin.address, timelockInstance.address);
+	//await deployer.deploy(StakingRewards_FXS_USDT, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_USDT, FRAXStablecoin.address, timelockInstance.address);
+	//await deployer.deploy(StakingRewards_FXS_yUSD, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_yUSD, FRAXStablecoin.address, timelockInstance.address);
+	await deployer.deploy(StakingRewards_FRAX_FXS, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_FXS, FRAXStablecoin.address, timelockInstance.address, 350000);
+	
 	const stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
 	const stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.deployed();
-	const stakingInstance_FRAX_USDT = await StakingRewards_FRAX_USDT.deployed();
+	//const stakingInstance_FRAX_USDT = await StakingRewards_FRAX_USDT.deployed();
 	// const stakingInstance_FRAX_yUSD = await StakingRewards_FRAX_yUSD.deployed();
 	const stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.deployed();
-	const stakingInstance_FXS_USDC = await StakingRewards_FXS_USDC.deployed();
-	const stakingInstance_FXS_USDT = await StakingRewards_FXS_USDT.deployed();
+	//const stakingInstance_FXS_USDC = await StakingRewards_FXS_USDC.deployed();
+	//const stakingInstance_FXS_USDT = await StakingRewards_FXS_USDT.deployed();
 	// const stakingInstance_FXS_yUSD = await StakingRewards_FXS_yUSD.deployed();
+	const stakingInstance_FRAX_FXS = await StakingRewards_FRAX_FXS.deployed();
 
 	// ======== Get instances of the pairs ========
 	console.log(chalk.yellow('===== GET THE INSTANCES OF THE PAIRS ====='));
@@ -293,6 +299,7 @@ module.exports = async function(deployer, network, accounts) {
 	// const pair_instance_FXS_yUSD = await UniswapV2Pair.at(pair_addr_FXS_yUSD);
 	const pair_instance_USDT_WETH = await UniswapV2Pair.at(pair_addr_USDT_WETH);
 	const pair_instance_USDC_WETH = await UniswapV2Pair.at(pair_addr_USDC_WETH);
+	const pair_instance_FRAX_FXS = await UniswapV2Pair.at(pair_addr_FRAX_FXS);
 
 	// ======== Add allowances to the Uniswap Router ========
 	console.log(chalk.yellow('===== ADD ALLOWANCES TO THE UNISWAP ROUTER ====='));
@@ -323,12 +330,13 @@ module.exports = async function(deployer, network, accounts) {
 	// Transfer 1,000,000 FXS each to the staking contracts
 	await fxsInstance.transfer(stakingInstance_FRAX_WETH.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await fxsInstance.transfer(stakingInstance_FRAX_USDC.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await fxsInstance.transfer(stakingInstance_FRAX_USDT.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	//await fxsInstance.transfer(stakingInstance_FRAX_USDT.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// await fxsInstance.transfer(stakingInstance_FRAX_yUSD.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await fxsInstance.transfer(stakingInstance_FXS_WETH.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await fxsInstance.transfer(stakingInstance_FXS_USDC.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await fxsInstance.transfer(stakingInstance_FXS_USDT.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await fxsInstance.transfer(stakingInstance_FXS_yUSD.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	//await fxsInstance.transfer(stakingInstance_FXS_USDC.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	//await fxsInstance.transfer(stakingInstance_FXS_USDT.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	//await fxsInstance.transfer(stakingInstance_FXS_yUSD.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	await fxsInstance.transfer(stakingInstance_FRAX_FXS.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// ======== Add liquidity to the pairs so the oracle constructor doesn't error  ========
 	// Initially, all prices will be 1:1, but that can be changed in further testing via arbitrage simulations to a known price
@@ -461,6 +469,19 @@ module.exports = async function(deployer, network, accounts) {
 	await routerInstance.addLiquidity(
 		col_instance_USDC.address, 
 		wethInstance.address,
+		new BigNumber(392000e18), 
+		new BigNumber(1000e18), 
+		new BigNumber(392000e18), 
+		new BigNumber(1000e18), 
+		COLLATERAL_FRAX_AND_FXS_OWNER, 
+		new BigNumber(2105300114), 
+		{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+	);
+
+	// Handle FRAX / FXS
+	await routerInstance.addLiquidity(
+		fraxInstance.address, 
+		fxsInstance.address,
 		new BigNumber(392000e18), 
 		new BigNumber(1000e18), 
 		new BigNumber(392000e18), 
@@ -681,16 +702,18 @@ module.exports = async function(deployer, network, accounts) {
 	await pair_instance_FXS_USDC.transfer(METAMASK_ADDRESS, new BigNumber("250e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await pair_instance_FXS_USDT.transfer(METAMASK_ADDRESS, new BigNumber("260e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// await pair_instance_FXS_yUSD.transfer(METAMASK_ADDRESS, new BigNumber("270e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	await pair_instance_FRAX_FXS.transfer(METAMASK_ADDRESS, new BigNumber("220e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// ======== Initialize the staking rewards ========
 	await stakingInstance_FRAX_WETH.initializeDefault({ from: STAKING_OWNER });
 	await stakingInstance_FRAX_USDC.initializeDefault({ from: STAKING_OWNER });
-	await stakingInstance_FRAX_USDT.initializeDefault({ from: STAKING_OWNER });
+	// await stakingInstance_FRAX_USDT.initializeDefault({ from: STAKING_OWNER });
 	// await stakingInstance_FRAX_yUSD.initializeDefault({ from: STAKING_OWNER });
 	await stakingInstance_FXS_WETH.initializeDefault({ from: STAKING_OWNER });
-	await stakingInstance_FXS_USDC.initializeDefault({ from: STAKING_OWNER });
-	await stakingInstance_FXS_USDT.initializeDefault({ from: STAKING_OWNER });
+	// await stakingInstance_FXS_USDC.initializeDefault({ from: STAKING_OWNER });
+	// await stakingInstance_FXS_USDT.initializeDefault({ from: STAKING_OWNER });
 	// await stakingInstance_FXS_yUSD.initializeDefault({ from: STAKING_OWNER });
+	await stakingInstance_FRAX_FXS.initializeDefault({ from: STAKING_OWNER });
 
 
 	// ======== Seed the collateral pools ========
@@ -933,16 +956,18 @@ module.exports = async function(deployer, network, accounts) {
 				'Uniswap FXS/USDC': pair_instance_FXS_USDC.address,
 				'Uniswap FXS/USDT': pair_instance_FXS_USDT.address,
 				// 'Uniswap FXS/yUSD': pair_instance_FXS_yUSD.address,
+				'Uniswap FRAX/FXS': pair_instance_FRAX_FXS.address
 			},
 			staking_contracts_for_tokens: {
 				'Uniswap FRAX/WETH': stakingInstance_FRAX_WETH.address,
 				'Uniswap FRAX/USDC': stakingInstance_FRAX_USDC.address,
-				'Uniswap FRAX/USDT': stakingInstance_FRAX_USDT.address,
+				// 'Uniswap FRAX/USDT': stakingInstance_FRAX_USDT.address,
 				// 'Uniswap FRAX/yUSD': stakingInstance_FRAX_yUSD.address,
 				'Uniswap FXS/WETH': stakingInstance_FXS_WETH.address,
-				'Uniswap FXS/USDC': stakingInstance_FXS_USDC.address,
-				'Uniswap FXS/USDT': stakingInstance_FXS_USDT.address,
+				//'Uniswap FXS/USDC': stakingInstance_FXS_USDC.address,
+				//'Uniswap FXS/USDT': stakingInstance_FXS_USDT.address,
 				// 'Uniswap FXS/yUSD': stakingInstance_FXS_yUSD.address,
+				'Uniswap FRAX/FXS': stakingInstance_FRAX_FXS.address,
 			}
 		}      
 	}
