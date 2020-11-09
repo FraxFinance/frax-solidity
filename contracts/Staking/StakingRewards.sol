@@ -356,11 +356,9 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     // Added to support recovering LP Rewards from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
-        // Cannot withdraw LP token
-        bool isLPToken = tokenAddress == address(stakingToken);
         // Cannot recover the staking token or the rewards token
         require(
-            tokenAddress != address(stakingToken) && tokenAddress != address(rewardsToken) && !isLPToken,
+            tokenAddress != address(stakingToken) && tokenAddress != address(rewardsToken),
             "Cannot withdraw the staking or rewards tokens"
         );
         ERC20(tokenAddress).safeTransfer(owner, tokenAmount);

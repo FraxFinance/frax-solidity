@@ -1490,102 +1490,108 @@ contract('FRAX', async (accounts) => {
 		console.log("=========================Normal Stakes=========================");
 		// Give some Uniswap Pool tokens to another user so they can stake too
 		await pair_instance_FRAX_USDC.transfer(accounts[9], new BigNumber("250e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("give accounts[9] 250 FRAX-USDC Uniswap pool tokens");
 
 		const cr_boost_multiplier = new BigNumber(await stakingInstance_FRAX_USDC.crBoostMultiplier()).div(BIG6);
-		console.log("cr_boost_multiplier: ", cr_boost_multiplier.toNumber());
+		console.log("pool cr_boost_multiplier (div 1e6): ", cr_boost_multiplier.toNumber());
 
-		// Need to approve first so the staking can use transfer
-		let uni_pool_tokens_1 = new BigNumber("75e18");
-		let uni_pool_tokens_9 = new BigNumber("25e18");
-		await pair_instance_FRAX_USDC.approve(stakingInstance_FRAX_USDC.address, uni_pool_tokens_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await pair_instance_FRAX_USDC.approve(stakingInstance_FRAX_USDC.address, uni_pool_tokens_9, { from: accounts[9] });
-		
-		// Note the FRAX amounts before
-		const uni_pool_tokens_before_1 = new BigNumber(await pair_instance_FRAX_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const uni_pool_tokens_before_9 = new BigNumber(await pair_instance_FRAX_USDC.balanceOf.call(accounts[9])).div(BIG18);
-		console.log("FRAX_USDC Uniswap Liquidity Tokens BEFORE [1]: ", uni_pool_tokens_before_1.toString());
-		console.log("FRAX_USDC Uniswap Liquidity Tokens BEFORE [9]: ", uni_pool_tokens_before_9.toString());
-
-		// Stake
-		await stakingInstance_FRAX_USDC.stake(uni_pool_tokens_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await stakingInstance_FRAX_USDC.stake(uni_pool_tokens_9, { from: accounts[9] });
-		await time.advanceBlock();
+		const rewardPerToken = new BigNumber(await stakingInstance_FRAX_USDC.rewardPerToken()).div(BIG6);
+		console.log("pool rewardPerToken (div 1e6): ", rewardPerToken.toNumber());
+		console.log("");
 
 		// Note the Uniswap Pool Token and FXS amounts after staking
+		let uni_pool_tokens_1 = new BigNumber("75e18");
+		await pair_instance_FRAX_USDC.approve(stakingInstance_FRAX_USDC.address, uni_pool_tokens_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("accounts[0] approve FRAX_USDC staking pool for 75 LP tokens");
 		const uni_pool_1st_stake_1 = new BigNumber(await pair_instance_FRAX_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const uni_pool_1st_stake_9 = new BigNumber(await pair_instance_FRAX_USDC.balanceOf.call(accounts[9])).div(BIG18);
 		const fxs_1st_stake_1 = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const fxs_1st_stake_9 = new BigNumber(await fxsInstance.balanceOf.call(accounts[9])).div(BIG18);
 		const rewards_balance_1st_stake_1 = new BigNumber(await stakingInstance_FRAX_USDC.rewards.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		
+		await stakingInstance_FRAX_USDC.stake(uni_pool_tokens_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });		
+		console.log("accounts[0] staking 75 LP tokens into FRAX_USDC staking pool");
+		console.log("accounts[0] LP token balance:", uni_pool_1st_stake_1.toString());
+		console.log("accounts[0] FXS balance:", fxs_1st_stake_1.toString());
+		console.log("accounts[0] staking rewards():", rewards_balance_1st_stake_1.toString());
+		console.log("");
+
+		let uni_pool_tokens_9 = new BigNumber("25e18");
+		await pair_instance_FRAX_USDC.approve(stakingInstance_FRAX_USDC.address, uni_pool_tokens_9, { from: accounts[9] });
+		console.log("accounts[9] approve FRAX_USDC staking pool for 25 LP tokens");
+		const uni_pool_1st_stake_9 = new BigNumber(await pair_instance_FRAX_USDC.balanceOf.call(accounts[9])).div(BIG18);
+		const fxs_1st_stake_9 = new BigNumber(await fxsInstance.balanceOf.call(accounts[9])).div(BIG18);
 		const rewards_balance_1st_stake_9 = new BigNumber(await stakingInstance_FRAX_USDC.rewards.call(accounts[9])).div(BIG18);
-		console.log("UNI POOL AFTER 1ST STAKE [1]: ", uni_pool_1st_stake_1.toString());
-		console.log("UNI POOL AFTER 1ST STAKE [9]: ", uni_pool_1st_stake_9.toString());
-		console.log("FXS AFTER 1ST STAKE [1]: ", fxs_1st_stake_1.toString());
-		console.log("FXS AFTER 1ST STAKE [9]: ", fxs_1st_stake_9.toString());
-		console.log("REWARDS BALANCE BEFORE [1]: ", rewards_balance_1st_stake_1.toString());
-		console.log("REWARDS BALANCE BEFORE [9]: ", rewards_balance_1st_stake_9.toString());
+
+		await stakingInstance_FRAX_USDC.stake(uni_pool_tokens_9, { from: accounts[9] });
+		console.log("accounts[9] staking 25 LP tokens into FRAX_USDC staking pool");
+		console.log("accounts[9] LP token balance:", uni_pool_1st_stake_9.toString());
+		console.log("accounts[9] FXS balance:", fxs_1st_stake_9.toString());
+		console.log("accounts[9] staking rewards():", rewards_balance_1st_stake_9.toString());
+		console.log("");
 
 		// Note the last update time
 		const block_time_before = (await time.latest()).toNumber();
-		console.log("BLOCK TIME AT STAKING: ", block_time_before);
+		console.log("current block time (in seconds):", block_time_before);
 
 		// Note the total lastUpdateTime
 		let rewards_contract_lastUpdateTime = new BigNumber(await stakingInstance_FRAX_USDC.lastUpdateTime.call());
-		console.log("REWARDS CONTRACT lastUpdateTime: ", rewards_contract_lastUpdateTime.toString());
+		console.log("pool lastUpdateTime:", rewards_contract_lastUpdateTime.toString());
 
 		// Note the total periodFinish
 		let rewards_contract_periodFinish = new BigNumber(await stakingInstance_FRAX_USDC.periodFinish.call());
-		console.log("REWARDS CONTRACT periodFinish: ", rewards_contract_periodFinish.toString());
+		console.log("pool periodFinish:", rewards_contract_periodFinish.toString());
 
 		// Note the total lastTimeRewardApplicable
 		let rewards_contract_lastTimeRewardApplicable = new BigNumber(await stakingInstance_FRAX_USDC.lastTimeRewardApplicable.call());
-		console.log("REWARDS CONTRACT lastTimeRewardApplicable: ", rewards_contract_lastTimeRewardApplicable.toString());
+		console.log("pool lastTimeRewardApplicable():", rewards_contract_lastTimeRewardApplicable.toString());
 
 		console.log("====================================================================");
+		console.log("advance one week (one rewardsDuration period)");
 		// Advance 7 days so the reward can be claimed
 		await time.increase((7 * 86400) + 1);
 		await time.advanceBlock();
 		//await fraxInstance.refreshCollateralRatio();
+		console.log("");
 
 		// Note the last update time
 		let block_time_after = (await time.latest()).toNumber();
-		console.log("BLOCK TIME AFTER WAITING: ", block_time_after);
+		console.log("block time after waiting one week (in seconds):", block_time_after);
 
 		// Make sure there is a valid period for the contract
 		await stakingInstance_FRAX_USDC.renewIfApplicable({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Note the total lastUpdateTime
 		rewards_contract_lastUpdateTime = new BigNumber(await stakingInstance_FRAX_USDC.lastUpdateTime.call());
-		console.log("REWARDS CONTRACT lastUpdateTime: ", rewards_contract_lastUpdateTime.toString());
+		console.log("pool lastUpdateTime:", rewards_contract_lastUpdateTime.toString());
 
 		// Note the total periodFinish
 		rewards_contract_periodFinish = new BigNumber(await stakingInstance_FRAX_USDC.periodFinish.call());
-		console.log("REWARDS CONTRACT periodFinish: ", rewards_contract_periodFinish.toString());
+		console.log("pool periodFinish:", rewards_contract_periodFinish.toString());
 
 		// Note the total lastTimeRewardApplicable
 		rewards_contract_lastTimeRewardApplicable = new BigNumber(await stakingInstance_FRAX_USDC.lastTimeRewardApplicable.call());
-		console.log("REWARDS CONTRACT lastTimeRewardApplicable: ", rewards_contract_lastTimeRewardApplicable.toString());
+		console.log("pool lastTimeRewardApplicable():", rewards_contract_lastTimeRewardApplicable.toString());
 		
 		// Note the total FRAX supply
 		const rewards_contract_stored_uni_pool = new BigNumber(await stakingInstance_FRAX_USDC.stakingTokenSupply.call()).div(BIG18);
-		console.log("REWARDS CONTRACT STORED UNI POOL: ", rewards_contract_stored_uni_pool.toString());
+		console.log("pool stakingTokenSupply() (of LP tokens):", rewards_contract_stored_uni_pool.toString());
 
 		// Note the reward per token
 		let rewards_per_token = new BigNumber(await stakingInstance_FRAX_USDC.rewardPerToken.call()).div(BIG18);
-		console.log("REWARDS PER TOKEN (SINCE DEPOSIT): ", rewards_per_token.toString());
+		console.log("pool rewardPerToken():", rewards_per_token.toString());
 
 		// Print the decimals
 		const staking_token_decimal = new BigNumber(await stakingInstance_FRAX_USDC.stakingDecimals.call())
-		console.log("STAKING TOKEN DECIMALS: ", staking_token_decimal.toString());
+		console.log("pool stakingDecimals():", staking_token_decimal.toString());
 
+		console.log("");
 		// Show the reward
 		const staking_fxs_earned_1 = new BigNumber(await stakingInstance_FRAX_USDC.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const staking_fxs_contract_bal_1 = new BigNumber(await stakingInstance_FRAX_USDC.rewardsFor.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const staking_fxs_earned_9 = new BigNumber(await stakingInstance_FRAX_USDC.earned.call(accounts[9])).div(BIG18);
 		const staking_fxs_contract_bal_9 = new BigNumber(await stakingInstance_FRAX_USDC.rewardsFor.call(accounts[9])).div(BIG18);
-		console.log("STAKING FXS EARNED [1]: ", staking_fxs_earned_1.toString());
+		console.log("accounts[0] staking earned():", staking_fxs_earned_1.toString());
 		// console.log("STAKING FXS BALANCE IN CONTRACT [1]: ", staking_fxs_contract_bal_1.toString());
-		console.log("STAKING FXS EARNED [9]: ", staking_fxs_earned_9.toString());
+		console.log("accounts[9] staking earned():", staking_fxs_earned_9.toString());
 		// console.log("STAKING FXS BALANCE IN CONTRACT [9]: ", staking_fxs_contract_bal_9.toString());
 
 		// await stakingInstance_FRAX_USDC.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -1593,31 +1599,34 @@ contract('FRAX', async (accounts) => {
 		// Note the UNI POOL and FXS amounts after the reward
 		const uni_pool_post_reward_1 = new BigNumber(await pair_instance_FRAX_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const fxs_post_reward_1 = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const rewards_balance_1_after = new BigNumber(await stakingInstance_FRAX_USDC.rewards.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		console.log("UNI POOL POST REWARD [1]: ", uni_pool_post_reward_1.toString());
-		console.log("FXS POST REWARD [1]: ", fxs_post_reward_1.toString());
-		console.log("REWARDS BALANCE AFTER [1]: ", rewards_balance_1_after.toString());
+		const rewards_balance_1_after = new BigNumber(await stakingInstance_FRAX_USDC.rewardsFor.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		console.log("accounts[0] LP token balance:", uni_pool_post_reward_1.toString());
+		console.log("accounts[0] FXS balance:", fxs_post_reward_1.toString());
+		console.log("accounts[0] staking rewardsFor():", rewards_balance_1_after.toString());
 
 		console.log("====================================================================");
-		console.log("USER 1 DOES AN EARLY UNI POOL WITHDRAWAL, SO STOPS ACCUMULATING REWARDS");
+		console.log("accounts[0] withdraws");
+		console.log("");
 		await stakingInstance_FRAX_USDC.withdraw(uni_pool_tokens_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await time.advanceBlock();
 		const uni_pool_balance_1 = new BigNumber(await pair_instance_FRAX_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const staking_fxs_ew_earned_1 = new BigNumber(await stakingInstance_FRAX_USDC.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		console.log("UNI POOL BALANCE IN CONTRACT [1]: ", uni_pool_balance_1.toString());
-		console.log("STAKING FXS EARNED [1]: ", staking_fxs_ew_earned_1.toString());
+		console.log("accounts[0] LP token balance:", uni_pool_balance_1.toString());
+		console.log("accounts[0] staking earned():", staking_fxs_ew_earned_1.toString());
+		console.log("");
 
-		console.log("CLAIMING THE REWARD [1]...");
+		console.log("accounts[0] claims getReward()");
 		await stakingInstance_FRAX_USDC.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await time.advanceBlock();
+		console.log("");
 
 		const staking_fxs_ew_contract_bal_1 = new BigNumber(await stakingInstance_FRAX_USDC.rewardsFor.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		console.log("STAKING FXS BALANCE IN CONTRACT [1]: ", staking_fxs_ew_contract_bal_1.toString());
-		console.log("WAIT A FEW DAYS FOR USER 9 TO EARN SOME MORE");
+		console.log("staking pool rewardsFor(accounts[0]):", staking_fxs_ew_contract_bal_1.toString());
 		console.log("====================================================================");
 
+		console.log("wait two weeks so accounts[9] can earn more");
 		// Advance a few days
-		await time.increase((3 * 86400) + 1);
+		await time.increase(2 * (7 * 86400) + 1);
 		await time.advanceBlock();
 
 		// Make sure there is a valid period for the contract
