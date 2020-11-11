@@ -63,6 +63,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     mapping(address => LockedStake[]) private lockedStakes;
 
+    mapping(address => bool) public greylist;
+
     struct LockedStake {
         bytes32 kek_id;
         uint256 start_timestamp;
@@ -187,6 +189,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     function stake(uint256 amount) external override nonReentrant notPaused updateReward(msg.sender) {
         require(amount > 0, "Cannot stake 0");
+        require(greylist[msg.sender] == false, "address has been greylisted");
 
         // Staking token supply and boosted supply
         _staking_token_supply = _staking_token_supply.add(amount);
@@ -204,6 +207,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     function stakeLocked(uint256 amount, uint256 secs) external nonReentrant notPaused updateReward(msg.sender) {
         require(amount > 0, "Cannot stake 0");
         require(secs > 0, "Cannot wait for a negative number");
+        require(greylist[msg.sender] == false, "address has been greylisted");
         require(secs >= locked_stake_min_time, StringHelpers.strConcat("Minimum stake time not met (", locked_stake_min_time_str, ")") );
 
         uint256 multiplier = stakingMultiplier(secs);
@@ -403,6 +407,10 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
         emit DefaultInitialization();
+    }
+
+    function greylistAddress(address _address) external onlyByOwnerOrGovernance {
+        greylist[_address] = !(greylist[_address]);
     }
 
     /* ========== MODIFIERS ========== */
