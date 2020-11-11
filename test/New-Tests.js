@@ -783,17 +783,17 @@ contract('FRAX', async (accounts) => {
 		const totalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18);
 		console.log("totalCollateralValue: ", totalCollateralValue.toNumber());
 
-		/*
+		
 		// Advance 1 hr so the collateral ratio can be recalculated
-		await time.increase(3600 + 1);
-		await time.advanceBlock();
-		await fraxInstance.refreshCollateralRatio();
+		//await time.increase(3600 + 1);
+		//await time.advanceBlock();
+		//await fraxInstance.refreshCollateralRatio();
 
 		// Advance 1 hr so the collateral ratio can be recalculated
-		await time.increase(3600 + 1);
-		await time.advanceBlock();
-		await fraxInstance.refreshCollateralRatio();
-		*/
+		//await time.increase(3600 + 1);
+		//await time.advanceBlock();
+		//await fraxInstance.refreshCollateralRatio();
+		
 
 		const collateral_ratio_refreshed = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
 		console.log("collateral_ratio_refreshed: ", collateral_ratio_refreshed.toNumber());
@@ -1512,6 +1512,8 @@ contract('FRAX', async (accounts) => {
 		console.log("accounts[0] LP token balance:", uni_pool_1st_stake_1.toString());
 		console.log("accounts[0] FXS balance:", fxs_1st_stake_1.toString());
 		console.log("accounts[0] staking rewards():", rewards_balance_1st_stake_1.toString());
+		console.log("accounts[0] balanceOf:", (new BigNumber(await stakingInstance_FRAX_USDC.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
+		console.log("accounts[0] boostedBalanceOf:", (new BigNumber(await stakingInstance_FRAX_USDC.boostedBalanceOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
 		console.log("");
 
 		let uni_pool_tokens_9 = new BigNumber("25e18");
@@ -1519,13 +1521,15 @@ contract('FRAX', async (accounts) => {
 		console.log("accounts[9] approve FRAX_USDC staking pool for 25 LP tokens");
 		const uni_pool_1st_stake_9 = new BigNumber(await pair_instance_FRAX_USDC.balanceOf.call(accounts[9])).div(BIG18);
 		const fxs_1st_stake_9 = new BigNumber(await fxsInstance.balanceOf.call(accounts[9])).div(BIG18);
-		const rewards_balance_1st_stake_9 = new BigNumber(await stakingInstance_FRAX_USDC.rewards.call(accounts[9])).div(BIG18);
+		const rewards_balance_1st_stake_9 = new BigNumber(await stakingInstance_FRAX_USDC.rewards(accounts[9])).div(BIG18);
 
 		await stakingInstance_FRAX_USDC.stake(uni_pool_tokens_9, { from: accounts[9] });
 		console.log("accounts[9] staking 25 LP tokens into FRAX_USDC staking pool");
 		console.log("accounts[9] LP token balance:", uni_pool_1st_stake_9.toString());
 		console.log("accounts[9] FXS balance:", fxs_1st_stake_9.toString());
 		console.log("accounts[9] staking rewards():", rewards_balance_1st_stake_9.toString());
+		console.log("accounts[9] balanceOf:", (new BigNumber(await stakingInstance_FRAX_USDC.balanceOf(accounts[9]))).div(BIG18).toNumber());
+		console.log("accounts[9] boostedBalanceOf:", (new BigNumber(await stakingInstance_FRAX_USDC.boostedBalanceOf(accounts[9]))).div(BIG18).toNumber());
 		console.log("");
 
 		// Note the last update time
@@ -1550,6 +1554,13 @@ contract('FRAX', async (accounts) => {
 		await time.increase((7 * 86400) + 1);
 		await time.advanceBlock();
 		//await fraxInstance.refreshCollateralRatio();
+		console.log("");
+
+		const cr_boost_multiplier_2 = new BigNumber(await stakingInstance_FRAX_USDC.crBoostMultiplier()).div(BIG6);
+		console.log("pool cr_boost_multiplier (div 1e6): ", cr_boost_multiplier_2.toNumber());
+
+		const rewardPerToken_2 = new BigNumber(await stakingInstance_FRAX_USDC.rewardPerToken()).div(BIG18);
+		console.log("pool rewardPerToken (div 1e18): ", rewardPerToken_2.toNumber());
 		console.log("");
 
 		// Note the last update time

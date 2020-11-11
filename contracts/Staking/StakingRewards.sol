@@ -100,7 +100,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function stakingMultiplier(uint256 secs) public view returns (uint256) {
-        uint256 multiplier = secs.mul(locked_stake_max_multiplier).div(locked_stake_time_for_max_multiplier);
+        uint256 multiplier = 1e6 + secs.mul(locked_stake_max_multiplier - 1e6).div(locked_stake_time_for_max_multiplier);
         if (multiplier > locked_stake_max_multiplier) multiplier = locked_stake_max_multiplier;
         return multiplier;
     }
