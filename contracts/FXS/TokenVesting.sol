@@ -1,6 +1,6 @@
 pragma solidity 0.6.11;
 
-import "../ERC20/SafeERC20.sol";
+import "../ERC20/ERC20Custom.sol";
 //import "../Utils/Ownable.sol";
 import "../Math/SafeMath.sol";
 //import "../Utils/Initializable.sol";
@@ -21,7 +21,6 @@ contract TokenVesting {
     // solhint-disable not-rely-on-time
 
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
 
     event TokensReleased(address token, uint256 amount);
     event TokenVestingRevoked(address token);
@@ -135,7 +134,7 @@ contract TokenVesting {
 
         _released[address(token)] = _released[address(token)].add(unreleased);
 
-        token.safeTransfer(_beneficiary, unreleased);
+        token.transfer(_beneficiary, unreleased);
 
         emit TokensReleased(address(token), unreleased);
     }
@@ -157,7 +156,7 @@ contract TokenVesting {
 
         _revoked[address(token)] = true;
 
-        token.safeTransfer(_owner, refund);
+        token.transfer(_owner, refund);
 
         emit TokenVestingRevoked(address(token));
     }
