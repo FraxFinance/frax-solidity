@@ -72,6 +72,9 @@ const StakingRewards_FXS_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FXS
 const StakingRewards_FXS_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDT.sol");
 // const StakingRewards_FXS_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FXS_yUSD.sol");
 
+// Token vesting
+const TokenVesting = artifacts.require("FXS/TokenVesting.sol");
+
 // Governance related
 const GovernorAlpha = artifacts.require("Governance/GovernorAlpha");
 const Timelock = artifacts.require("Governance/Timelock");
@@ -107,6 +110,8 @@ contract('FRAX', async (accounts) => {
 	// Initialize core contract instances
 	let fraxInstance;
 	let fxsInstance;
+
+	let vestingInstance;
 
 	// Initialize collateral instances
 	let wethInstance;
@@ -215,6 +220,8 @@ contract('FRAX', async (accounts) => {
 		// Fill core contract instances
 		fraxInstance = await FRAXStablecoin.deployed();
 		fxsInstance = await FRAXShares.deployed();
+
+		vestingInstance = await TokenVesting.deployed();
 
 		// Fill collateral instances
 		wethInstance = await WETH.deployed();
@@ -550,20 +557,59 @@ contract('FRAX', async (accounts) => {
 
 
 	});
-/* IGNORE THIS
-	it("Changes the price of USDT through swapping on the USDT-ETH Uniswap pair", async () => {
-		console.log("=========================Uniswapv2Router.swapExactETHForTokens=========================");
-		const amountIn = 1000;
-		const amountOutMin = 1;
-		await col_instance_USDT.approve.call(TestSwap.address, amountIn, {from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("approved TestSwap for", amountIn, "USDT");
-		//const path = await TestSwap_instance.getPath.call();
-		//console.log("test6");
-		const result = await TestSwap_instance.swapUSDTforETH.call(amountIn, amountOutMin, {from: COLLATERAL_FRAX_AND_FXS_OWNER});
-		console.log("swapped");
-		console.log(result);
+
+	// TOKEN VESTING TEST
+	/*
+	it('Deposits FXS into the vesting contract, attempts to withdraw before the cliff, between cliff and end, and after end', async () => {
+		await vestingInstance.setFXSAddress(fxsInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await vestingInstance.setTimelockAddress(timelockInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await fxsInstance.transfer(vestingInstance.address, new BigNumber("5400000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("current timestamp:", (await time.latest()).toNumber());
+		console.log("TokenVesting contract info:");
+		console.log("beneficiary:", await vestingInstance.beneficiary());
+		console.log("cliff:", (await vestingInstance.cliff()).toNumber());
+		console.log("start:", (await vestingInstance.start()).toNumber());
+		console.log("duration:", (await vestingInstance.duration()).toNumber());
+		console.log("revocable:", await vestingInstance.revocable());
+		console.log("released:", (await vestingInstance.released()).toNumber());
+		console.log("accounts[9] FXS balance:", (new BigNumber(await fxsInstance.balanceOf(accounts[9]))).div(BIG18).toNumber());
+
+		console.log("======================================");
+		console.log("wait 121.25 days (1/3 of a year, ~four months)");
+		await time.increase(86400 * 121.25);
+		await time.advanceBlock();
+		console.log("======================================");
+
+		//console.log("current timestamp:", (await time.latest()).toNumber());
+		//console.log("released:", (await vestingInstance.released()).toNumber());
+		//console.log("attempt to withdraw from vesting instance", await vestingInstance.release({ from: accounts[9] }));
+		//console.log("accounts[9] FXS balance:", (new BigNumber(await fxsInstance.balanceOf(accounts[9]))).div(BIG18).toNumber());
+
+		console.log("======================================");
+		console.log("wait another 121.25 days");
+		await time.increase(86400 * 121.25);
+		await time.advanceBlock();
+		console.log("======================================");
+
+		console.log("current timestamp:", (await time.latest()).toNumber());
+		console.log("released:", (new BigNumber(await vestingInstance.released())).div(BIG18).toNumber())
+		console.log("attempt to withdraw from vesting instance");
+		await vestingInstance.release({ from: accounts[9] });
+		console.log("accounts[9] FXS balance:", (new BigNumber(await fxsInstance.balanceOf(accounts[9]))).div(BIG18).toNumber());
+
+		console.log("======================================");
+		console.log("wait the last 121.25 days");
+		await time.increase(86400 * 121.25);
+		await time.advanceBlock();
+		console.log("======================================");
+
+		console.log("current timestamp:", (await time.latest()).toNumber());
+		console.log("released:", (new BigNumber(await vestingInstance.released())).div(BIG18).toNumber())
+		console.log("attempt to withdraw from vesting instance");
+		await vestingInstance.release({ from: accounts[9] });
+		console.log("accounts[9] FXS balance:", (new BigNumber(await fxsInstance.balanceOf(accounts[9]))).div(BIG18).toNumber());
 	});
-*/
+	*/
 
 	// GOVERNANCE TEST [PART 1]
 	// ================================================================

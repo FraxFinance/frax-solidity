@@ -1,9 +1,10 @@
+// SPDX-License-Identifier: MIT
 pragma solidity 0.6.11;
 
 import "../ERC20/ERC20Custom.sol";
-//import "../Utils/Ownable.sol";
+import "../ERC20/ERC20.sol";
 import "../Math/SafeMath.sol";
-//import "../Utils/Initializable.sol";
+import "../FXS/FXS.sol";
 
 /**
  * @title TokenVesting
@@ -11,7 +12,7 @@ import "../Math/SafeMath.sol";
  * typical vesting scheme, with a cliff and vesting period. Optionally revocable by the
  * owner.
  * 
- * Modified from OpenZepellin TokenVesting, with Initializable and ContextUpgradeSafe removed
+ * Modified from OpenZeppelin's TokenVesting.sol draft
  */
 contract TokenVesting {
     // The vesting schedule is time-based (i.e. using block timestamps as opposed to e.g. block numbers), and is
@@ -22,8 +23,8 @@ contract TokenVesting {
 
     using SafeMath for uint256;
 
-    event TokensReleased(address token, uint256 amount);
-    event TokenVestingRevoked(address token);
+    event TokensReleased(uint256 amount);
+    event TokenVestingRevoked();
 
     // beneficiary of tokens after they are released
     address private _beneficiary;
@@ -36,10 +37,13 @@ contract TokenVesting {
     uint256 private _start;
     uint256 private _duration;
 
+    address public _FXS_contract_address;
+    FRAXShares FXS;
+    address public _timelock_address;
     bool public _revocable;
 
-    mapping (address => uint256) private _released;
-    mapping (address => bool) private _revoked;
+    uint256 private _released;
+    bool public _revoked;
 
     /**
      * @dev Creates a vesting contract that vests its balance of any ERC20 token to the
@@ -53,10 +57,10 @@ contract TokenVesting {
      */
 
     constructor(
-        address beneficiary, 
-        uint256 start, 
-        uint256 cliffDuration, 
-        uint256 duration, 
+        address beneficiary,
+        uint256 start,
+        uint256 cliffDuration,
+        uint256 duration,
         bool revocable
     ) public {
         require(beneficiary != address(0), "TokenVesting: beneficiary is the zero address");
@@ -72,6 +76,17 @@ contract TokenVesting {
         _cliff = start.add(cliffDuration);
         _start = start;
         _owner = msg.sender;
+    }
+
+    function setFXSAddress(address FXS_address) public {
+        require(msg.sender == _owner, "must be set by the owner");
+        _FXS_contract_address = FXS_address;
+        FXS = FRAXShares(FXS_address);
+    }
+
+    function setTimelockAddress(address timelock_address) public {
+        require(msg.sender == _owner, "must be set by the owner");
+        _timelock_address = timelock_address;
     }
 
     /**
@@ -112,74 +127,79 @@ contract TokenVesting {
     /**
      * @return the amount of the token released.
      */
-    function released(address token) public view returns (uint256) {
-        return _released[token];
+    function released() public view returns (uint256) {
+        return _released;
     }
 
     /**
      * @return true if the token is revoked.
      */
-    function revoked(address token) public view returns (bool) {
-        return _revoked[token];
+    function revoked() public view returns (bool) {
+        return _revoked;
     }
 
     /**
      * @notice Transfers vested tokens to beneficiary.
-     * @param token ERC20 token which is being vested
      */
-    function release(IERC20 token) public {
-        uint256 unreleased = _releasableAmount(token);
+    function release() public {
+        uint256 unreleased = _releasableAmount();
 
         require(unreleased > 0, "TokenVesting: no tokens are due");
 
-        _released[address(token)] = _released[address(token)].add(unreleased);
+        _released = _released.add(unreleased);
 
-        token.transfer(_beneficiary, unreleased);
+        FXS.transfer(_beneficiary, unreleased);
 
-        emit TokensReleased(address(token), unreleased);
+        emit TokensReleased(unreleased);
     }
 
     /**
      * @notice Allows the owner to revoke the vesting. Tokens already vested
      * remain in the contract, the rest are returned to the owner.
-     * @param token ERC20 token which is being vested
      */
-    function revoke(IERC20 token) public {
-        require(msg.sender == _owner, "Must be called by the owner of the contract");
+    function revoke() public {
+        require(msg.sender == _timelock_address, "Must be called by the timelock contract");
         require(_revocable, "TokenVesting: cannot revoke");
-        require(!_revoked[address(token)], "TokenVesting: token already revoked");
+        require(!_revoked, "TokenVesting: token already revoked");
 
-        uint256 balance = token.balanceOf(address(this));
+        uint256 balance = FXS.balanceOf(address(this));
 
-        uint256 unreleased = _releasableAmount(token);
+        uint256 unreleased = _releasableAmount();
         uint256 refund = balance.sub(unreleased);
 
-        _revoked[address(token)] = true;
+        _revoked = true;
 
-        token.transfer(_owner, refund);
+        FXS.transfer(_owner, refund);
 
-        emit TokenVestingRevoked(address(token));
+        emit TokenVestingRevoked();
     }
+
+    // Added to support recovering possible airdrops
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external {
+        require(msg.sender == _beneficiary, "Must be called by the beneficiary");
+
+        // Cannot recover the staking token or the rewards token
+        require(tokenAddress != _FXS_contract_address, "Cannot withdraw the FXS through this function");
+        ERC20(tokenAddress).transfer(_beneficiary, tokenAmount);
+    }
+
 
     /**
      * @dev Calculates the amount that has already vested but hasn't been released yet.
-     * @param token ERC20 token which is being vested
      */
-    function _releasableAmount(IERC20 token) private view returns (uint256) {
-        return _vestedAmount(token).sub(_released[address(token)]);
+    function _releasableAmount() private view returns (uint256) {
+        return _vestedAmount().sub(_released);
     }
 
     /**
      * @dev Calculates the amount that has already vested.
-     * @param token ERC20 token which is being vested
      */
-    function _vestedAmount(IERC20 token) private view returns (uint256) {
-        uint256 currentBalance = token.balanceOf(address(this));
-        uint256 totalBalance = currentBalance.add(_released[address(token)]);
-
+    function _vestedAmount() private view returns (uint256) {
+        uint256 currentBalance = FXS.balanceOf(address(this));
+        uint256 totalBalance = currentBalance.add(_released);
         if (block.timestamp < _cliff) {
             return 0;
-        } else if (block.timestamp >= _start.add(_duration) || _revoked[address(token)]) {
+        } else if (block.timestamp >= _start.add(_duration) || _revoked) {
             return totalBalance;
         } else {
             return totalBalance.mul(block.timestamp.sub(_start)).div(_duration);

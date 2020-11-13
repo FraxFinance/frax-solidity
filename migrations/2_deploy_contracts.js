@@ -80,6 +80,9 @@ const StakingRewards_FXS_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FXS
 //const StakingRewards_FXS_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FXS_yUSD.sol");
 const StakingRewards_FRAX_FXS = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_FXS.sol");
 
+// Token vesting contract
+const TokenVesting = artifacts.require("FXS/TokenVesting.sol");
+
 const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 
 // Make sure Ganache is running beforehand
@@ -168,6 +171,8 @@ module.exports = async function(deployer, network, accounts) {
 	const fraxInstance = await FRAXStablecoin.deployed();
 	await deployer.deploy(FRAXShares, "FXS", ONE_BILLION_DEC18, ORACLE_ADDRESS, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	const fxsInstance = await FRAXShares.deployed();
+	await deployer.deploy(TokenVesting, accounts[9], await time.latest(), 86400 * 182.5, 86400 * 365, false, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); //6 month cliff, 1 year vesting schedule
+	const vestingInstance = await TokenVesting.deployed();
 
 	// ======== Deploy the governance contract and its associated timelock ========
 	console.log(chalk.yellow('===== DEPLOY THE GOVERNANCE CONTRACT ====='));
