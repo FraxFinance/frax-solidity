@@ -558,59 +558,6 @@ contract('FRAX', async (accounts) => {
 
 	});
 
-	// TOKEN VESTING TEST
-	/*
-	it('Deposits FXS into the vesting contract, attempts to withdraw before the cliff, between cliff and end, and after end', async () => {
-		await vestingInstance.setFXSAddress(fxsInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await vestingInstance.setTimelockAddress(timelockInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await fxsInstance.transfer(vestingInstance.address, new BigNumber("5400000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("current timestamp:", (await time.latest()).toNumber());
-		console.log("TokenVesting contract info:");
-		console.log("beneficiary:", await vestingInstance.beneficiary());
-		console.log("cliff:", (await vestingInstance.cliff()).toNumber());
-		console.log("start:", (await vestingInstance.start()).toNumber());
-		console.log("duration:", (await vestingInstance.duration()).toNumber());
-		console.log("revocable:", await vestingInstance.revocable());
-		console.log("released:", (await vestingInstance.released()).toNumber());
-		console.log("accounts[9] FXS balance:", (new BigNumber(await fxsInstance.balanceOf(accounts[9]))).div(BIG18).toNumber());
-
-		console.log("======================================");
-		console.log("wait 121.25 days (1/3 of a year, ~four months)");
-		await time.increase(86400 * 121.25);
-		await time.advanceBlock();
-		console.log("======================================");
-
-		//console.log("current timestamp:", (await time.latest()).toNumber());
-		//console.log("released:", (await vestingInstance.released()).toNumber());
-		//console.log("attempt to withdraw from vesting instance", await vestingInstance.release({ from: accounts[9] }));
-		//console.log("accounts[9] FXS balance:", (new BigNumber(await fxsInstance.balanceOf(accounts[9]))).div(BIG18).toNumber());
-
-		console.log("======================================");
-		console.log("wait another 121.25 days");
-		await time.increase(86400 * 121.25);
-		await time.advanceBlock();
-		console.log("======================================");
-
-		console.log("current timestamp:", (await time.latest()).toNumber());
-		console.log("released:", (new BigNumber(await vestingInstance.released())).div(BIG18).toNumber())
-		console.log("attempt to withdraw from vesting instance");
-		await vestingInstance.release({ from: accounts[9] });
-		console.log("accounts[9] FXS balance:", (new BigNumber(await fxsInstance.balanceOf(accounts[9]))).div(BIG18).toNumber());
-
-		console.log("======================================");
-		console.log("wait the last 121.25 days");
-		await time.increase(86400 * 121.25);
-		await time.advanceBlock();
-		console.log("======================================");
-
-		console.log("current timestamp:", (await time.latest()).toNumber());
-		console.log("released:", (new BigNumber(await vestingInstance.released())).div(BIG18).toNumber())
-		console.log("attempt to withdraw from vesting instance");
-		await vestingInstance.release({ from: accounts[9] });
-		console.log("accounts[9] FXS balance:", (new BigNumber(await fxsInstance.balanceOf(accounts[9]))).div(BIG18).toNumber());
-	});
-	*/
-
 	// GOVERNANCE TEST [PART 1]
 	// ================================================================
 	it('Propose changing the minting fee', async () => {
