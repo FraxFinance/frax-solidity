@@ -5,7 +5,7 @@ import "truffle/Assert.sol";
 import "truffle/DeployedAddresses.sol";
 import "../contracts/FakeCollateral/FakeCollateral.sol";
 import "../contracts/Frax/Frax.sol";
-import "../contracts/Frax/FraxPool.sol";
+import "../contracts/Frax/Pools/FraxPool.sol";
 import "../contracts/FXS/FXS.sol";
 import "../contracts/Governance/Governance.sol";
 import "../contracts/Staking/StakingRewards.sol";

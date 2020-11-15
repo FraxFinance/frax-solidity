@@ -7,6 +7,7 @@ import "../ERC20/ERC20Custom.sol";
 import "../ERC20/IERC20.sol";
 import "../Frax/Frax.sol";
 import "../Math/SafeMath.sol";
+import "../Governance/AccessControl.sol";
 
 contract FRAXShares is ERC20Custom, AccessControl {
     using SafeMath for uint256;

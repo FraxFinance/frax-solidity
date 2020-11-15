@@ -13,7 +13,7 @@ import '../Uniswap/UniswapV2Library.sol';
 contract UniswapPairOracle {
     using FixedPoint for *;
 
-    uint public constant PERIOD = 24 hours;
+    //uint public constant PERIOD = 24 hours;
 
     IUniswapV2Pair public immutable pair;
     address public immutable token0;
@@ -44,7 +44,7 @@ contract UniswapPairOracle {
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // Overflow is desired
 
         // Ensure that at least one full period has passed since the last update
-        require(timeElapsed >= PERIOD, 'UniswapPairOracle: PERIOD_NOT_ELAPSED');
+        //require(timeElapsed >= PERIOD, 'UniswapPairOracle: PERIOD_NOT_ELAPSED');
 
         // Overflow is desired, casting never truncates
         // Cumulative price is in (uq112x112 price * seconds) units so we simply wrap it after division by time elapsed

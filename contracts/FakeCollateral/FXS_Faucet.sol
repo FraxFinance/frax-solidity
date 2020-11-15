@@ -18,7 +18,7 @@ contract FXS_Faucet {
 
     function faucet() public {
     	if(used[msg.sender] == false){
-    		fxs_contract.transfer(msg.sender, 1000 * (10 ** 18));
+    		fxs_contract.transfer(msg.sender, 100 * (10 ** 18));
     		used[msg.sender] = true;
     	}
     }
