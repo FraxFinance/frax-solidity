@@ -4,7 +4,6 @@ pragma solidity 0.6.11;
 import "../ERC20/ERC20Custom.sol";
 import "../ERC20/ERC20.sol";
 import "../Math/SafeMath.sol";
-import "../FXS/FXS.sol";
 
 /**
  * @title TokenVesting
@@ -38,7 +37,7 @@ contract TokenVesting {
     uint256 private _duration;
 
     address public _FXS_contract_address;
-    FRAXShares FXS;
+    ERC20 FXS;
     address public _timelock_address;
     bool public _revocable;
 
@@ -81,7 +80,7 @@ contract TokenVesting {
     function setFXSAddress(address FXS_address) public {
         require(msg.sender == _owner, "must be set by the owner");
         _FXS_contract_address = FXS_address;
-        FXS = FRAXShares(FXS_address);
+        FXS = ERC20(FXS_address);
     }
 
     function setTimelockAddress(address timelock_address) public {
@@ -142,6 +141,7 @@ contract TokenVesting {
      * @notice Transfers vested tokens to beneficiary.
      */
     function release() public {
+        require(msg.sender == _beneficiary, "must be the beneficiary to release tokens");
         uint256 unreleased = _releasableAmount();
 
         require(unreleased > 0, "TokenVesting: no tokens are due");
