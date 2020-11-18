@@ -18,7 +18,7 @@ contract FRAXShares is ERC20Custom, AccessControl {
     uint8 public constant decimals = 18;
     address public FRAXStablecoinAdd;
     
-    uint256 public constant genesis_supply = 100000000e18; // 100M. 51M goes to the staking pool
+    uint256 public constant genesis_supply = 100000000e18; // 100M is printed upon genesis
     uint256 public maximum_supply; // No FXS can be minted under any condition past this number
     uint256 public FXS_DAO_min; // Minimum FXS required to join DAO groups 
 
@@ -112,13 +112,13 @@ contract FRAXShares is ERC20Custom, AccessControl {
 
     // This function is what other frax pools will call to burn FXS 
     function pool_burn_from(address b_address, uint256 b_amount) external onlyPools {
-        uint32 srcRepNum = numCheckpoints[tx.origin];
-        uint96 srcRepOld = srcRepNum > 0 ? checkpoints[tx.origin][srcRepNum - 1].votes : 0;
-        uint96 srcRepNew = sub96(srcRepOld, uint96(b_amount), "pool_burn_from new votes underflows");
-        _writeCheckpoint(tx.origin, srcRepNum, srcRepOld, srcRepNew);
-        trackVotes(b_address, tx.origin, uint96(b_amount)); //check if this burns votes
         super._burnFrom(b_address, b_amount);
-        emit FXSBurned(b_address, tx.origin, b_amount);
+        uint32 srcRepNum = numCheckpoints[b_address];
+        uint96 srcRepOld = srcRepNum > 0 ? checkpoints[b_address][srcRepNum - 1].votes : 0;
+        uint96 srcRepNew = sub96(srcRepOld, uint96(b_amount), "pool_burn_from new votes underflows");
+        _writeCheckpoint(b_address, srcRepNum, srcRepOld, srcRepNew);
+        trackVotes(b_address, address(this), uint96(b_amount)); //check if this burns votes
+        emit FXSBurned(b_address, address(this), b_amount);
     }
 
     /* ========== OVERRIDDEN PUBLIC FUNCTIONS ========== */
