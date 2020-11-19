@@ -65,6 +65,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     mapping(address => bool) public greylist;
 
+    bool public unlockedStakes; // Release lock stakes in case of system migration
+
     struct LockedStake {
         bytes32 kek_id;
         uint256 start_timestamp;
@@ -93,6 +95,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         timelock_address = _timelock_address;
         pool_weight = _pool_weight;
         rewardRate = rewardRate * pool_weight / 1e6;
+        unlockedStakes = false;
     }
 
     /* ========== VIEWS ========== */
@@ -261,7 +264,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
                 break;
             }
         }
-        require(block.timestamp >= thisStake.ending_timestamp, "Stake is still locked!");
+        require(block.timestamp >= thisStake.ending_timestamp || unlockedStakes == true, "Stake is still locked!");
 
         uint256 theAmount = thisStake.amount;
         uint256 boostedAmount = theAmount.mul(thisStake.multiplier).div(PRICE_PRECISION);
@@ -411,6 +414,10 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     function greylistAddress(address _address) external onlyByOwnerOrGovernance {
         greylist[_address] = !(greylist[_address]);
+    }
+
+    function unlockStakes() external onlyByOwnerOrGovernance {
+        unlockedStakes = !unlockedStakes;
     }
 
     /* ========== MODIFIERS ========== */
