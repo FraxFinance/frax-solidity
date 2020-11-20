@@ -1722,8 +1722,9 @@ contract('FRAX', async (accounts) => {
 
 		// Need to approve first so the staking can use transfer
 		const uni_pool_locked_1 = new BigNumber("75e18");
+		const uni_pool_locked_1_sum = new BigNumber ("100e18");
 		const uni_pool_locked_9 = new BigNumber("25e18");
-		await pair_instance_FRAX_USDC.approve(stakingInstance_FRAX_USDC.address, uni_pool_locked_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await pair_instance_FRAX_USDC.approve(stakingInstance_FRAX_USDC.address, uni_pool_locked_1_sum, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await pair_instance_FRAX_USDC.approve(stakingInstance_FRAX_USDC.address, uni_pool_locked_9, { from: accounts[9] });
 		
 		// // Note the FRAX amounts before
@@ -1732,9 +1733,13 @@ contract('FRAX', async (accounts) => {
 		// console.log("FRAX_USDC Uniswap Liquidity Tokens BEFORE [1]: ", frax_before_1_locked.toString());
 		// console.log("FRAX_USDC Uniswap Liquidity Tokens BEFORE [9]: ", frax_before_9_locked.toString());
 
+		console.log("accounts[1] FXS balance:", new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
+
 		// Stake Locked
-		await stakingInstance_FRAX_USDC.stakeLocked(uni_pool_locked_1, 30 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 1 month
+		await stakingInstance_FRAX_USDC.stakeLocked(uni_pool_locked_1, 30 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 15 days
 		await stakingInstance_FRAX_USDC.stakeLocked(uni_pool_locked_9, 180 * 86400, { from: accounts[9] }); // 6 months
+
+		await stakingInstance_FRAX_USDC.stakeLocked(new BigNumber ("25e18"), 270 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 270 days
 		await time.advanceBlock();
 
 		// Show the stake structs
@@ -1790,10 +1795,20 @@ contract('FRAX', async (accounts) => {
 		await time.advanceBlock();
 
 		await stakingInstance_FRAX_USDC.withdrawLocked(locked_stake_structs_9[0].kek_id, { from: accounts[9] });
+		await expectRevert.unspecified(stakingInstance_FRAX_USDC.withdrawLocked(locked_stake_structs_1[1].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
 
 		const staking_fxs_earned_180_9 = new BigNumber(await stakingInstance_FRAX_USDC.earned.call(accounts[9])).div(BIG18);
 		console.log("STAKING FXS EARNED [9]: ", staking_fxs_earned_180_9.toString());
 
+		console.log("UNLOCKING ALL STAKES");
+		await stakingInstance_FRAX_USDC.unlockStakes({ from: STAKING_OWNER });
+		await stakingInstance_FRAX_USDC.withdrawLocked(locked_stake_structs_1[1].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		const post_staking_fxs_earned_1 = new BigNumber(await stakingInstance_FRAX_USDC.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		console.log("POST-STAKING FXS EARNED [1]: ", post_staking_fxs_earned_1.toString());
+
+		await stakingInstance_FRAX_USDC.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("accounts[1] FXS balance:", new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
 	});
 
 });

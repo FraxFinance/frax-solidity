@@ -24,5 +24,5 @@ interface IStakingRewards {
 
     function getReward() external;
 
-    function exit() external;
+    //function exit() external;
 }

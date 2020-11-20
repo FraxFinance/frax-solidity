@@ -34,7 +34,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     uint256 private constant PRICE_PRECISION = 1e6;
 
     // Max reward per second
-    uint256 public rewardRate = 161719939117199391; // (uint256(51000000e18)).div(10 * (365 * 86400)); // 51M FXS over 10 years
+    uint256 public rewardRate;
 
     // uint256 public rewardsDuration = 86400 hours;
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
@@ -96,6 +96,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         pool_weight = _pool_weight;
         rewardRate = rewardRate * pool_weight / 1e6;
         unlockedStakes = false;
+        rewardRate = 161719939117199391; // (uint256(51000000e18)).div(10 * (365 * 86400)); // 51M FXS over 10 years
     }
 
     /* ========== VIEWS ========== */
@@ -297,7 +298,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
             emit RewardPaid(msg.sender, reward);
         }
     }
-
+/*
     function exit() external override {
         withdraw(_balances[msg.sender]);
 
@@ -305,7 +306,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
         getReward();
     }
-
+*/
     function renewIfApplicable() external {
         if (block.timestamp > periodFinish) {
             retroCatchUp();
@@ -335,7 +336,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
-
+/*
     // This notifies people that the reward is being changed
     function notifyRewardAmount(uint256 reward) external override onlyRewardsDistribution updateReward(address(0)) {
         // Needed to make compiler happy
@@ -360,7 +361,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         // periodFinish = block.timestamp.add(rewardsDuration);
         // emit RewardAdded(reward);
     }
-
+*/
     // Added to support recovering LP Rewards from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Cannot recover the staking token or the rewards token
@@ -418,6 +419,10 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     function unlockStakes() external onlyByOwnerOrGovernance {
         unlockedStakes = !unlockedStakes;
+    }
+
+    function setRewardRate(uint256 _new_rate) external onlyByOwnerOrGovernance {
+        rewardRate = _new_rate;
     }
 
     /* ========== MODIFIERS ========== */
