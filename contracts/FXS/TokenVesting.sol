@@ -91,49 +91,49 @@ contract TokenVesting {
     /**
      * @return the beneficiary of the tokens.
      */
-    function beneficiary() public view returns (address) {
+    function getBeneficiary() public view returns (address) {
         return _beneficiary;
     }
 
     /**
      * @return the cliff time of the token vesting.
      */
-    function cliff() public view returns (uint256) {
+    function getCliff() public view returns (uint256) {
         return _cliff;
     }
 
     /**
      * @return the start time of the token vesting.
      */
-    function start() public view returns (uint256) {
+    function getStart() public view returns (uint256) {
         return _start;
     }
 
     /**
      * @return the duration of the token vesting.
      */
-    function duration() public view returns (uint256) {
+    function getDuration() public view returns (uint256) {
         return _duration;
     }
 
     /**
      * @return true if the vesting is revocable.
      */
-    function revocable() public view returns (bool) {
+    function getRevocable() public view returns (bool) {
         return _revocable;
     }
 
     /**
      * @return the amount of the token released.
      */
-    function released() public view returns (uint256) {
+    function getReleased() public view returns (uint256) {
         return _released;
     }
 
     /**
      * @return true if the token is revoked.
      */
-    function revoked() public view returns (bool) {
+    function getRevoked() public view returns (bool) {
         return _revoked;
     }
 

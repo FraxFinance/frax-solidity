@@ -257,6 +257,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     function withdrawLocked(bytes32 kek_id) public nonReentrant updateReward(msg.sender) {
         LockedStake memory thisStake;
+        thisStake.amount = 0;
         uint theIndex;
         for (uint i = 0; i < lockedStakes[msg.sender].length; i++){ 
             if (kek_id == lockedStakes[msg.sender][i].kek_id){
