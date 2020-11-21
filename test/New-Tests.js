@@ -31,7 +31,6 @@ const UniswapV2Library = artifacts.require("Uniswap/UniswapV2Library");
 const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary");
 const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
 const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_Modified");
-const TestSwap = artifacts.require("Uniswap/TestSwap");
 
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
@@ -65,11 +64,11 @@ const FRAXStablecoin = artifacts.require("Frax/FRAXStablecoin");
 const FRAXShares = artifacts.require("FXS/FRAXShares");
 const StakingRewards_FRAX_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_WETH.sol");
 const StakingRewards_FRAX_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDC.sol");
-const StakingRewards_FRAX_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDT.sol");
+//const StakingRewards_FRAX_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDT.sol");
 // const StakingRewards_FRAX_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_yUSD.sol");
 const StakingRewards_FXS_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FXS_WETH.sol");
-const StakingRewards_FXS_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDC.sol");
-const StakingRewards_FXS_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDT.sol");
+//const StakingRewards_FXS_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDC.sol");
+//const StakingRewards_FXS_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDT.sol");
 // const StakingRewards_FXS_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FXS_yUSD.sol");
 
 // Token vesting
@@ -118,8 +117,6 @@ contract('FRAX', async (accounts) => {
 	let col_instance_USDC;
 	let col_instance_USDT;
 	// let col_instance_yUSD;
-
-	let TestSwap_instance;
 
 	// Initialize the Uniswap Router Instance
 	let routerInstance; 
@@ -191,11 +188,11 @@ contract('FRAX', async (accounts) => {
 	// Initialize staking instances
 	let stakingInstance_FRAX_WETH;
 	let stakingInstance_FRAX_USDC;
-	let stakingInstance_FRAX_USDT;
+	//let stakingInstance_FRAX_USDT;
 	// let stakingInstance_FRAX_yUSD;
 	let stakingInstance_FXS_WETH;
-	let stakingInstance_FXS_USDC;
-	let stakingInstance_FXS_USDT;
+	//let stakingInstance_FXS_USDC;
+	//let stakingInstance_FXS_USDT;
 	// let stakingInstance_FXS_yUSD;
 
 	// Initialize running balances
@@ -228,8 +225,6 @@ contract('FRAX', async (accounts) => {
 		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
 		col_instance_USDT = await FakeCollateral_USDT.deployed(); 
 		// col_instance_yUSD = await FakeCollateral_yUSD.deployed(); 
-
-		TestSwap_instance = await TestSwap.deployed();
 
 		// Fill the Uniswap Router Instance
 		routerInstance = await UniswapV2Router02_Modified.deployed(); 
@@ -317,11 +312,11 @@ contract('FRAX', async (accounts) => {
 		// Fill the staking rewards instances
 		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
 		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.deployed();
-		stakingInstance_FRAX_USDT = await StakingRewards_FRAX_USDT.deployed();
+		//stakingInstance_FRAX_USDT = await StakingRewards_FRAX_USDT.deployed();
 		// stakingInstance_FRAX_yUSD = await StakingRewards_FRAX_yUSD.deployed();
 		stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.deployed();
-		stakingInstance_FXS_USDC = await StakingRewards_FXS_USDC.deployed();
-		stakingInstance_FXS_USDT = await StakingRewards_FXS_USDT.deployed();
+		//stakingInstance_FXS_USDC = await StakingRewards_FXS_USDC.deployed();
+		//stakingInstance_FXS_USDT = await StakingRewards_FXS_USDT.deployed();
 		// stakingInstance_FXS_yUSD = await StakingRewards_FXS_yUSD.deployed();
     });
 
