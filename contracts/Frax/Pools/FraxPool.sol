@@ -89,7 +89,6 @@ contract FraxPool is AccessControl {
         address _frax_contract_address,
         address _fxs_contract_address,
         address _collateral_address,
-        // address _oracle_address,
         address _creator_address,
         address _timelock_address,
         uint256 _pool_ceiling
@@ -99,21 +98,15 @@ contract FraxPool is AccessControl {
         frax_contract_address = _frax_contract_address;
         fxs_contract_address = _fxs_contract_address;
         collateral_address = _collateral_address;
-        // oracle_address = _oracle_address;
         timelock_address = _timelock_address;
         owner_address = _creator_address;
-        // oracle = UniswapPairOracle(_oracle_address);
         collateral_token = ERC20(_collateral_address);
         pool_ceiling = _pool_ceiling;
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        // grantRole(MINT_PAUSER, oracle_address);
         grantRole(MINT_PAUSER, timelock_address);
-        // grantRole(REDEEM_PAUSER, oracle_address);
         grantRole(REDEEM_PAUSER, timelock_address);
-        // grantRole(BUYBACK_PAUSER, oracle_address);
         grantRole(BUYBACK_PAUSER, timelock_address);
-        // grantRole(COLLATERAL_PRICE_PAUSER, oracle_address);
         grantRole(COLLATERAL_PRICE_PAUSER, timelock_address);
     }
 
@@ -261,6 +254,7 @@ contract FraxPool is AccessControl {
 
         require(collateral_amount <= collateral_token.balanceOf(address(this)), "Not enough collateral in pool");
         require(COLLATERAL_out_min <= collateral_amount && FXS_out_min <= fxs_amount, "Slippage limit reached");
+        
         // Move all external functions to the end
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
         collateral_token.approve(msg.sender, collateral_amount);
@@ -397,22 +391,19 @@ contract FraxPool is AccessControl {
         collateralPricePaused = !collateralPricePaused;
     }
 
-    function setPoolCeiling(uint256 new_ceiling) external onlyByOwnerOrGovernance {
+    // Combined into one function due to 24KiB contract memory limit
+    function setPoolCeilingAndBonusRate(uint256 new_ceiling, uint256 new_bonus_rate) external onlyByOwnerOrGovernance {
         pool_ceiling = new_ceiling;
+        bonus_rate = new_bonus_rate;
     }
-
+/*
     function setPoolBonusRate(uint256 _bonus_rate) external onlyByOwnerOrGovernance {
         bonus_rate = _bonus_rate;
     }
-
+*/
     function setRedemptionDelay(uint256 _new_delay) external onlyByOwnerOrGovernance {
         redemption_delay = _new_delay;
     }
-
-    // function setOracle(address new_oracle) external onlyByOwnerOrGovernance {
-    //     oracle_address = new_oracle;
-    //     oracle = UniswapPairOracle(oracle_address);
-    // }
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
         timelock_address = new_timelock;
