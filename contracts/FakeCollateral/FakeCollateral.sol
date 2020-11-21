@@ -39,13 +39,11 @@ contract FakeCollateral is Context, IERC20 {
     uint8 public decimals;
     address public creator_address;
     uint256 public genesis_supply;
-
-    mapping (address => uint256) private _balances;
-
-    mapping (address => mapping (address => uint256)) private _allowances;
-
     uint256 private _totalSupply;
 
+    mapping (address => uint256) private _balances;
+    mapping (address => mapping (address => uint256)) private _allowances;
+    mapping (address => bool) used;
 
     constructor(
         address _creator_address,
@@ -58,6 +56,13 @@ contract FakeCollateral is Context, IERC20 {
         symbol = _symbol;
         decimals = _decimals;
         _mint(creator_address, genesis_supply);
+    }
+
+    function faucet() public {
+    	if (used[msg.sender] == false) {
+    		used[msg.sender] = true;
+    		_mint(msg.sender, 1000 * (10 ** uint256(decimals)));
+    	}
     }
 
     /**

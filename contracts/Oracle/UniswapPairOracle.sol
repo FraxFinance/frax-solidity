@@ -12,8 +12,11 @@ import '../Uniswap/UniswapV2Library.sol';
 // Note that the price average is only guaranteed to be over at least 1 period, but may be over a longer period
 contract UniswapPairOracle {
     using FixedPoint for *;
+    
+    address owner_address;
+    address timelock_address;
 
-    //uint public constant PERIOD = 24 hours;
+    uint public PERIOD = 3600;
 
     IUniswapV2Pair public immutable pair;
     address public immutable token0;
@@ -25,7 +28,12 @@ contract UniswapPairOracle {
     FixedPoint.uq112x112 public price0Average;
     FixedPoint.uq112x112 public price1Average;
 
-    constructor(address factory, address tokenA, address tokenB) public {
+    modifier onlyByOwnerOrGovernance() {
+        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not an owner or the governance timelock");
+        _;
+    }
+
+    constructor(address factory, address tokenA, address tokenB, address _owner_address, address _timelock_address) public {
         IUniswapV2Pair _pair = IUniswapV2Pair(UniswapV2Library.pairFor(factory, tokenA, tokenB));
         pair = _pair;
         token0 = _pair.token0();
@@ -36,6 +44,21 @@ contract UniswapPairOracle {
         uint112 reserve1;
         (reserve0, reserve1, blockTimestampLast) = _pair.getReserves();
         require(reserve0 != 0 && reserve1 != 0, 'UniswapPairOracle: NO_RESERVES'); // Ensure that there's liquidity in the pair
+
+        owner_address = _owner_address;
+        timelock_address = _timelock_address;
+    }
+
+    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+        owner_address = _owner_address;
+    }
+
+    function setTimelock(address _timelock_address) external onlyByOwnerOrGovernance {
+        timelock_address = _timelock_address;
+    }
+
+    function setPeriod(uint _period) external onlyByOwnerOrGovernance {
+        PERIOD = _period;
     }
 
     function update() external {
@@ -44,7 +67,7 @@ contract UniswapPairOracle {
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // Overflow is desired
 
         // Ensure that at least one full period has passed since the last update
-        //require(timeElapsed >= PERIOD, 'UniswapPairOracle: PERIOD_NOT_ELAPSED');
+        require(timeElapsed >= PERIOD, 'UniswapPairOracle: PERIOD_NOT_ELAPSED');
 
         // Overflow is desired, casting never truncates
         // Cumulative price is in (uq112x112 price * seconds) units so we simply wrap it after division by time elapsed
