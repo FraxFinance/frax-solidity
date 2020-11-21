@@ -146,7 +146,7 @@ contract FraxPool is AccessControl {
         }
     }
 
-    function setCollatETHOracle(address _collateral_address, address _weth_address) external onlyByOwnerOrGovernance {
+    function setCollatETHOracle(address _collateral_weth_oracle_address, address _weth_address) external onlyByOwnerOrGovernance {
         collat_eth_oracle_address = _collateral_address;
         collatEthOracle = UniswapPairOracle(_collateral_address);
         weth_address = _weth_address;
