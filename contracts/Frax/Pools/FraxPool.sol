@@ -43,13 +43,16 @@ contract FraxPool is AccessControl {
     uint256 private constant COLLATERAL_RATIO_MAX = 1e6;
     
     // Pool_ceiling is the total units of collateral that a pool contract can hold
-    uint256 private pool_ceiling = 0;
+    uint256 public pool_ceiling = 0;
 
     // Stores price of the collateral, if price is paused
     uint256 public pausedPrice = 0;
 
     // Bonus rate on FXS minted during recollateralizeFRAX(); 6 decimals of precision, set to 0.75% on genesis
     uint256 public bonus_rate = 7500;
+
+    // Number of blocks to wait before being able to collectRedemption()
+    uint256 public redemption_delay = 1;
 
     // AccessControl Roles
     bytes32 private constant MINT_PAUSER = keccak256("MINT_PAUSER");
@@ -290,7 +293,7 @@ contract FraxPool is AccessControl {
     // contract to the user. Redemption is split into two functions to prevent flash loans from being able
     // to take out FRAX/collateral from the system, use an AMM to trade the new price, and then mint back into the system.
     function collectRedemption() external {
-        require((lastRedeemed[msg.sender].add(1)) <= block.number, "Must wait at least one block before collecting redemption");
+        require((lastRedeemed[msg.sender].add(redemption_delay)) <= block.number, "Must wait for redemption_delay blocks before collecting redemption");
         bool sendFXS = false;
         bool sendCollateral = false;
         uint FXSAmount;
@@ -400,6 +403,10 @@ contract FraxPool is AccessControl {
 
     function setPoolBonusRate(uint256 _bonus_rate) external onlyByOwnerOrGovernance {
         bonus_rate = _bonus_rate;
+    }
+
+    function setRedemptionDelay(uint256 _new_delay) external onlyByOwnerOrGovernance {
+        redemption_delay = _new_delay;
     }
 
     // function setOracle(address new_oracle) external onlyByOwnerOrGovernance {
