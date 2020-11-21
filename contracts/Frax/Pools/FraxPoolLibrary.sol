@@ -39,7 +39,6 @@ library FraxPoolLibrary {
         uint256 col_price_usd = col_price;
         uint256 c_dollar_value_d18 = (collateral_amount_d18.mul(col_price_usd)).div(1e6);
         return c_dollar_value_d18.sub((c_dollar_value_d18.mul(mint_fee)).div(1e6));
-        //return collateral_amount_d18.mul(1000000-mint_fee).mul(col_price_usd).div(1e12);
     }
 
     function calcMintAlgorithmicFRAX(uint256 mint_fee, uint256 fxs_price_usd, uint256 fxs_amount_d18) public pure returns (uint256) {
@@ -68,16 +67,14 @@ library FraxPoolLibrary {
         uint calculated_fxs_needed = calculated_fxs_dollar_value_d18.mul(1e6).div(params.fxs_price_usd);
 
         return (
-            (c_dollar_value_d18 + calculated_fxs_dollar_value_d18).sub(((c_dollar_value_d18 + calculated_fxs_dollar_value_d18).mul(params.mint_fee)).div(1e6)),
+            (c_dollar_value_d18.add(calculated_fxs_dollar_value_d18)).sub(((c_dollar_value_d18.add(calculated_fxs_dollar_value_d18)).mul(params.mint_fee)).div(1e6)),
             calculated_fxs_needed
         );
     }
 
     function calcRedeem1t1FRAX(uint256 col_price_usd, uint256 FRAX_amount, uint256 redemption_fee) public pure returns (uint256) {
-        //uint256 frax_dollar_value_d18 = FRAX_amount.mul(1e6).div(frax_price_usd);
         uint256 collateral_needed_d18 = FRAX_amount.mul(1e6).div(col_price_usd);
         return collateral_needed_d18.sub((collateral_needed_d18.mul(redemption_fee)).div(1e6));
-        //return (FRAX_amount.mul(1000000-redemption_fee).div(1e6)); // returns FRAX_amount worth of collateral in USD, minus redemption fee
     }
 
     // Must be internal because of the struct

@@ -106,7 +106,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function stakingMultiplier(uint256 secs) public view returns (uint256) {
-        uint256 multiplier = 1e6 + secs.mul(locked_stake_max_multiplier - 1e6).div(locked_stake_time_for_max_multiplier);
+        uint256 multiplier = uint(1e6).add(secs.mul(locked_stake_max_multiplier - 1e6).div(locked_stake_time_for_max_multiplier));
         if (multiplier > locked_stake_max_multiplier) multiplier = locked_stake_max_multiplier;
         return multiplier;
     }
@@ -134,7 +134,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         uint256 total_locked_balance = 0;
         for (uint i = 0; i < lockedStakes[account].length; i++){ 
             if ( block.timestamp < lockedStakes[account][i].ending_timestamp ){
-                total_locked_balance += lockedStakes[account][i].amount;
+                total_locked_balance = total_locked_balance.add(lockedStakes[account][i].amount);
             }
         }
         return total_locked_balance;
@@ -324,7 +324,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         // uint256 new_lastUpdateTime = block.timestamp;
 
         // lastUpdateTime = periodFinish;
-        periodFinish = periodFinish.add((num_periods_elapsed + 1).mul(rewardsDuration));
+        periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(rewardsDuration));
 
         rewardPerTokenStored = rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
