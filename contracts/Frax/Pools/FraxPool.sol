@@ -147,8 +147,8 @@ contract FraxPool is AccessControl {
     }
 
     function setCollatETHOracle(address _collateral_weth_oracle_address, address _weth_address) external onlyByOwnerOrGovernance {
-        collat_eth_oracle_address = _collateral_address;
-        collatEthOracle = UniswapPairOracle(_collateral_address);
+        collat_eth_oracle_address = _collateral_weth_oracle_address;
+        collatEthOracle = UniswapPairOracle(_collateral_weth_oracle_address);
         weth_address = _weth_address;
     }
 
@@ -337,7 +337,7 @@ contract FraxPool is AccessControl {
             global_collateral_ratio
         ); 
 
-        uint256 fxs_paid_back = amount_to_recollat.mul(1e6.add(bonus_rate)).div(fxs_price);
+        uint256 fxs_paid_back = amount_to_recollat.mul(uint(1e6).add(bonus_rate)).div(fxs_price);
 
         require(FXS_out_min <= fxs_paid_back, "Slippage limit reached");
         collateral_token.transferFrom(msg.sender, address(this), collateral_units);
