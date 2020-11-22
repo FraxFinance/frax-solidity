@@ -363,10 +363,10 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Cannot recover the staking token or the rewards token
         require(
-            tokenAddress != address(stakingToken) && tokenAddress != address(rewardsToken),
-            "Cannot withdraw the staking or rewards tokens"
+            tokenAddress != address(stakingToken),
+            "Admin cannot withdraw the staking token from the contract"
         );
-        ERC20(tokenAddress).safeTransfer(owner, tokenAmount);
+        ERC20(tokenAddress).transfer(owner_address, tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
 
