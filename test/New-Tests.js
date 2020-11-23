@@ -1806,4 +1806,119 @@ contract('FRAX', async (accounts) => {
 		console.log("accounts[1] FXS balance:", new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
 	});
 
+	it("Does a fair launch", async () => {
+		console.log("====================================================================");
+		await fxsInstance.transfer(stakingInstance_FRAX_WETH.address, new BigNumber("100000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await pair_instance_FRAX_WETH.transfer(accounts[2], new BigNumber("100e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await pair_instance_FRAX_WETH.transfer(accounts[3], new BigNumber("100e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		console.log("accounts[2] FRAX-WETH LP token balance:", (new BigNumber(await pair_instance_FRAX_WETH.balanceOf(accounts[2]))).div(BIG18).toNumber());
+		console.log("accounts[3] FRAX-WETH LP token balance:", (new BigNumber(await pair_instance_FRAX_WETH.balanceOf(accounts[3]))).div(BIG18).toNumber());
+
+		console.log("");
+
+		let acc2_startingFXSbalance = await fxsInstance.balanceOf(accounts[2]);
+		let acc3_startingFXSbalance = await fxsInstance.balanceOf(accounts[3]);
+
+		console.log("accounts[2] FXS balance:", new BigNumber(await fxsInstance.balanceOf(accounts[2])).div(BIG18).toNumber());
+		console.log("accounts[3] FXS balance:", new BigNumber(await fxsInstance.balanceOf(accounts[3])).div(BIG18).toNumber());
+
+		await pair_instance_FRAX_WETH.approve(stakingInstance_FRAX_WETH.address, new BigNumber("100e18"), { from: accounts[2] });
+		await pair_instance_FRAX_WETH.approve(stakingInstance_FRAX_WETH.address, new BigNumber("100e18"), { from: accounts[3] });
+
+		console.log("staking");
+		await stakingInstance_FRAX_WETH.stake(new BigNumber("100e18"), { from: accounts[2] });
+		await stakingInstance_FRAX_WETH.stake(new BigNumber("100e18"), { from: accounts[3] });
+
+
+		// Note the last update time
+		const block_time_before = (await time.latest()).toNumber();
+		console.log("current block time (in seconds):", block_time_before);
+
+		// Note the total lastUpdateTime
+		let rewards_contract_lastUpdateTime = new BigNumber(await stakingInstance_FRAX_WETH.lastUpdateTime.call());
+		console.log("pool lastUpdateTime:", rewards_contract_lastUpdateTime.toNumber());
+
+		// Note the total periodFinish
+		let rewards_contract_periodFinish = new BigNumber(await stakingInstance_FRAX_WETH.periodFinish.call());
+		console.log("pool periodFinish:", rewards_contract_periodFinish.toNumber());
+
+		// Note the total lastTimeRewardApplicable
+		let rewards_contract_lastTimeRewardApplicable = new BigNumber(await stakingInstance_FRAX_WETH.lastTimeRewardApplicable.call());
+		console.log("pool lastTimeRewardApplicable():", rewards_contract_lastTimeRewardApplicable.toNumber());
+
+		
+		const staking_fxs_earned_2 = new BigNumber(await stakingInstance_FRAX_WETH.earned(accounts[2])).div(BIG18);
+		const staking_fxs_earned_3 = new BigNumber(await stakingInstance_FRAX_WETH.earned(accounts[3])).div(BIG18);
+		
+		console.log("accounts[2] staking earned():", staking_fxs_earned_2.toNumber());
+		console.log("accounts[3] staking earned():", staking_fxs_earned_3.toNumber());
+
+		let cr_boost_multiplier_2;
+		let rewardPerToken_2;
+		let mid_block_time_before;
+		let rewards_contract_stored_uni_pool;
+		let rewards_per_token;
+		let mid_staking_fxs_earned_2;
+		let mid_staking_fxs_earned_3;
+
+		for(let i = 0; i < 3; i++){
+			console.log("====================================================================");
+			console.log("advance one day [day number:",i,"]");
+			await time.increase(86400);
+			await time.advanceBlock();
+			console.log("");
+
+			cr_boost_multiplier_2 = new BigNumber(await stakingInstance_FRAX_WETH.crBoostMultiplier()).div(BIG6);
+			console.log("cr_boost_multiplier:", cr_boost_multiplier_2.toNumber());
+
+			rewardPerToken_2 = new BigNumber(await stakingInstance_FRAX_WETH.rewardPerToken()).div(BIG18);
+			console.log("rewardPerToken:", rewardPerToken_2.toNumber());
+			console.log("");
+
+			// Make sure there is a valid period for the contract
+			await stakingInstance_FRAX_WETH.renewIfApplicable({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+			// Note the last update time
+			mid_block_time_before = (await time.latest()).toNumber();
+			console.log("current block time (in seconds):", mid_block_time_before);
+
+			// Note the total lastUpdateTime
+			rewards_contract_lastUpdateTime = new BigNumber(await stakingInstance_FRAX_WETH.lastUpdateTime());
+			console.log("pool lastUpdateTime:", rewards_contract_lastUpdateTime.toNumber());
+
+			// Note the total periodFinish
+			rewards_contract_periodFinish = new BigNumber(await stakingInstance_FRAX_WETH.periodFinish());
+			console.log("pool periodFinish:", rewards_contract_periodFinish.toNumber());
+
+			// Note the total lastTimeRewardApplicable
+			rewards_contract_lastTimeRewardApplicable = new BigNumber(await stakingInstance_FRAX_WETH.lastTimeRewardApplicable());
+			console.log("pool lastTimeRewardApplicable():", rewards_contract_lastTimeRewardApplicable.toNumber());
+			
+			// Note the total FRAX supply
+			rewards_contract_stored_uni_pool = new BigNumber(await stakingInstance_FRAX_WETH.stakingTokenSupply()).div(BIG18);
+			console.log("pool stakingTokenSupply() (of LP tokens):", rewards_contract_stored_uni_pool.toNumber());
+
+			// Note the reward per token
+			rewards_per_token = new BigNumber(await stakingInstance_FRAX_WETH.rewardPerToken()).div(BIG18);
+			console.log("pool rewardPerToken():", rewards_per_token.toNumber());
+			
+			// Show the reward
+			mid_staking_fxs_earned_2 = new BigNumber(await stakingInstance_FRAX_WETH.earned(accounts[2])).div(BIG18);
+			mid_staking_fxs_earned_3 = new BigNumber(await stakingInstance_FRAX_WETH.earned(accounts[3])).div(BIG18);
+			
+			console.log("accounts[2] staking earned():", mid_staking_fxs_earned_2.toNumber());
+			console.log("accounts[3] staking earned():", mid_staking_fxs_earned_3.toNumber());
+		}
+
+		console.log("accounts[2] getReward()");
+		await stakingInstance_FRAX_WETH.getReward({ from: accounts[2] });
+		console.log("accounts[3] getReward()");
+		await stakingInstance_FRAX_WETH.getReward({ from: accounts[3] });
+		console.log("");
+
+		console.log("accounts[2] FXS balance change:", acc2_startingFXSbalance.minus(new BigNumber(await fxsInstance.balanceOf(accounts[2]))).div(BIG18).toNumber());
+		console.log("accounts[3] FXS balance change:", acc3_startingFXSbalance.minus(new BigNumber(await fxsInstance.balanceOf(accounts[3]))).div(BIG18).toNumber());
+
+	});
 });
