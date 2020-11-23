@@ -58,11 +58,13 @@ contract FraxPool is AccessControl {
     bytes32 private constant MINT_PAUSER = keccak256("MINT_PAUSER");
     bytes32 private constant REDEEM_PAUSER = keccak256("REDEEM_PAUSER");
     bytes32 private constant BUYBACK_PAUSER = keccak256("BUYBACK_PAUSER");
+    bytes32 private constant RECOLLATERALIZE_PAUSER = keccak256("RECOLLATERALIZE_PAUSER");
     bytes32 private constant COLLATERAL_PRICE_PAUSER = keccak256("COLLATERAL_PRICE_PAUSER");
     
     // AccessControl state variables
     bool private mintPaused = false;
     bool private redeemPaused = false;
+    bool private recollateralizePaused = false;
     bool private buyBackPaused = false;
     bool private collateralPricePaused = false;
 
@@ -106,6 +108,7 @@ contract FraxPool is AccessControl {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         grantRole(MINT_PAUSER, timelock_address);
         grantRole(REDEEM_PAUSER, timelock_address);
+        grantRole(RECOLLATERALIZE_PAUSER, timelock_address);
         grantRole(BUYBACK_PAUSER, timelock_address);
         grantRole(COLLATERAL_PRICE_PAUSER, timelock_address);
     }
@@ -324,8 +327,8 @@ contract FraxPool is AccessControl {
     // This function simply rewards anyone that sends collateral to a pool with the same amount of FXS + the bonus rate
     // Anyone can call this function to recollateralize the protocol and take the extra FXS value from the bonus rate as an arb opportunity
     function recollateralizeFRAX(uint256 collateral_amount, uint256 FXS_out_min) external {
+        require(recollateralizePaused == false, "Recollateralize is paused");
         ( , uint256 fxs_price, uint256 frax_total_supply , uint256 global_collateral_ratio, uint256 global_collat_value, , , ) = FRAX.frax_info();
-
         (uint256 collateral_units, uint256 amount_to_recollat) = FraxPoolLibrary.calcRecollateralizeFRAXInner(
             collateral_amount,
             getCollateralPrice(),
@@ -374,6 +377,11 @@ contract FraxPool is AccessControl {
         require(hasRole(REDEEM_PAUSER, msg.sender));
         redeemPaused = !redeemPaused;
     }
+
+    function toggleRecollateralize() external {
+        require(hasRole(RECOLLATERALIZE_PAUSER, msg.sender));
+        recollateralizePaused = !recollateralizePaused;
+    }
     
     function toggleBuyBack() external {
         require(hasRole(BUYBACK_PAUSER, msg.sender));
@@ -392,17 +400,10 @@ contract FraxPool is AccessControl {
     }
 
     // Combined into one function due to 24KiB contract memory limit
-    function setPoolCeilingAndBonusRate(uint256 new_ceiling, uint256 new_bonus_rate) external onlyByOwnerOrGovernance {
+    function setPoolParameters(uint256 new_ceiling, uint256 new_bonus_rate, uint256 new_redemption_delay) external onlyByOwnerOrGovernance {
         pool_ceiling = new_ceiling;
         bonus_rate = new_bonus_rate;
-    }
-/*
-    function setPoolBonusRate(uint256 _bonus_rate) external onlyByOwnerOrGovernance {
-        bonus_rate = _bonus_rate;
-    }
-*/
-    function setRedemptionDelay(uint256 _new_delay) external onlyByOwnerOrGovernance {
-        redemption_delay = _new_delay;
+        redemption_delay = new_redemption_delay;
     }
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
