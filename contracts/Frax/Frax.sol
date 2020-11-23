@@ -62,7 +62,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     }
 
     modifier onlyPools() {
-       require(frax_pools[msg.sender] == true, "Only frax pools can mint new FRAX");
+       require(frax_pools[msg.sender] == true, "Only frax pools can call this function");
         _;
     } 
     
