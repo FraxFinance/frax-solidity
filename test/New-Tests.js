@@ -1817,8 +1817,8 @@ contract('FRAX', async (accounts) => {
 
 		console.log("");
 
-		let acc2_startingFXSbalance = await fxsInstance.balanceOf(accounts[2]);
-		let acc3_startingFXSbalance = await fxsInstance.balanceOf(accounts[3]);
+		let acc2_startingFXSbalance = new BigNumber(await (fxsInstance.balanceOf(accounts[2])));
+		let acc3_startingFXSbalance = new BigNumber(await (fxsInstance.balanceOf(accounts[3])));
 
 		console.log("accounts[2] FXS balance:", new BigNumber(await fxsInstance.balanceOf(accounts[2])).div(BIG18).toNumber());
 		console.log("accounts[3] FXS balance:", new BigNumber(await fxsInstance.balanceOf(accounts[3])).div(BIG18).toNumber());
@@ -1917,8 +1917,8 @@ contract('FRAX', async (accounts) => {
 		await stakingInstance_FRAX_WETH.getReward({ from: accounts[3] });
 		console.log("");
 
-		console.log("accounts[2] FXS balance change:", acc2_startingFXSbalance.minus(new BigNumber(await fxsInstance.balanceOf(accounts[2]))).div(BIG18).toNumber());
-		console.log("accounts[3] FXS balance change:", acc3_startingFXSbalance.minus(new BigNumber(await fxsInstance.balanceOf(accounts[3]))).div(BIG18).toNumber());
+		console.log("accounts[2] FXS balance change:", ((new BigNumber(await fxsInstance.balanceOf(accounts[2]))).minus(acc2_startingFXSbalance)).div(BIG18).toNumber());
+		console.log("accounts[3] FXS balance change:", ((new BigNumber(await fxsInstance.balanceOf(accounts[3]))).minus(acc3_startingFXSbalance)).div(BIG18).toNumber());
 
 	});
 });
