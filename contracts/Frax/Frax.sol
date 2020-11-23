@@ -168,19 +168,22 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     /* ========== PUBLIC FUNCTIONS ========== */
     
     // There needs to be a time interval that this can be called. Otherwise it can be called multiple times per expansion.
-    uint256 last_call_time; // Last time the refreshCollateralRatio function was called
+    uint256 public last_call_time; // Last time the refreshCollateralRatio function was called
     function refreshCollateralRatio() public {
         require(collateral_ratio_paused == false, "Collateral Ratio has been paused");
         uint256 frax_price_cur = frax_price();
-        require(block.timestamp - last_call_time >= refresh_cooldown && frax_price_cur != price_target, "Must wait out for the refresh cooldown since last refresh, and current FRAX price must not already be at the target");
+        require(block.timestamp - last_call_time >= refresh_cooldown, "Must wait for the refresh cooldown since last refresh");
 
         // Step increments are 0.25% (upon genesis, changable by setFraxStep()) 
         
-        if (frax_price_cur > price_target) {
-            global_collateral_ratio = global_collateral_ratio.sub(frax_step);
-        } 
-        else {
-            if(global_collateral_ratio.add(frax_step) >= price_target){
+        if (frax_price_cur >= price_target) { //decrease collateral ratio
+            if(global_collateral_ratio <= frax_step){ //if within a step of 0, go to 0
+                global_collateral_ratio = 0;
+            } else {
+                global_collateral_ratio = global_collateral_ratio.sub(frax_step);
+            }
+        } else { //increase collateral ratio
+            if(global_collateral_ratio.add(frax_step) >= 1000000){
                 global_collateral_ratio = 1000000; // cap collateral ratio at 1.000000
             } else {
                 global_collateral_ratio = global_collateral_ratio.add(frax_step);
