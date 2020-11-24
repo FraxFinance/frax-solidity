@@ -94,7 +94,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         lastUpdateTime = block.timestamp;
         timelock_address = _timelock_address;
         pool_weight = _pool_weight;
-        rewardRate = 317097919837645865; // (uint256(10000000e18)).div(365 * 86400); // Base emission rate of 10M FXS over the first year
+        rewardRate = 380517503805175038; // (uint256(12000000e18)).div(365 * 86400); // Base emission rate of 12M FXS over the first year
         rewardRate = rewardRate * pool_weight / 1e6;
         unlockedStakes = false;
     }
