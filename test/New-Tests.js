@@ -552,7 +552,7 @@ contract('FRAX', async (accounts) => {
 
 
 	});
-
+/*
 	it("Deploys a vesting contract and then executes a governance proposal to revoke it", async () => {
 		await vestingInstance.setTimelockAddress(timelockInstance.address, { from: accounts[0] });
 		await vestingInstance.setFXSAddress(fxsInstance.address, { from: accounts[0] });
@@ -668,7 +668,7 @@ contract('FRAX', async (accounts) => {
 		await vestingInstance.release({ from: accounts[5] });
 		console.log("accounts[5] balance after:", (new BigNumber(await fxsInstance.balanceOf(accounts[5]))).div(BIG18).toNumber());
 	});
-/*
+*/
 	// GOVERNANCE TEST [PART 1]
 	// ================================================================
 	it('Propose changing the minting fee', async () => {
@@ -1135,6 +1135,16 @@ contract('FRAX', async (accounts) => {
 		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
 
 	});
+
+	it("Set the pool ceiling and try to mint above it", async () => {
+		console.log("=========================Pool Ceiling Test=========================");
+		await pool_instance_USDC.setPoolCeiling(new BigNumber("100e18"));
+		await fxsInstance.approve(pool_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await col_instance_USDC.approve(pool_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		await expectRevert.unspecified(await pool_instance_USDC.mintFractionalFRAX(new BigNumber("1000e18"), new BigNumber("1000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
+		await pool_instance_USDC.setPoolCeiling(new BigNumber("5000000e18"));
+	})
 
 
 
@@ -2052,5 +2062,5 @@ contract('FRAX', async (accounts) => {
 
 		console.log("staking contract FXS balance:", new BigNumber(await fxsInstance.balanceOf(stakingInstance_FRAX_WETH.address)).div(BIG18).toNumber());
 	});
-*/
+
 });
