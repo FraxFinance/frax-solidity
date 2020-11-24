@@ -170,8 +170,6 @@ module.exports = async function(deployer, network, accounts) {
 	const fraxInstance = await FRAXStablecoin.deployed();
 	await deployer.deploy(FRAXShares, "FXS", ONE_BILLION_DEC18, ORACLE_ADDRESS, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	const fxsInstance = await FRAXShares.deployed();
-	await deployer.deploy(TokenVesting, accounts[9], await time.latest(), 86400 * 182.5, 86400 * 365, false, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); //6 month cliff, 1 year vesting schedule
-	const vestingInstance = await TokenVesting.deployed();
 
 	// ======== Deploy the governance contract and its associated timelock ========
 	console.log(chalk.yellow('===== DEPLOY THE GOVERNANCE CONTRACT ====='));
@@ -913,9 +911,10 @@ module.exports = async function(deployer, network, accounts) {
 	// 	// Advance 24 hrs so the period can be computed
 	// 	await time.increase(86400 + 1);
 	// 	await time.advanceBlock();
-		
 	}
 	
+	await deployer.deploy(TokenVesting, accounts[5], await time.latest(), 86400 * 1, 86400 * 10, false, { from: accounts[0] });
+	const vestingInstance = await TokenVesting.deployed();	
 
 	// ======== Note the addresses ========
 	// If you are testing the frontend, you need to copy-paste the output of CONTRACT_ADDRESSES to the frontend src/misc/constants.tsx
@@ -976,6 +975,6 @@ module.exports = async function(deployer, network, accounts) {
 
 	console.log("CONTRACT_ADDRESSES: ", CONTRACT_ADDRESSES);
 
-	// deployer.deploy(UniswapPairOracle);
+	
 	console.log(`==========================================================`);
 };
