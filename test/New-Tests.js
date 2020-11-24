@@ -1138,12 +1138,11 @@ contract('FRAX', async (accounts) => {
 
 	it("Set the pool ceiling and try to mint above it", async () => {
 		console.log("=========================Pool Ceiling Test=========================");
-		await pool_instance_USDC.setPoolCeiling(new BigNumber("100e18"));
-		await fxsInstance.approve(pool_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await col_instance_USDC.approve(pool_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-		await expectRevert.unspecified(await pool_instance_USDC.mintFractionalFRAX(new BigNumber("1000e18"), new BigNumber("1000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
-		await pool_instance_USDC.setPoolCeiling(new BigNumber("5000000e18"));
+		await pool_instance_USDC.setPoolParameters(new BigNumber("100e18"), 7500, 1, { from: POOL_CREATOR });
+		await fxsInstance.approve(pool_instance_USDC.address, new BigNumber("1000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await col_instance_USDC.approve(pool_instance_USDC.address, new BigNumber("1000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await expectRevert.unspecified(pool_instance_USDC.mintFractionalFRAX(new BigNumber("1000e18"), new BigNumber("1000e18"), 0, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
+		await pool_instance_USDC.setPoolParameters(new BigNumber("500000000e18"), 7500, 1, { from: POOL_CREATOR });
 	})
 
 
@@ -1934,7 +1933,7 @@ contract('FRAX', async (accounts) => {
 
 	it("Does a fair launch", async () => {
 		console.log("====================================================================");
-		await fxsInstance.transfer(stakingInstance_FRAX_WETH.address, new BigNumber("100000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await fxsInstance.transfer(stakingInstance_FRAX_WETH.address, new BigNumber("1000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await pair_instance_FRAX_WETH.transfer(accounts[2], new BigNumber("100e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await pair_instance_FRAX_WETH.transfer(accounts[3], new BigNumber("100e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 

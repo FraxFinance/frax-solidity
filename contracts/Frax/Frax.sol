@@ -32,7 +32,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     address public fxs_eth_oracle_address;
     address public weth_address;
     address public eth_usd_consumer_address;
-    uint256 public constant genesis_supply = 5000e18; // 5000 FRAX. This is to help with establishing the Uniswap pools, as they need liquidity
+    uint256 public constant genesis_supply = 2000000e18; // 2M FRAX (only for testing, genesis supply will be 5k on Mainnet). This is to help with establishing the Uniswap pools, as they need liquidity
 
     // The addresses in this array are added by the oracle and these contracts are able to mint frax
     address[] public frax_pools_array;

@@ -36,25 +36,25 @@ const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_
 const WETH = artifacts.require("ERC20/WETH");
 const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
 const FakeCollateral_USDT = artifacts.require("FakeCollateral/FakeCollateral_USDT");
-// const FakeCollateral_yUSD = artifacts.require("FakeCollateral/FakeCollateral_yUSD");
+
 
 // Collateral Pools
 const FraxPoolLibrary = artifacts.require("Frax/Pools/FraxPoolLibrary");
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 const Pool_USDT = artifacts.require("Frax/Pools/Pool_USDT");
-// const Pool_yUSD = artifacts.require("Frax/Pools/Pool_yUSD");
+
 
 // Oracles
-const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_WETH");
-const UniswapPairOracle_FRAX_USDT = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_USDT");
-const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_USDC");
-// const UniswapPairOracle_FRAX_yUSD = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_yUSD");
-const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_WETH");
-const UniswapPairOracle_FXS_USDT = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_USDT");
-const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_USDC");
-// const UniswapPairOracle_FXS_yUSD = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_yUSD");
-const UniswapPairOracle_USDT_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_USDT_WETH");
-const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_USDC_WETH");
+const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_WETH");
+const UniswapPairOracle_FRAX_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDT");
+const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDC");
+
+const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
+const UniswapPairOracle_FXS_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDT");
+const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
+
+const UniswapPairOracle_USDT_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDT_WETH");
+const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
 
 // Chainlink Price Consumer
 // const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
@@ -69,15 +69,15 @@ const GovernorAlpha = artifacts.require("Governance/GovernorAlpha");
 const Timelock = artifacts.require("Governance/Timelock");
 
 // Staking contracts
-const StakingRewards_FRAX_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_WETH.sol");
-const StakingRewards_FRAX_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDC.sol");
+const StakingRewards_FRAX_WETH = artifacts.require("Staking/Variants/Stake_FRAX_WETH.sol");
+const StakingRewards_FRAX_USDC = artifacts.require("Staking/Variants/Stake_FRAX_USDC.sol");
 //const StakingRewards_FRAX_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDT.sol");
-// const StakingRewards_FRAX_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_yUSD.sol");
-const StakingRewards_FXS_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FXS_WETH.sol");
+
+const StakingRewards_FXS_WETH = artifacts.require("Staking/Variants/Stake_FXS_WETH.sol");
 //const StakingRewards_FXS_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDC.sol");
 //const StakingRewards_FXS_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDT.sol");
-//const StakingRewards_FXS_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FXS_yUSD.sol");
-const StakingRewards_FRAX_FXS = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_FXS.sol");
+
+const StakingRewards_FRAX_FXS = artifacts.require("Staking/Variants/Stake_FRAX_FXS.sol");
 
 // Token vesting contract
 const TokenVesting = artifacts.require("FXS/TokenVesting.sol");
@@ -223,11 +223,10 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.deploy(WETH, COLLATERAL_FRAX_AND_FXS_OWNER);
 	await deployer.deploy(FakeCollateral_USDC, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC18, "USDC", 18);
 	await deployer.deploy(FakeCollateral_USDT, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC18, "USDT", 18);
-	// await deployer.deploy(FakeCollateral_yUSD, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC18, "yUSD", 18);
 	const wethInstance = await WETH.deployed();
 	const col_instance_USDC = await FakeCollateral_USDC.deployed(); 
 	const col_instance_USDT = await FakeCollateral_USDT.deployed(); 
-	// const col_instance_yUSD = await FakeCollateral_yUSD.deployed(); 
+	
 
 	// ======== Deploy the router and the SwapToPrice ========
 	console.log(chalk.yellow('===== DEPLOY THE ROUTER AND SWAPTOPRICE ====='));
@@ -242,11 +241,11 @@ module.exports = async function(deployer, network, accounts) {
 	await uniswapFactoryInstance.createPair(fraxInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await uniswapFactoryInstance.createPair(fraxInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await uniswapFactoryInstance.createPair(fraxInstance.address, col_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await uniswapFactoryInstance.createPair(fraxInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 	await uniswapFactoryInstance.createPair(fxsInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await uniswapFactoryInstance.createPair(fxsInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await uniswapFactoryInstance.createPair(fxsInstance.address, col_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await uniswapFactoryInstance.createPair(fxsInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 	await uniswapFactoryInstance.createPair(col_instance_USDT.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await uniswapFactoryInstance.createPair(col_instance_USDC.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await uniswapFactoryInstance.createPair(fraxInstance.address, fxsInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -256,11 +255,11 @@ module.exports = async function(deployer, network, accounts) {
 	const pair_addr_FRAX_WETH = await uniswapFactoryInstance.getPair(fraxInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	const pair_addr_FRAX_USDC = await uniswapFactoryInstance.getPair(fraxInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	const pair_addr_FRAX_USDT = await uniswapFactoryInstance.getPair(fraxInstance.address, col_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// const pair_addr_FRAX_yUSD = await uniswapFactoryInstance.getPair(fraxInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 	const pair_addr_FXS_WETH = await uniswapFactoryInstance.getPair(fxsInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	const pair_addr_FXS_USDC = await uniswapFactoryInstance.getPair(fxsInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	const pair_addr_FXS_USDT = await uniswapFactoryInstance.getPair(fxsInstance.address, col_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// const pair_addr_FXS_yUSD = await uniswapFactoryInstance.getPair(fxsInstance.address, FakeCollateral_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 	const pair_addr_USDT_WETH = await uniswapFactoryInstance.getPair(col_instance_USDT.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	const pair_addr_USDC_WETH = await uniswapFactoryInstance.getPair(col_instance_USDC.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	const pair_addr_FRAX_FXS = await uniswapFactoryInstance.getPair(fraxInstance.address, fxsInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -272,21 +271,21 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.deploy(StakingRewards_FRAX_WETH, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_WETH, FRAXStablecoin.address, timelockInstance.address, 500000);
 	await deployer.deploy(StakingRewards_FRAX_USDC, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_USDC, FRAXStablecoin.address, timelockInstance.address, 500000);
 	//await deployer.deploy(StakingRewards_FRAX_USDT, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_USDT, FRAXStablecoin.address, timelockInstance.address);
-	// await deployer.deploy(StakingRewards_FRAX_yUSD, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_yUSD, FRAXStablecoin.address, timelockInstance.address);
+	
 	await deployer.deploy(StakingRewards_FXS_WETH, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_WETH, FRAXStablecoin.address, timelockInstance.address, 0);
 	//await deployer.deploy(StakingRewards_FXS_USDC, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_USDC, FRAXStablecoin.address, timelockInstance.address);
 	//await deployer.deploy(StakingRewards_FXS_USDT, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_USDT, FRAXStablecoin.address, timelockInstance.address);
-	//await deployer.deploy(StakingRewards_FXS_yUSD, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_yUSD, FRAXStablecoin.address, timelockInstance.address);
+	
 	await deployer.deploy(StakingRewards_FRAX_FXS, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_FXS, FRAXStablecoin.address, timelockInstance.address, 0);
 	
 	const stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
 	const stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.deployed();
 	//const stakingInstance_FRAX_USDT = await StakingRewards_FRAX_USDT.deployed();
-	// const stakingInstance_FRAX_yUSD = await StakingRewards_FRAX_yUSD.deployed();
+	
 	const stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.deployed();
 	//const stakingInstance_FXS_USDC = await StakingRewards_FXS_USDC.deployed();
 	//const stakingInstance_FXS_USDT = await StakingRewards_FXS_USDT.deployed();
-	// const stakingInstance_FXS_yUSD = await StakingRewards_FXS_yUSD.deployed();
+	
 	const stakingInstance_FRAX_FXS = await StakingRewards_FRAX_FXS.deployed();
 
 	// ======== Get instances of the pairs ========
@@ -294,11 +293,11 @@ module.exports = async function(deployer, network, accounts) {
 	const pair_instance_FRAX_WETH = await UniswapV2Pair.at(pair_addr_FRAX_WETH);
 	const pair_instance_FRAX_USDC = await UniswapV2Pair.at(pair_addr_FRAX_USDC);
 	const pair_instance_FRAX_USDT = await UniswapV2Pair.at(pair_addr_FRAX_USDT);
-	// const pair_instance_FRAX_yUSD = await UniswapV2Pair.at(pair_addr_FRAX_yUSD);
+	
 	const pair_instance_FXS_WETH = await UniswapV2Pair.at(pair_addr_FXS_WETH);
 	const pair_instance_FXS_USDC = await UniswapV2Pair.at(pair_addr_FXS_USDC);
 	const pair_instance_FXS_USDT = await UniswapV2Pair.at(pair_addr_FXS_USDT);
-	// const pair_instance_FXS_yUSD = await UniswapV2Pair.at(pair_addr_FXS_yUSD);
+	
 	const pair_instance_USDT_WETH = await UniswapV2Pair.at(pair_addr_USDT_WETH);
 	const pair_instance_USDC_WETH = await UniswapV2Pair.at(pair_addr_USDC_WETH);
 	const pair_instance_FRAX_FXS = await UniswapV2Pair.at(pair_addr_FRAX_FXS);
@@ -308,7 +307,7 @@ module.exports = async function(deployer, network, accounts) {
 	await wethInstance.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await col_instance_USDC.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await col_instance_USDT.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await col_instance_yUSD.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 	await fraxInstance.approve(routerInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await fxsInstance.approve(routerInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
@@ -333,11 +332,11 @@ module.exports = async function(deployer, network, accounts) {
 	await fxsInstance.transfer(stakingInstance_FRAX_WETH.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await fxsInstance.transfer(stakingInstance_FRAX_USDC.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	//await fxsInstance.transfer(stakingInstance_FRAX_USDT.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await fxsInstance.transfer(stakingInstance_FRAX_yUSD.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 	await fxsInstance.transfer(stakingInstance_FXS_WETH.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	//await fxsInstance.transfer(stakingInstance_FXS_USDC.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	//await fxsInstance.transfer(stakingInstance_FXS_USDT.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	//await fxsInstance.transfer(stakingInstance_FXS_yUSD.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 	await fxsInstance.transfer(stakingInstance_FRAX_FXS.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// ======== Add liquidity to the pairs so the oracle constructor doesn't error  ========
@@ -387,19 +386,6 @@ module.exports = async function(deployer, network, accounts) {
 		{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
 	);
 
-	// Handle FRAX / yUSD
-	// await routerInstance.addLiquidity(
-	// 	fraxInstance.address, 
-	// 	col_instance_yUSD.address,
-	// 	new BigNumber(1010e18), 
-	// 	new BigNumber(1000e18), 
-	// 	new BigNumber(1010e18), 
-	// 	new BigNumber(1000e18), 
-	// 	COLLATERAL_FRAX_AND_FXS_OWNER, 
-	// 	new BigNumber(2105300114), 
-	// 	{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-	// );
-
 	// Handle FXS / WETH
 	// Normally you would use addLiquidityETH here
 	await routerInstance.addLiquidity(
@@ -439,19 +425,6 @@ module.exports = async function(deployer, network, accounts) {
 		new BigNumber(2105300114), 
 		{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
 	);
-
-	// Handle FXS / yUSD
-	// await routerInstance.addLiquidity(
-	// 	fxsInstance.address, 
-	// 	col_instance_yUSD.address,
-	// 	new BigNumber(5010e18), 
-	// 	new BigNumber(1000e18), 
-	// 	new BigNumber(5010e18), 
-	// 	new BigNumber(1000e18), 
-	// 	COLLATERAL_FRAX_AND_FXS_OWNER, 
-	// 	new BigNumber(2105300114), 
-	// 	{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-	// );
 
 	// Normally, you would use addLiquidityETH
 	// Handle USDT / WETH
@@ -522,11 +495,11 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.deploy(UniswapPairOracle_FRAX_WETH, uniswapFactoryInstance.address, fraxInstance.address, wethInstance.address, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	await deployer.deploy(UniswapPairOracle_FRAX_USDC, uniswapFactoryInstance.address, fraxInstance.address, col_instance_USDC.address, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	await deployer.deploy(UniswapPairOracle_FRAX_USDT, uniswapFactoryInstance.address, fraxInstance.address, col_instance_USDT.address, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
-	// await deployer.deploy(UniswapPairOracle_FRAX_yUSD, uniswapFactoryInstance.address, fraxInstance.address, col_instance_yUSD.address);
+	
 	await deployer.deploy(UniswapPairOracle_FXS_WETH, uniswapFactoryInstance.address, fxsInstance.address, wethInstance.address, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	await deployer.deploy(UniswapPairOracle_FXS_USDC, uniswapFactoryInstance.address, fxsInstance.address, col_instance_USDC.address, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	await deployer.deploy(UniswapPairOracle_FXS_USDT, uniswapFactoryInstance.address, fxsInstance.address, col_instance_USDT.address, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
-	// await deployer.deploy(UniswapPairOracle_FXS_yUSD, uniswapFactoryInstance.address, fxsInstance.address, col_instance_yUSD.address);
+	
 	await deployer.deploy(UniswapPairOracle_USDT_WETH, uniswapFactoryInstance.address, col_instance_USDT.address, wethInstance.address, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	await deployer.deploy(UniswapPairOracle_USDC_WETH, uniswapFactoryInstance.address, col_instance_USDC.address, wethInstance.address, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 
@@ -538,14 +511,14 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.deploy(Pool_USDC, fraxInstance.address, fxsInstance.address, col_instance_USDC.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
 	await deployer.deploy(Pool_USDT, fraxInstance.address, fxsInstance.address, col_instance_USDT.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18);
 	
-	// await deployer.deploy(Pool_yUSD, col_instance_yUSD.address, UniswapPairOracle_FRAX_yUSD.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18); 
+	
 
 	
 	// ======== Get the pool instances ========
 	console.log(chalk.yellow('===== POOL INSTANCES ====='));
 	const pool_instance_USDC = await Pool_USDC.deployed();
 	const pool_instance_USDT = await Pool_USDT.deployed();
-	// const pool_instance_yUSD = await Pool_yUSD.deployed();
+	
 
 	// ======== Set FraxPool various private variables ======== (DEPRECATED)
 	//console.log(chalk.yellow('===== FRAXPOOL PRIVATE VARIABLES ====='));
@@ -557,9 +530,6 @@ module.exports = async function(deployer, network, accounts) {
 	//await pool_instance_USDT.setFRAXAddress(fraxInstance.address, { from: POOL_CREATOR });
 	//await pool_instance_USDT.setFXSAddress(fxsInstance.address, { from: POOL_CREATOR });
 
-	// yUSD
-	// await pool_instance_yUSD.setFRAXAddress(fraxInstance.address, { from: POOL_CREATOR });
-	// await pool_instance_yUSD.setFXSAddress(fxsInstance.address, { from: POOL_CREATOR });
 
 	// ======== Set the redemption and minting fees ========
 	console.log(chalk.yellow('===== REDEMPTION AND MINTING FEES ====='));
@@ -575,11 +545,11 @@ module.exports = async function(deployer, network, accounts) {
 	const oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.deployed();
 	const oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.deployed(); 
 	const oracle_instance_FRAX_USDT = await UniswapPairOracle_FRAX_USDT.deployed(); 
-	// const oracle_instance_FRAX_yUSD = await UniswapPairOracle_FRAX_yUSD.deployed(); 
+	
 	const oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
 	const oracle_instance_FXS_USDC = await UniswapPairOracle_FXS_USDC.deployed(); 
 	const oracle_instance_FXS_USDT = await UniswapPairOracle_FXS_USDT.deployed(); 
-	// const oracle_instance_FXS_yUSD = await UniswapPairOracle_FXS_yUSD.deployed(); 
+	
 	const oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.deployed();
 	const oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.deployed();
 
@@ -593,7 +563,7 @@ module.exports = async function(deployer, network, accounts) {
 	await fraxInstance.setFRAXEthOracle(oracle_instance_FRAX_WETH.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	//await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	//await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await fraxInstance.addStablecoinOracle(0, oracle_instance_FRAX_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 	await pool_instance_USDT.setCollatETHOracle(oracle_instance_USDT_WETH.address, wethInstance.address, { from: POOL_CREATOR });
 	await pool_instance_USDC.setCollatETHOracle(oracle_instance_USDC_WETH.address, wethInstance.address, { from: POOL_CREATOR });
 
@@ -604,7 +574,7 @@ module.exports = async function(deployer, network, accounts) {
 	await fraxInstance.setFXSEthOracle(oracle_instance_FXS_WETH.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	//await fraxInstance.addStablecoinOracle(1, oracle_instance_FXS_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	//await fraxInstance.addStablecoinOracle(1, oracle_instance_FXS_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await fraxInstance.addStablecoinOracle(1, oracle_instance_FXS_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 
 	// ======== Set the Chainlink oracle ========
 	console.log(chalk.yellow('===== SET THE CHAINLINK ORACLE ====='));
@@ -622,11 +592,11 @@ module.exports = async function(deployer, network, accounts) {
 	await oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await oracle_instance_FRAX_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await oracle_instance_FRAX_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await oracle_instance_FRAX_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 	await oracle_instance_FXS_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await oracle_instance_FXS_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await oracle_instance_FXS_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await oracle_instance_FXS_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 
 	await oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await oracle_instance_USDC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -640,7 +610,7 @@ module.exports = async function(deployer, network, accounts) {
 	// Link the FAKE collateral pool to the FRAX contract
 	await fraxInstance.addPool(pool_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await fraxInstance.addPool(pool_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await fraxInstance.addPool(pool_instance_yUSD.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	
 
 	// ======== Set the FRAX address inside of the FXS contract ========
 	console.log(chalk.yellow('===== SET FRAX ADDRESS ====='));
@@ -654,11 +624,9 @@ module.exports = async function(deployer, network, accounts) {
 	let frax_price_from_FRAX_WETH = (new BigNumber(await oracle_instance_FRAX_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
 	let frax_price_from_FRAX_USDC = (new BigNumber(await oracle_instance_FRAX_USDC.consult.call(col_instance_USDC.address, 1e6))).div(BIG6).toNumber();
 	let frax_price_from_FRAX_USDT = (new BigNumber(await oracle_instance_FRAX_USDT.consult.call(col_instance_USDT.address, 1e6))).div(BIG6).toNumber();
-	// let frax_price_from_FRAX_yUSD = (new BigNumber(await oracle_instance_FRAX_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
 	let fxs_price_from_FXS_WETH = (new BigNumber(await oracle_instance_FXS_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
 	let fxs_price_from_FXS_USDC = (new BigNumber(await oracle_instance_FXS_USDC.consult.call(col_instance_USDC.address, 1e6))).div(BIG6).toNumber();
 	let fxs_price_from_FXS_USDT = (new BigNumber(await oracle_instance_FXS_USDT.consult.call(col_instance_USDT.address, 1e6))).div(BIG6).toNumber();
-	// let fxs_price_from_FXS_yUSD = (new BigNumber(await oracle_instance_FXS_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
 	let USDT_price_from_USDT_WETH = (new BigNumber(await oracle_instance_USDT_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
 	let USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
 	const frax_price_initial = new BigNumber(await fraxInstance.frax_price({ from: COLLATERAL_FRAX_AND_FXS_OWNER })).div(BIG6);
@@ -670,11 +638,9 @@ module.exports = async function(deployer, network, accounts) {
 	console.log("frax_price_from_FRAX_WETH: ", frax_price_from_FRAX_WETH.toString(), " FRAX = 1 WETH");
 	console.log("frax_price_from_FRAX_USDC: ", frax_price_from_FRAX_USDC.toString(), " FRAX = 1 USDC");
 	console.log("frax_price_from_FRAX_USDT: ", frax_price_from_FRAX_USDT.toString(), " FRAX = 1 USDT");
-	// console.log("frax_price_from_FRAX_yUSD: ", frax_price_from_FRAX_yUSD.toString(), " FRAX = 1 yUSD");
 	console.log("fxs_price_from_FXS_WETH: ", fxs_price_from_FXS_WETH.toString(), " FXS = 1 WETH");
 	console.log("fxs_price_from_FXS_USDC: ", fxs_price_from_FXS_USDC.toString(), " FXS = 1 USDC");
 	console.log("fxs_price_from_FXS_USDT: ", fxs_price_from_FXS_USDT.toString(), " FXS = 1 USDT");
-	// console.log("fxs_price_from_FXS_yUSD: ", fxs_price_from_FXS_yUSD.toString(), " FXS = 1 yUSD");
 	console.log("USDT_price_from_USDT_WETH: ", USDT_price_from_USDT_WETH.toString(), " USDT = 1 WETH");
 	console.log("USDC_price_from_USDC_WETH: ", USDC_price_from_USDC_WETH.toString(), " USDC = 1 WETH");
 
@@ -691,28 +657,23 @@ module.exports = async function(deployer, network, accounts) {
 	await wethInstance.transfer(METAMASK_ADDRESS, new BigNumber("1000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await col_instance_USDC.transfer(METAMASK_ADDRESS, new BigNumber("2000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await col_instance_USDT.transfer(METAMASK_ADDRESS, new BigNumber("3000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await col_instance_yUSD.transfer(METAMASK_ADDRESS, new BigNumber("4000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// Liquidity tokens
 	await pair_instance_FRAX_WETH.transfer(METAMASK_ADDRESS, new BigNumber("200e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await pair_instance_FRAX_USDC.transfer(METAMASK_ADDRESS, new BigNumber("210e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await pair_instance_FRAX_USDT.transfer(METAMASK_ADDRESS, new BigNumber("220e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await pair_instance_FRAX_yUSD.transfer(METAMASK_ADDRESS, new BigNumber("230e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await pair_instance_FXS_WETH.transfer(METAMASK_ADDRESS, new BigNumber("240e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await pair_instance_FXS_USDC.transfer(METAMASK_ADDRESS, new BigNumber("250e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await pair_instance_FXS_USDT.transfer(METAMASK_ADDRESS, new BigNumber("260e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await pair_instance_FXS_yUSD.transfer(METAMASK_ADDRESS, new BigNumber("270e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await pair_instance_FRAX_FXS.transfer(METAMASK_ADDRESS, new BigNumber("220e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// ======== Initialize the staking rewards ========
 	await stakingInstance_FRAX_WETH.initializeDefault({ from: STAKING_OWNER });
 	await stakingInstance_FRAX_USDC.initializeDefault({ from: STAKING_OWNER });
 	// await stakingInstance_FRAX_USDT.initializeDefault({ from: STAKING_OWNER });
-	// await stakingInstance_FRAX_yUSD.initializeDefault({ from: STAKING_OWNER });
 	await stakingInstance_FXS_WETH.initializeDefault({ from: STAKING_OWNER });
 	// await stakingInstance_FXS_USDC.initializeDefault({ from: STAKING_OWNER });
 	// await stakingInstance_FXS_USDT.initializeDefault({ from: STAKING_OWNER });
-	// await stakingInstance_FXS_yUSD.initializeDefault({ from: STAKING_OWNER });
 	await stakingInstance_FRAX_FXS.initializeDefault({ from: STAKING_OWNER });
 
 
@@ -726,7 +687,6 @@ module.exports = async function(deployer, network, accounts) {
 	if (false){
 		await col_instance_USDC.transfer(pool_instance_USDC.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await col_instance_USDT.transfer(pool_instance_USDT.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await col_instance_yUSD.transfer(pool_instance_yUSD.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	
 		// ======== Advance a block and 24 hours to catch things up ========
 		await time.increase(86400 + 1);
@@ -791,7 +751,6 @@ module.exports = async function(deployer, network, accounts) {
 	// 	await wethInstance.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await col_instance_USDC.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await col_instance_USDT.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// 	// await col_instance_yUSD.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await fraxInstance.approve(routerInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await fxsInstance.approve(routerInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
@@ -799,7 +758,6 @@ module.exports = async function(deployer, network, accounts) {
 	// 	await wethInstance.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await col_instance_USDC.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await col_instance_USDT.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// 	// await col_instance_yUSD.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await fraxInstance.approve(swapToPriceInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await fxsInstance.approve(swapToPriceInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
@@ -900,11 +858,9 @@ module.exports = async function(deployer, network, accounts) {
 	// 	await oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await oracle_instance_FRAX_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await oracle_instance_FRAX_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// 	// await oracle_instance_FRAX_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await oracle_instance_FXS_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await oracle_instance_FXS_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await oracle_instance_FXS_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// 	// await oracle_instance_FXS_yUSD.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	await oracle_instance_USDC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
@@ -929,45 +885,37 @@ module.exports = async function(deployer, network, accounts) {
 				FRAX_WETH: oracle_instance_FRAX_WETH.address,
 				FRAX_USDC: oracle_instance_FRAX_USDC.address,
 				FRAX_USDT: oracle_instance_FRAX_USDT.address,
-				// FRAX_yUSD: oracle_instance_FRAX_yUSD.address,
 				FXS_WETH: oracle_instance_FXS_WETH.address,
 				FXS_USDC: oracle_instance_FXS_USDC.address,
 				FXS_USDT: oracle_instance_FXS_USDT.address,
-				// FXS_yUSD: oracle_instance_FXS_yUSD.address,
 				USDT_WETH: oracle_instance_USDT_WETH.address,
 				USDC_WETH: oracle_instance_USDC_WETH.address
 			},
 			collateral: {
 				USDC: col_instance_USDC.address,
 				USDT: col_instance_USDT.address,
-				// yUSD: col_instance_yUSD.address,
 			},
 			governance: governanceInstance.address,
 			pools: {
 				USDC: pool_instance_USDC.address,
 				USDT: pool_instance_USDT.address,
-				// yUSD: pool_instance_yUSD.address,
 			},
 			stake_tokens: {
 				'Uniswap FRAX/WETH': pair_instance_FRAX_WETH.address,
 				'Uniswap FRAX/USDC': pair_instance_FRAX_USDC.address,
 				'Uniswap FRAX/USDT': pair_instance_FRAX_USDT.address,
-				// 'Uniswap FRAX/yUSD': pair_instance_FRAX_yUSD.address,
 				'Uniswap FXS/WETH': pair_instance_FXS_WETH.address,
 				'Uniswap FXS/USDC': pair_instance_FXS_USDC.address,
 				'Uniswap FXS/USDT': pair_instance_FXS_USDT.address,
-				// 'Uniswap FXS/yUSD': pair_instance_FXS_yUSD.address,
 				'Uniswap FRAX/FXS': pair_instance_FRAX_FXS.address
 			},
 			staking_contracts_for_tokens: {
 				'Uniswap FRAX/WETH': stakingInstance_FRAX_WETH.address,
 				'Uniswap FRAX/USDC': stakingInstance_FRAX_USDC.address,
 				// 'Uniswap FRAX/USDT': stakingInstance_FRAX_USDT.address,
-				// 'Uniswap FRAX/yUSD': stakingInstance_FRAX_yUSD.address,
 				'Uniswap FXS/WETH': stakingInstance_FXS_WETH.address,
 				//'Uniswap FXS/USDC': stakingInstance_FXS_USDC.address,
 				//'Uniswap FXS/USDT': stakingInstance_FXS_USDT.address,
-				// 'Uniswap FXS/yUSD': stakingInstance_FXS_yUSD.address,
 				'Uniswap FRAX/FXS': stakingInstance_FRAX_FXS.address,
 			}
 		}      
