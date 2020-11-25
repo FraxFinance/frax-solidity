@@ -124,19 +124,21 @@ contract FRAXShares is ERC20Custom, AccessControl {
     /* ========== OVERRIDDEN PUBLIC FUNCTIONS ========== */
 
     function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+        // Transfer votes
+        trackVotes(_msgSender(), recipient, uint96(amount));
+
         _transfer(_msgSender(), recipient, amount);
 
-        // Keep track of votes. "Delegates" is a misnomer here
-        trackVotes(_msgSender(), recipient, uint96(amount));
         return true;
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+        // Transfer votes
+        trackVotes(sender, recipient, uint96(amount));
+
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
 
-        // Keep track of votes. "Delegates" is a misnomer here
-        trackVotes(sender, recipient, uint96(amount));
         return true;
     }
 
