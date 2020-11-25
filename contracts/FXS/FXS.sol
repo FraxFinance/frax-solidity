@@ -105,18 +105,18 @@ contract FRAXShares is ERC20Custom, AccessControl {
         uint32 srcRepNum = numCheckpoints[address(this)];
         uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
         uint96 srcRepNew = add96(srcRepOld, uint96(m_amount), "pool_mint new votes overflows");
-        _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew);
+        _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew); // mint new votes
         trackVotes(address(this), m_address, uint96(m_amount));
         super._mint(m_address, m_amount);
     }
 
     // This function is what other frax pools will call to burn FXS 
     function pool_burn_from(address b_address, uint256 b_amount) external onlyPools {
-        uint32 srcRepNum = numCheckpoints[b_address];
-        uint96 srcRepOld = srcRepNum > 0 ? checkpoints[b_address][srcRepNum - 1].votes : 0;
+        trackVotes(b_address, address(this), uint96(b_amount));
+        uint32 srcRepNum = numCheckpoints[address(this)];
+        uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
         uint96 srcRepNew = sub96(srcRepOld, uint96(b_amount), "pool_burn_from new votes underflows");
-        _writeCheckpoint(b_address, srcRepNum, srcRepOld, srcRepNew);
-        trackVotes(b_address, address(this), uint96(b_amount)); //check if this burns votes
+        _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew); // burn votes
         super._burnFrom(b_address, b_amount);
         emit FXSBurned(b_address, address(this), b_amount);
     }

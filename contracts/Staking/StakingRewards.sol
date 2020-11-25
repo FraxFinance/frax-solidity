@@ -49,7 +49,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     uint256 public locked_stake_max_multiplier = 3000000; // 6 decimals of precision. 1x = 1000000
     uint256 public locked_stake_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
     uint256 public locked_stake_min_time = 604800; // 7 * 86400  (7 days)
-    string public locked_stake_min_time_str = "604800"; // 7 days
+    string public locked_stake_min_time_str = "604800"; // 7 days on genesis
 
     uint256 public cr_boost_max_multiplier = 3000000; // 6 decimals of precision. 1x = 0
 
@@ -291,7 +291,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
             rewards[msg.sender] = 0;
-            rewardsToken.safeTransfer(msg.sender, reward);
+            rewardsToken.transfer(msg.sender, reward);
             emit RewardPaid(msg.sender, reward);
         }
     }
@@ -385,19 +385,25 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         emit LockedStakeMaxMultiplierUpdated(locked_stake_max_multiplier);
     }
 
-    function setLockedStakeTimeForMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier) external onlyByOwnerOrGovernance {
+    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier, uint256 _locked_stake_min_time) external onlyByOwnerOrGovernance {
         require(_locked_stake_time_for_max_multiplier >= 1, "Multiplier Max Time must be greater than or equal to 1");
+        require(_locked_stake_min_time >= 1, "Multiplier Max Time must be greater than or equal to 1");
+        
+        locked_stake_min_time = _locked_stake_min_time;
+        locked_stake_min_time_str = StringHelpers.uint2str(_locked_stake_min_time);
         locked_stake_time_for_max_multiplier = _locked_stake_time_for_max_multiplier;
+
+        emit LockedStakeMinTime(_locked_stake_min_time);
         emit LockedStakeTimeForMaxMultiplier(locked_stake_time_for_max_multiplier);
     }
-
+/*
     function setLockedStakeMinTime(uint256 _locked_stake_min_time) external onlyByOwnerOrGovernance {
         require(_locked_stake_min_time >= 1, "Multiplier Max Time must be greater than or equal to 1");
         locked_stake_min_time = _locked_stake_min_time;
         locked_stake_min_time_str = StringHelpers.uint2str(_locked_stake_min_time);
         emit LockedStakeMinTime(_locked_stake_min_time);
     }
-
+*/
     function setMaxCRBoostMultiplier(uint256 _max_boost_multiplier) external onlyByOwnerOrGovernance {
         require(_max_boost_multiplier >= 1, "Max CR Boost must be greater than or equal to 1");
         cr_boost_max_multiplier = _max_boost_multiplier;
