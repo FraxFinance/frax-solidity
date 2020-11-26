@@ -19,7 +19,6 @@ contract FRAXShares is ERC20Custom, AccessControl {
     address public FRAXStablecoinAdd;
     
     uint256 public constant genesis_supply = 100000000e18; // 100M is printed upon genesis
-    uint256 public maximum_supply; // No FXS can be minted under any condition past this number
     uint256 public FXS_DAO_min; // Minimum FXS required to join DAO groups 
 
     address public owner_address;
@@ -57,13 +56,11 @@ contract FRAXShares is ERC20Custom, AccessControl {
 
     constructor(
         string memory _symbol, 
-        uint256 _maximum_supply,
         address _oracle_address,
         address _owner_address,
         address _timelock_address
     ) public {
         symbol = _symbol;
-        maximum_supply = _maximum_supply; 
         owner_address = _owner_address;
         oracle_address = _oracle_address;
         timelock_address = _timelock_address;
@@ -97,14 +94,11 @@ contract FRAXShares is ERC20Custom, AccessControl {
     }
 
     function mint(address to, uint256 amount) public onlyPools {
-        require(totalSupply().add(amount) < maximum_supply, "No more FXS can be minted, max supply reached");
         _mint(to, amount);
     }
     
     // This function is what other frax pools will call to mint new FXS (similar to the FRAX mint) 
-    function pool_mint(address m_address, uint256 m_amount) external onlyPools {
-        require(totalSupply().add(m_amount) < maximum_supply, "No more FXS can be minted, max supply reached");
-        
+    function pool_mint(address m_address, uint256 m_amount) external onlyPools {        
         if(trackingVotes){
             uint32 srcRepNum = numCheckpoints[address(this)];
             uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
