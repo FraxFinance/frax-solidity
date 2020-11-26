@@ -592,17 +592,6 @@ contract('FRAX', async (accounts) => {
 			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
 		);
 		
-		/*
-		await governanceInstance.propose(
-			[vestingInstance.address],
-			[0],
-			['getReleased()'],
-			['0x00'],
-			"vestingInstance getReleased()",
-			"I hereby propose to call getReleased() on the vestingInstance",
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		);
-		*/
 
 		// Advance one block so the voting can begin
 		await time.increase(15);
@@ -681,13 +670,15 @@ contract('FRAX', async (accounts) => {
 		// Set the voting period back to 17280 blocks
 		await governanceInstance.__setVotingPeriod(17280, { from: GOVERNOR_GUARDIAN_ADDRESS });
 
-
-		console.log("accounts[0] FXS balance change:", (new BigNumber(await fxsInstance.balanceOf(accounts[0]))).minus(initial_FXS_balance).div(BIG18).toNumber());	
-		console.log("accounts[5] FXS balance change:", (new BigNumber(await fxsInstance.balanceOf(accounts[5]))).minus(initial_FXS_balance_5).div(BIG18).toNumber());	
+		const acc_0_FXS_balance_change = (new BigNumber(await fxsInstance.balanceOf(accounts[0]))).minus(initial_FXS_balance).div(BIG18);
+		const acc_5_FXS_balance_change = (new BigNumber(await fxsInstance.balanceOf(accounts[5]))).minus(initial_FXS_balance_5).div(BIG18);
+		
+		console.log("accounts[0] FXS balance change:", acc_0_FXS_balance_change.toNumber());	
+		console.log("accounts[5] FXS balance change:", acc_5_FXS_balance_change.toNumber());	
 
 		console.log("accounts[5] attempts to release more tokens");
 		await vestingInstance.release({ from: accounts[5] });
-		console.log("accounts[5] balance after:", (new BigNumber(await fxsInstance.balanceOf(accounts[5]))).div(BIG18).toNumber());
+		console.log("accounts[5] FXS balance change:", (new BigNumber(await fxsInstance.balanceOf(accounts[5])).minus(initial_FXS_balance_5).div(BIG18)).toNumber());
 	});
 
 	// GOVERNANCE TEST [PART 1]
