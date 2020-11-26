@@ -868,8 +868,8 @@ module.exports = async function(deployer, network, accounts) {
 	// 	await time.increase(86400 + 1);
 	// 	await time.advanceBlock();
 	}
-	
-	await deployer.deploy(TokenVesting, accounts[5], await time.latest(), 86400 * 1, 86400 * 10, false, { from: accounts[0] });
+
+	await deployer.deploy(TokenVesting, accounts[5], await time.latest(), 86400, 86400 * 10, true, { from: accounts[0] });
 	const vestingInstance = await TokenVesting.deployed();	
 
 	// ======== Note the addresses ========

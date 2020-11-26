@@ -552,8 +552,9 @@ contract('FRAX', async (accounts) => {
 
 
 	});
-/*
+
 	it("Deploys a vesting contract and then executes a governance proposal to revoke it", async () => {
+		console.log("======== Setup vestingInstance ========");
 		await vestingInstance.setTimelockAddress(timelockInstance.address, { from: accounts[0] });
 		await vestingInstance.setFXSAddress(fxsInstance.address, { from: accounts[0] });
 		await fxsInstance.approve(vestingInstance.address, new BigNumber("100000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -562,12 +563,14 @@ contract('FRAX', async (accounts) => {
 		const initial_FXS_balance = new BigNumber(await fxsInstance.balanceOf(accounts[0]));
 		const initial_FXS_balance_5 = new BigNumber(await fxsInstance.balanceOf(accounts[5]));
 		
-		console.log("======== Revoke vestingInstance ========");
         const timelock_delay = (await timelockInstance.delay.call()).toNumber();
 
 		// Temporarily set the voting period to 10 blocks
 		await governanceInstance.__setVotingPeriod(10, { from: GOVERNOR_GUARDIAN_ADDRESS });
 
+		console.log("timelock_delay:", timelock_delay);
+		console.log("votingPeriod (denoted in blocks):", (await governanceInstance.votingPeriod()).toNumber());
+		
 		// Determine the latest block
 		const latestBlock = (new BigNumber(await time.latestBlock())).toNumber();
 		console.log("Latest block: ", latestBlock);
@@ -576,7 +579,9 @@ contract('FRAX', async (accounts) => {
 		let revoked_status_before = await vestingInstance.getRevoked();
 		console.log("revoked_status_before:", revoked_status_before);;
 
+		console.log("======== Create proposal ========");
 		// https://github.com/compound-finance/compound-protocol/blob/master/tests/Governance/GovernorAlpha/ProposeTest.js
+		
 		await governanceInstance.propose(
 			[vestingInstance.address],
 			[0],
@@ -586,6 +591,18 @@ contract('FRAX', async (accounts) => {
 			"I hereby propose to revoke the vestingInstance owner's unvested FXS",
 			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
 		);
+		
+		/*
+		await governanceInstance.propose(
+			[vestingInstance.address],
+			[0],
+			['getReleased()'],
+			['0x00'],
+			"vestingInstance getReleased()",
+			"I hereby propose to call getReleased() on the vestingInstance",
+			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
+		);
+		*/
 
 		// Advance one block so the voting can begin
 		await time.increase(15);
@@ -594,6 +611,7 @@ contract('FRAX', async (accounts) => {
 		// Print the proposal count
 		let proposal_id = await governanceInstance.latestProposalIds.call(COLLATERAL_FRAX_AND_FXS_OWNER);
 
+		console.log("proposal_id:", proposal_id.toNumber());
 		// Print the proposal before
 		let proposal_details = await governanceInstance.proposals.call(proposal_id);
 		// console.log(util.inspect(proposal_details, false, null, true));
@@ -635,6 +653,7 @@ contract('FRAX', async (accounts) => {
 		let proposal_state_after = await governanceInstance.state.call(proposal_id);
 		console.log("proposal_state_after: ", new BigNumber(proposal_state_after).toNumber());
 
+		console.log("======== Queue proposal ========");
 		// Queue the execution
 		await governanceInstance.queue(proposal_id, { from: TIMELOCK_ADMIN });
 
@@ -650,11 +669,13 @@ contract('FRAX', async (accounts) => {
 
 		await time.increase(86400);
 		await time.advanceBlock();
+
+		console.log("======== Execute proposal ========");
 		// Execute the proposal
         await governanceInstance.execute(proposal_id, { from: TIMELOCK_ADMIN });
 
 		// Print the minting fee afterwards
-		let revoked_status_after = (new BigNumber(await vestingInstance.revoked.call()));
+		let revoked_status_after = await vestingInstance.getRevoked();
 		console.log("revoked_status_after", revoked_status_after);
 
 		// Set the voting period back to 17280 blocks
@@ -668,7 +689,7 @@ contract('FRAX', async (accounts) => {
 		await vestingInstance.release({ from: accounts[5] });
 		console.log("accounts[5] balance after:", (new BigNumber(await fxsInstance.balanceOf(accounts[5]))).div(BIG18).toNumber());
 	});
-*/
+
 	// GOVERNANCE TEST [PART 1]
 	// ================================================================
 	it('Propose changing the minting fee', async () => {
@@ -1093,6 +1114,7 @@ contract('FRAX', async (accounts) => {
 		console.log("globalCollateralValue: ", globalCollateralValue);
 		console.log("");
 		
+		console.log("accounts[0] votes intial:", (await fxsInstance.getCurrentVotes(COLLATERAL_FRAX_AND_FXS_OWNER)).toString());
 		// Note the collateral ratio
 		const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
 		console.log("collateral_ratio_before: ", collateral_ratio_before.toNumber());
@@ -1127,12 +1149,14 @@ contract('FRAX', async (accounts) => {
 		const pool_collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(pool_instance_USDC.address)).div(BIG18);
 		console.log("accounts[0] USDC balance change: ", collateral_after.toNumber() - collateral_before.toNumber());
 		console.log("accounts[0] FXS balance change: ", fxs_after.toNumber() - fxs_before.toNumber());
+		console.log("accounts[0] votes final:", (await fxsInstance.getCurrentVotes(COLLATERAL_FRAX_AND_FXS_OWNER)).toString());
 		console.log("accounts[0] FRAX balance change: ", frax_after.toNumber() - frax_before.toNumber());
 		console.log("FRAX_pool_USDC balance change: ", pool_collateral_after.toNumber() - pool_collateral_before.toNumber());
 
 		// Note the new collateral ratio
 		const collateral_ratio_after = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
 		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
+		//await expectRevert(fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)); //throw error on purpose (to check event log)
 
 	});
 
@@ -1142,7 +1166,7 @@ contract('FRAX', async (accounts) => {
 		await fxsInstance.approve(pool_instance_USDC.address, new BigNumber("1000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await col_instance_USDC.approve(pool_instance_USDC.address, new BigNumber("1000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await expectRevert.unspecified(pool_instance_USDC.mintFractionalFRAX(new BigNumber("1000e18"), new BigNumber("1000e18"), 0, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
-		await pool_instance_USDC.setPoolParameters(new BigNumber("500000000e18"), 7500, 1, { from: POOL_CREATOR });
+		await pool_instance_USDC.setPoolParameters(new BigNumber("5000000e18"), 7500, 1, { from: POOL_CREATOR });
 	})
 
 
@@ -1219,6 +1243,8 @@ contract('FRAX', async (accounts) => {
 		console.log("globalCollateralValue: ", globalCollateralValue);
 		console.log("");
 
+		console.log("accounts[0] votes intial:", (await fxsInstance.getCurrentVotes(COLLATERAL_FRAX_AND_FXS_OWNER)).toString());
+
 		// Note the collateral ratio
 		const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
 		console.log("collateral_ratio_before: ", collateral_ratio_before.toNumber());
@@ -1256,6 +1282,7 @@ contract('FRAX', async (accounts) => {
 		const collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const pool_collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(pool_instance_USDC.address)).div(BIG18);
 		console.log("accounts[0] FXS balance change:", fxs_after.toNumber() - fxs_before.toNumber());
+		console.log("accounts[0] votes final:", (await fxsInstance.getCurrentVotes(COLLATERAL_FRAX_AND_FXS_OWNER)).toString());
 		console.log("accounts[0] FRAX balance change:", frax_after.toNumber() - frax_before.toNumber());
 		console.log("accounts[0] USDC balance change:", collateral_after.toNumber() - collateral_before.toNumber());
 		console.log("FRAX_pool_USDC balance change:", pool_collateral_after.toNumber() - pool_collateral_before.toNumber());
@@ -1696,8 +1723,8 @@ contract('FRAX', async (accounts) => {
 		console.log("pool lastTimeRewardApplicable():", rewards_contract_lastTimeRewardApplicable.toString());
 		
 		// Note the total FRAX supply
-		const rewards_contract_stored_uni_pool = new BigNumber(await stakingInstance_FRAX_USDC.stakingTokenSupply.call()).div(BIG18);
-		console.log("pool stakingTokenSupply() (of LP tokens):", rewards_contract_stored_uni_pool.toString());
+		const rewards_contract_stored_uni_pool = new BigNumber(await stakingInstance_FRAX_USDC.totalSupply.call()).div(BIG18);
+		console.log("pool totalSupply() (of LP tokens):", rewards_contract_stored_uni_pool.toString());
 
 		// Note the reward per token
 		let rewards_per_token = new BigNumber(await stakingInstance_FRAX_USDC.rewardPerToken.call()).div(BIG18);
@@ -1933,7 +1960,7 @@ contract('FRAX', async (accounts) => {
 
 	it("Does a fair launch", async () => {
 		console.log("====================================================================");
-		await fxsInstance.transfer(stakingInstance_FRAX_WETH.address, new BigNumber("1000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await fxsInstance.transfer(stakingInstance_FRAX_WETH.address, new BigNumber("10000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await pair_instance_FRAX_WETH.transfer(accounts[2], new BigNumber("100e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await pair_instance_FRAX_WETH.transfer(accounts[3], new BigNumber("100e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
@@ -2026,8 +2053,8 @@ contract('FRAX', async (accounts) => {
 			console.log("pool lastTimeRewardApplicable():", rewards_contract_lastTimeRewardApplicable.toNumber());
 			
 			// Note the total FRAX supply
-			rewards_contract_stored_uni_pool = new BigNumber(await stakingInstance_FRAX_WETH.stakingTokenSupply()).div(BIG18);
-			console.log("pool stakingTokenSupply() (of LP tokens):", rewards_contract_stored_uni_pool.toNumber());
+			rewards_contract_stored_uni_pool = new BigNumber(await stakingInstance_FRAX_WETH.totalSupply()).div(BIG18);
+			console.log("pool totalSupply() (of LP tokens):", rewards_contract_stored_uni_pool.toNumber());
 
 			// Note the reward per token
 			rewards_per_token = new BigNumber(await stakingInstance_FRAX_WETH.rewardPerToken()).div(BIG18);
