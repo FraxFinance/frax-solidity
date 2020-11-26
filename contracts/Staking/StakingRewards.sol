@@ -49,9 +49,9 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     uint256 public locked_stake_max_multiplier = 3000000; // 6 decimals of precision. 1x = 1000000
     uint256 public locked_stake_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
     uint256 public locked_stake_min_time = 604800; // 7 * 86400  (7 days)
-    string public locked_stake_min_time_str = "604800"; // 7 days on genesis
+    string private locked_stake_min_time_str = "604800"; // 7 days on genesis
 
-    uint256 public cr_boost_max_multiplier = 3000000; // 6 decimals of precision. 1x = 0
+    uint256 public cr_boost_max_multiplier = 3000000; // 6 decimals of precision. 1x = 1000000
 
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -95,7 +95,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         timelock_address = _timelock_address;
         pool_weight = _pool_weight;
         rewardRate = 380517503805175038; // (uint256(12000000e18)).div(365 * 86400); // Base emission rate of 12M FXS over the first year
-        rewardRate = rewardRate * pool_weight / 1e6;
+        rewardRate = rewardRate.mul(pool_weight).div(1e6);
         unlockedStakes = false;
     }
 
@@ -110,14 +110,13 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function stakingMultiplier(uint256 secs) public view returns (uint256) {
-        uint256 multiplier = uint(1e6).add(secs.mul(locked_stake_max_multiplier - 1e6).div(locked_stake_time_for_max_multiplier));
+        uint256 multiplier = uint(1e6).add(secs.mul(locked_stake_max_multiplier.sub(1e6)).div(locked_stake_time_for_max_multiplier));
         if (multiplier > locked_stake_max_multiplier) multiplier = locked_stake_max_multiplier;
         return multiplier;
     }
 
     function crBoostMultiplier() public view returns (uint256) {
-        uint256 boost_to_subtract = cr_boost_max_multiplier.mul(FRAX.global_collateral_ratio()).div(PRICE_PRECISION);
-        uint256 multiplier = (cr_boost_max_multiplier.sub(boost_to_subtract));
+        uint256 multiplier = uint(1e6).add( (uint(1e6).sub(FRAX.global_collateral_ratio())).mul(cr_boost_max_multiplier.sub(1e6)).div(1e6) );
         return multiplier;
     }
 
