@@ -27,6 +27,8 @@ contract FRAXShares is ERC20Custom, AccessControl {
     address public timelock_address; // Governance timelock address
     FRAXStablecoin private FRAX;
 
+    bool public trackingVotes = true; // Tracking votes (only change if need to disable votes)
+
     // A checkpoint for marking number of votes from a given block
     struct Checkpoint {
         uint32 fromBlock;
@@ -102,39 +104,53 @@ contract FRAXShares is ERC20Custom, AccessControl {
     // This function is what other frax pools will call to mint new FXS (similar to the FRAX mint) 
     function pool_mint(address m_address, uint256 m_amount) external onlyPools {
         require(totalSupply().add(m_amount) < maximum_supply, "No more FXS can be minted, max supply reached");
-        uint32 srcRepNum = numCheckpoints[address(this)];
-        uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
-        uint96 srcRepNew = add96(srcRepOld, uint96(m_amount), "pool_mint new votes overflows");
-        _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew); // mint new votes
-        trackVotes(address(this), m_address, uint96(m_amount));
+        
+        if(trackingVotes){
+            uint32 srcRepNum = numCheckpoints[address(this)];
+            uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
+            uint96 srcRepNew = add96(srcRepOld, uint96(m_amount), "pool_mint new votes overflows");
+            _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew); // mint new votes
+            trackVotes(address(this), m_address, uint96(m_amount));
+        }
+
         super._mint(m_address, m_amount);
     }
 
     // This function is what other frax pools will call to burn FXS 
     function pool_burn_from(address b_address, uint256 b_amount) external onlyPools {
-        trackVotes(b_address, address(this), uint96(b_amount));
-        uint32 srcRepNum = numCheckpoints[address(this)];
-        uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
-        uint96 srcRepNew = sub96(srcRepOld, uint96(b_amount), "pool_burn_from new votes underflows");
-        _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew); // burn votes
+        if(trackingVotes){
+            trackVotes(b_address, address(this), uint96(b_amount));
+            uint32 srcRepNum = numCheckpoints[address(this)];
+            uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
+            uint96 srcRepNew = sub96(srcRepOld, uint96(b_amount), "pool_burn_from new votes underflows");
+            _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew); // burn votes
+        }
+
         super._burnFrom(b_address, b_amount);
         emit FXSBurned(b_address, address(this), b_amount);
+    }
+
+    function toggleVotes() external onlyByOwnerOrGovernance {
+        trackingVotes = !trackingVotes;
     }
 
     /* ========== OVERRIDDEN PUBLIC FUNCTIONS ========== */
 
     function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
-        // Transfer votes
-        trackVotes(_msgSender(), recipient, uint96(amount));
+        if(trackingVotes){
+            // Transfer votes
+            trackVotes(_msgSender(), recipient, uint96(amount));
+        }
 
         _transfer(_msgSender(), recipient, amount);
-
         return true;
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
-        // Transfer votes
-        trackVotes(sender, recipient, uint96(amount));
+        if(trackingVotes){
+            // Transfer votes
+            trackVotes(sender, recipient, uint96(amount));
+        }
 
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
