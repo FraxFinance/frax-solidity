@@ -122,7 +122,7 @@ contract FraxPool is AccessControl {
     // Returns dollar value of collateral held in this Frax pool
     function collatDollarBalance() public view returns (uint256) {
         uint256 eth_usd_price = FRAX.eth_usd_price();
-        uint256 eth_collat_price = collatEthOracle.consult(weth_address, (PRICE_PRECISION * (10 ** missing_decimals)));//.mul(10 ** missing_decimals)));
+        uint256 eth_collat_price = collatEthOracle.consult(weth_address, (PRICE_PRECISION * (10 ** missing_decimals)));
 
         uint256 collat_usd_price = eth_usd_price.mul(PRICE_PRECISION).div(eth_collat_price);
         return (collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral)).mul(collat_usd_price).div(PRICE_PRECISION); //.mul(getCollateralPrice()).div(1e6);
@@ -156,10 +156,11 @@ contract FraxPool is AccessControl {
     }
 
     // We separate out the 1t1, fractional and algorithmic minting functions for gas efficiency 
-    function mint1t1FRAX(uint256 collateral_amount_d18, uint256 FRAX_out_min) external notMintPaused {
+    function mint1t1FRAX(uint256 collateral_amount, uint256 FRAX_out_min) external notMintPaused {
+        uint256 collateral_amount_d18 = collateral_amount * (10 ** missing_decimals);
         ( , , , uint256 global_collateral_ratio, , uint256 minting_fee, ,) = FRAX.frax_info();
         require(global_collateral_ratio >= COLLATERAL_RATIO_MAX, "Collateral ratio must be >= 1");
-        require((collateral_token.balanceOf(address(this))).sub(unclaimedPoolCollateral).add(collateral_amount_d18) <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
+        require((collateral_token.balanceOf(address(this))).sub(unclaimedPoolCollateral).add(collateral_amount) <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
         
         (uint256 frax_amount_d18) = FraxPoolLibrary.calcMint1t1FRAX(
             getCollateralPrice(),
@@ -168,7 +169,7 @@ contract FraxPool is AccessControl {
         ); //1 FRAX for each $1 worth of collateral
 
         require(FRAX_out_min <= frax_amount_d18, "Slippage limit reached");
-        collateral_token.transferFrom(msg.sender, address(this), collateral_amount_d18);
+        collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
         FRAX.pool_mint(msg.sender, frax_amount_d18);
     }
 

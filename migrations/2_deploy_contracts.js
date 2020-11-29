@@ -115,6 +115,7 @@ module.exports = async function(deployer, network, accounts) {
 	const FIVE_MILLION_DEC18 = new BigNumber("5000000e18");
 	const TEN_MILLION_DEC18 = new BigNumber("10000000e18");
 	const ONE_HUNDRED_MILLION_DEC18 = new BigNumber("100000000e18");
+	const ONE_HUNDRED_MILLION_DEC6 = new BigNumber("100000000e6");
 	const ONE_BILLION_DEC18 = new BigNumber("1000000000e18");
 	const COLLATERAL_SEED_DEC18 = new BigNumber(508500e18);
 	
@@ -226,7 +227,7 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.deploy(WETH, COLLATERAL_FRAX_AND_FXS_OWNER);
 	await deployer.deploy(FakeCollateral_USDC, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC18, "USDC", 18);
 	await deployer.deploy(FakeCollateral_USDT, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC18, "USDT", 18);
-	await deployer.deploy(FakeCollateral_6DEC, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC18, "6DEC", 6);
+	await deployer.deploy(FakeCollateral_6DEC, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC6, "6DEC", 6);
 	const wethInstance = await WETH.deployed();
 	const col_instance_USDC = await FakeCollateral_USDC.deployed(); 
 	const col_instance_USDT = await FakeCollateral_USDT.deployed(); 
@@ -641,6 +642,7 @@ module.exports = async function(deployer, network, accounts) {
 	// Link the FAKE collateral pool to the FRAX contract
 	await fraxInstance.addPool(pool_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	await fraxInstance.addPool(pool_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	await fraxInstance.addPool(pool_instance_6DEC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	
 
 	// ======== Set the FRAX address inside of the FXS contract ========
