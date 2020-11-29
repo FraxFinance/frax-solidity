@@ -41,6 +41,9 @@ contract FraxPool is AccessControl {
     uint256 private constant PRICE_PRECISION = 1e6;
     uint256 private constant COLLATERAL_RATIO_PRECISION = 1e6;
     uint256 private constant COLLATERAL_RATIO_MAX = 1e6;
+
+    // Number of decimals needed to get to 18
+    uint256 private missing_decimals;
     
     // Pool_ceiling is the total units of collateral that a pool contract can hold
     uint256 public pool_ceiling = 0;
@@ -104,6 +107,7 @@ contract FraxPool is AccessControl {
         owner_address = _creator_address;
         collateral_token = ERC20(_collateral_address);
         pool_ceiling = _pool_ceiling;
+        missing_decimals = uint(18).sub(collateral_token.decimals());
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         grantRole(MINT_PAUSER, timelock_address);
@@ -118,7 +122,7 @@ contract FraxPool is AccessControl {
     // Returns dollar value of collateral held in this Frax pool
     function collatDollarBalance() public view returns (uint256) {
         uint256 eth_usd_price = FRAX.eth_usd_price();
-        uint256 eth_collat_price = collatEthOracle.consult(weth_address, PRICE_PRECISION);
+        uint256 eth_collat_price = collatEthOracle.consult(weth_address, (PRICE_PRECISION * (10 ** missing_decimals)));//.mul(10 ** missing_decimals)));
 
         uint256 collat_usd_price = eth_usd_price.mul(PRICE_PRECISION).div(eth_collat_price);
         return (collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral)).mul(collat_usd_price).div(PRICE_PRECISION); //.mul(getCollateralPrice()).div(1e6);
@@ -141,7 +145,7 @@ contract FraxPool is AccessControl {
             return pausedPrice;
         } else {
             ( , , , , , , , uint256 eth_usd_price) = FRAX.frax_info();
-            return eth_usd_price.mul(PRICE_PRECISION).div(collatEthOracle.consult(weth_address, PRICE_PRECISION));
+            return eth_usd_price.mul(PRICE_PRECISION).div(collatEthOracle.consult(weth_address, PRICE_PRECISION * (10 ** missing_decimals)));
         }
     }
 

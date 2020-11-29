@@ -30,7 +30,7 @@ contract GovernorAlpha {
     TimelockInterface public timelock;
 
     // The address of the FXS token
-    FRAXShares private fxs;
+    FRAXShares public fxs;
 
     /// @notice The address of the Governor Guardian
     address public guardian;

@@ -108,6 +108,7 @@ contract FRAXShares is ERC20Custom, AccessControl {
         }
 
         super._mint(m_address, m_amount);
+        emit FXSMinted(address(this), m_address, m_amount);
     }
 
     // This function is what other frax pools will call to burn FXS 
@@ -274,5 +275,8 @@ contract FRAXShares is ERC20Custom, AccessControl {
 
     // Track FXS burned
     event FXSBurned(address indexed from, address indexed to, uint256 amount);
+
+    // Track FXS minted
+    event FXSMinted(address indexed from, address indexed to, uint256 amount);
 
 }
