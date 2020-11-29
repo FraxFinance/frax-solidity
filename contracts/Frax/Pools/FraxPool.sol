@@ -195,13 +195,15 @@ contract FraxPool is AccessControl {
         (uint256 frax_price, uint256 fxs_price, , uint256 global_collateral_ratio, , uint256 minting_fee, ,) = FRAX.frax_info();
         require(global_collateral_ratio < COLLATERAL_RATIO_MAX && global_collateral_ratio > 0, "Collateral ratio needs to be between .000001 and .999999");
         require(collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral).add(collateral_amount) <= pool_ceiling, "Pool ceiling reached, no more FRAX can be minted with this collateral");
+
+        uint256 collateral_amount_d18 = collateral_amount * (10 ** missing_decimals);
         FraxPoolLibrary.MintFF_Params memory input_params = FraxPoolLibrary.MintFF_Params(
             minting_fee, 
             fxs_price,
             frax_price,
             getCollateralPrice(),
             fxs_amount,
-            collateral_amount,
+            collateral_amount_d18,
             (collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral)),
             pool_ceiling,
             global_collateral_ratio
