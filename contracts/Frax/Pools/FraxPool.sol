@@ -220,9 +220,11 @@ contract FraxPool is AccessControl {
         (, , , uint256 global_collateral_ratio, , , uint256 redemption_fee,) = FRAX.frax_info();
         require(global_collateral_ratio == COLLATERAL_RATIO_MAX, "Collateral ratio must be == 1");
 
+        // Need to adjust for decimals of collateral
+        uint256 FRAX_amount_precision = FRAX_amount.div(10 ** missing_decimals);
         (uint256 collateral_needed) = FraxPoolLibrary.calcRedeem1t1FRAX(
             getCollateralPrice(),
-            FRAX_amount,
+            FRAX_amount_precision,
             redemption_fee
         );
 

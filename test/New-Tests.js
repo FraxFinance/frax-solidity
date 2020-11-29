@@ -83,6 +83,7 @@ const Timelock = artifacts.require("Governance/Timelock");
 
 const ONE_MILLION_DEC18 = new BigNumber(1000000e18);
 const COLLATERAL_SEED_DEC18 = new BigNumber(508500e18);
+const COLLATERAL_SEED_DEC6 = new BigNumber(508500e6);
 const ONE_THOUSAND_DEC18 = new BigNumber(1000e18);
 const THREE_THOUSAND_DEC18 = new BigNumber(3000e18);
 const BIG6 = new BigNumber("1e6");
@@ -574,6 +575,7 @@ contract('FRAX', async (accounts) => {
 		// Link the FAKE collateral pool to the FRAX contract
 		await col_instance_USDC.transfer(pool_instance_USDC.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await col_instance_USDT.transfer(pool_instance_USDT.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await col_instance_6DEC.transfer(pool_instance_6DEC.address, COLLATERAL_SEED_DEC6, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await col_instance_yUSD.transfer(pool_instance_yUSD.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Refresh the collateral ratio
@@ -653,7 +655,65 @@ contract('FRAX', async (accounts) => {
 		const collateral_ratio_after = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
 		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
 
-	})
+	});
+
+
+	it("Redeems 6DEC 1-to-1", async () => {
+		console.log("============6DEC redeem1t1FRAX()============");
+		totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+		totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+		globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+		globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+		console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+		console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+		console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+		console.log("totalSupplyFXS: ", totalSupplyFXS);
+		console.log("globalCollateralRatio: ", globalCollateralRatio);
+		console.log("globalCollateralValue: ", globalCollateralValue);
+		console.log("");
+		
+		// Note the collateral ratio
+		const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+		console.log("collateral_ratio_before: ", collateral_ratio_before.toNumber());
+
+		// Note the collateral and FRAX amounts before redeeming
+		const collateral_before = new BigNumber(await col_instance_6DEC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG6);
+		const pool_collateral_before = new BigNumber(await col_instance_6DEC.balanceOf.call(pool_instance_6DEC.address)).div(BIG6);
+		const frax_before = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		bal_frax = frax_before;
+		col_bal_6dec = collateral_before;
+		pool_bal_6dec = pool_collateral_before;
+		console.log("bal_frax: ", bal_frax.toNumber());
+		console.log("col_bal_6dec: ", col_bal_6dec.toNumber());
+		console.log("pool_bal_6dec: ", pool_bal_6dec.toNumber());
+		console.log("FRAX price (USD): " , new BigNumber(await fraxInstance.frax_price.call()).div(BIG6).toNumber());
+
+		// Need to approve first so the pool contract can use transfer
+		const frax_amount = new BigNumber("100e18");
+		await fraxInstance.approve(pool_instance_6DEC.address, frax_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Redeem some FRAX
+		await pool_instance_6DEC.redeem1t1FRAX(frax_amount, new BigNumber("10e6"), { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // Get at least 10 6DEC out, roughly 90% slippage limit (testing purposes)
+		console.log("accounts[0] redeem1t1() with 100 FRAX");
+		// Collect redemption; need to wait at least 3 blocks
+		await time.advanceBlock();
+		await time.advanceBlock();
+		await time.advanceBlock();
+		await pool_instance_6DEC.collectRedemption({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Note the collateral and FRAX amounts after redeeming
+		const collateral_after = new BigNumber(await col_instance_6DEC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG6);
+		const frax_after = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const pool_collateral_after = new BigNumber(await col_instance_6DEC.balanceOf.call(pool_instance_6DEC.address)).div(BIG6);
+		console.log("accounts[0] FRAX change: ", frax_after.toNumber() - frax_before.toNumber());
+		console.log("accounts[0] 6DEC change: ", collateral_after.toNumber() - collateral_before.toNumber());
+		console.log("FRAX_pool_6DEC change: ", pool_collateral_after.toNumber() - pool_collateral_before.toNumber());
+
+		// Note the new collateral ratio
+		const collateral_ratio_after = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+		console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
+	});
+
 	/*
 	it("Deploys a vesting contract and then executes a governance proposal to revoke it", async () => {
 		console.log("======== Setup vestingInstance ========");
