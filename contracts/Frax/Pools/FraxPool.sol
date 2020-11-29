@@ -125,7 +125,7 @@ contract FraxPool is AccessControl {
         uint256 eth_collat_price = collatEthOracle.consult(weth_address, (PRICE_PRECISION * (10 ** missing_decimals)));
 
         uint256 collat_usd_price = eth_usd_price.mul(PRICE_PRECISION).div(eth_collat_price);
-        return (collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral)).mul(collat_usd_price).div(PRICE_PRECISION); //.mul(getCollateralPrice()).div(1e6);
+        return (collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral)).mul(10 ** missing_decimals).mul(collat_usd_price).div(PRICE_PRECISION); //.mul(getCollateralPrice()).div(1e6);
     }
 
     // Returns the value of excess collateral held in this Frax pool, compared to what is needed to maintain the global collateral ratio
@@ -250,14 +250,13 @@ contract FraxPool is AccessControl {
         uint256 col_price_usd = getCollateralPrice();
 
         uint256 FRAX_amount_post_fee = FRAX_amount.sub((FRAX_amount.mul(redemption_fee)).div(PRICE_PRECISION));
-
         uint256 fxs_dollar_value_d18 = FRAX_amount_post_fee.sub(FRAX_amount_post_fee.mul(global_collateral_ratio).div(PRICE_PRECISION));
+        uint256 fxs_amount = fxs_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price);
 
         // Need to adjust for decimals of collateral
         uint256 FRAX_amount_precision = FRAX_amount_post_fee.div(10 ** missing_decimals);
         uint256 collateral_dollar_value = FRAX_amount_precision.mul(global_collateral_ratio).div(PRICE_PRECISION);
         uint256 collateral_amount = collateral_dollar_value.mul(PRICE_PRECISION).div(col_price_usd);
-        uint256 fxs_amount = fxs_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price);
 
         redeemCollateralBalances[msg.sender] = redeemCollateralBalances[msg.sender].add(collateral_amount);
         unclaimedPoolCollateral = unclaimedPoolCollateral.add(collateral_amount);
@@ -350,10 +349,12 @@ contract FraxPool is AccessControl {
             global_collateral_ratio
         ); 
 
+        uint256 collateral_units_precision = collateral_units.div(10 ** missing_decimals);
+
         uint256 fxs_paid_back = amount_to_recollat.mul(uint(1e6).add(bonus_rate)).div(fxs_price);
 
         require(FXS_out_min <= fxs_paid_back, "Slippage limit reached");
-        collateral_token.transferFrom(msg.sender, address(this), collateral_units);
+        collateral_token.transferFrom(msg.sender, address(this), collateral_units_precision);
         FXS.pool_mint(msg.sender, fxs_paid_back);
         
     }
@@ -372,11 +373,12 @@ contract FraxPool is AccessControl {
         );
 
         (uint256 collateral_equivalent_d18) = FraxPoolLibrary.calcBuyBackFXS(input_params);
+        uint256 collateral_precision = collateral_equivalent_d18.div(10 ** missing_decimals);
 
-        require(COLLATERAL_out_min <= collateral_equivalent_d18, "Slippage limit reached");
+        require(COLLATERAL_out_min <= collateral_precision, "Slippage limit reached");
         // Give the sender their desired collateral and burn the FXS
         FXS.pool_burn_from(msg.sender, FXS_amount);
-        collateral_token.transfer(msg.sender, collateral_equivalent_d18);
+        collateral_token.transfer(msg.sender, collateral_precision);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
