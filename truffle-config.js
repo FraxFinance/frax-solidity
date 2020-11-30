@@ -50,11 +50,6 @@ module.exports = {
 			network_id: 4,
 			gas: 8000000      //  Sure this gas allocation isn't over 4M, which is the max
 		}
-		
-		// ropsten: {
-		// 	url: "wss://ropsten.infura.io/ws/v3/0a5b1633380b415d9b7342823baad798",
-		// 	network_id: "3"
-		// }
 	},
 	compilers: {
 		solc: {
