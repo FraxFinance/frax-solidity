@@ -1,0 +1,803 @@
+Starting migrations...
+======================
+> Network name:    'rinkeby'
+> Network id:      4
+> Block gas limit: 10000000 (0x989680)
+
+
+1_initial_migration.js
+======================
+ACCOUNTS
+[
+  '0x413E139d41Ed85560FBCdA56ea3939805b797ab1',
+  '0x032516D9D390e1F7B4594D8B078b429bA1e9bE91',
+  '0x349377E7dD73282EcDb146450D62a3323AB00C22',
+  '0xD21E25c34A9C223ba4e617241478bAF55eB76315',
+  '0x134321FD239E310f200538f3543c3839D2e2Db29',
+  '0x2eDaD6707dA2C98c07aDB8bd44fa52C5B9fea9a5',
+  '0xFC0b79B63eEb27E8202a6723eDC7D1Eb15c2cd30',
+  '0xafc7d92D4906BbC490E5b63BCB6C528aB1B23556',
+  '0xF786a287Ab432221a93dF8489006E855D1CAebc9',
+  '0x9E19e4013607E410CF6E535E8Dd162a8a09161FD'
+]
+
+   Deploying 'Migrations'
+   ----------------------
+   > transaction hash:    0xfcb692f0641c9c1f033dff3d073e7541a7d21b0480ed613613f6d9f9671b8454
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x70d00b44A73FFc62371f536f13A209a6E6D48295
+   > block number:        7510481
+   > block timestamp:     1604815501
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.16813514
+   > gas used:            164391 (0x28227)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00328782 ETH
+
+
+   > Saving migration to chain.
+   > Saving artifacts
+   -------------------------------------
+   > Total cost:          0.00328782 ETH
+
+
+2_deploy_contracts.js
+=====================
+IF YOU ERROR ABOVE HERE, MAKE SURE TO SET THE PROVIDER BELOW CORRECTLY
+===== SET THE ADDRESSES =====
+===== SET OTHER CONSTANTS =====
+====================================================
+===== DEPLOY MOST OF THE CONTRACTS =====
+
+   Deploying 'Address'
+   -------------------
+   > transaction hash:    0xc352d47cb2dfdf403ac53890caee21344619e756e1ae988bf6dcd94cbb3a6fe2
+   > Blocks: 0            Seconds: 4
+   > contract address:    0xAf22d941E4EB2C9243ef6796a849De360C083778
+   > block number:        7510483
+   > block timestamp:     1604815531
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.16584966
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'BlockMiner'
+   ----------------------
+   > transaction hash:    0x2c9d479cf9862a1c0d62a39b15adaad1a118919b34b455315d48ba337dc55a7d
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xed42A0FC68C40473fA7F8f4Eb2362b5DD9075EcB
+   > block number:        7510484
+   > block timestamp:     1604815546
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.16383416
+   > gas used:            100775 (0x189a7)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.0020155 ETH
+
+
+   Deploying 'Babylonian'
+   ----------------------
+   > transaction hash:    0x09ffc683e936fec5fa24d0ab2f086bee1783a24d031ab5ce3c4f489b95a9bd50
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x5De273b9C09b9501886B2627CFe4040b1179A35B
+   > block number:        7510485
+   > block timestamp:     1604815561
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.1623955
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'UQ112x112'
+   ---------------------
+   > transaction hash:    0xbc36e549d70818e6a6c71ecc14bc569d50c24e42c079e222ebf85a4e903f09f2
+   > Blocks: 1            Seconds: 12
+   > contract address:    0x765d0F5Bd89f1045a32618f68Bb7abe0dDC6a82e
+   > block number:        7510486
+   > block timestamp:     1604815576
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.16095684
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'StringHelpers'
+   -------------------------
+   > transaction hash:    0x8d336b657e9ec4ae227ffc95a4506ecff1782171cc3f21378dd79b30106027e0
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x898ADb41B533C51305CfDd6748E9711CA6564802
+   > block number:        7510487
+   > block timestamp:     1604815591
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.15951818
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'FixedPoint'
+   ----------------------
+   > transaction hash:    0x52ebb232e51364cce0b5b6760b8e435e1ab7af5ba20ec288b5cec0b89c63f5d6
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xF36F2E1A3e135Bf3656A49b7a0EFA489aC1c7123
+   > block number:        7510488
+   > block timestamp:     1604815606
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.15807952
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'Math'
+   ----------------
+   > transaction hash:    0x91d78fd11e8b4f3a54865b47b593009b6601cd03a5a8125b9b6475f7ba23fa02
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xd484f0e9b112216C0c91E0468d5AbDad0b81528F
+   > block number:        7510489
+   > block timestamp:     1604815621
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.15664086
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'SafeMath'
+   --------------------
+   > transaction hash:    0xa0f4dc958f4ca4e58cd0a2af7091123c88caa975a6a766ba060eedca05f28996
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xA26e81c225Cd663D053C52ef56fcA8B61a9Bb87E
+   > block number:        7510490
+   > block timestamp:     1604815636
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.1552022
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'TransferHelper'
+   --------------------------
+   > transaction hash:    0x34486fcf69605dada74e064f1169243fa06072f9bc761a103c810e6a1e145279
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x3b3e279B91dCff6AaDE7389EE04D4BC5fB21A79f
+   > block number:        7510491
+   > block timestamp:     1604815651
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.15376354
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'UniswapV2ERC20'
+   --------------------------
+   > transaction hash:    0xd6b1dcd9a3af02089b830e8c14477a18326570e27edb39dbefa32f2119305063
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xB2C2e3f03021107C5c69F5e98Fa4Dfe8B589dCf3
+   > block number:        7510492
+   > block timestamp:     1604815666
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.1346202
+   > gas used:            957167 (0xe9aef)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.01914334 ETH
+
+
+   Deploying 'UniswapV2OracleLibrary'
+   ----------------------------------
+   > transaction hash:    0x00f40291ce55eab4a54411328187552bdac5c596085adb1462dcf5312fef57c6
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xC01548F747B080a5AA8307292CEF534820c1567D
+   > block number:        7510493
+   > block timestamp:     1604815681
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.13318154
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'UniswapV2Library'
+   ----------------------------
+   > transaction hash:    0x14dd59a0f7e89b50b737bfb6e9a5f149aa4d5695d5f72c3f5de38f041c4980f5
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x9f87697f2230C09c52fF6b635c26133AFDd1F08c
+   > block number:        7510494
+   > block timestamp:     1604815696
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.13174288
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'UniswapV2Pair'
+   -------------------------
+   > transaction hash:    0x4a003d49b5ef580c890c7a5e5604919e5ad4b1c7dfe76e51edd437b2a209b07f
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xaa14d6ba918666621d25DfECE065A58E20C1a419
+   > block number:        7510495
+   > block timestamp:     1604815711
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             15.06475414
+   > gas used:            3349437 (0x331bbd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.06698874 ETH
+
+
+   Deploying 'UniswapV2Factory'
+   ----------------------------
+   > transaction hash:    0xa73a9aee38f7b3ef5b21017884dc255f6fcee16b41961341c98177e8223e5cab
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xfB4b41e28147a22235e097C14735a19444161B4a
+   > block number:        7510496
+   > block timestamp:     1604815726
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.98283004
+   > gas used:            4096205 (0x3e80cd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.0819241 ETH
+
+
+   Deploying 'SafeERC20'
+   ---------------------
+   > transaction hash:    0xcf36dcf5cee949470031ea22702c97a8c2aab858f0ee1a3789bb0eb9d362c920
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xD61a550cbB052B8F1396c8D0Bc5902da796161C8
+   > block number:        7510497
+   > block timestamp:     1604815741
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.98139138
+   > gas used:            71933 (0x118fd)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00143866 ETH
+
+
+   Deploying 'FraxPoolLibrary'
+   ---------------------------
+   > transaction hash:    0x711c18f846fc4cfa559f61ca3e50266df4b3b942e452aca21afac834069ad7c2
+   > Blocks: 1            Seconds: 12
+   > contract address:    0x290646403F94564F22f7eC08a685519e13bDB08D
+   > block number:        7510498
+   > block timestamp:     1604815756
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.97095596
+   > gas used:            521771 (0x7f62b)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.01043542 ETH
+
+
+   Linking
+   -------
+   * Contract: Pool_USDC <--> Library: FraxPoolLibrary (at address: 0x290646403F94564F22f7eC08a685519e13bDB08D)
+
+   Linking
+   -------
+   * Contract: Pool_USDT <--> Library: FraxPoolLibrary (at address: 0x290646403F94564F22f7eC08a685519e13bDB08D)
+
+   Deploying 'Owned'
+   -----------------
+   > transaction hash:    0xfe8921dee4ecad23f2d983094ab8157077915c6441e3f8f5bf261a5b9bc83bea
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xD0824A6Ef591cf3425b12dC0Ff192C2D9F89FD6C
+   > block number:        7510499
+   > block timestamp:     1604815771
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.96319462
+   > gas used:            388067 (0x5ebe3)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00776134 ETH
+
+
+   Deploying 'ChainlinkETHUSDPriceConsumerTest'
+   --------------------------------------------
+   > transaction hash:    0x11f84c5d81e5c3bf9310e9d00573ffab49698053f4eb76beb6ac9e086ad1f6b6
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x695588f82e06F1E8A92b39Cc8B0c1C3E16576c5E
+   > block number:        7510500
+   > block timestamp:     1604815786
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.9609086
+   > gas used:            114301 (0x1be7d)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00228602 ETH
+
+
+   Deploying 'Timelock'
+   --------------------
+   > transaction hash:    0x01f321ea781e9bf5fd7f132908b2c67a65b04d8c6fc20fc3746c810540261803
+   > Blocks: 0            Seconds: 9
+   > contract address:    0xBBbB5d51fcde3810A2Bd75fC48298944A4b36E24
+   > block number:        7510501
+   > block timestamp:     1604815801
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.92549336
+   > gas used:            1770762 (0x1b050a)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.03541524 ETH
+
+
+   Deploying 'MigrationHelper'
+   ---------------------------
+   > transaction hash:    0xcbb0c082c0066644321908e7eb6b32175820fc9f0944eacffd6cf3cbfc911cbb
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x65eBdB5AE6E09419ff5435CA5C951bC639dd7F83
+   > block number:        7510502
+   > block timestamp:     1604815816
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.92217942
+   > gas used:            165697 (0x28741)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.00331394 ETH
+
+
+   Deploying 'FRAXStablecoin'
+   --------------------------
+   > transaction hash:    0x36f57f6890d7dff328d0562bbe252a5fc21b4d4b0ccc19e46cc14dd5de92ed65
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xa23A5D188C8E2f4b3E029815a793972C58D89890
+   > block number:        7510503
+   > block timestamp:     1604815831
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.82142054
+   > gas used:            5037944 (0x4cdf78)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.10075888 ETH
+
+
+   Deploying 'FRAXShares'
+   ----------------------
+   > transaction hash:    0xbe71bcbbd934a47279df611cf61e664561a92fbbb6697204d9ef9feac4df6a39
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xb1efaEC30db0da6CD2ADbDE71D82A73DcA6aF182
+   > block number:        7510504
+   > block timestamp:     1604815846
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.73810422
+   > gas used:            4165816 (0x3f90b8)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.08331632 ETH
+
+===== DEPLOY THE GOVERNANCE CONTRACT =====
+
+   Deploying 'GovernorAlpha'
+   -------------------------
+   > transaction hash:    0xe142e078cf131265ba6334d4f63fbe886e6a701306a93be33be983add28442c9
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xa1171DD40F411586Ba689B207E1A745A907F3769
+   > block number:        7510505
+   > block timestamp:     1604815861
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.64075946
+   > gas used:            4867238 (0x4a44a6)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.09734476 ETH
+
+===== SET THE GOVERNANCE CONTRACT AS THE TIMELOCK ADMIN [Phase 1] =====
+GOVERNANCE_ADDRESS [BEFORE]:  0xa1171DD40F411586Ba689B207E1A745A907F3769
+timelock_admin [BEFORE]:  0x134321FD239E310f200538f3543c3839D2e2Db29
+timelock_delay [BEFORE]:  172800
+current_timestamp [BEFORE]:  1604815876
+current_timestamp + timelock_delay [BEFORE]:  1604988976
+NEED TO DO THIS PART LATER [Execute timelock]
+NEED TO DO THIS PART LATER [Execute timelock]
+NEED TO DO THIS PART LATER [Execute timelock]
+===== FRAX FXS ADDRESS =====
+===== FAKE COLLATERAL =====
+
+   Deploying 'WETH'
+   ----------------
+   > transaction hash:    0xc2745784ceb210207f9c12cbca266ba963497254a6489552fcdad4148ea932d5
+   > Blocks: 0            Seconds: 12
+   > contract address:    0xD7cA9c2DDF21eC40A3eAD7AEb6E9F6B7fb45911C
+   > block number:        7510510
+   > block timestamp:     1604815936
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.62379812
+   > gas used:            848067 (0xcf0c3)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.01696134 ETH
+
+
+   Deploying 'FakeCollateral_USDC'
+   -------------------------------
+   > transaction hash:    0xea6243bf8cfd37e20c25d69d3cd69af16204026d40197802f1f8f55e3ba88af9
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x8c5b90a404912d91194973A9419a9422FbE3f4C5
+   > block number:        7510511
+   > block timestamp:     1604815951
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.59803802
+   > gas used:            1288005 (0x13a745)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.0257601 ETH
+
+
+   Deploying 'FakeCollateral_USDT'
+   -------------------------------
+   > transaction hash:    0xfcfa8acff259a7d8c5744ffcd6e7ae1df61691b30bb3a15e5e3c39fa97ab59e1
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x7582B7FC1503A9F68CAa6Caa3239c9843E76A575
+   > block number:        7510512
+   > block timestamp:     1604815966
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.57227792
+   > gas used:            1288005 (0x13a745)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.0257601 ETH
+
+===== DEPLOY THE ROUTER AND SWAP_TO_PRICE =====
+
+   Deploying 'UniswapV2Router02_Modified'
+   --------------------------------------
+   > transaction hash:    0x3b266353d35f8d9bb6526eeb78d43061a489e4e8e243ce9bc2daa0d3b6db2a1b
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x70117814f384e5344b1EeCE3f4839Fe217A0c5b4
+   > block number:        7510513
+   > block timestamp:     1604815981
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.47513814
+   > gas used:            4856989 (0x4a1c9d)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.09713978 ETH
+
+
+   Deploying 'SwapToPrice'
+   -----------------------
+   > transaction hash:    0xccd17aeae28d8a189d2ff09daca7026c2bdb0b690600baab695ae47d4d921589
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x33d34c38CAd58A7f5e8257ef02E8D13D6a8d8452
+   > block number:        7510514
+   > block timestamp:     1604815996
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.45400246
+   > gas used:            1056784 (0x102010)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.02113568 ETH
+
+===== SET UNISWAP PAIRS =====
+===== GET THE ADDRESSES OF THE PAIRS =====
+===== DEPLOY THE STAKING CONTRACTS =====
+
+   Deploying 'Stake_FRAX_WETH'
+   ---------------------------
+   > transaction hash:    0x36464a3e815e768e75a79a93d1d308d2f13cf8e4c9510bbf184ad081d88dde5b
+   > Blocks: 0            Seconds: 4
+   > contract address:    0x7519C261DdDD3724128E567213DA6f06Aa0CD6a0
+   > block number:        7510524
+   > block timestamp:     1604816146
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.3434947
+   > gas used:            5525388 (0x544f8c)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.11050776 ETH
+
+
+   Deploying 'Stake_FRAX_USDC'
+   ---------------------------
+   > transaction hash:    0xfae16700f89d8ad953c40881f01fcb67db261172ebaa64edd57fe7efd1ebd975
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x19DC65EB5352A53a24E3E50FCcc89A635Ac48Aa1
+   > block number:        7510525
+   > block timestamp:     1604816161
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.23298694
+   > gas used:            5525388 (0x544f8c)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.11050776 ETH
+
+
+   Deploying 'Stake_FRAX_FXS'
+   --------------------------
+   > transaction hash:    0xbdf9db5748f58f7a6719acb2453f70eb1f0eb71e5c7985459c84a60b593f9bc8
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x179f2372dCd84851511B0781ED5615931feAa2D6
+   > block number:        7510526
+   > block timestamp:     1604816176
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.12247918
+   > gas used:            5525388 (0x544f8c)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.11050776 ETH
+
+
+   Deploying 'Stake_FXS_WETH'
+   --------------------------
+   > transaction hash:    0x7b885ca44728f9d9b4172cd6a68dd5caba0b31586993af1ce7cc12e7c03a1fa6
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x662cB89cDF4c3a56Cd7BdF2a7057Fa763F184C8B
+   > block number:        7510527
+   > block timestamp:     1604816191
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             14.01197142
+   > gas used:            5525388 (0x544f8c)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.11050776 ETH
+
+===== GET VARIOUS STAKING ADDRESSES =====
+===== GET VARIOUS PAIR INSTANCES =====
+===== ADD ALLOWANCES TO THE UNISWAP ROUTER =====
+===== SPREAD SOME FXS AROUND =====
+===== ADDING LIQUIDITY TO THE PAIRS =====
+===== UNISWAP ORACLES =====
+
+   Deploying 'UniswapPairOracle_FRAX_WETH'
+   ---------------------------------------
+   > transaction hash:    0x4cfd4688e6ae701bfa6c0d8ad554cd5570d9027d162c8f3addf52d493507bc71
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xD0feEA73Be6451d946EffBb9463e9D8960aef3dD
+   > block number:        7510555
+   > block timestamp:     1604816611
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.98469728
+   > gas used:            1363707 (0x14cefb)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.02727414 ETH
+
+
+   Deploying 'UniswapPairOracle_FRAX_USDC'
+   ---------------------------------------
+   > transaction hash:    0x511bfd537dfc5265da00c9ebe356616e1775b6e7cbfe2200e923988b9365bcb6
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xb60C014737E16f8d93fF662A854dd79aF65A82DB
+   > block number:        7510556
+   > block timestamp:     1604816626
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.95742294
+   > gas used:            1363717 (0x14cf05)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.02727434 ETH
+
+
+   Deploying 'UniswapPairOracle_FRAX_USDT'
+   ---------------------------------------
+   > transaction hash:    0x2c0f7ca2c499b558008701740751f44483f676da349eb610bf6338188e16052b
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xA5fF82Fb25A9ca7936062ec62bc202F7031b58A0
+   > block number:        7510557
+   > block timestamp:     1604816641
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.9301486
+   > gas used:            1363717 (0x14cf05)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.02727434 ETH
+
+
+   Deploying 'UniswapPairOracle_FRAX_FXS'
+   --------------------------------------
+   > transaction hash:    0x589268e27edcb762616182f83d176f7ef0a7b4b1ca950fa49a5fea2346beeecb
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x845F37f280EA967F9E99f14469D27680e57234D6
+   > block number:        7510558
+   > block timestamp:     1604816656
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.90287446
+   > gas used:            1363707 (0x14cefb)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.02727414 ETH
+
+
+   Deploying 'UniswapPairOracle_FXS_WETH'
+   --------------------------------------
+   > transaction hash:    0x1cdf9f68bb64dc3c74ee4ca7b19b9477a62d262269573c6e8dded32bf3fbf5b4
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x49EA1371a45B9Ba9B4C66eE8B73cF284567fA1e4
+   > block number:        7510559
+   > block timestamp:     1604816671
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.87560032
+   > gas used:            1363707 (0x14cefb)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.02727414 ETH
+
+
+   Deploying 'UniswapPairOracle_FXS_USDC'
+   --------------------------------------
+   > transaction hash:    0x8c71e8df97e8a3a782c8a0fe240f769d8966b077bb08ad0ec1093ac618fe4eae
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x716786Aa312CF644B178c087b2dE99808864B600
+   > block number:        7510560
+   > block timestamp:     1604816686
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.84832598
+   > gas used:            1363717 (0x14cf05)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.02727434 ETH
+
+
+   Deploying 'UniswapPairOracle_FXS_USDT'
+   --------------------------------------
+   > transaction hash:    0xc063fc500dc65de3296e3fd8c86d76ebbb9dba7a2e3706253c2ee0b4b79d7487
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xD0e83778D01D44242f6eF1e94E995365EF954721
+   > block number:        7510561
+   > block timestamp:     1604816701
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.82105164
+   > gas used:            1363717 (0x14cf05)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.02727434 ETH
+
+
+   Deploying 'UniswapPairOracle_USDC_WETH'
+   ---------------------------------------
+   > transaction hash:    0x7bbc0ffd8f29867e98ec7ac7e06bbdf0c9654d0e2deac1e4b87d6d553e0c2f02
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x6ED5136c0BAdf2e9C1aDBE787Fdd64a92698A5aE
+   > block number:        7510562
+   > block timestamp:     1604816716
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.7937775
+   > gas used:            1363707 (0x14cefb)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.02727414 ETH
+
+
+   Deploying 'UniswapPairOracle_USDT_WETH'
+   ---------------------------------------
+   > transaction hash:    0x5b6d01de322e57db435afb0ef6007c08ee4022c2940901f7ed75863636b5f285
+   > Blocks: 0            Seconds: 8
+   > contract address:    0xB710f190396185f09e4B701eBfD2169e74894c2B
+   > block number:        7510563
+   > block timestamp:     1604816731
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.76650336
+   > gas used:            1363707 (0x14cefb)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.02727414 ETH
+
+===== FRAX POOLS =====
+
+   Deploying 'Pool_USDC'
+   ---------------------
+   > transaction hash:    0x3226ce4c9cdf8e2e579b808385a138ac65042615dbe3d647ac14f62824fa6ac6
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x39911AE033Dba949CF72f39Be3E7BD100282D241
+   > block number:        7510564
+   > block timestamp:     1604816746
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.64954466
+   > gas used:            5847935 (0x593b7f)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.1169587 ETH
+
+
+   Deploying 'Pool_USDT'
+   ---------------------
+   > transaction hash:    0x864cea914d945a59a7a2f801a549074a12a6d70fc777959b1d6d0371d448e74c
+   > Blocks: 1            Seconds: 13
+   > contract address:    0x8122D2bDFe9c27AE5Ad54df9e81490e7f887f044
+   > block number:        7510565
+   > block timestamp:     1604816761
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.53258572
+   > gas used:            5847947 (0x593b8b)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.11695894 ETH
+
+
+   Deploying 'TestSwap'
+   --------------------
+   > transaction hash:    0x20856d6d99ee789a0946facd0936b1a0dc7526febad60871e9cbfb487c3e9e96
+   > Blocks: 0            Seconds: 8
+   > contract address:    0x0547D7eD26fF1b249d8fA3E25746E77b4A4E8f74
+   > block number:        7510566
+   > block timestamp:     1604816776
+   > account:             0x413E139d41Ed85560FBCdA56ea3939805b797ab1
+   > balance:             13.51922122
+   > gas used:            668225 (0xa3241)
+   > gas price:           20 gwei
+   > value sent:          0 ETH
+   > total cost:          0.0133645 ETH
+
+===== POOL INSTANCES =====
+===== REDEMPTION AND MINTING FEES =====
+===== FRAX AND FXS ORACLES =====
+===== LINK FRAX ORACLES =====
+===== LINK FXS ORACLES =====
+===== SET THE CHAINLINK ORACLE =====
+CONTRACT_ADDRESSES:  {
+  rinkeby: {
+    main: {
+      FRAX: '0xa23A5D188C8E2f4b3E029815a793972C58D89890',
+      FXS: '0xb1efaEC30db0da6CD2ADbDE71D82A73DcA6aF182'
+    },
+    weth: '0xD7cA9c2DDF21eC40A3eAD7AEb6E9F6B7fb45911C',
+    oracles: {
+      FRAX_WETH: '0xD0feEA73Be6451d946EffBb9463e9D8960aef3dD',
+      FRAX_USDC: '0xb60C014737E16f8d93fF662A854dd79aF65A82DB',
+      FRAX_USDT: '0xA5fF82Fb25A9ca7936062ec62bc202F7031b58A0',
+      FRAX_FXS: '0x845F37f280EA967F9E99f14469D27680e57234D6',
+      FXS_WETH: '0x49EA1371a45B9Ba9B4C66eE8B73cF284567fA1e4',
+      FXS_USDC: '0x716786Aa312CF644B178c087b2dE99808864B600',
+      FXS_USDT: '0xD0e83778D01D44242f6eF1e94E995365EF954721',
+      USDC_WETH: '0x6ED5136c0BAdf2e9C1aDBE787Fdd64a92698A5aE',
+      USDT_WETH: '0xB710f190396185f09e4B701eBfD2169e74894c2B'
+    },
+    collateral: {
+      USDC: '0x8c5b90a404912d91194973A9419a9422FbE3f4C5',
+      USDT: '0x7582B7FC1503A9F68CAa6Caa3239c9843E76A575'
+    },
+    governance: '0xa1171DD40F411586Ba689B207E1A745A907F3769',
+    pools: {
+      USDC: '0x39911AE033Dba949CF72f39Be3E7BD100282D241',
+      USDT: '0x8122D2bDFe9c27AE5Ad54df9e81490e7f887f044'
+    },
+    uniswap_other: {
+      router: '0x70117814f384e5344b1EeCE3f4839Fe217A0c5b4',
+      factory: '0xfB4b41e28147a22235e097C14735a19444161B4a'
+    },
+    pricing: { swap_to_price: '0x33d34c38CAd58A7f5e8257ef02E8D13D6a8d8452' },
+    misc: {
+      timelock: '0xBBbB5d51fcde3810A2Bd75fC48298944A4b36E24',
+      migration_helper: '0x65eBdB5AE6E09419ff5435CA5C951bC639dd7F83'
+    },
+    stake_tokens: {
+      'Uniswap FRAX/WETH': '0x3D29dF32BBec749EB4E912AEe92C7B4F67531CA9',
+      'Uniswap FRAX/USDC': '0x9e37bcDD94E7AC7B0d70601fa39A8b3650d0A5B3',
+      'Uniswap FRAX/FXS': '0xA14ed6dac31ffBa5E08CEd9cae45E835382b677F',
+      'Uniswap FXS/WETH': '0x4ECAB9c16E787c9C0a1CCdDb8Bba13Ea01bD768a'
+    },
+    staking_contracts_for_tokens: {
+      'Uniswap FRAX/WETH': '0x7519C261DdDD3724128E567213DA6f06Aa0CD6a0',
+      'Uniswap FRAX/USDC': '0x19DC65EB5352A53a24E3E50FCcc89A635Ac48Aa1',
+      'Uniswap FRAX/FXS': '0x179f2372dCd84851511B0781ED5615931feAa2D6',
+      'Uniswap FXS/WETH': '0x662cB89cDF4c3a56Cd7BdF2a7057Fa763F184C8B'
+    }
+  }
+}
+
+   > Saving migration to chain.
+   > Saving artifacts
+   -------------------------------------
+   > Total cost:           1.6480671 ETH

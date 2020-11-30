@@ -16,7 +16,7 @@ contract UniswapPairOracle {
     address owner_address;
     address timelock_address;
 
-    uint public PERIOD = 3600;
+    uint public PERIOD = 3600; // 1 hour TWAP (time-weighted average price)
 
     IUniswapV2Pair public immutable pair;
     address public immutable token0;
