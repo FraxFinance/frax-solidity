@@ -20,7 +20,7 @@ module.exports = {
 			websockets: true,        // Enable EventEmitter interface for web3 (default: false)
 		},
 		ropsten: {
-			url: "wss://ropsten.infura.io/ws/v3/0a5b1633380b415d9b7342823baad798",
+			url: "wss://ropsten.infura.io/ws/v3/xxx",
 			network_id: "3"
 		}
 	},
