@@ -2,6 +2,8 @@
 pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
 
+import "./AggregatorV3Interface.sol";
+
 // VERY IMPORTANT: UNCOMMENT THIS LATER
 // VERY IMPORTANT: UNCOMMENT THIS LATER
 // VERY IMPORTANT: UNCOMMENT THIS LATER
@@ -69,7 +71,7 @@ contract ChainlinkETHUSDPriceConsumerTest {
     /**
      * Returns the latest price
      */
-    function getLatestPrice() public view returns (int) {
+    function getLatestPrice() public pure returns (int) {
         // VERY IMPORTANT: UNCOMMENT THIS LATER
         // VERY IMPORTANT: UNCOMMENT THIS LATER
         // VERY IMPORTANT: UNCOMMENT THIS LATER
@@ -99,10 +101,10 @@ contract ChainlinkETHUSDPriceConsumerTest {
         // You can can multiply the "true" price by 1e6 to get the frax ecosystem 'price'
         // return price;
 
-        return 39100000000;
+        return 59000000000;
     }
 
-    function getDecimals() public view returns (uint8) {
+    function getDecimals() public pure returns (uint8) {
         // VERY IMPORTANT: UNCOMMENT THIS LATER
         // VERY IMPORTANT: UNCOMMENT THIS LATER
         // VERY IMPORTANT: UNCOMMENT THIS LATER
