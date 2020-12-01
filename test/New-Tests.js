@@ -732,8 +732,8 @@ contract('FRAX', async (accounts) => {
 	it('PART 0: Normal stakes at CR = 100%', async () => {
 		console.log("=========================Normal Stakes=========================");
 		// Give some Uniswap Pool tokens to another user so they can stake too
-		await pair_instance_FRAX_USDC.transfer(accounts[9], new BigNumber("250e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("give accounts[9] 250 FRAX-USDC Uniswap pool tokens");
+		await pair_instance_FRAX_USDC.transfer(accounts[9], new BigNumber("10e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("give accounts[9] 10 FRAX-USDC Uniswap pool tokens");
 
 		const cr_boost_multiplier = new BigNumber(await stakingInstance_FRAX_USDC.crBoostMultiplier()).div(BIG6);
 		console.log("pool cr_boost_multiplier (div 1e6): ", cr_boost_multiplier.toNumber());
@@ -743,15 +743,15 @@ contract('FRAX', async (accounts) => {
 		console.log("");
 
 		// Note the Uniswap Pool Token and FXS amounts after staking
-		let uni_pool_tokens_1 = new BigNumber("75e18");
+		let uni_pool_tokens_1 = new BigNumber("75e17");
 		await pair_instance_FRAX_USDC.approve(stakingInstance_FRAX_USDC.address, uni_pool_tokens_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("accounts[0] approve FRAX_USDC staking pool for 75 LP tokens");
+		console.log("accounts[0] approve FRAX_USDC staking pool for 7.5 LP tokens");
 		const uni_pool_1st_stake_1 = new BigNumber(await pair_instance_FRAX_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const fxs_1st_stake_1 = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const rewards_balance_1st_stake_1 = new BigNumber(await stakingInstance_FRAX_USDC.rewards.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		
 		await stakingInstance_FRAX_USDC.stake(uni_pool_tokens_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });		
-		console.log("accounts[0] staking 75 LP tokens into FRAX_USDC staking pool");
+		console.log("accounts[0] staking 7.5 LP tokens into FRAX_USDC staking pool");
 		console.log("accounts[0] LP token balance:", uni_pool_1st_stake_1.toString());
 		console.log("accounts[0] FXS balance:", fxs_1st_stake_1.toString());
 		console.log("accounts[0] staking rewards():", rewards_balance_1st_stake_1.toString());
@@ -759,15 +759,15 @@ contract('FRAX', async (accounts) => {
 		console.log("accounts[0] boostedBalanceOf:", (new BigNumber(await stakingInstance_FRAX_USDC.boostedBalanceOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
 		console.log("");
 
-		let uni_pool_tokens_9 = new BigNumber("25e18");
+		let uni_pool_tokens_9 = new BigNumber("25e17");
 		await pair_instance_FRAX_USDC.approve(stakingInstance_FRAX_USDC.address, uni_pool_tokens_9, { from: accounts[9] });
-		console.log("accounts[9] approve FRAX_USDC staking pool for 25 LP tokens");
+		console.log("accounts[9] approve FRAX_USDC staking pool for 2.5 LP tokens");
 		const uni_pool_1st_stake_9 = new BigNumber(await pair_instance_FRAX_USDC.balanceOf.call(accounts[9])).div(BIG18);
 		const fxs_1st_stake_9 = new BigNumber(await fxsInstance.balanceOf.call(accounts[9])).div(BIG18);
 		const rewards_balance_1st_stake_9 = new BigNumber(await stakingInstance_FRAX_USDC.rewards(accounts[9])).div(BIG18);
 
 		await stakingInstance_FRAX_USDC.stake(uni_pool_tokens_9, { from: accounts[9] });
-		console.log("accounts[9] staking 25 LP tokens into FRAX_USDC staking pool");
+		console.log("accounts[9] staking 2.5 LP tokens into FRAX_USDC staking pool");
 		console.log("accounts[9] LP token balance:", uni_pool_1st_stake_9.toString());
 		console.log("accounts[9] FXS balance:", fxs_1st_stake_9.toString());
 		console.log("accounts[9] staking rewards():", rewards_balance_1st_stake_9.toString());
@@ -1278,16 +1278,17 @@ contract('FRAX', async (accounts) => {
 		// Print the current FRAX price
 		frax_price_from_FRAX_WETH = (new BigNumber(await oracle_instance_FRAX_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
 		console.log("frax_price_from_FRAX_WETH (before): ", frax_price_from_FRAX_WETH.toString(), " FRAX = 1 WETH");
+		console.log("frax_price:", new BigNumber(await fraxInstance.frax_price.call()).div(BIG6).toNumber());
 		
 		// Swap the FRAX price upwards
-		// Targeting 350 FRAX / 1 WETH
+		// Targeting 10 FRAX / 1 WETH
 		await swapToPriceInstance.swapToPrice(
 			fraxInstance.address,
 			wethInstance.address,
-			new BigNumber(350e6),
+			new BigNumber(10e6),
 			new BigNumber(1e6),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
+			new BigNumber(100000e18),
+			new BigNumber(100000e18),
 			COLLATERAL_FRAX_AND_FXS_OWNER,
 			new BigNumber(2105300114),
 			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
@@ -1303,6 +1304,7 @@ contract('FRAX', async (accounts) => {
 		// Print the new FRAX price
 		frax_price_from_FRAX_WETH = (new BigNumber(await oracle_instance_FRAX_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
 		console.log("frax_price_from_FRAX_WETH (after): ", frax_price_from_FRAX_WETH.toString(), " FRAX = 1 WETH");
+		console.log("frax_price:", new BigNumber(await fraxInstance.frax_price.call()).div(BIG6).toNumber());
 		
 		for(let i = 0; i < 13; i++){ // Drop the collateral ratio by 13 * 0.25%
 			await time.increase(3600 + 1);
