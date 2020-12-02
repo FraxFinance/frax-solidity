@@ -237,9 +237,9 @@ contract FraxPool is AccessControl {
         lastRedeemed[msg.sender] = block.number;
 
         require(COLLATERAL_out_min <= collateral_needed, "Slippage limit reached");
+        
         // Move all external functions to the end
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
-        collateral_token.approve(msg.sender, collateral_needed);
     }
 
     // Will fail if fully collateralized or algorithmic
@@ -271,8 +271,6 @@ contract FraxPool is AccessControl {
         
         // Move all external functions to the end
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
-        collateral_token.approve(msg.sender, collateral_amount);
-        FXS.approve(msg.sender, fxs_amount);
         FXS.pool_mint(address(this), fxs_amount);
     }
 
@@ -293,7 +291,6 @@ contract FraxPool is AccessControl {
         require(FXS_out_min <= fxs_amount, "Slippage limit reached");
         // Move all external functions to the end
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
-        FXS.approve(msg.sender, fxs_amount);
         FXS.pool_mint(address(this), fxs_amount);
     }
 
