@@ -1832,6 +1832,9 @@ contract('FRAX', async (accounts) => {
 
 		const fxs_after_withdraw_0 = (new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18);
 		console.log("accounts[1] FXS balance change:", (fxs_after_withdraw_0).minus(fxs_1st_stake_1).toNumber());
+
+		console.log("accounts[1] vote balance:", new BigNumber(await fxsInstance.getCurrentVotes(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
+		console.log("accounts[1] FXS balance:", new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
 		console.log("====================================================================");
 
 		console.log("wait two weeks so accounts[9] can earn more");
