@@ -1905,7 +1905,7 @@ contract('FRAX', async (accounts) => {
 		console.log("REWARDS CONTRACT lastTimeRewardApplicable: ", rewards_contract_lastTimeRewardApplicable.toString());
 		
 		// Note the total FRAX supply
-		const rewards_contract_stored_uni_pool = new BigNumber(await stakingInstance_FRAX_USDC.stakingTokenSupply.call()).div(BIG18);
+		const rewards_contract_stored_uni_pool = new BigNumber(await stakingInstance_FRAX_USDC.totalSupply.call()).div(BIG18);
 		console.log("REWARDS CONTRACT STORED UNI POOL: ", rewards_contract_stored_uni_pool.toString());
 
 		// Note the reward per token
