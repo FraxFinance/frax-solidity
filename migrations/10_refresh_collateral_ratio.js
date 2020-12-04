@@ -36,8 +36,8 @@ const UniswapV2Factory = artifacts.require("Uniswap/UniswapV2Factory");
 const UniswapV2Library = artifacts.require("Uniswap/UniswapV2Library");
 const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary");
 const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
+const UniswapV2Router02 = artifacts.require("Uniswap/UniswapV2Router02");
 const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_Modified");
-const TestSwap = artifacts.require("Uniswap/TestSwap");
 
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
@@ -84,7 +84,7 @@ const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 module.exports = async function(deployer, network, accounts) {
 
 	// ======== Set the addresses ========
-	console.log(chalk.yellow('===== SET THE ADDRESSES ====='));
+	
 	const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
 	const ORACLE_ADDRESS = accounts[2];
 	const POOL_CREATOR = accounts[3];
@@ -95,7 +95,7 @@ module.exports = async function(deployer, network, accounts) {
 	// const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[8];
 
 	// ======== Set other constants ========
-	console.log(chalk.yellow('===== SET OTHER CONSTANTS ====='));
+	
 	const ONE_MILLION_DEC18 = new BigNumber("1000000e18");
 	const FIVE_MILLION_DEC18 = new BigNumber("5000000e18");
 	const TEN_MILLION_DEC18 = new BigNumber("10000000e18");
@@ -112,7 +112,7 @@ module.exports = async function(deployer, network, accounts) {
 	const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 	const METAMASK_ADDRESS = process.env.METAMASK_ADDRESS;;
 
-	console.log(`====================================================`);
+	// ================= Start Initializing =================
 
 	// Get the necessary instances
 	let CONTRACT_ADDRESSES;
@@ -171,7 +171,7 @@ module.exports = async function(deployer, network, accounts) {
 		wethInstance = await WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].weth);
 		col_instance_USDC = await FakeCollateral_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDC); 
 		col_instance_USDT = await FakeCollateral_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDT); 
-		routerInstance = await UniswapV2Router02_Modified.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.router); 
+		routerInstance = await UniswapV2Router02.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.router); 
 		uniswapFactoryInstance = await UniswapV2Factory.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.factory); 
 		swapToPriceInstance = await SwapToPrice.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pricing.swap_to_price); 
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_WETH);
@@ -185,6 +185,7 @@ module.exports = async function(deployer, network, accounts) {
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.USDT_WETH);
 		pool_instance_USDC = await Pool_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDC);
 		pool_instance_USDT = await Pool_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDT);
+	
 	}
 
 
@@ -192,184 +193,66 @@ module.exports = async function(deployer, network, accounts) {
 	// ====================================================================================================================
 	// ====================================================================================================================
 	
+	await fraxInstance.refreshCollateralRatio();
+	return false;
 
-	console.log("===============FIRST SWAPS===============");
-		
-	if (false) {
-		// Add allowances to the Uniswap Router
-		// console.log("Doing Uniswap allowances...");
-		// await wethInstance.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// console.log("---wethInstance---")
-		// await col_instance_USDC.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// console.log("---col_instance_USDC---")
-		// await col_instance_USDT.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// console.log("---col_instance_USDT---")
-		// await fraxInstance.approve(routerInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// console.log("---fraxInstance---")
-		// await fxsInstance.approve(routerInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// console.log("---fxsInstance---")
-
-		// Add allowances to the swapToPrice contract
-		console.log("Doing swapToPrice allowances...");
-		await wethInstance.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("---wethInstance---")
-		await col_instance_USDC.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("---col_instance_USDC---")
-		await col_instance_USDT.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("---col_instance_USDT---")
-		await fraxInstance.approve(swapToPriceInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("---fraxInstance---")
-		await fxsInstance.approve(swapToPriceInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("---fxsInstance---")
-	}
-	{
-
-
-		//--- FRAX
-
-		// Handle FRAX / WETH
-		// Targeting 365.0 FRAX / 1 WETH
-		await swapToPriceInstance.swapToPrice(
-			fraxInstance.address,
-			wethInstance.address,
-			new BigNumber(3650e5),
-			new BigNumber(1e6),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
-		console.log("FRAX / WETH swapped");
-
-		// Handle FRAX / USDC
-		// Targeting 1.008 FRAX / 1 USDC
-		await swapToPriceInstance.swapToPrice(
-			fraxInstance.address,
-			col_instance_USDC.address,
-			new BigNumber(1008e3),
-			new BigNumber(997e3),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
-		console.log("FRAX / USDC swapped");
-
-		// Handle FRAX / USDT
-		// Targeting 0.990 FRAX / 1 USDT
-		await swapToPriceInstance.swapToPrice(
-			fraxInstance.address,
-			col_instance_USDT.address,
-			new BigNumber(990e3),
-			new BigNumber(1005e3),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
-		console.log("FRAX / USDT swapped");
-
-		//--- FXS
-
-		// Handle FXS / WETH
-		// Targeting 1855 FXS / 1 WETH
-		await swapToPriceInstance.swapToPrice(
-			fxsInstance.address,
-			wethInstance.address,
-			new BigNumber(1855e6),
-			new BigNumber(1e6),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
-		console.log("FXS / WETH swapped");
-
-		// Handle FXS / USDC
-		// Targeting 5.2 FXS / 1 USDC
-		await swapToPriceInstance.swapToPrice(
-			fxsInstance.address,
-			col_instance_USDC.address,
-			new BigNumber(52e5),
-			new BigNumber(1e6),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
-		console.log("FXS / USDC swapped");
-
-
-		// Handle FXS / USDT
-		// Targeting 5.1 FXS / 1 USDT
-		await swapToPriceInstance.swapToPrice(
-			fxsInstance.address,
-			col_instance_USDT.address,
-			new BigNumber(51e5),
-			new BigNumber(1e6),
-			new BigNumber(100e18),
-			new BigNumber(100e18),
-			COLLATERAL_FRAX_AND_FXS_OWNER,
-			new BigNumber(2105300114),
-			{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-		)
-		console.log("FXS / USDT swapped");
-
-	}
-
-
-	console.log(chalk.red.bold('YOU NEED TO WAIT AT LEAST 24 HOURS HERE NORMALLY, BUT TEMPORARILY RESETTING THE PRICE UPDATE TO ONE SECOND'));
-	console.log(chalk.yellow('===== TEMPORARILY SET THE PERIOD TO 1 SECOND ====='));
-
-	oracle_instance_FRAX_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDT.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_FXS.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	oracle_instance_FXS_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDT.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	oracle_instance_USDC_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_USDT_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-
-	console.log(chalk.yellow('===== UPDATE THE PRICES ====='));
-
-	// Make sure the prices are updated
-	console.log(chalk.blue('=== FRAX_XXX ==='))
-	await oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FRAX_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FRAX_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FRAX_FXS.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	console.log("=========================mintFractionalFRAX=========================");
+	totalSupplyFRAX = new BigNumber(await fraxInstance.totalSupply.call()).div(BIG18).toNumber();
+	totalSupplyFXS = new BigNumber(await fxsInstance.totalSupply.call()).div(BIG18).toNumber();
+	globalCollateralRatio = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6).toNumber();
+	globalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18).toNumber();
+	console.log("FRAX price (USD): ", (new BigNumber(await fraxInstance.frax_price.call()).div(BIG6)).toNumber());
+	console.log("FXS price (USD): ", (new BigNumber(await fraxInstance.fxs_price.call()).div(BIG6)).toNumber());
+	console.log("totalSupplyFRAX: ", totalSupplyFRAX);
+	console.log("totalSupplyFXS: ", totalSupplyFXS);
+	console.log("globalCollateralRatio: ", globalCollateralRatio);
+	console.log("globalCollateralValue: ", globalCollateralValue);
+	console.log("");
 	
-	console.log(chalk.blue('=== FXS_XXX ==='))
-	await oracle_instance_FXS_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FXS_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FXS_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	
-	console.log(chalk.blue('=== USDC_XXX ==='))
-	await oracle_instance_USDC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// Note the collateral ratio
+	const collateral_ratio_before = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+	console.log("collateral_ratio_before: ", collateral_ratio_before.toNumber());
 
-	console.log(chalk.blue('=== USDT_XXX ==='))
-	await oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// Note the FXS, FRAX, and FAKE amounts before minting
+	const fxs_before = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+	const frax_before = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+	const collateral_before = new BigNumber(await col_instance_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+	const pool_collateral_before = new BigNumber(await col_instance_USDC.balanceOf.call(pool_instance_USDC.address)).div(BIG18);
+	bal_fxs = fxs_before;
+	bal_frax = frax_before;
+	col_bal_usdc = collateral_before;
+	pool_bal_usdc = pool_collateral_before;
+	console.log("bal_fxs: ", bal_fxs.toNumber());
+	console.log("bal_frax: ", bal_frax.toNumber());
+	console.log("col_bal_usdc: ", col_bal_usdc.toNumber());
+	console.log("pool_bal_usdc: ", pool_bal_usdc.toNumber());
 
-	console.log(chalk.yellow('===== SET THE PERIOD TO BACK TO 24 HOURS ====='));
+	// Need to approve first so the pool contract can use transferFrom
+	const fxs_amount = new BigNumber("500e18");
+	await fxsInstance.approve(pool_instance_USDC.address, fxs_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	const collateral_amount = new BigNumber("100e18");
+	await col_instance_USDC.approve(pool_instance_USDC.address, collateral_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-	oracle_instance_FRAX_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDC.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDT.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_FXS.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	await pool_instance_USDC.mintFractionalFRAX(collateral_amount, fxs_amount, new BigNumber("10e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	console.log("accounts[0] mintFractionalFRAX() with 100 USDC and 500 FXS");
 
-	oracle_instance_FXS_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDC.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDT.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// Note the FXS, FRAX, and FAKE amounts after minting
+	const fxs_after = new BigNumber(await fxsInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+	const frax_after = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+	const collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+	const pool_collateral_after = new BigNumber(await col_instance_USDC.balanceOf.call(pool_instance_USDC.address)).div(BIG18);
+	console.log("accounts[0] USDC balance change: ", collateral_after.toNumber() - collateral_before.toNumber());
+	console.log("accounts[0] FXS balance change: ", fxs_after.toNumber() - fxs_before.toNumber());
+	console.log("accounts[0] FRAX balance change: ", frax_after.toNumber() - frax_before.toNumber());
+	console.log("FRAX_pool_USDC balance change: ", pool_collateral_after.toNumber() - pool_collateral_before.toNumber());
 
-	oracle_instance_USDC_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_USDT_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// Note the new collateral ratio
+	const collateral_ratio_after = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+	console.log("collateral_ratio_after: ", collateral_ratio_after.toNumber());
+
+
+
+
+
+
 };

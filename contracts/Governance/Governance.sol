@@ -20,6 +20,7 @@ contract GovernorAlpha {
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
 
     /// @notice The delay before voting on a proposal may take place, once proposed
+    // This also helps protect against flash loan attacks because only the vote balance at the proposal start block is considered
     function votingDelay() public pure returns (uint) { return 1; } // 1 block
 
     /// @notice The duration of voting on a proposal, in blocks

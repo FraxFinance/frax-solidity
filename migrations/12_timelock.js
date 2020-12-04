@@ -38,7 +38,6 @@ const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary
 const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
 const UniswapV2Router02 = artifacts.require("Uniswap/UniswapV2Router02");
 const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_Modified");
-const TestSwap = artifacts.require("Uniswap/TestSwap");
 
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
@@ -83,7 +82,7 @@ const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 
 // Make sure Ganache is running beforehand
 module.exports = async function(deployer, network, accounts) {
-
+	
 	// ======== Set the addresses ========
 	console.log(chalk.yellow('===== SET THE ADDRESSES ====='));
 	const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
@@ -96,7 +95,7 @@ module.exports = async function(deployer, network, accounts) {
 	// const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[8];
 
 	// ======== Set other constants ========
-	console.log(chalk.yellow('===== SET OTHER CONSTANTS ====='));
+	
 	const ONE_MILLION_DEC18 = new BigNumber("1000000e18");
 	const FIVE_MILLION_DEC18 = new BigNumber("5000000e18");
 	const TEN_MILLION_DEC18 = new BigNumber("10000000e18");
@@ -113,7 +112,7 @@ module.exports = async function(deployer, network, accounts) {
 	const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 	const METAMASK_ADDRESS = process.env.METAMASK_ADDRESS;;
 
-	console.log(`====================================================`);
+	// ================= Start Initializing =================
 
 	// Get the necessary instances
 	let CONTRACT_ADDRESSES;
@@ -148,7 +147,6 @@ module.exports = async function(deployer, network, accounts) {
 		fxsInstance = await FRAXShares.deployed();
 		wethInstance = await WETH.deployed();
 		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
-		col_instance_USDT = await FakeCollateral_USDT.deployed(); 
 		uniswapFactoryInstance = await UniswapV2Factory.deployed(); 
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.deployed();
 		oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.deployed(); 
@@ -171,8 +169,7 @@ module.exports = async function(deployer, network, accounts) {
 		governanceInstance = await GovernorAlpha.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].governance);
 		wethInstance = await WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].weth);
 		col_instance_USDC = await FakeCollateral_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDC); 
-		col_instance_USDT = await FakeCollateral_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDT); 
-		routerInstance = await UniswapV2Router02_Modified.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.router); 
+		routerInstance = await UniswapV2Router02.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.router); 
 		uniswapFactoryInstance = await UniswapV2Factory.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.factory); 
 		swapToPriceInstance = await SwapToPrice.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pricing.swap_to_price); 
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_WETH);
@@ -186,68 +183,44 @@ module.exports = async function(deployer, network, accounts) {
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.USDT_WETH);
 		pool_instance_USDC = await Pool_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDC);
 		pool_instance_USDT = await Pool_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDT);
-	
 	}
 
+
+    const pair_addr_USDC_WETH = await uniswapFactoryInstance.getPair(col_instance_USDC.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	const pair_instance_USDC_WETH = await UniswapV2Pair.at(pair_addr_USDC_WETH);
 
 	// CONTINUE MAIN DEPLOY CODE HERE
 	// ====================================================================================================================
 	// ====================================================================================================================
-	// ======== Seed the collateral pools ========
 
-	// ======== Advance a block and 24 hours to catch things up ========
-	// await time.increase(86400 + 1);
-	// await time.advanceBlock();
-	// await fraxInstance.refreshCollateralRatio();
+	if (process.env.MIGRATION_MODE == 'ganache'){
+		// Advance 2 days to catch things up
+		await time.increase((2 * 86400) + 300 + 1);
+		await time.advanceBlock();
+	}
+	else {
+		console.log(chalk.red.bold('YOU NEED TO WAIT AT LEAST TWO DAYS HERE'));
+	}
 
-	// ======== Make some governance proposals ========
+	// ======== Set the Governance contract as the timelock admin [Phase 2] ========
+	console.log(chalk.yellow('===== SET THE GOVERNANCE CONTRACT AS THE TIMELOCK ADMIN [Phase 2] ====='));
 
-	// Minting fee 0.04% -> 0.1%
-	await governanceInstance.propose(
-		[fraxInstance.address],
-		[0],
-		['setMintingFee(uint256)'],
-		[web3.eth.abi.encodeParameters(['uint256'], [1000])], // 0.1%
-		"Minting fee increase",
-		"I hereby propose to increase the minting fee from 0.04% to 0.1%",
-		{ from: COLLATERAL_FRAX_AND_FXS_OWNER }
-	);
+	// Fetch the delay transaction
+	const eta_with_delay = (await migrationHelperInstance.gov_to_timelock_eta.call()).toNumber();
+
+	const tx_nugget = [
+		timelockInstance.address, 
+		0, 
+		"setPendingAdmin(address)",
+		web3.eth.abi.encodeParameters(['address'], [governanceInstance.address]),
+		eta_with_delay,
+		{ from: TIMELOCK_ADMIN }
+	]
+
+	await timelockInstance.executeTransaction(...tx_nugget);
+	await governanceInstance.__acceptAdmin({ from: GOVERNOR_GUARDIAN_ADDRESS });
+	timelock_admin_address = await timelockInstance.admin.call();
+	console.log("timelock_admin [AFTER]: ", timelock_admin_address)
 	
-	// Redemption fee 0.04% -> 0.08%
-	await governanceInstance.propose(
-		[fraxInstance.address],
-		[0],
-		['setMintingFee(uint256)'],
-		[web3.eth.abi.encodeParameters(['uint256'], [800])], // 0.1%
-		"Redemption fee increase",
-		"I want to increase the redemption fee from 0.04% to 0.08%",
-		{ from: GOVERNOR_GUARDIAN_ADDRESS }
-	);
-
-	// Increase the USDC pool ceiling from 10M to 15M
-	// This mini hack is needed
-	const num = 15000000 * (10 ** 18);
-	const numAsHex = "0x" + num.toString(16);
-	await governanceInstance.propose(
-		[pool_instance_USDC.address],
-		[0],
-		['setPoolCeiling(uint256)'],
-		[web3.eth.abi.encodeParameters(['uint256'], [numAsHex])], // 15M
-		"USDC Pool ceiling raise",
-		"Raise the USDC pool ceiling to 15M",
-		{ from: STAKING_REWARDS_DISTRIBUTOR }
-	);
-
-	// // Advance one block so voting can begin
-	// await time.increase(15);
-	// await time.advanceBlock();
-
-	// await governanceInstance.castVote(1, true, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// await governanceInstance.castVote(2, true, { from: GOVERNOR_GUARDIAN_ADDRESS });
-	// await governanceInstance.castVote(3, true, { from: STAKING_REWARDS_DISTRIBUTOR });
-
-	// // ======== Advance a block and 24 hours to catch things up ========
-	// await time.increase(86400 + 1);
-	// await time.advanceBlock();
-
+		
 };
