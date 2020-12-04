@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../src/types/constants'));
+const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -38,7 +38,6 @@ const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary
 const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
 const UniswapV2Router02 = artifacts.require("Uniswap/UniswapV2Router02");
 const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_Modified");
-const TestSwap = artifacts.require("Uniswap/TestSwap");
 
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
@@ -85,7 +84,7 @@ const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 module.exports = async function(deployer, network, accounts) {
 
 	// ======== Set the addresses ========
-	console.log(chalk.yellow('===== SET THE ADDRESSES ====='));
+	
 	const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
 	const ORACLE_ADDRESS = accounts[2];
 	const POOL_CREATOR = accounts[3];
@@ -96,7 +95,7 @@ module.exports = async function(deployer, network, accounts) {
 	// const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[8];
 
 	// ======== Set other constants ========
-	console.log(chalk.yellow('===== SET OTHER CONSTANTS ====='));
+	
 	const ONE_MILLION_DEC18 = new BigNumber("1000000e18");
 	const FIVE_MILLION_DEC18 = new BigNumber("5000000e18");
 	const TEN_MILLION_DEC18 = new BigNumber("10000000e18");
@@ -113,7 +112,7 @@ module.exports = async function(deployer, network, accounts) {
 	const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 	const METAMASK_ADDRESS = process.env.METAMASK_ADDRESS;;
 
-	console.log(`====================================================`);
+	// ================= Start Initializing =================
 
 	// Get the necessary instances
 	let CONTRACT_ADDRESSES;
@@ -172,7 +171,7 @@ module.exports = async function(deployer, network, accounts) {
 		wethInstance = await WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].weth);
 		col_instance_USDC = await FakeCollateral_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDC); 
 		col_instance_USDT = await FakeCollateral_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDT); 
-		routerInstance = await UniswapV2Router02_Modified.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.router); 
+		routerInstance = await UniswapV2Router02.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.router); 
 		uniswapFactoryInstance = await UniswapV2Factory.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.factory); 
 		swapToPriceInstance = await SwapToPrice.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pricing.swap_to_price); 
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_WETH);
@@ -202,7 +201,6 @@ module.exports = async function(deployer, network, accounts) {
 
 	// ======== Make some governance proposals ========
 
-	return false;
 
 	// Minting fee 0.04% -> 0.1%
 	await governanceInstance.propose(
