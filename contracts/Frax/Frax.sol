@@ -23,6 +23,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     UniswapPairOracle private fraxEthOracle;
     UniswapPairOracle private fxsEthOracle;
     string public symbol;
+    string public name;
     uint8 public constant decimals = 18;
     address public owner_address;
     address public creator_address;
@@ -83,10 +84,12 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
+        string memory _name,
         string memory _symbol,
         address _creator_address,
         address _timelock_address
     ) public {
+        name = _name;
         symbol = _symbol;
         creator_address = _creator_address;
         timelock_address = _timelock_address;
