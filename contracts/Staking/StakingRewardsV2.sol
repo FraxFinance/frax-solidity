@@ -229,7 +229,6 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
         _locked_balances[msg.sender] = _locked_balances[msg.sender].add(amount);
         _boosted_balances[msg.sender] = _boosted_balances[msg.sender].add(boostedAmount);
 
-        emit Staked(msg.sender, amount);
         emit StakeLocked(msg.sender, amount, secs);
     }
 
@@ -260,6 +259,7 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
                 break;
             }
         }
+        require(thisStake.kek_id == kek_id, "Stake not found");
         require(block.timestamp >= thisStake.ending_timestamp || unlockedStakes == true, "Stake is still locked!");
 
         uint256 theAmount = thisStake.amount;
@@ -279,7 +279,6 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
             // Give the tokens to the withdrawer
             stakingToken.safeTransfer(msg.sender, theAmount);
 
-            emit Withdrawn(msg.sender, theAmount);
             emit WithdrawnLocked(msg.sender, theAmount, kek_id);
         }
 
