@@ -309,6 +309,9 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
 
     // If the period expired, renew it
     function retroCatchUp() internal {
+        // Failsafe check
+        require(block.timestamp > periodFinish, "Period is not expired yet");
+
         // Ensure the provided reward amount is not more than the balance in the contract.
         // This keeps the reward rate in the right range, preventing overflows due to
         // very high values of rewardRate in the earned and rewardsPerToken functions;
