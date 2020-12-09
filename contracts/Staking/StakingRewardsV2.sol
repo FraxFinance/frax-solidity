@@ -30,8 +30,10 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     ERC20 public stakingToken;
     uint256 public periodFinish;
 
-    // Constants for various precisions
+    // Constant for various precisions
     uint256 private constant PRICE_PRECISION = 1e6;
+    uint256 private constant MULTIPLIER_BASE = 1e6;
+    uint256 private constant POOL_WEIGHT_BASE = 1e6;
 
     // Max reward per second
     uint256 public rewardRate;
@@ -96,7 +98,7 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
         timelock_address = _timelock_address;
         pool_weight = _pool_weight;
         rewardRate = 380517503805175038; // (uint256(12000000e18)).div(365 * 86400); // Base emission rate of 12M FXS over the first year
-        rewardRate = rewardRate.mul(pool_weight).div(1e6);
+        rewardRate = rewardRate.mul(pool_weight).div(POOL_WEIGHT_BASE);
         unlockedStakes = false;
     }
 
@@ -111,13 +113,13 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     }
 
     function stakingMultiplier(uint256 secs) public view returns (uint256) {
-        uint256 multiplier = uint(1e6).add(secs.mul(locked_stake_max_multiplier.sub(1e6)).div(locked_stake_time_for_max_multiplier));
+        uint256 multiplier = uint(MULTIPLIER_BASE).add(secs.mul(locked_stake_max_multiplier.sub(MULTIPLIER_BASE)).div(locked_stake_time_for_max_multiplier));
         if (multiplier > locked_stake_max_multiplier) multiplier = locked_stake_max_multiplier;
         return multiplier;
     }
 
     function crBoostMultiplier() public view returns (uint256) {
-        uint256 multiplier = uint(1e6).add( (uint(1e6).sub(FRAX.global_collateral_ratio())).mul(cr_boost_max_multiplier.sub(1e6)).div(1e6) );
+        uint256 multiplier = uint(MULTIPLIER_BASE).add((uint(MULTIPLIER_BASE).sub(FRAX.global_collateral_ratio())).mul(cr_boost_max_multiplier.sub(MULTIPLIER_BASE)).div(MULTIPLIER_BASE) );
         return multiplier;
     }
 
@@ -310,7 +312,7 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     // If the period expired, renew it
     function retroCatchUp() internal {
         // Failsafe check
-        require(block.timestamp > periodFinish, "Period is not expired yet");
+        require(block.timestamp > periodFinish, "Period has not expired yet!");
 
         // Ensure the provided reward amount is not more than the balance in the contract.
         // This keeps the reward rate in the right range, preventing overflows due to
