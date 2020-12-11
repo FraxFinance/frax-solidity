@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../../../dist/types/constants'));
+const constants = require(path.join(__dirname, '../src/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -43,27 +43,27 @@ const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_
 const WETH = artifacts.require("ERC20/WETH");
 const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
 const FakeCollateral_USDT = artifacts.require("FakeCollateral/FakeCollateral_USDT");
-const FakeCollateral_6DEC = artifacts.require("FakeCollateral/FakeCollateral_6DEC");
+
 
 // Collateral Pools
 const FraxPoolLibrary = artifacts.require("Frax/Pools/FraxPoolLibrary");
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 const Pool_USDT = artifacts.require("Frax/Pools/Pool_USDT");
-const Pool_6DEC = artifacts.require("Frax/Pools/Pool_6DEC");
+
 
 // Oracles
 const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_WETH");
 const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDC");
 const UniswapPairOracle_FRAX_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDT");
-const UniswapPairOracle_FRAX_6DEC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_6DEC");
+
 const UniswapPairOracle_FRAX_FXS = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_FXS");
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
 const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
 const UniswapPairOracle_FXS_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDT");
-const UniswapPairOracle_FXS_6DEC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_6DEC");
+
 const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
 const UniswapPairOracle_USDT_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDT_WETH");
-const UniswapPairOracle_6DEC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_6DEC_WETH");
+
 
 // Chainlink Price Consumer
 const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
@@ -103,6 +103,7 @@ module.exports = async function(deployer, network, accounts) {
 
 	// ======== Set other constants ========
 	
+	const ONE_HUNDRED_DEC6 = new BigNumber("100e6");
 	const ONE_MILLION_DEC18 = new BigNumber("1000000e18");
 	const FIVE_MILLION_DEC18 = new BigNumber("5000000e18");
 	const TEN_MILLION_DEC18 = new BigNumber("10000000e18");
@@ -132,64 +133,64 @@ module.exports = async function(deployer, network, accounts) {
 	let wethInstance;
 	let col_instance_USDC;
 	let col_instance_USDT;
-	let col_instance_6DEC;
+	
 	let routerInstance;
 	let uniswapFactoryInstance;
 	let swapToPriceInstance;
 	let oracle_instance_FRAX_WETH;
 	let oracle_instance_FRAX_USDC;
 	let oracle_instance_FRAX_USDT;
-	let oracle_instance_FRAX_6DEC;
+	
 	let oracle_instance_FRAX_FXS;
 	let oracle_instance_FXS_WETH;
 	let oracle_instance_FXS_USDC; 
 	let oracle_instance_FXS_USDT; 
-	let oracle_instance_FXS_6DEC; 
+	
 	let oracle_instance_USDC_WETH;
 	let oracle_instance_USDT_WETH;
-	let oracle_instance_6DEC_WETH;
+	
 	let stakingInstance_FRAX_WETH;
 	let stakingInstance_FRAX_USDC;
 	let stakingInstance_FRAX_FXS;
 	let stakingInstance_FXS_WETH;
 	let pool_instance_USDC;
 	let pool_instance_USDT;
-	let pool_instance_6DEC;
+	
 
 	// Get the necessary instances
-	if (false && false && process.env.MIGRATION_MODE == 'ganache'){
+	if (process.env.MIGRATION_MODE == 'ganache'){
 		timelockInstance = await Timelock.deployed();
 		migrationHelperInstance = await MigrationHelper.deployed()
 		governanceInstance = await GovernorAlpha.deployed();
 		fraxInstance = await FRAXStablecoin.deployed();
 		fxsInstance = await FRAXShares.deployed();
-		tokenVestingInstance = await TokenVesting.deployed();
+		//tokenVestingInstance = await TokenVesting.deployed();
 		wethInstance = await WETH.deployed();
 		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
 		col_instance_USDT = await FakeCollateral_USDT.deployed(); 
-		col_instance_6DEC = await FakeCollateral_6DEC.deployed(); 
+		
 		routerInstance = await UniswapV2Router02_Modified.deployed(); 
 		uniswapFactoryInstance = await UniswapV2Factory.deployed(); 
 		swapToPriceInstance = await SwapToPrice.deployed();
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.deployed();
 		oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.deployed(); 
 		oracle_instance_FRAX_USDT = await UniswapPairOracle_FRAX_USDT.deployed();
-		oracle_instance_FRAX_6DEC = await UniswapPairOracle_FRAX_6DEC.deployed();
+		
 		oracle_instance_FRAX_FXS = await UniswapPairOracle_FRAX_FXS.deployed();
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
 		oracle_instance_FXS_USDC = await UniswapPairOracle_FXS_USDC.deployed(); 
 		oracle_instance_FXS_USDT = await UniswapPairOracle_FXS_USDT.deployed(); 
-		oracle_instance_FXS_6DEC = await UniswapPairOracle_FXS_6DEC.deployed(); 
+		
 		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.deployed();
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.deployed();
-		oracle_instance_6DEC_WETH = await UniswapPairOracle_6DEC_WETH.deployed();
+		
 		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
 		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.deployed();
 		stakingInstance_FRAX_FXS = await StakingRewards_FRAX_FXS.deployed();
 		stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.deployed();
 		pool_instance_USDC = await Pool_USDC.deployed();
 		pool_instance_USDT = await Pool_USDT.deployed();
-		pool_instance_6DEC = await Pool_6DEC.deployed();
+		
 	}
 	else {
 		CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
@@ -197,34 +198,32 @@ module.exports = async function(deployer, network, accounts) {
 		migrationHelperInstance = await MigrationHelper.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].misc.migration_helper);
 		fraxInstance = await FRAXStablecoin.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].main.FRAX);
 		fxsInstance = await FRAXShares.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].main.FXS);
-		tokenVestingInstance = await TokenVesting.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].main.vesting);
 		governanceInstance = await GovernorAlpha.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].governance);
 		wethInstance = await WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].weth);
 		col_instance_USDC = await FakeCollateral_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDC);
 		col_instance_USDT = await FakeCollateral_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDT); 
-		col_instance_6DEC = await FakeCollateral_6DEC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral['6DEC']); 
 		routerInstance = await UniswapV2Router02.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.router); 
 		uniswapFactoryInstance = await UniswapV2Factory.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.factory); 
 		swapToPriceInstance = await SwapToPrice.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pricing.swap_to_price); 
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_WETH);
 		oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_USDC); 
 		oracle_instance_FRAX_USDT = await UniswapPairOracle_FRAX_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_USDT); 
-		oracle_instance_FRAX_6DEC = await UniswapPairOracle_FRAX_6DEC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_6DEC); 
+		 
 		oracle_instance_FRAX_FXS = await UniswapPairOracle_FRAX_FXS.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_FXS);
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_WETH);
 		oracle_instance_FXS_USDC = await UniswapPairOracle_FXS_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_USDC); 
 		oracle_instance_FXS_USDT = await UniswapPairOracle_FXS_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_USDT); 
-		oracle_instance_FXS_6DEC = await UniswapPairOracle_FXS_6DEC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_6DEC); 
+		
 		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.USDC_WETH);
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.USDT_WETH);
-		oracle_instance_6DEC_WETH = await UniswapPairOracle_6DEC_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles['6DEC_WETH']);
+		
 		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FRAX/WETH"]);
 		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FRAX/USDC"]);
 		stakingInstance_FRAX_FXS = await StakingRewards_FRAX_FXS.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FRAX/FXS"]);
 		stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FXS/WETH"]);
 		pool_instance_USDC = await Pool_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDC);
 		pool_instance_USDT = await Pool_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDT);
-		pool_instance_6DEC = await Pool_6DEC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools["6DEC"]);
+		
 	}
 
 	// CONTINUE MAIN DEPLOY CODE HERE
@@ -233,21 +232,19 @@ module.exports = async function(deployer, network, accounts) {
 	
 	console.log("========================Collateral Seed========================");
 	console.log("Seed the collateral pools some collateral to start off with")
-	if(!IS_MAINNET){
+	if(IS_MAINNET){
+		await Promise.all([
+			await col_instance_USDC.transfer(pool_instance_USDC.address, ONE_HUNDRED_DEC6, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			await col_instance_USDT.transfer(pool_instance_USDT.address, ONE_HUNDRED_DEC6, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		]);
+	}
+	else {
 		console.log(chalk.blue('=== USDC ==='));
 		await col_instance_USDC.transfer(pool_instance_USDC.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		
 		console.log(chalk.blue('=== USDT ==='));
 		await col_instance_USDT.transfer(pool_instance_USDT.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		
-		console.log(chalk.blue('=== 6DEC ==='));
-		await col_instance_6DEC.transfer(pool_instance_6DEC.address, COLLATERAL_SEED_DEC6, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	}
-	else {
-		console.log(chalk.red.bold("DO NOT FORGET TO SEE THE COLLATERAL POOLS!!!"));
-		console.log(chalk.red.bold("DO NOT FORGET TO SEE THE COLLATERAL POOLS!!!"));
-		console.log(chalk.red.bold("DO NOT FORGET TO SEE THE COLLATERAL POOLS!!!"));
-		console.log(chalk.red.bold("DO NOT FORGET TO SEE THE COLLATERAL POOLS!!!"));
 	}
 
 	console.log(`==========================================================`);

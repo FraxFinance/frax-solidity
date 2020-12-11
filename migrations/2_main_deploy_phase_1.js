@@ -41,27 +41,27 @@ const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_
 const WETH = artifacts.require("ERC20/WETH");
 const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
 const FakeCollateral_USDT = artifacts.require("FakeCollateral/FakeCollateral_USDT");
-const FakeCollateral_6DEC = artifacts.require("FakeCollateral/FakeCollateral_6DEC");
+
 
 // Collateral Pools
 const FraxPoolLibrary = artifacts.require("Frax/Pools/FraxPoolLibrary");
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 const Pool_USDT = artifacts.require("Frax/Pools/Pool_USDT");
-const Pool_6DEC = artifacts.require("Frax/Pools/Pool_6DEC");
+
 
 // Oracles
 const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_WETH");
 const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDC");
 const UniswapPairOracle_FRAX_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDT");
-const UniswapPairOracle_FRAX_6DEC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_6DEC");
+
 const UniswapPairOracle_FRAX_FXS = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_FXS");
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
 const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
 const UniswapPairOracle_FXS_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDT");
-const UniswapPairOracle_FXS_6DEC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_6DEC");
+
 const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
 const UniswapPairOracle_USDT_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDT_WETH");
-const UniswapPairOracle_6DEC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_6DEC_WETH");
+
 
 // Chainlink Price Consumer
 const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
@@ -86,7 +86,7 @@ const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 
 // Make sure Ganache is running beforehand
 module.exports = async function(deployer, network, accounts) {
-
+	const USE_MAINNET_EXISTING = true;
 	const IS_MAINNET = (process.env.MIGRATION_MODE == 'mainnet');
 	const IS_ROPSTEN = (process.env.MIGRATION_MODE == 'ropsten');
 	
@@ -132,10 +132,9 @@ module.exports = async function(deployer, network, accounts) {
 		send.ether(COLLATERAL_FRAX_AND_FXS_OWNER, METAMASK_ADDRESS, 2e18);
 	}
 
-// if (false) {
-
 	// ======== Deploy most of the contracts ========
 	console.log(chalk.yellow('===== DEPLOY MOST OF THE CONTRACTS ====='));
+	
 	await deployer.deploy(Address);
 	await deployer.deploy(BlockMiner);
 	await deployer.deploy(Babylonian);
@@ -144,27 +143,27 @@ module.exports = async function(deployer, network, accounts) {
 	await deployer.link(UQ112x112, [UniswapV2Pair]);
 	await deployer.link(Babylonian, [FixedPoint, SwapToPrice]);
 	await deployer.deploy(FixedPoint);
-	await deployer.link(FixedPoint, [UniswapV2OracleLibrary, UniswapPairOracle_FRAX_WETH, UniswapPairOracle_FRAX_USDC, UniswapPairOracle_FRAX_USDT, UniswapPairOracle_FRAX_FXS, UniswapPairOracle_FXS_WETH, UniswapPairOracle_FXS_USDC, UniswapPairOracle_FXS_USDT, UniswapPairOracle_USDC_WETH, UniswapPairOracle_USDT_WETH, UniswapPairOracle_6DEC_WETH]);
-	await deployer.link(Address, [ERC20, ERC20Custom, SafeERC20, WETH, FakeCollateral_USDC, FakeCollateral_USDT, FakeCollateral_6DEC]);
+	await deployer.link(FixedPoint, [UniswapV2OracleLibrary, UniswapPairOracle_FRAX_WETH, UniswapPairOracle_FRAX_USDC, UniswapPairOracle_FRAX_USDT, UniswapPairOracle_FRAX_FXS, UniswapPairOracle_FXS_WETH, UniswapPairOracle_FXS_USDC, UniswapPairOracle_FXS_USDT, UniswapPairOracle_USDC_WETH, UniswapPairOracle_USDT_WETH]);
+	await deployer.link(Address, [ERC20, ERC20Custom, SafeERC20, WETH, FakeCollateral_USDC, FakeCollateral_USDT]);
 	await deployer.deploy(Math);
 	await deployer.link(Math, [StakingRewards_FRAX_WETH, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FRAX_FXS, StakingRewards_FXS_WETH, UniswapV2ERC20, UniswapV2Pair]);
 	await deployer.deploy(SafeMath);
-	await deployer.link(SafeMath, [ERC20, ERC20Custom, SafeERC20, WETH, FakeCollateral_USDC, FakeCollateral_USDT, FakeCollateral_6DEC, FRAXStablecoin, Pool_USDC, Pool_USDT, Pool_6DEC, FRAXShares, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FRAX_FXS, StakingRewards_FXS_WETH, UniswapV2ERC20, UniswapV2Library, UniswapV2Router02, UniswapV2Router02_Modified, SwapToPrice, Timelock]);
+	await deployer.link(SafeMath, [ERC20, ERC20Custom, SafeERC20, WETH, FakeCollateral_USDC, FakeCollateral_USDT, FRAXStablecoin, Pool_USDC, Pool_USDT, FRAXShares, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FRAX_FXS, StakingRewards_FXS_WETH, UniswapV2ERC20, UniswapV2Library, UniswapV2Router02, UniswapV2Router02_Modified, SwapToPrice, Timelock]);
 	await deployer.deploy(TransferHelper);
-	await deployer.link(TransferHelper, [UniswapV2Router02, UniswapV2Router02_Modified, SwapToPrice, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FRAX_FXS, StakingRewards_FXS_WETH, Pool_USDC, Pool_USDT, Pool_6DEC]);
+	await deployer.link(TransferHelper, [UniswapV2Router02, UniswapV2Router02_Modified, SwapToPrice, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FRAX_FXS, StakingRewards_FXS_WETH, Pool_USDC, Pool_USDT]);
 	await deployer.deploy(UniswapV2ERC20);
 	await deployer.link(UniswapV2ERC20, [UniswapV2Pair]);
 	await deployer.deploy(UniswapV2OracleLibrary);
-	await deployer.link(UniswapV2OracleLibrary, [UniswapPairOracle_FRAX_WETH, UniswapPairOracle_FRAX_USDC, UniswapPairOracle_FRAX_USDT, UniswapPairOracle_FRAX_FXS, UniswapPairOracle_FXS_WETH, UniswapPairOracle_FXS_WETH, UniswapPairOracle_FXS_USDC, UniswapPairOracle_FXS_USDT, UniswapPairOracle_USDC_WETH, UniswapPairOracle_USDT_WETH, UniswapPairOracle_6DEC_WETH]);
+	await deployer.link(UniswapV2OracleLibrary, [UniswapPairOracle_FRAX_WETH, UniswapPairOracle_FRAX_USDC, UniswapPairOracle_FRAX_USDT, UniswapPairOracle_FRAX_FXS, UniswapPairOracle_FXS_WETH, UniswapPairOracle_FXS_WETH, UniswapPairOracle_FXS_USDC, UniswapPairOracle_FXS_USDT, UniswapPairOracle_USDC_WETH, UniswapPairOracle_USDT_WETH]);
 	await deployer.deploy(UniswapV2Library);
-	await deployer.link(UniswapV2Library, [UniswapPairOracle_FRAX_WETH, UniswapPairOracle_FRAX_USDC, UniswapPairOracle_FXS_WETH, UniswapPairOracle_FXS_USDC, UniswapPairOracle_USDC_WETH, UniswapV2Router02, UniswapV2Router02_Modified, SwapToPrice, UniswapPairOracle_6DEC_WETH]);
+	await deployer.link(UniswapV2Library, [UniswapPairOracle_FRAX_WETH, UniswapPairOracle_FRAX_USDC, UniswapPairOracle_FXS_WETH, UniswapPairOracle_FXS_USDC, UniswapPairOracle_USDC_WETH, UniswapV2Router02, UniswapV2Router02_Modified, SwapToPrice]);
 	await deployer.deploy(UniswapV2Pair);
 	await deployer.link(UniswapV2Pair, [UniswapV2Factory]);
 	await deployer.deploy(UniswapV2Factory, DUMP_ADDRESS);
 	await deployer.deploy(SafeERC20);
-	await deployer.link(SafeERC20, [WETH, FakeCollateral_USDC, FakeCollateral_USDT, FakeCollateral_6DEC, FRAXStablecoin, Pool_USDC, Pool_USDT, Pool_6DEC, FRAXShares, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FRAX_FXS, StakingRewards_FXS_WETH]);
+	await deployer.link(SafeERC20, [WETH, FakeCollateral_USDC, FakeCollateral_USDT, FRAXStablecoin, Pool_USDC, Pool_USDT, FRAXShares, StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FRAX_FXS, StakingRewards_FXS_WETH]);
 	await deployer.deploy(FraxPoolLibrary);
-	await deployer.link(FraxPoolLibrary, [Pool_USDC, Pool_USDT, Pool_6DEC]);
+	await deployer.link(FraxPoolLibrary, [Pool_USDC, Pool_USDT]);
 	await deployer.deploy(Owned, COLLATERAL_FRAX_AND_FXS_OWNER);
 	await deployer.deploy(ChainlinkETHUSDPriceConsumer);
 	await deployer.deploy(ChainlinkETHUSDPriceConsumerTest);
@@ -176,12 +175,19 @@ module.exports = async function(deployer, network, accounts) {
 	const migrationHelperInstance = await MigrationHelper.deployed();
 
 	// FRAX
-	await deployer.deploy(FRAXStablecoin, "FRAX", COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
+	await deployer.deploy(FRAXStablecoin, "Frax", "FRAX", COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	const fraxInstance = await FRAXStablecoin.deployed();
 
 	// FXS
-	await deployer.deploy(FRAXShares, "FXS", ORACLE_ADDRESS, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
+	await deployer.deploy(FRAXShares, "Frax Share", "FXS", ORACLE_ADDRESS, COLLATERAL_FRAX_AND_FXS_OWNER, timelockInstance.address);
 	const fxsInstance = await FRAXShares.deployed();
+
+	console.log(chalk.yellow("===== Make sure name()'s work ====="));
+	let frax_name = await fraxInstance.name.call();
+	let fxs_name = await fxsInstance.name.call();
+	console.log(`frax_name: [${frax_name}]`);
+	console.log(`fxs_name: [${fxs_name}]`);
+
 
 	// ======== Deploy the governance contract and its associated timelock ========
 	console.log(chalk.yellow('===== DEPLOY THE GOVERNANCE CONTRACT ====='));
@@ -226,29 +232,23 @@ module.exports = async function(deployer, network, accounts) {
 	let wethInstance;
 	let col_instance_USDC;
 	let col_instance_USDT;
-	let col_instance_6DEC;
-
+	
 	if (IS_MAINNET){
 		console.log(chalk.yellow('===== REAL COLLATERAL ====='));
 		wethInstance = await WETH.at("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2");
 		col_instance_USDC = await FakeCollateral_USDC.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"); 
 		col_instance_USDT = await FakeCollateral_USDT.at("0xdac17f958d2ee523a2206206994597c13d831ec7"); 
 
-		// Deploy a fake collateral here just to prevent having to put a bunch of if statements everywhere
-		await deployer.deploy(FakeCollateral_6DEC, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC6, "6DEC", 6);
-		col_instance_6DEC = await FakeCollateral_6DEC.deployed();
 	}
 	else {
 		console.log(chalk.yellow('===== FAKE COLLATERAL ====='));
 
 		await deployer.deploy(WETH, COLLATERAL_FRAX_AND_FXS_OWNER);
-		await deployer.deploy(FakeCollateral_USDC, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC18, "USDC", 18);
-		await deployer.deploy(FakeCollateral_USDT, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC18, "USDT", 18);
-		await deployer.deploy(FakeCollateral_6DEC, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC6, "6DEC", 6);
+		await deployer.deploy(FakeCollateral_USDC, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC18, "USDC", 6);
+		await deployer.deploy(FakeCollateral_USDT, COLLATERAL_FRAX_AND_FXS_OWNER, ONE_HUNDRED_MILLION_DEC18, "USDT", 6);
 		wethInstance = await WETH.deployed();
 		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
 		col_instance_USDT = await FakeCollateral_USDT.deployed(); 
-		col_instance_6DEC = await FakeCollateral_6DEC.deployed();
 	}
 
 
@@ -264,26 +264,21 @@ module.exports = async function(deployer, network, accounts) {
 				FRAX_WETH: "NOT_DEPLOYED_YET",
 				FRAX_USDC: "NOT_DEPLOYED_YET",
 				FRAX_USDT: "NOT_DEPLOYED_YET",
-				FRAX_6DEC: "NOT_DEPLOYED_YET",
 				FRAX_FXS: "NOT_DEPLOYED_YET",
 				FXS_WETH: "NOT_DEPLOYED_YET",
 				FXS_USDC: "NOT_DEPLOYED_YET",
 				FXS_USDT: "NOT_DEPLOYED_YET",
-				FXS_6DEC: "NOT_DEPLOYED_YET",
 				USDC_WETH: "NOT_DEPLOYED_YET",
 				USDT_WETH: "NOT_DEPLOYED_YET",
-				"6DEC_WETH": "NOT_DEPLOYED_YET",
 			},
 			collateral: {
 				USDC: col_instance_USDC.address,
 				USDT: col_instance_USDT.address,
-				"6DEC": col_instance_6DEC.address,
 			},
 			governance: governanceInstance.address,
 			pools: {
 				USDC: "NOT_DEPLOYED_YET",
 				USDT: "NOT_DEPLOYED_YET",
-				"6DEC": "NOT_DEPLOYED_YET",
 			},
 			uniswap_other: {
 				router: "NOT_DEPLOYED_YET",

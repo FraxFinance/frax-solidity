@@ -212,6 +212,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     // This function is what other frax pools will call to mint new FRAX 
     function pool_mint(address m_address, uint256 m_amount) public onlyPools {
         super._mint(m_address, m_amount);
+        emit FRAXMinted(msg.sender, m_address, m_amount);
     }
 
     // Adds collateral addresses supported, such as tether and busd, must be ERC20 
@@ -295,6 +296,9 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
 
     /* ========== EVENTS ========== */
 
-    // Track FXS burned
+    // Track FRAX burned
     event FRAXBurned(address indexed from, address indexed to, uint256 amount);
+
+    // Track FRAX minted
+    event FRAXMinted(address indexed from, address indexed to, uint256 amount);
 }

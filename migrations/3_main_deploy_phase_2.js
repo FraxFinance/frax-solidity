@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../../../dist/types/constants'));
+const constants = require(path.join(__dirname, '../src/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -43,27 +43,22 @@ const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_
 const WETH = artifacts.require("ERC20/WETH");
 const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
 const FakeCollateral_USDT = artifacts.require("FakeCollateral/FakeCollateral_USDT");
-const FakeCollateral_6DEC = artifacts.require("FakeCollateral/FakeCollateral_6DEC");
 
 // Collateral Pools
 const FraxPoolLibrary = artifacts.require("Frax/Pools/FraxPoolLibrary");
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 const Pool_USDT = artifacts.require("Frax/Pools/Pool_USDT");
-const Pool_6DEC = artifacts.require("Frax/Pools/Pool_6DEC");
 
 // Oracles
 const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_WETH");
 const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDC");
 const UniswapPairOracle_FRAX_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDT");
-const UniswapPairOracle_FRAX_6DEC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_6DEC");
 const UniswapPairOracle_FRAX_FXS = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_FXS");
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
 const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
 const UniswapPairOracle_FXS_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDT");
-const UniswapPairOracle_FXS_6DEC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_6DEC");
 const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
 const UniswapPairOracle_USDT_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDT_WETH");
-const UniswapPairOracle_6DEC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_6DEC_WETH");
 
 // Chainlink Price Consumer
 const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
@@ -138,9 +133,8 @@ module.exports = async function(deployer, network, accounts) {
 	let wethInstance;
 	let col_instance_USDC;
 	let col_instance_USDT;
-	let col_instance_6DEC;
 
-	if (false && false && process.env.MIGRATION_MODE == 'ganache'){
+	if (process.env.MIGRATION_MODE == 'ganache'){
 		timelockInstance = await Timelock.deployed();
 		migrationHelperInstance = await MigrationHelper.deployed()
 		governanceInstance = await GovernorAlpha.deployed(); 
@@ -149,7 +143,6 @@ module.exports = async function(deployer, network, accounts) {
 		wethInstance = await WETH.deployed();
 		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
 		col_instance_USDT = await FakeCollateral_USDT.deployed(); 
-		col_instance_6DEC = await FakeCollateral_6DEC.deployed(); 
 	}
 	else {
 		CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
@@ -161,7 +154,7 @@ module.exports = async function(deployer, network, accounts) {
 		wethInstance = await WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].weth);
 		col_instance_USDC = await FakeCollateral_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDC);
 		col_instance_USDT = await FakeCollateral_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDT); 
-		col_instance_6DEC = await FakeCollateral_6DEC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral['6DEC']); 
+		
 	}
 
 
@@ -191,57 +184,55 @@ module.exports = async function(deployer, network, accounts) {
 		uniswapFactoryInstance = await UniswapV2Factory.deployed(); 
 	}
 
-	await deployer.deploy(SwapToPrice, uniswapFactoryInstance.address, routerInstance.address);
-	const swapToPriceInstance = await SwapToPrice.deployed();
+	let swapToPriceInstance;
+	if (process.env.MIGRATION_MODE == 'ganache'){
+		await deployer.deploy(SwapToPrice, uniswapFactoryInstance.address, routerInstance.address);
+		swapToPriceInstance = await SwapToPrice.deployed();
+	} else {
+		swapToPriceInstance = await SwapToPrice.at('0xa61cBe7E326B13A8dbA11D00f42531BE704DF51B'); 
+	}
 
 	// ======== Set the Uniswap pairs ========
 	console.log(chalk.yellow('===== SET UNISWAP PAIRS ====='));
-	await uniswapFactoryInstance.createPair(fraxInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await uniswapFactoryInstance.createPair(fraxInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await uniswapFactoryInstance.createPair(fraxInstance.address, col_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await uniswapFactoryInstance.createPair(fraxInstance.address, col_instance_6DEC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await uniswapFactoryInstance.createPair(fraxInstance.address, fxsInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	console.log(chalk.blue('=== FRAX / XXXX ==='));
+	await Promise.all([
+		uniswapFactoryInstance.createPair(fraxInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		uniswapFactoryInstance.createPair(fraxInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		uniswapFactoryInstance.createPair(fraxInstance.address, col_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		uniswapFactoryInstance.createPair(fraxInstance.address, fxsInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
+	]);
 
-	await uniswapFactoryInstance.createPair(fxsInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await uniswapFactoryInstance.createPair(fxsInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await uniswapFactoryInstance.createPair(fxsInstance.address, col_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await uniswapFactoryInstance.createPair(fxsInstance.address, col_instance_6DEC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	console.log(chalk.blue('=== FXS / XXXX ==='));
+	await Promise.all([
+		uniswapFactoryInstance.createPair(fxsInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		uniswapFactoryInstance.createPair(fxsInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		uniswapFactoryInstance.createPair(fxsInstance.address, col_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
+	])
 
-	await uniswapFactoryInstance.createPair(col_instance_USDC.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await uniswapFactoryInstance.createPair(col_instance_USDT.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await uniswapFactoryInstance.createPair(col_instance_6DEC.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	if (!IS_MAINNET){
+		console.log(chalk.blue('=== XXXX / WETH ==='));
+		await uniswapFactoryInstance.createPair(col_instance_USDC.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await uniswapFactoryInstance.createPair(col_instance_USDT.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	}
 
 	// ======== Get the addresses of the pairs ========
 	console.log(chalk.yellow('===== GET THE ADDRESSES OF THE PAIRS ====='));
 	const pair_addr_FRAX_WETH = await uniswapFactoryInstance.getPair(fraxInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	const pair_addr_FRAX_USDC = await uniswapFactoryInstance.getPair(fraxInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	const pair_addr_FRAX_USDT = await uniswapFactoryInstance.getPair(fraxInstance.address, col_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	const pair_addr_FXS_WETH = await uniswapFactoryInstance.getPair(fxsInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	const pair_addr_FXS_USDC = await uniswapFactoryInstance.getPair(fxsInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	const pair_addr_FXS_USDT = await uniswapFactoryInstance.getPair(fxsInstance.address, col_instance_USDT.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
 	const pair_addr_FRAX_FXS = await uniswapFactoryInstance.getPair(fraxInstance.address, fxsInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	const pair_addr_USDC_WETH = await uniswapFactoryInstance.getPair(col_instance_USDC.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	const pair_addr_USDT_WETH = await uniswapFactoryInstance.getPair(col_instance_USDT.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	const pair_addr_6DEC_WETH = await uniswapFactoryInstance.getPair(col_instance_6DEC.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
+	const pair_addr_FXS_WETH = await uniswapFactoryInstance.getPair(fxsInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// ======== Deploy the staking contracts ========
 	console.log(chalk.yellow('===== DEPLOY THE STAKING CONTRACTS ====='));
 	await deployer.link(FRAXStablecoin, [StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FRAX_FXS]);
 	await deployer.link(StringHelpers, [StakingRewards_FRAX_WETH, StakingRewards_FRAX_USDC, StakingRewards_FXS_WETH, StakingRewards_FRAX_FXS]);
-	await deployer.deploy(StakingRewards_FRAX_WETH, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_WETH, FRAXStablecoin.address, timelockInstance.address, 500000);
-	await deployer.deploy(StakingRewards_FRAX_USDC, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_USDC, FRAXStablecoin.address, timelockInstance.address, 500000);
-	//await deployer.deploy(StakingRewards_FRAX_USDT, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_USDT, FRAXStablecoin.address, timelockInstance.address);
-
-	await deployer.deploy(StakingRewards_FXS_WETH, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_WETH, FRAXStablecoin.address, timelockInstance.address, 0);
-	//await deployer.deploy(StakingRewards_FXS_USDC, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_USDC, FRAXStablecoin.address, timelockInstance.address);
-	//await deployer.deploy(StakingRewards_FXS_USDT, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_USDT, FRAXStablecoin.address, timelockInstance.address);
-
-	await deployer.deploy(StakingRewards_FRAX_FXS, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_FXS, FRAXStablecoin.address, timelockInstance.address, 0);
-
+	await Promise.all([
+		deployer.deploy(StakingRewards_FRAX_WETH, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_WETH, FRAXStablecoin.address, timelockInstance.address, 500000),
+		deployer.deploy(StakingRewards_FRAX_USDC, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_USDC, FRAXStablecoin.address, timelockInstance.address, 500000),
+		deployer.deploy(StakingRewards_FRAX_FXS, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_FXS, FRAXStablecoin.address, timelockInstance.address, 0),
+		deployer.deploy(StakingRewards_FXS_WETH, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_WETH, FRAXStablecoin.address, timelockInstance.address, 0)
+	])
+	
 	// ======== Get various staking addresses ======== 
 	console.log(chalk.yellow('===== GET VARIOUS STAKING ADDRESSES ====='));
 	const stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
@@ -255,20 +246,16 @@ module.exports = async function(deployer, network, accounts) {
 	const pair_instance_FRAX_USDC = await UniswapV2Pair.at(pair_addr_FRAX_USDC);
 	const pair_instance_FRAX_FXS = await UniswapV2Pair.at(pair_addr_FRAX_FXS);
 	const pair_instance_FXS_WETH = await UniswapV2Pair.at(pair_addr_FXS_WETH);
-
-	const pair_instance_USDC_WETH = await UniswapV2Pair.at(pair_addr_USDC_WETH);
-	const pair_instance_USDT_WETH = await UniswapV2Pair.at(pair_addr_USDT_WETH);
-	const pair_instance_6DEC_WETH = await UniswapV2Pair.at(pair_addr_6DEC_WETH);
 	
 	// ======== Add allowances to the Uniswap Router ========
 	console.log(chalk.yellow('===== ADD ALLOWANCES TO THE UNISWAP ROUTER ====='));
-	await wethInstance.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await col_instance_USDC.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await col_instance_USDT.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await col_instance_6DEC.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	await fraxInstance.approve(routerInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await fxsInstance.approve(routerInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	await Promise.all([
+		wethInstance.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		col_instance_USDC.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		col_instance_USDT.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		fraxInstance.approve(routerInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		fxsInstance.approve(routerInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER })
+	])
 
 	// ======== Note the addresses ========
 	// If you are testing the frontend, you need to copy-paste the output of CONTRACT_ADDRESSES to the frontend src/misc/constants.tsx
@@ -284,26 +271,21 @@ module.exports = async function(deployer, network, accounts) {
 				FRAX_WETH: "NOT_DEPLOYED_YET",
 				FRAX_USDC: "NOT_DEPLOYED_YET",
 				FRAX_USDT: "NOT_DEPLOYED_YET",
-				FRAX_6DEC: "NOT_DEPLOYED_YET",
 				FRAX_FXS: "NOT_DEPLOYED_YET",
 				FXS_WETH: "NOT_DEPLOYED_YET",
 				FXS_USDC: "NOT_DEPLOYED_YET",
 				FXS_USDT: "NOT_DEPLOYED_YET",
-				FXS_6DEC: "NOT_DEPLOYED_YET",
 				USDC_WETH: "NOT_DEPLOYED_YET",
 				USDT_WETH: "NOT_DEPLOYED_YET",
-				"6DEC_WETH": "NOT_DEPLOYED_YET",
 			},
 			collateral: {
 				USDC: col_instance_USDC.address,
 				USDT: col_instance_USDT.address,
-				"6DEC": col_instance_6DEC.address,
 			},
 			governance: governanceInstance.address,
 			pools: {
 				USDC: "NOT_DEPLOYED_YET",
 				USDT: "NOT_DEPLOYED_YET",
-				"6DEC": "NOT_DEPLOYED_YET",
 			},
 			uniswap_other: {
 				router: routerInstance.address,

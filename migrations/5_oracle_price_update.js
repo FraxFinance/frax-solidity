@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../../../dist/types/constants'));
+const constants = require(path.join(__dirname, '../src/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -43,27 +43,27 @@ const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_
 const WETH = artifacts.require("ERC20/WETH");
 const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
 const FakeCollateral_USDT = artifacts.require("FakeCollateral/FakeCollateral_USDT");
-const FakeCollateral_6DEC = artifacts.require("FakeCollateral/FakeCollateral_6DEC");
+
 
 // Collateral Pools
 const FraxPoolLibrary = artifacts.require("Frax/Pools/FraxPoolLibrary");
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 const Pool_USDT = artifacts.require("Frax/Pools/Pool_USDT");
-const Pool_6DEC = artifacts.require("Frax/Pools/Pool_6DEC");
+
 
 // Oracles
 const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_WETH");
 const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDC");
 const UniswapPairOracle_FRAX_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDT");
-const UniswapPairOracle_FRAX_6DEC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_6DEC");
+
 const UniswapPairOracle_FRAX_FXS = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_FXS");
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
 const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
 const UniswapPairOracle_FXS_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDT");
-const UniswapPairOracle_FXS_6DEC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_6DEC");
+
 const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
 const UniswapPairOracle_USDT_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDT_WETH");
-const UniswapPairOracle_6DEC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_6DEC_WETH");
+
 
 // Chainlink Price Consumer
 const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
@@ -134,20 +134,20 @@ module.exports = async function(deployer, network, accounts) {
 	let oracle_instance_FRAX_WETH;
 	let oracle_instance_FRAX_USDC;
 	let oracle_instance_FRAX_USDT;
-	let oracle_instance_FRAX_6DEC;
+	
 	let oracle_instance_FRAX_FXS;
 	let oracle_instance_FXS_WETH;
 	let oracle_instance_FXS_USDC; 
 	let oracle_instance_FXS_USDT; 
-	let oracle_instance_FXS_6DEC; 
+	
 	let oracle_instance_USDC_WETH;
 	let oracle_instance_USDT_WETH;
-	let oracle_instance_6DEC_WETH;
+	
 	let pool_instance_USDC;
 	let pool_instance_USDT;
-	let pool_instance_6DEC;
+	
 
-	if (false && false && process.env.MIGRATION_MODE == 'ganache'){
+	if (process.env.MIGRATION_MODE == 'ganache'){
 		timelockInstance = await Timelock.deployed();
 		migrationHelperInstance = await MigrationHelper.deployed()
 		governanceInstance = await GovernorAlpha.deployed();
@@ -160,18 +160,18 @@ module.exports = async function(deployer, network, accounts) {
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.deployed();
 		oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.deployed(); 
 		oracle_instance_FRAX_USDT = await UniswapPairOracle_FRAX_USDT.deployed();
-		oracle_instance_FRAX_6DEC = await UniswapPairOracle_FRAX_6DEC.deployed();
+		
 		oracle_instance_FRAX_FXS = await UniswapPairOracle_FRAX_FXS.deployed();
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
 		oracle_instance_FXS_USDC = await UniswapPairOracle_FXS_USDC.deployed(); 
 		oracle_instance_FXS_USDT = await UniswapPairOracle_FXS_USDT.deployed(); 
-		oracle_instance_FXS_6DEC = await UniswapPairOracle_FXS_6DEC.deployed(); 
+		
 		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.deployed();
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.deployed();
-		oracle_instance_6DEC_WETH = await UniswapPairOracle_6DEC_WETH.deployed();
+		
 		pool_instance_USDC = await Pool_USDC.deployed();
 		pool_instance_USDT = await Pool_USDT.deployed();
-		pool_instance_6DEC = await Pool_6DEC.deployed();
+		
 	}
 	else {
 		CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
@@ -188,18 +188,18 @@ module.exports = async function(deployer, network, accounts) {
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_WETH);
 		oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_USDC); 
 		oracle_instance_FRAX_USDT = await UniswapPairOracle_FRAX_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_USDT); 
-		oracle_instance_FRAX_6DEC = await UniswapPairOracle_FRAX_6DEC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_6DEC); 
+		 
 		oracle_instance_FRAX_FXS = await UniswapPairOracle_FRAX_FXS.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_FXS);
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_WETH);
 		oracle_instance_FXS_USDC = await UniswapPairOracle_FXS_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_USDC); 
 		oracle_instance_FXS_USDT = await UniswapPairOracle_FXS_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_USDT); 
-		oracle_instance_FXS_6DEC = await UniswapPairOracle_FXS_6DEC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_6DEC); 
+		
 		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.USDC_WETH);
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.USDT_WETH);
-		oracle_instance_6DEC_WETH = await UniswapPairOracle_6DEC_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles['6DEC_WETH']);
+		
 		pool_instance_USDC = await Pool_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDC);
 		pool_instance_USDT = await Pool_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDT);
-		pool_instance_6DEC = await Pool_6DEC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools["6DEC"]);
+		
 	}
 
 
@@ -214,21 +214,17 @@ module.exports = async function(deployer, network, accounts) {
 
 	console.log(chalk.red.bold('YOU NEED TO WAIT AT LEAST 24 HOURS HERE NORMALLY, BUT TEMPORARILY RESETTING THE PRICE UPDATE TO ONE SECOND'));
 	console.log(chalk.yellow('===== TEMPORARILY SET THE PERIOD TO 1 SECOND ====='));
-
-	oracle_instance_FRAX_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDT.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_6DEC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_FXS.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	oracle_instance_FXS_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_6DEC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDT.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	oracle_instance_USDC_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_USDT_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_6DEC_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	await Promise.all([
+		oracle_instance_FRAX_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_USDC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_USDT.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_FXS.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_USDC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_USDT.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_USDC_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_USDT_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
+	])
 
 	console.log(chalk.yellow('===== UPDATE THE PRICES ====='));
 
@@ -242,31 +238,18 @@ module.exports = async function(deployer, network, accounts) {
 	}
 
 	// Make sure the prices are updated
-	console.log(chalk.blue('=== FRAX_XXX ==='))
-	await oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FRAX_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FRAX_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FRAX_6DEC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FRAX_FXS.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	
-	console.log(chalk.blue('=== FXS_XXX ==='))
-	await oracle_instance_FXS_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FXS_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FXS_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FXS_6DEC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	
-	console.log(chalk.blue('=== USDC_XXX ==='))
-	await oracle_instance_USDC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	await Promise.all([
+		oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_FXS.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_USDC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER })
+	]);
 
-	console.log(chalk.blue('=== USDT_XXX ==='))
-	await oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	console.log(chalk.blue('=== 6DEC_XXX ==='))
-	// const token0 = await oracle_instance_6DEC_WETH.token0({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// const token1 = await oracle_instance_6DEC_WETH.token1({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// console.log("oracle_instance_6DEC_WETH token0: ", token0);
-	// console.log("oracle_instance_6DEC_WETH token1: ", token1);
-	await oracle_instance_6DEC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	console.log(chalk.yellow('===== SET THE PERIOD TO BACK TO 24 HOURS ====='));
 
 	if (process.env.MIGRATION_MODE == 'ganache'){
@@ -278,19 +261,15 @@ module.exports = async function(deployer, network, accounts) {
 		console.log(chalk.red.bold('YOU NEED TO WAIT AT LEAST 1 SECOND HERE HERE'));
 	}
 
-	oracle_instance_FRAX_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDC.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDT.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_6DEC.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_FXS.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	oracle_instance_FXS_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDC.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDT.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_6DEC.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	oracle_instance_USDC_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_USDT_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_6DEC_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
+	await Promise.all([
+		oracle_instance_FRAX_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_USDC.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_USDT.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_FXS.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_USDC.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_USDT.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_USDC_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_USDT_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
+	]);
 };

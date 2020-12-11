@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../../../dist/types/constants'));
+const constants = require(path.join(__dirname, '../src/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -191,45 +191,37 @@ module.exports = async function(deployer, network, accounts) {
 	// ====================================================================================================================
 	// ====================================================================================================================
 	
-
-	console.log("===============FIRST SWAPS===============");
-
-	return false;
+	// TODO: Not sure about the swapToPriceInstance.swapToPrice parameters
+	if (false){
 		
-	if (false) {
-		// Add allowances to the Uniswap Router
-		// console.log("Doing Uniswap allowances...");
-		// await wethInstance.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// console.log("---wethInstance---")
-		// await col_instance_USDC.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// console.log("---col_instance_USDC---")
-		// await col_instance_USDT.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// console.log("---col_instance_USDT---")
-		// await fraxInstance.approve(routerInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// console.log("---fraxInstance---")
-		// await fxsInstance.approve(routerInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// console.log("---fxsInstance---")
+		console.log("===============FIRST SWAPS===============");
 
-		// Add allowances to the swapToPrice contract
-		console.log("Doing swapToPrice allowances...");
-		await wethInstance.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("---wethInstance---")
-		await col_instance_USDC.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("---col_instance_USDC---")
-		await col_instance_USDT.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("---col_instance_USDT---")
-		await fraxInstance.approve(swapToPriceInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("---fraxInstance---")
-		await fxsInstance.approve(swapToPriceInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		console.log("---fxsInstance---")
-	}
-	{
+		// return false;
+			
+		if (true) {
+			// Add allowances to the Uniswap Router
+			await Promise.all([
+				wethInstance.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+				col_instance_USDC.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+				col_instance_USDT.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+				fraxInstance.approve(routerInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+				fxsInstance.approve(routerInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER })
+			])
 
+			// Add allowances to the swapToPrice contract
+			console.log("Doing swapToPrice allowances...");
+			await Promise.all([
+				wethInstance.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+				col_instance_USDC.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+				col_instance_USDT.approve(swapToPriceInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+				fraxInstance.approve(swapToPriceInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+				fxsInstance.approve(swapToPriceInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER })
+			])
+		}
 
 		//--- FRAX
 
 		// Handle FRAX / WETH
-		// Targeting 365.0 FRAX / 1 WETH
 		await swapToPriceInstance.swapToPrice(
 			fraxInstance.address,
 			wethInstance.address,
@@ -321,56 +313,50 @@ module.exports = async function(deployer, network, accounts) {
 		)
 		console.log("FXS / USDT swapped");
 
+
+		console.log(chalk.red.bold('YOU NEED TO WAIT AT LEAST 24 HOURS HERE NORMALLY, BUT TEMPORARILY RESETTING THE PRICE UPDATE TO ONE SECOND'));
+		console.log(chalk.yellow('===== TEMPORARILY SET THE PERIOD TO 1 SECOND ====='));
+
+		await Promise.all([
+			oracle_instance_FRAX_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FRAX_USDC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FRAX_USDT.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FRAX_FXS.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FXS_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FXS_USDC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FXS_USDT.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_USDC_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_USDT_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
+		])
+
+		console.log(chalk.yellow('===== UPDATE THE PRICES ====='));
+
+		// Make sure the prices are updated
+		await Promise.all([
+			oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FRAX_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FRAX_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FRAX_FXS.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FXS_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FXS_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FXS_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_USDC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER })
+		]);
+
+		console.log(chalk.yellow('===== SET THE PERIOD TO BACK TO 24 HOURS ====='));
+		await Promise.all([
+			oracle_instance_FRAX_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FRAX_USDC.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FRAX_USDT.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FRAX_FXS.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FXS_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FXS_USDC.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_FXS_USDT.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_USDC_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			oracle_instance_USDT_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		]);
+
+				
 	}
-
-
-	console.log(chalk.red.bold('YOU NEED TO WAIT AT LEAST 24 HOURS HERE NORMALLY, BUT TEMPORARILY RESETTING THE PRICE UPDATE TO ONE SECOND'));
-	console.log(chalk.yellow('===== TEMPORARILY SET THE PERIOD TO 1 SECOND ====='));
-
-	oracle_instance_FRAX_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDT.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_FXS.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	oracle_instance_FXS_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDC.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDT.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	oracle_instance_USDC_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_USDT_WETH.setPeriod(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-
-	console.log(chalk.yellow('===== UPDATE THE PRICES ====='));
-
-	// Make sure the prices are updated
-	console.log(chalk.blue('=== FRAX_XXX ==='))
-	await oracle_instance_FRAX_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FRAX_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FRAX_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FRAX_FXS.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	
-	console.log(chalk.blue('=== FXS_XXX ==='))
-	await oracle_instance_FXS_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FXS_USDC.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	await oracle_instance_FXS_USDT.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	
-	console.log(chalk.blue('=== USDC_XXX ==='))
-	await oracle_instance_USDC_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	console.log(chalk.blue('=== USDT_XXX ==='))
-	await oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	console.log(chalk.yellow('===== SET THE PERIOD TO BACK TO 24 HOURS ====='));
-
-	oracle_instance_FRAX_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDC.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_USDT.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FRAX_FXS.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	oracle_instance_FXS_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDC.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_FXS_USDT.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-	oracle_instance_USDC_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	oracle_instance_USDT_WETH.setPeriod(86400 + 1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 };
