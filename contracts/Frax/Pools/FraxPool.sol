@@ -212,6 +212,7 @@ contract FraxPool is AccessControl {
         (uint256 mint_amount, uint256 fxs_needed) = FraxPoolLibrary.calcMintFractionalFRAX(input_params);
 
         require(FRAX_out_min <= mint_amount, "Slippage limit reached");
+        require(fxs_needed <= fxs_amount, "Not enough FXS inputted");
         FXS.pool_burn_from(msg.sender, fxs_needed);
         collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
         FRAX.pool_mint(msg.sender, mint_amount);
@@ -230,7 +231,7 @@ contract FraxPool is AccessControl {
             redemption_fee
         );
 
-        require(collateral_needed <= collateral_token.balanceOf(address(this)), "Not enough collateral in pool");
+        require(collateral_needed <= collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral), "Not enough collateral in pool");
 
         redeemCollateralBalances[msg.sender] = redeemCollateralBalances[msg.sender].add(collateral_needed);
         unclaimedPoolCollateral = unclaimedPoolCollateral.add(collateral_needed);
@@ -266,7 +267,7 @@ contract FraxPool is AccessControl {
 
         lastRedeemed[msg.sender] = block.number;
 
-        require(collateral_amount <= collateral_token.balanceOf(address(this)), "Not enough collateral in pool");
+        require(collateral_amount <= collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral), "Not enough collateral in pool");
         require(COLLATERAL_out_min <= collateral_amount && FXS_out_min <= fxs_amount, "Slippage limit reached");
         
         // Move all external functions to the end
