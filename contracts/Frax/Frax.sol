@@ -182,7 +182,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
 
         // Step increments are 0.25% (upon genesis, changable by setFraxStep()) 
         
-        if (frax_price_cur >= price_target.add(price_band)) { //decrease collateral ratio
+        if (frax_price_cur > price_target.add(price_band)) { //decrease collateral ratio
             if(global_collateral_ratio <= frax_step){ //if within a step of 0, go to 0
                 global_collateral_ratio = 0;
             } else {
