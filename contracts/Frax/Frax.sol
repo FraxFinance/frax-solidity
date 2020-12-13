@@ -105,6 +105,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         global_collateral_ratio = 1000000; // Frax system starts off fully collateralized (6 decimals of precision)
         refresh_cooldown = 3600; // Refresh cooldown period is set to 1 hour (3600 seconds) at genesis
         price_target = 1000000; // Collateral ratio will adjust according to the $1 price target at genesis
+        price_band = 5000; // Collateral ratio will not adjust if between $0.995 and $1.005 at genesis
     }
 
     /* ========== VIEWS ========== */
