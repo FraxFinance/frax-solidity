@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../src/types/constants'));
+const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -188,10 +188,21 @@ module.exports = async function(deployer, network, accounts) {
 	
 	}
 
+	// return false;
 
 	// CONTINUE MAIN DEPLOY CODE HERE
 	// ====================================================================================================================
 	// ====================================================================================================================
 	
-	//await fraxInstance.refreshCollateralRatio();
+
+	if (process.env.MIGRATION_MODE == 'ganache'){
+		// Advance 1 hr to catch things up
+		await time.increase(3600 + 1);
+		await time.advanceBlock();
+	}
+	else {
+		console.log(chalk.red.bold('YOU NEED TO WAIT AT LEAST TWO DAYS HERE'));
+	}
+
+	await fraxInstance.refreshCollateralRatio();
 };

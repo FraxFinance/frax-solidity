@@ -37,7 +37,6 @@ const UniswapV2Library = artifacts.require("Uniswap/UniswapV2Library");
 const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary");
 const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
 const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_Modified");
-const TestSwap = artifacts.require("Uniswap/TestSwap");
 
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
@@ -95,7 +94,7 @@ module.exports = async function(deployer, network, accounts) {
 	// const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[8];
 
 	// ======== Set other constants ========
-	console.log(chalk.yellow('===== SET OTHER CONSTANTS ====='));
+	
 	const ONE_MILLION_DEC18 = new BigNumber("1000000e18");
 	const FIVE_MILLION_DEC18 = new BigNumber("5000000e18");
 	const TEN_MILLION_DEC18 = new BigNumber("10000000e18");
@@ -112,7 +111,7 @@ module.exports = async function(deployer, network, accounts) {
 	const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 	const METAMASK_ADDRESS = process.env.METAMASK_ADDRESS;;
 
-	console.log(`====================================================`);
+	// ================= Start Initializing =================
 
 	// Get the necessary instances
 	let CONTRACT_ADDRESSES;

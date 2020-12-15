@@ -750,34 +750,35 @@ contract('FRAX', async (accounts) => {
 	});
 0x01 */
 
-	it('Seed the collateral pools some collateral to start off with', async () => {
-		console.log("========================Collateral Seed========================");
+	// [DEPRECATED] SEEDED IN THE MIGRATION FLOW
+	// it('Seed the collateral pools some collateral to start off with', async () => {
+	// 	console.log("========================Collateral Seed========================");
 
-		// Link the FAKE collateral pool to the FRAX contract
-		await col_instance_USDC.transfer(pool_instance_USDC.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await col_instance_USDT.transfer(pool_instance_USDT.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await col_instance_yUSD.transfer(pool_instance_yUSD.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// 	// Link the FAKE collateral pool to the FRAX contract
+	// 	await col_instance_USDC.transfer(pool_instance_USDC.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// 	await col_instance_USDT.transfer(pool_instance_USDT.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// 	// await col_instance_yUSD.transfer(pool_instance_yUSD.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		// Refresh the collateral ratio
-		const totalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18);
-		console.log("totalCollateralValue: ", totalCollateralValue.toNumber());
+	// 	// Refresh the collateral ratio
+	// 	const totalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18);
+	// 	console.log("totalCollateralValue: ", totalCollateralValue.toNumber());
 
-		/*
-		// Advance 1 hr so the collateral ratio can be recalculated
-		await time.increase(3600 + 1);
-		await time.advanceBlock();
-		await fraxInstance.refreshCollateralRatio();
+	// 	/*
+	// 	// Advance 1 hr so the collateral ratio can be recalculated
+	// 	await time.increase(3600 + 1);
+	// 	await time.advanceBlock();
+	// 	await fraxInstance.refreshCollateralRatio();
 
-		// Advance 1 hr so the collateral ratio can be recalculated
-		await time.increase(3600 + 1);
-		await time.advanceBlock();
-		await fraxInstance.refreshCollateralRatio();
-		*/
+	// 	// Advance 1 hr so the collateral ratio can be recalculated
+	// 	await time.increase(3600 + 1);
+	// 	await time.advanceBlock();
+	// 	await fraxInstance.refreshCollateralRatio();
+	// 	*/
 
-		const collateral_ratio_refreshed = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
-		console.log("collateral_ratio_refreshed: ", collateral_ratio_refreshed.toNumber());
-		col_rat = collateral_ratio_refreshed;
-	});
+	// 	const collateral_ratio_refreshed = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+	// 	console.log("collateral_ratio_refreshed: ", collateral_ratio_refreshed.toNumber());
+	// 	col_rat = collateral_ratio_refreshed;
+	// });
 /*
 	it('Mint some FRAX using USDC as collateral (collateral ratio = 1) [mint1t1FRAX]', async () => {
 		console.log("=========================mint1t1FRAX=========================");

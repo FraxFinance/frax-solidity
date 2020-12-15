@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../src/types/constants'));
+const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -185,12 +185,14 @@ module.exports = async function(deployer, network, accounts) {
 	}
 
 	let swapToPriceInstance;
-	if (process.env.MIGRATION_MODE == 'ganache'){
-		await deployer.deploy(SwapToPrice, uniswapFactoryInstance.address, routerInstance.address);
-		swapToPriceInstance = await SwapToPrice.deployed();
-	} else {
+	if (IS_MAINNET){
 		swapToPriceInstance = await SwapToPrice.at('0xa61cBe7E326B13A8dbA11D00f42531BE704DF51B'); 
 	}
+	else {
+		await deployer.deploy(SwapToPrice, uniswapFactoryInstance.address, routerInstance.address);
+		swapToPriceInstance = await SwapToPrice.deployed();
+	}
+	
 
 	// ======== Set the Uniswap pairs ========
 	console.log(chalk.yellow('===== SET UNISWAP PAIRS ====='));

@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../src/types/constants'));
+const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -83,6 +83,8 @@ const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 // Make sure Ganache is running beforehand
 module.exports = async function(deployer, network, accounts) {
 	
+	const IS_MAINNET = (process.env.MIGRATION_MODE == 'mainnet');
+
 	// ======== Set the addresses ========
 	console.log(chalk.yellow('===== SET THE ADDRESSES ====='));
 	const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
@@ -188,6 +190,8 @@ module.exports = async function(deployer, network, accounts) {
 	// CONTINUE MAIN DEPLOY CODE HERE
 	// ====================================================================================================================
 	// ====================================================================================================================
+
+	// return false;
 
 	if (process.env.MIGRATION_MODE == 'ganache'){
 		// Advance 2 days to catch things up

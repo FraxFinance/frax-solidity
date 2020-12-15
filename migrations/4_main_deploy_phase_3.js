@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../src/types/constants'));
+const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -108,6 +108,7 @@ module.exports = async function(deployer, network, accounts) {
 	
 	const ONE_MILLION_DEC18 = new BigNumber("1000000e18");
 	const FIVE_MILLION_DEC18 = new BigNumber("5000000e18");
+	const FIVE_MILLION_DEC6 = new BigNumber("5000000e6");
 	const TEN_MILLION_DEC18 = new BigNumber("10000000e18");
 	const ONE_HUNDRED_MILLION_DEC18 = new BigNumber("100000000e18");
 	const ONE_HUNDRED_MILLION_DEC6 = new BigNumber("100000000e6");
@@ -228,6 +229,29 @@ module.exports = async function(deployer, network, accounts) {
 		fxsInstance.transfer(stakingInstance_FRAX_FXS.address, new BigNumber("1000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
 		fxsInstance.transfer(stakingInstance_FXS_WETH.address, new BigNumber("1000000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER })
 	]);
+
+	if (!IS_MAINNET){
+		// Advance 1 block so you can check the votes below
+		await time.increase(20);
+		await time.advanceBlock();
+	}
+
+	// Print some vote totals
+	console.log(chalk.yellow('===== PRINT OUT SOME VOTES ====='));
+
+	const previous_block = (await time.latestBlock()) - 1;
+
+	// Get the prices
+	let stake_FRAX_WETH_votes = (new BigNumber(await fxsInstance.getPriorVotes.call(stakingInstance_FRAX_WETH.address, previous_block))).div(BIG18);
+	let stake_FRAX_USDC_votes = (new BigNumber(await fxsInstance.getPriorVotes.call(stakingInstance_FRAX_USDC.address, previous_block))).div(BIG18);
+	let stake_FRAX_FXS_votes = (new BigNumber(await fxsInstance.getPriorVotes.call(stakingInstance_FRAX_FXS.address, previous_block))).div(BIG18);
+	let stake_FXS_WETH_votes = (new BigNumber(await fxsInstance.getPriorVotes.call(stakingInstance_FXS_WETH.address, previous_block))).div(BIG18);
+
+	// Print the new prices
+	console.log("stake_FRAX_WETH_votes: ", stake_FRAX_WETH_votes.toString());
+	console.log("stake_FRAX_USDC_votes: ", stake_FRAX_USDC_votes.toString());
+	console.log("stake_FRAX_FXS_votes: ", stake_FRAX_FXS_votes.toString());
+	console.log("stake_FXS_WETH_votes: ", stake_FXS_WETH_votes.toString());
 	
 	// ======== Add liquidity to the pairs so the oracle constructor doesn't error  ========
 	// Initially, all prices will be 1:1, but that can be changed in further testing via arbitrage simulations to a known price
@@ -277,9 +301,9 @@ module.exports = async function(deployer, network, accounts) {
 		routerInstance.addLiquidity(
 			fxsInstance.address, 
 			fraxInstance.address,
-			new BigNumber(500e18), 
+			new BigNumber(133333e15), 
 			new BigNumber(100e18), 
-			new BigNumber(500e18), 
+			new BigNumber(133333e15), 
 			new BigNumber(100e18), 
 			COLLATERAL_FRAX_AND_FXS_OWNER, 
 			new BigNumber(2105300114), 
@@ -289,9 +313,9 @@ module.exports = async function(deployer, network, accounts) {
 		routerInstance.addLiquidity(
 			fxsInstance.address, 
 			wethInstance.address,
-			new BigNumber(3000e18), 
+			new BigNumber(800e18), 
 			new BigNumber(1e18), 
-			new BigNumber(3000e18), 
+			new BigNumber(800e18), 
 			new BigNumber(1e18), 
 			COLLATERAL_FRAX_AND_FXS_OWNER, 
 			new BigNumber(2105300114), 
@@ -301,9 +325,9 @@ module.exports = async function(deployer, network, accounts) {
 		routerInstance.addLiquidity(
 			fxsInstance.address, 
 			col_instance_USDC.address,
-			new BigNumber(500e18), 
+			new BigNumber(133333e15), 
 			new BigNumber(100e6), 
-			new BigNumber(500e18), 
+			new BigNumber(133333e15), 
 			new BigNumber(100e6), 
 			COLLATERAL_FRAX_AND_FXS_OWNER, 
 			new BigNumber(2105300114), 
@@ -313,9 +337,9 @@ module.exports = async function(deployer, network, accounts) {
 		routerInstance.addLiquidity(
 			fxsInstance.address, 
 			col_instance_USDT.address,
-			new BigNumber(500e18), 
+			new BigNumber(133333e15), 
 			new BigNumber(100e6), 
-			new BigNumber(500e18), 
+			new BigNumber(133333e15), 
 			new BigNumber(100e6), 
 			COLLATERAL_FRAX_AND_FXS_OWNER, 
 			new BigNumber(2105300114), 
@@ -330,9 +354,9 @@ module.exports = async function(deployer, network, accounts) {
 		await routerInstance.addLiquidity(
 			col_instance_USDC.address, 
 			wethInstance.address,
-			new BigNumber(600000e18), 
+			new BigNumber(600000e6), 
 			new BigNumber(1000e18), 
-			new BigNumber(600000e18), 
+			new BigNumber(600000e6), 
 			new BigNumber(1000e18), 
 			COLLATERAL_FRAX_AND_FXS_OWNER, 
 			new BigNumber(2105300114), 
@@ -343,9 +367,9 @@ module.exports = async function(deployer, network, accounts) {
 		await routerInstance.addLiquidity(
 			col_instance_USDT.address, 
 			wethInstance.address,
-			new BigNumber(600000e18), 
+			new BigNumber(600000e6), 
 			new BigNumber(1000e18), 
-			new BigNumber(600000e18), 
+			new BigNumber(600000e6), 
 			new BigNumber(1000e18), 
 			COLLATERAL_FRAX_AND_FXS_OWNER, 
 			new BigNumber(2105300114), 
@@ -380,8 +404,8 @@ module.exports = async function(deployer, network, accounts) {
 	console.log(chalk.yellow('========== FRAX POOLS =========='));
 	await deployer.link(StringHelpers, [Pool_USDC, Pool_USDT]);
 	await Promise.all([
-		deployer.deploy(Pool_USDC, fraxInstance.address, fxsInstance.address, col_instance_USDC.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18),
-		deployer.deploy(Pool_USDT, fraxInstance.address, fxsInstance.address, col_instance_USDT.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC18)
+		deployer.deploy(Pool_USDC, fraxInstance.address, fxsInstance.address, col_instance_USDC.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC6),
+		deployer.deploy(Pool_USDT, fraxInstance.address, fxsInstance.address, col_instance_USDT.address, POOL_CREATOR, timelockInstance.address, FIVE_MILLION_DEC6)
 	])
 	
 	// ============= Get the pool instances ========
@@ -399,6 +423,12 @@ module.exports = async function(deployer, network, accounts) {
 		fraxInstance.setMintingFee(MINTING_FEE, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
 	])
 
+	// ============= Set the pool parameters so the minting and redemption fees get set ========
+	console.log(chalk.yellow('========== REFRESH POOL PARAMETERS =========='));
+	await Promise.all([
+		await pool_instance_USDC.setPoolParameters(FIVE_MILLION_DEC6, 7500, 1, { from: POOL_CREATOR }),
+		await pool_instance_USDT.setPoolParameters(FIVE_MILLION_DEC6, 7500, 1, { from: POOL_CREATOR }),
+	]);
 
 	// ============= Get FRAX and FXS oracles ========
 	console.log(chalk.yellow('========== GET FRAX AND FXS ORACLES =========='));
@@ -440,8 +470,9 @@ module.exports = async function(deployer, network, accounts) {
 	console.log(chalk.blue('=== COLLATERAL / WETH ORACLE SETTING ==='));
 	await Promise.all([
 		fraxInstance.setFRAXEthOracle(oracle_instance_FRAX_WETH.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		pool_instance_USDT.setCollatETHOracle(oracle_instance_USDT_WETH.address, wethInstance.address, { from: POOL_CREATOR }),
-		pool_instance_USDC.setCollatETHOracle(oracle_instance_USDC_WETH.address, wethInstance.address, { from: POOL_CREATOR })
+		pool_instance_USDC.setCollatETHOracle(oracle_instance_USDC_WETH.address, wethInstance.address, { from: POOL_CREATOR }),
+		pool_instance_USDT.setCollatETHOracle(oracle_instance_USDT_WETH.address, wethInstance.address, { from: POOL_CREATOR })
+		
 	]);
 	
 	// ======== Link FXS oracles ========
