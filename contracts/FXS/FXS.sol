@@ -29,9 +29,6 @@ contract FRAXShares is ERC20Custom, AccessControl {
 
     bool public trackingVotes = true; // Tracking votes (only change if need to disable votes)
 
-    /// @notice A record of each accounts delegate
-    mapping (address => address) public delegates;
-
     // A checkpoint for marking number of votes from a given block
     struct Checkpoint {
         uint32 fromBlock;
@@ -43,21 +40,6 @@ contract FRAXShares is ERC20Custom, AccessControl {
 
     // The number of checkpoints for each account
     mapping (address => uint32) public numCheckpoints;
-
-    /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
-
-    /// @notice The EIP-712 typehash for the delegation struct used by the contract
-    bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
-
-    /// @notice A record of states for signing / validating signatures
-    mapping (address => uint) public nonces;
-
-    /// @notice An event thats emitted when an account changes its delegate
-    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
-
-    /// @notice An event thats emitted when a delegate account's vote balance changes
-    event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
 
     /* ========== MODIFIERS ========== */
 
@@ -121,15 +103,11 @@ contract FRAXShares is ERC20Custom, AccessControl {
     // This function is what other frax pools will call to mint new FXS (similar to the FRAX mint) 
     function pool_mint(address m_address, uint256 m_amount) external onlyPools {        
         if(trackingVotes){
-            uint32 num_checkpoints_src = numCheckpoints[address(this)];
-            uint96 num_votes_before = num_checkpoints_src > 0 ? checkpoints[address(this)][num_checkpoints_src - 1].votes : 0;
-            uint96 new_total_votes = add96(num_votes_before, uint96(m_amount), "pool_mint new votes overflows");
-
-            // Need to create new votes out of thin air first and give them to the FXS contract by writing a checkpoint
-            _writeCheckpoint(address(this), num_checkpoints_src, num_votes_before, new_total_votes);
-
-            // Move the new votes to the mintee and subtract them from the FXS contract
-            _moveDelegates(address(this), m_address, uint96(m_amount));
+            uint32 srcRepNum = numCheckpoints[address(this)];
+            uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
+            uint96 srcRepNew = add96(srcRepOld, uint96(m_amount), "pool_mint new votes overflows");
+            _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew); // mint new votes
+            trackVotes(address(this), m_address, uint96(m_amount));
         }
 
         super._mint(m_address, m_amount);
@@ -139,14 +117,11 @@ contract FRAXShares is ERC20Custom, AccessControl {
     // This function is what other frax pools will call to burn FXS 
     function pool_burn_from(address b_address, uint256 b_amount) external onlyPools {
         if(trackingVotes){
-            // Take the votes from the burner first and give them to the FXS contract
-            _moveDelegates(b_address, address(this), uint96(b_amount));
-            uint32 num_checkpoints_src = numCheckpoints[address(this)];
-            uint96 num_votes_before = num_checkpoints_src > 0 ? checkpoints[address(this)][num_checkpoints_src - 1].votes : 0;
-            uint96 new_total_votes = sub96(num_votes_before, uint96(b_amount), "pool_burn_from new votes underflows");
-
-            // Make the votes given to the FXS contract from the burner disappear into thin air
-            _writeCheckpoint(address(this), num_checkpoints_src, num_votes_before, new_total_votes);
+            trackVotes(b_address, address(this), uint96(b_amount));
+            uint32 srcRepNum = numCheckpoints[address(this)];
+            uint96 srcRepOld = srcRepNum > 0 ? checkpoints[address(this)][srcRepNum - 1].votes : 0;
+            uint96 srcRepNew = sub96(srcRepOld, uint96(b_amount), "pool_burn_from new votes underflows");
+            _writeCheckpoint(address(this), srcRepNum, srcRepOld, srcRepNew); // burn votes
         }
 
         super._burnFrom(b_address, b_amount);
@@ -159,92 +134,29 @@ contract FRAXShares is ERC20Custom, AccessControl {
 
     /* ========== OVERRIDDEN PUBLIC FUNCTIONS ========== */
 
-    /**
-     * @notice Approve `spender` to transfer up to `amount` from `src`
-     * @dev This will overwrite the approval amount for `spender`
-     *  and is subject to issues noted [here](https://eips.ethereum.org/EIPS/eip-20#approve)
-     * @param spender The address of the account which may transfer tokens
-     * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
-     * @return Whether or not the approval succeeded
-     */
-    function approve(address spender, uint rawAmount) public virtual override returns (bool) {
-        uint96 amount;
-        if (rawAmount == uint(-1)) {
-            amount = uint96(-1);
-        } else {
-            amount = safe96(rawAmount, "FXS::approve: amount exceeds 96 bits");
+    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+        if(trackingVotes){
+            // Transfer votes
+            trackVotes(_msgSender(), recipient, uint96(amount));
         }
 
-        _allowances[msg.sender][spender] = amount;
-
-        emit Approval(msg.sender, spender, amount);
+        _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
-    /**
-     * @notice Transfer `amount` tokens from `msg.sender` to `dst`
-     * @param dst The address of the destination account
-     * @param rawAmount The number of tokens to transfer
-     * @return Whether or not the transfer succeeded
-     */
-    function transfer(address dst, uint rawAmount) public virtual override returns (bool) {
-        uint96 amount = safe96(rawAmount, "FXS::transfer: amount exceeds 96 bits");
-        _transferTokens(msg.sender, dst, amount);
-        return true;
-    }
-
-    /**
-     * @notice Transfer `amount` tokens from `src` to `dst`
-     * @param src The address of the source account
-     * @param dst The address of the destination account
-     * @param rawAmount The number of tokens to transfer
-     * @return Whether or not the transfer succeeded
-     */
-    function transferFrom(address src, address dst, uint rawAmount) public virtual override returns (bool) {
-        address spender = msg.sender;
-        uint96 spenderAllowance = uint96(_allowances[src][spender]);
-        uint96 amount = safe96(rawAmount, "FXS::approve: amount exceeds 96 bits");
-
-        if (spender != src && spenderAllowance != uint96(-1)) {
-            uint96 newAllowance = sub96(spenderAllowance, amount, "FXS::transferFrom: transfer amount exceeds spender allowance");
-            _allowances[src][spender] = newAllowance;
-
-            emit Approval(src, spender, newAllowance);
+    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+        if(trackingVotes){
+            // Transfer votes
+            trackVotes(sender, recipient, uint96(amount));
         }
 
-        _transferTokens(src, dst, amount);
+        _transfer(sender, recipient, amount);
+        _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
+
         return true;
     }
 
     /* ========== PUBLIC FUNCTIONS ========== */
-
-    /**
-     * @notice Delegate votes from `msg.sender` to `delegatee`
-     * @param delegatee The address to delegate votes to
-     */
-    function delegate(address delegatee) public {
-        return _delegate(msg.sender, delegatee);
-    }
-
-    /**
-     * @notice Delegates votes from signatory to `delegatee`
-     * @param delegatee The address to delegate votes to
-     * @param nonce The contract state required to match the signature
-     * @param expiry The time at which to expire the signature
-     * @param v The recovery byte of the signature
-     * @param r Half of the ECDSA signature pair
-     * @param s Half of the ECDSA signature pair
-     */
-    function delegateBySig(address delegatee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s) public {
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
-        bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "FXS::delegateBySig: invalid signature");
-        require(nonce == nonces[signatory]++, "FXS::delegateBySig: invalid nonce");
-        require(now <= expiry, "FXS::delegateBySig: signature expired");
-        return _delegate(signatory, delegatee);
-    }
 
     /**
      * @notice Gets the current votes balance for `account`
@@ -299,44 +211,10 @@ contract FRAXShares is ERC20Custom, AccessControl {
 
     /* ========== INTERNAL FUNCTIONS ========== */
 
-    function _delegate(address delegator, address delegatee) internal {
-        address currentDelegate = delegates[delegator];
-        uint96 delegatorBalance = uint96(_balances[delegator]);
-        delegates[delegator] = delegatee;
-
-        emit DelegateChanged(delegator, currentDelegate, delegatee);
-
-        _moveDelegates(currentDelegate, delegatee, delegatorBalance);
-    }
-
-    function _transferTokens(address src, address dst, uint96 amount) internal {
-        require(src != address(0), "FXS::_transferTokens: cannot transfer from the zero address");
-        require(dst != address(0), "FXS::_transferTokens: cannot transfer to the zero address");
-
-        uint96 src_balance = uint96(_balances[src]);
-        uint96 dst_balance = uint96(_balances[dst]);
-
-        _balances[src] = uint256(sub96(src_balance, amount, "FXS::_transferTokens: transfer amount exceeds balance"));
-        _balances[dst] = uint256(add96(dst_balance, amount, "FXS::_transferTokens: transfer amount overflows"));
-        emit Transfer(src, dst, amount);
-
-        // Check for empty delegates and set to the addresses themselves if empty
-        if (delegates[src] == address(0)){
-            _delegate(src, src);
-        }
-        else if (delegates[dst] == address(0)){
-            _delegate(dst, dst);
-        }
-
-        _moveDelegates(delegates[src], delegates[dst], amount);
-    }
-
     // From compound's _moveDelegates
     // Keep track of votes. "Delegates" is a misnomer here
-    function _moveDelegates(address srcRep, address dstRep, uint96 amount) internal {
-        if (trackingVotes && srcRep != dstRep && amount > 0) {
-
-            // Remove the votes from the source
+    function trackVotes(address srcRep, address dstRep, uint96 amount) internal {
+        if (srcRep != dstRep && amount > 0) {
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];
                 uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
@@ -344,7 +222,6 @@ contract FRAXShares is ERC20Custom, AccessControl {
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
-            // Give the votes to the destination
             if (dstRep != address(0)) {
                 uint32 dstRepNum = numCheckpoints[dstRep];
                 uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
@@ -354,17 +231,17 @@ contract FRAXShares is ERC20Custom, AccessControl {
         }
     }
 
-    function _writeCheckpoint(address delegatee, uint32 nCheckpoints, uint96 oldVotes, uint96 newVotes) internal {
+    function _writeCheckpoint(address voter, uint32 nCheckpoints, uint96 oldVotes, uint96 newVotes) internal {
       uint32 blockNumber = safe32(block.number, "FXS::_writeCheckpoint: block number exceeds 32 bits");
 
-      if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
-          checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
+      if (nCheckpoints > 0 && checkpoints[voter][nCheckpoints - 1].fromBlock == blockNumber) {
+          checkpoints[voter][nCheckpoints - 1].votes = newVotes;
       } else {
-          checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
-          numCheckpoints[delegatee] = nCheckpoints + 1;
+          checkpoints[voter][nCheckpoints] = Checkpoint(blockNumber, newVotes);
+          numCheckpoints[voter] = nCheckpoints + 1;
       }
 
-      emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
+      emit VoterVotesChanged(voter, oldVotes, newVotes);
     }
 
     function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
