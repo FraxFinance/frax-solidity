@@ -33,7 +33,6 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     // Constant for various precisions
     uint256 private constant PRICE_PRECISION = 1e6;
     uint256 private constant MULTIPLIER_BASE = 1e6;
-    uint256 private constant POOL_WEIGHT_BASE = 1e6;
 
     // Max reward per second
     uint256 public rewardRate;
@@ -98,7 +97,7 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
         timelock_address = _timelock_address;
         pool_weight = _pool_weight;
         rewardRate = 380517503805175038; // (uint256(12000000e18)).div(365 * 86400); // Base emission rate of 12M FXS over the first year
-        rewardRate = rewardRate.mul(pool_weight).div(POOL_WEIGHT_BASE);
+        rewardRate = rewardRate.mul(pool_weight).div(1e6);
         unlockedStakes = false;
     }
 
@@ -363,11 +362,8 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
 */
     // Added to support recovering LP Rewards from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
-        // Cannot recover the staking token or the rewards token
-        require(
-            tokenAddress != address(stakingToken),
-            "Admin cannot withdraw the staking token from the contract"
-        );
+        // Admin cannot withdraw the staking token from the contract
+        require(tokenAddress != address(stakingToken));
         ERC20(tokenAddress).transfer(owner_address, tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
