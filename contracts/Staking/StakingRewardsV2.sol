@@ -43,7 +43,7 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
 
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored = 0;
-    uint256 public pool_weight; // This staking pool's percentage of the total FXS being distributed by all pools, 6 decimals of precision
+    uint256 private pool_weight; // This staking pool's percentage of the total FXS being distributed by all pools, 6 decimals of precision
 
     address public owner_address;
     address public timelock_address; // Governance timelock address
@@ -421,6 +421,11 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
 
     function setRewardRate(uint256 _new_rate) external onlyByOwnerOrGovernance {
         rewardRate = _new_rate;
+    }
+
+    function setOwnerAndTimelock(address _new_owner, address _new_timelock) external onlyByOwnerOrGovernance {
+        owner_address = _new_owner;
+        timelock_address = _new_timelock;
     }
 
     /* ========== MODIFIERS ========== */
