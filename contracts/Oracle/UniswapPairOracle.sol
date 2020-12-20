@@ -66,7 +66,7 @@ contract UniswapPairOracle {
         CONSULT_LENIENCY = _consult_leniency;
     }
 
-    // Iterate through all frax pools and calculate all value of collateral in all pools globally 
+    // Check if update() can be called instead of wasting gas calling it
     function canUpdate() public view returns (bool) {
         uint32 blockTimestamp = UniswapV2OracleLibrary.currentBlockTimestamp();
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // Overflow is desired
