@@ -66,6 +66,13 @@ contract UniswapPairOracle {
         CONSULT_LENIENCY = _consult_leniency;
     }
 
+    // Iterate through all frax pools and calculate all value of collateral in all pools globally 
+    function canUpdate() public view returns (bool) {
+        uint32 blockTimestamp = UniswapV2OracleLibrary.currentBlockTimestamp();
+        uint32 timeElapsed = blockTimestamp - blockTimestampLast; // Overflow is desired
+        return (timeElapsed >= PERIOD);
+    }
+
     function update() external {
         (uint price0Cumulative, uint price1Cumulative, uint32 blockTimestamp) =
             UniswapV2OracleLibrary.currentCumulativePrices(address(pair));
