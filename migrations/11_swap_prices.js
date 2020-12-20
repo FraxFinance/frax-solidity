@@ -346,16 +346,16 @@ module.exports = async function(deployer, network, accounts) {
 		oracle_instance_USDT_WETH.update({ from: COLLATERAL_FRAX_AND_FXS_OWNER })
 	]);
 
-	console.log(chalk.yellow('===== SET THE PERIOD TO BACK TO 24 HOURS ====='));
+	console.log(chalk.yellow('===== SET THE PERIOD TO BACK TO 1 HOUR ====='));
 	await Promise.all([
-		oracle_instance_FRAX_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FRAX_USDC.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FRAX_USDT.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FRAX_FXS.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FXS_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FXS_USDC.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FXS_USDT.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_USDC_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_USDT_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_WETH.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_USDC.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_USDT.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_FXS.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_WETH.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_USDC.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_USDT.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_USDC_WETH.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_USDT_WETH.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
 	]);
 };

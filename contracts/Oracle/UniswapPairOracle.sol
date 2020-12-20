@@ -17,6 +17,7 @@ contract UniswapPairOracle {
     address timelock_address;
 
     uint public PERIOD = 3600; // 1 hour TWAP (time-weighted average price)
+    uint public CONSULT_LENIENCY = 120; // Used for being able to consult past the period end
 
     IUniswapV2Pair public immutable pair;
     address public immutable token0;
@@ -61,6 +62,10 @@ contract UniswapPairOracle {
         PERIOD = _period;
     }
 
+    function setConsultLeniency(uint _consult_leniency) external onlyByOwnerOrGovernance {
+        CONSULT_LENIENCY = _consult_leniency;
+    }
+
     function update() external {
         (uint price0Cumulative, uint price1Cumulative, uint32 blockTimestamp) =
             UniswapV2OracleLibrary.currentCumulativePrices(address(pair));
@@ -81,6 +86,12 @@ contract UniswapPairOracle {
 
     // Note this will always return 0 before update has been called successfully for the first time.
     function consult(address token, uint amountIn) external view returns (uint amountOut) {
+        uint32 blockTimestamp = UniswapV2OracleLibrary.currentBlockTimestamp();
+        uint32 timeElapsed = blockTimestamp - blockTimestampLast; // Overflow is desired
+
+        // Ensure that the price is not stale
+        require(timeElapsed < (PERIOD + CONSULT_LENIENCY), 'UniswapPairOracle: PRICE_IS_STALE_NEED_TO_CALL_UPDATE');
+
         if (token == token0) {
             amountOut = price0Average.mul(amountIn).decode144();
         } else {
