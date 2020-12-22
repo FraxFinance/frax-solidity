@@ -38,12 +38,14 @@ module.exports = {
 		mainnet: {
 			provider: providerFactory(),
 			network_id: 1,
-			gas: 8000000      // Make sure this gas allocation isn't over 4M, which is the max
+			gas: 8000000,
+			gasPrice: 115000000000, // 115 gwei,
 		},
 		ropsten: {
 			provider: providerFactory(),
 			network_id: 3,
-			gas: 8000000      // Make sure this gas allocation isn't over 4M, which is the max
+			gas: 8000000,      // Make sure this gas allocation isn't over 4M, which is the max
+			gasPrice: 30000000000, // 30 gwei,
 		},
 		rinkeby: {
 			provider: providerFactory(),
@@ -54,9 +56,11 @@ module.exports = {
 	compilers: {
 		solc: {
 			version: "0.6.11",
-			optimizer: {
-				enabled: true,
-				runs: 200
+			settings: {
+				optimizer: {
+					enabled: true,
+					runs: 100000
+				}
 			}
 		}
 	},

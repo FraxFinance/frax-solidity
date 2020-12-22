@@ -191,14 +191,14 @@ module.exports = async function(deployer, network, accounts) {
 		routerInstance = await UniswapV2Router02.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.router); 
 		uniswapFactoryInstance = await UniswapV2Factory.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.factory); 
 		swapToPriceInstance = await SwapToPrice.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pricing.swap_to_price); 
-		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FRAX/WETH"]);
-		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FRAX/USDC"]);
-		stakingInstance_FRAX_FXS = await StakingRewards_FRAX_FXS.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FRAX/FXS"]);
-		stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FXS/WETH"]);
-		pair_instance_FRAX_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].stake_tokens["Uniswap FRAX/WETH"]);
-		pair_instance_FRAX_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].stake_tokens["Uniswap FRAX/USDC"]);
-		pair_instance_FRAX_FXS = await UniswapV2Pair.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].stake_tokens["Uniswap FRAX/FXS"]);
-		pair_instance_FXS_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].stake_tokens["Uniswap FXS/WETH"]);
+		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FRAX/WETH"]);
+		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FRAX/USDC"]);
+		stakingInstance_FRAX_FXS = await StakingRewards_FRAX_FXS.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FRAX/FXS"]);
+		stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FXS/WETH"]);
+		pair_instance_FRAX_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pair_tokens["Uniswap FRAX/WETH"]);
+		pair_instance_FRAX_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pair_tokens["Uniswap FRAX/USDC"]);
+		pair_instance_FRAX_FXS = await UniswapV2Pair.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pair_tokens["Uniswap FRAX/FXS"]);
+		pair_instance_FXS_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pair_tokens["Uniswap FXS/WETH"]);
 	}
 
 	// CONTINUE MAIN DEPLOY CODE HERE
@@ -527,13 +527,13 @@ module.exports = async function(deployer, network, accounts) {
 				UniswapV2Library: UniswapV2Library.address,
 				FraxPoolLibrary: FraxPoolLibrary.address,
 			},
-			stake_tokens: {
+			pair_tokens: {
 				'Uniswap FRAX/WETH': pair_instance_FRAX_WETH.address,
 				'Uniswap FRAX/USDC': pair_instance_FRAX_USDC.address,
 				'Uniswap FRAX/FXS': pair_instance_FRAX_FXS.address,
 				'Uniswap FXS/WETH': pair_instance_FXS_WETH.address,
 			},
-			staking_contracts_for_tokens: {
+			staking_contracts: {
 				'Uniswap FRAX/WETH': stakingInstance_FRAX_WETH.address,
 				'Uniswap FRAX/USDC': stakingInstance_FRAX_USDC.address,
 				'Uniswap FRAX/FXS': stakingInstance_FRAX_FXS.address,

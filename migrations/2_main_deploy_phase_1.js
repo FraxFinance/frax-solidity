@@ -296,13 +296,13 @@ module.exports = async function(deployer, network, accounts) {
 				UniswapV2Library: UniswapV2Library.address,
 				FraxPoolLibrary: FraxPoolLibrary.address,
 			},
-			stake_tokens: {
+			pair_tokens: {
 				'Uniswap FRAX/WETH': "NOT_DEPLOYED_YET",
 				'Uniswap FRAX/USDC': "NOT_DEPLOYED_YET",
 				'Uniswap FRAX/FXS': "NOT_DEPLOYED_YET",
 				'Uniswap FXS/WETH': "NOT_DEPLOYED_YET",
 			},
-			staking_contracts_for_tokens: {
+			staking_contracts: {
 				'Uniswap FRAX/WETH': "NOT_DEPLOYED_YET",
 				'Uniswap FRAX/USDC': "NOT_DEPLOYED_YET",
 				'Uniswap FRAX/FXS': "NOT_DEPLOYED_YET",
