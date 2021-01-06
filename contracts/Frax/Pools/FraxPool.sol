@@ -33,11 +33,13 @@ contract FraxPool is AccessControl {
     FRAXStablecoin private FRAX;
     // UniswapPairOracle private oracle;
     UniswapPairOracle private collatEthOracle;
-    address private collat_eth_oracle_address;
+    address public collat_eth_oracle_address;
     address private weth_address;
 
-    uint256 private minting_fee;
-    uint256 private redemption_fee;
+    uint256 public minting_fee;
+    uint256 public redemption_fee;
+    uint256 public buyback_fee;
+    uint256 public recollat_fee;
 
     mapping (address => uint256) public redeemFXSBalances;
     mapping (address => uint256) public redeemCollateralBalances;
@@ -51,7 +53,7 @@ contract FraxPool is AccessControl {
     uint256 private constant COLLATERAL_RATIO_MAX = 1e6;
 
     // Number of decimals needed to get to 18
-    uint256 private missing_decimals;
+    uint256 private immutable missing_decimals;
     
     // Pool_ceiling is the total units of collateral that a pool contract can hold
     uint256 public pool_ceiling = 0;
@@ -73,11 +75,11 @@ contract FraxPool is AccessControl {
     bytes32 private constant COLLATERAL_PRICE_PAUSER = keccak256("COLLATERAL_PRICE_PAUSER");
     
     // AccessControl state variables
-    bool private mintPaused = false;
-    bool private redeemPaused = false;
-    bool private recollateralizePaused = false;
-    bool private buyBackPaused = false;
-    bool private collateralPricePaused = false;
+    bool public mintPaused = false;
+    bool public redeemPaused = false;
+    bool public recollateralizePaused = false;
+    bool public buyBackPaused = false;
+    bool public collateralPricePaused = false;
 
     /* ========== MODIFIERS ========== */
 
@@ -129,11 +131,15 @@ contract FraxPool is AccessControl {
 
     // Returns dollar value of collateral held in this Frax pool
     function collatDollarBalance() public view returns (uint256) {
-        uint256 eth_usd_price = FRAX.eth_usd_price();
-        uint256 eth_collat_price = collatEthOracle.consult(weth_address, (PRICE_PRECISION * (10 ** missing_decimals)));
+        if(collateralPricePaused == true){
+            return (collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral)).mul(10 ** missing_decimals).mul(pausedPrice).div(PRICE_PRECISION);
+        } else {
+            uint256 eth_usd_price = FRAX.eth_usd_price();
+            uint256 eth_collat_price = collatEthOracle.consult(weth_address, (PRICE_PRECISION * (10 ** missing_decimals)));
 
-        uint256 collat_usd_price = eth_usd_price.mul(PRICE_PRECISION).div(eth_collat_price);
-        return (collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral)).mul(10 ** missing_decimals).mul(collat_usd_price).div(PRICE_PRECISION); //.mul(getCollateralPrice()).div(1e6);    
+            uint256 collat_usd_price = eth_usd_price.mul(PRICE_PRECISION).div(eth_collat_price);
+            return (collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral)).mul(10 ** missing_decimals).mul(collat_usd_price).div(PRICE_PRECISION); //.mul(getCollateralPrice()).div(1e6);    
+        }
     }
 
     // Returns the value of excess collateral held in this Frax pool, compared to what is needed to maintain the global collateral ratio
@@ -169,18 +175,18 @@ contract FraxPool is AccessControl {
     // We separate out the 1t1, fractional and algorithmic minting functions for gas efficiency 
     function mint1t1FRAX(uint256 collateral_amount, uint256 FRAX_out_min) external notMintPaused {
         uint256 collateral_amount_d18 = collateral_amount * (10 ** missing_decimals);
-        uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
 
-        require(global_collateral_ratio >= COLLATERAL_RATIO_MAX, "Collateral ratio must be >= 1");
+        require(FRAX.global_collateral_ratio() >= COLLATERAL_RATIO_MAX, "Collateral ratio must be >= 1");
         require((collateral_token.balanceOf(address(this))).sub(unclaimedPoolCollateral).add(collateral_amount) <= pool_ceiling, "[Pool's Closed]: Ceiling reached");
         
         (uint256 frax_amount_d18) = FraxPoolLibrary.calcMint1t1FRAX(
             getCollateralPrice(),
-            minting_fee,
             collateral_amount_d18
         ); //1 FRAX for each $1 worth of collateral
 
+        frax_amount_d18 = (frax_amount_d18.mul(uint(1e6).sub(minting_fee))).div(1e6); //remove precision at the end
         require(FRAX_out_min <= frax_amount_d18, "Slippage limit reached");
+
         collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
         FRAX.pool_mint(msg.sender, frax_amount_d18);
     }
@@ -188,16 +194,16 @@ contract FraxPool is AccessControl {
     // 0% collateral-backed
     function mintAlgorithmicFRAX(uint256 fxs_amount_d18, uint256 FRAX_out_min) external notMintPaused {
         uint256 fxs_price = FRAX.fxs_price();
-        uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
-        require(global_collateral_ratio == 0, "Collateral ratio must be 0");
+        require(FRAX.global_collateral_ratio() == 0, "Collateral ratio must be 0");
         
         (uint256 frax_amount_d18) = FraxPoolLibrary.calcMintAlgorithmicFRAX(
-            minting_fee, 
             fxs_price, // X FXS / 1 USD
             fxs_amount_d18
         );
 
+        frax_amount_d18 = (frax_amount_d18.mul(uint(1e6).sub(minting_fee))).div(1e6);
         require(FRAX_out_min <= frax_amount_d18, "Slippage limit reached");
+
         FXS.pool_burn_from(msg.sender, fxs_amount_d18);
         FRAX.pool_mint(msg.sender, frax_amount_d18);
     }
@@ -205,7 +211,6 @@ contract FraxPool is AccessControl {
     // Will fail if fully collateralized or fully algorithmic
     // > 0% and < 100% collateral-backed
     function mintFractionalFRAX(uint256 collateral_amount, uint256 fxs_amount, uint256 FRAX_out_min) external notMintPaused {
-        uint256 frax_price = FRAX.frax_price();
         uint256 fxs_price = FRAX.fxs_price();
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
 
@@ -214,21 +219,19 @@ contract FraxPool is AccessControl {
 
         uint256 collateral_amount_d18 = collateral_amount * (10 ** missing_decimals);
         FraxPoolLibrary.MintFF_Params memory input_params = FraxPoolLibrary.MintFF_Params(
-            minting_fee, 
             fxs_price,
-            frax_price,
             getCollateralPrice(),
             fxs_amount,
             collateral_amount_d18,
-            (collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral)),
-            pool_ceiling,
             global_collateral_ratio
         );
 
         (uint256 mint_amount, uint256 fxs_needed) = FraxPoolLibrary.calcMintFractionalFRAX(input_params);
 
+        mint_amount = (mint_amount.mul(uint(1e6).sub(minting_fee))).div(1e6);
         require(FRAX_out_min <= mint_amount, "Slippage limit reached");
         require(fxs_needed <= fxs_amount, "Not enough FXS inputted");
+
         FXS.pool_burn_from(msg.sender, fxs_needed);
         collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
         FRAX.pool_mint(msg.sender, mint_amount);
@@ -236,24 +239,22 @@ contract FraxPool is AccessControl {
 
     // Redeem collateral. 100% collateral-backed
     function redeem1t1FRAX(uint256 FRAX_amount, uint256 COLLATERAL_out_min) external notRedeemPaused {
-        uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
-        require(global_collateral_ratio == COLLATERAL_RATIO_MAX, "Collateral ratio must be == 1");
+        require(FRAX.global_collateral_ratio() == COLLATERAL_RATIO_MAX, "Collateral ratio must be == 1");
 
         // Need to adjust for decimals of collateral
         uint256 FRAX_amount_precision = FRAX_amount.div(10 ** missing_decimals);
         (uint256 collateral_needed) = FraxPoolLibrary.calcRedeem1t1FRAX(
             getCollateralPrice(),
-            FRAX_amount_precision,
-            redemption_fee
+            FRAX_amount_precision
         );
 
+        collateral_needed = (collateral_needed.mul(uint(1e6).sub(redemption_fee))).div(1e6);
         require(collateral_needed <= collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral), "Not enough collateral in pool");
+        require(COLLATERAL_out_min <= collateral_needed, "Slippage limit reached");
 
         redeemCollateralBalances[msg.sender] = redeemCollateralBalances[msg.sender].add(collateral_needed);
         unclaimedPoolCollateral = unclaimedPoolCollateral.add(collateral_needed);
         lastRedeemed[msg.sender] = block.number;
-
-        require(COLLATERAL_out_min <= collateral_needed, "Slippage limit reached");
         
         // Move all external functions to the end
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
@@ -268,7 +269,8 @@ contract FraxPool is AccessControl {
         require(global_collateral_ratio < COLLATERAL_RATIO_MAX && global_collateral_ratio > 0, "Collateral ratio needs to be between .000001 and .999999");
         uint256 col_price_usd = getCollateralPrice();
 
-        uint256 FRAX_amount_post_fee = FRAX_amount.sub((FRAX_amount.mul(redemption_fee)).div(PRICE_PRECISION));
+        uint256 FRAX_amount_post_fee = (FRAX_amount.mul(uint(1e6).sub(redemption_fee))).div(PRICE_PRECISION);
+
         uint256 fxs_dollar_value_d18 = FRAX_amount_post_fee.sub(FRAX_amount_post_fee.mul(global_collateral_ratio).div(PRICE_PRECISION));
         uint256 fxs_amount = fxs_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price);
 
@@ -277,6 +279,11 @@ contract FraxPool is AccessControl {
         uint256 collateral_dollar_value = FRAX_amount_precision.mul(global_collateral_ratio).div(PRICE_PRECISION);
         uint256 collateral_amount = collateral_dollar_value.mul(PRICE_PRECISION).div(col_price_usd);
 
+
+        require(collateral_amount <= collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral), "Not enough collateral in pool");
+        require(COLLATERAL_out_min <= collateral_amount, "Slippage limit reached [collateral]");
+        require(FXS_out_min <= fxs_amount, "Slippage limit reached [FXS]");
+
         redeemCollateralBalances[msg.sender] = redeemCollateralBalances[msg.sender].add(collateral_amount);
         unclaimedPoolCollateral = unclaimedPoolCollateral.add(collateral_amount);
 
@@ -284,10 +291,6 @@ contract FraxPool is AccessControl {
         unclaimedPoolFXS = unclaimedPoolFXS.add(fxs_amount);
 
         lastRedeemed[msg.sender] = block.number;
-
-        require(collateral_amount <= collateral_token.balanceOf(address(this)).sub(unclaimedPoolCollateral), "Not enough collateral in pool");
-        require(COLLATERAL_out_min <= collateral_amount, "Slippage limit reached [collateral]");
-        require(FXS_out_min <= fxs_amount, "Slippage limit reached [FXS]");
         
         // Move all external functions to the end
         FRAX.pool_burn_from(msg.sender, FRAX_amount);
@@ -301,7 +304,8 @@ contract FraxPool is AccessControl {
 
         require(global_collateral_ratio == 0, "Collateral ratio must be 0"); 
         uint256 fxs_dollar_value_d18 = FRAX_amount;
-        fxs_dollar_value_d18 = fxs_dollar_value_d18.sub((fxs_dollar_value_d18.mul(redemption_fee)).div(PRICE_PRECISION)); //apply redemption fee
+
+        fxs_dollar_value_d18 = (fxs_dollar_value_d18.mul(uint(1e6).sub(redemption_fee))).div(PRICE_PRECISION); //apply fees
 
         uint256 fxs_amount = fxs_dollar_value_d18.mul(PRICE_PRECISION).div(fxs_price);
         
@@ -363,7 +367,6 @@ contract FraxPool is AccessControl {
         uint256 frax_total_supply = FRAX.totalSupply();
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
         uint256 global_collat_value = FRAX.globalCollateralValue();
-        
         (uint256 collateral_units, uint256 amount_to_recollat) = FraxPoolLibrary.calcRecollateralizeFRAXInner(
             collateral_amount_d18,
             getCollateralPrice(),
@@ -374,7 +377,7 @@ contract FraxPool is AccessControl {
 
         uint256 collateral_units_precision = collateral_units.div(10 ** missing_decimals);
 
-        uint256 fxs_paid_back = amount_to_recollat.mul(uint(1e6).add(bonus_rate)).div(fxs_price);
+        uint256 fxs_paid_back = amount_to_recollat.mul(uint(1e6).add(bonus_rate).sub(recollat_fee)).div(fxs_price);
 
         require(FXS_out_min <= fxs_paid_back, "Slippage limit reached");
         collateral_token.transferFrom(msg.sender, address(this), collateral_units_precision);
@@ -387,7 +390,7 @@ contract FraxPool is AccessControl {
     function buyBackFXS(uint256 FXS_amount, uint256 COLLATERAL_out_min) external {
         require(buyBackPaused == false, "Buyback is paused");
         uint256 fxs_price = FRAX.fxs_price();
-        
+    
         FraxPoolLibrary.BuybackFXS_Params memory input_params = FraxPoolLibrary.BuybackFXS_Params(
             availableExcessCollatDV(),
             fxs_price,
@@ -395,7 +398,7 @@ contract FraxPool is AccessControl {
             FXS_amount
         );
 
-        (uint256 collateral_equivalent_d18) = FraxPoolLibrary.calcBuyBackFXS(input_params);
+        (uint256 collateral_equivalent_d18) = (FraxPoolLibrary.calcBuyBackFXS(input_params)).mul(uint(1e6).sub(buyback_fee)).div(1e6);
         uint256 collateral_precision = collateral_equivalent_d18.div(10 ** missing_decimals);
 
         require(COLLATERAL_out_min <= collateral_precision, "Slippage limit reached");
@@ -410,7 +413,7 @@ contract FraxPool is AccessControl {
         require(hasRole(MINT_PAUSER, msg.sender));
         mintPaused = !mintPaused;
     }
-    
+
     function toggleRedeeming() external {
         require(hasRole(REDEEM_PAUSER, msg.sender));
         redeemPaused = !redeemPaused;
@@ -426,11 +429,11 @@ contract FraxPool is AccessControl {
         buyBackPaused = !buyBackPaused;
     }
 
-    function toggleCollateralPrice() external {
+    function toggleCollateralPrice(uint256 _new_price) external {
         require(hasRole(COLLATERAL_PRICE_PAUSER, msg.sender));
         // If pausing, set paused price; else if unpausing, clear pausedPrice
         if(collateralPricePaused == false){
-            pausedPrice = getCollateralPrice();
+            pausedPrice = _new_price;
         } else {
             pausedPrice = 0;
         }
@@ -438,12 +441,14 @@ contract FraxPool is AccessControl {
     }
 
     // Combined into one function due to 24KiB contract memory limit
-    function setPoolParameters(uint256 new_ceiling, uint256 new_bonus_rate, uint256 new_redemption_delay) external onlyByOwnerOrGovernance {
+    function setPoolParameters(uint256 new_ceiling, uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee) external onlyByOwnerOrGovernance {
         pool_ceiling = new_ceiling;
         bonus_rate = new_bonus_rate;
         redemption_delay = new_redemption_delay;
-        minting_fee = FRAX.minting_fee();
-        redemption_fee = FRAX.redemption_fee();
+        minting_fee = new_mint_fee;
+        redemption_fee = new_redeem_fee;
+        buyback_fee = new_buyback_fee;
+        recollat_fee = new_recollat_fee;
     }
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
