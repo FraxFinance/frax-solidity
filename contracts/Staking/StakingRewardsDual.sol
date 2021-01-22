@@ -19,14 +19,15 @@ import "./IStakingRewards.sol";
 import "./RewardsDistributionRecipient.sol";
 import "./Pausable.sol";
 
-contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, ReentrancyGuard, Pausable {
+contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, ReentrancyGuard, Pausable {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
     /* ========== STATE VARIABLES ========== */
 
     FRAXStablecoin private FRAX;
-    ERC20 public rewardsToken;
+    ERC20 public rewardsToken0;
+    ERC20 public rewardsToken1;
     ERC20 public stakingToken;
     uint256 public periodFinish;
 
@@ -35,14 +36,17 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     uint256 private constant MULTIPLIER_BASE = 1e6;
 
     // Max reward per second
-    uint256 public rewardRate;
+    uint256 public rewardRate0;
+    uint256 public rewardRate1;
 
     // uint256 public rewardsDuration = 86400 hours;
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     uint256 public lastUpdateTime;
-    uint256 public rewardPerTokenStored = 0;
-    uint256 private pool_weight; // This staking pool's percentage of the total FXS being distributed by all pools, 6 decimals of precision
+    uint256 public rewardPerTokenStored0 = 0;
+    uint256 public rewardPerTokenStored1 = 0;
+    uint256 public pool_weight0; // This staking pool's percentage of the total FXS being distributed by all pools, 6 decimals of precision
+    uint256 public pool_weight1; // This staking pool's percentage of the total TOKEN 2 being distributed by all pools, 6 decimals of precision
 
     address public owner_address;
     address public timelock_address; // Governance timelock address
@@ -54,8 +58,10 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
 
     uint256 public cr_boost_max_multiplier = 3000000; // 6 decimals of precision. 1x = 1000000
 
-    mapping(address => uint256) public userRewardPerTokenPaid;
-    mapping(address => uint256) public rewards;
+    mapping(address => uint256) public userRewardPerTokenPaid0;
+    mapping(address => uint256) public userRewardPerTokenPaid1;
+    mapping(address => uint256) public rewards0;
+    mapping(address => uint256) public rewards1;
 
     uint256 private _staking_token_supply = 0;
     uint256 private _staking_token_boosted_supply = 0;
@@ -82,22 +88,28 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     constructor(
         address _owner,
         address _rewardsDistribution,
-        address _rewardsToken,
+        address _rewardsToken0,
+        address _rewardsToken1,
         address _stakingToken,
         address _frax_address,
         address _timelock_address,
-        uint256 _pool_weight
+        uint256 _pool_weight0,
+        uint256 _pool_weight1
     ) public Owned(_owner){
         owner_address = _owner;
-        rewardsToken = ERC20(_rewardsToken);
+        rewardsToken0 = ERC20(_rewardsToken0);
+        rewardsToken1 = ERC20(_rewardsToken1);
         stakingToken = ERC20(_stakingToken);
         FRAX = FRAXStablecoin(_frax_address);
         rewardsDistribution = _rewardsDistribution;
         lastUpdateTime = block.timestamp;
         timelock_address = _timelock_address;
-        pool_weight = _pool_weight;
-        rewardRate = 380517503805175038; // (uint256(12000000e18)).div(365 * 86400); // Base emission rate of 12M FXS over the first year
-        rewardRate = rewardRate.mul(pool_weight).div(1e6);
+        pool_weight0 = _pool_weight0;
+        pool_weight1 = _pool_weight1;
+        rewardRate0 = 380517503805175038; // (uint256(12000000e18)).div(365 * 86400); // Base emission rate of 12M FXS over the first year
+        rewardRate0 = rewardRate0.mul(pool_weight0).div(1e6);
+        rewardRate1 = 826719576719576; // (uint256(1000e18)).div(1209600); // Base emission rate of 1000 SUSHI over two weeks
+        rewardRate1 = rewardRate1.mul(pool_weight1).div(1e6);
         unlockedStakes = false;
     }
 
@@ -151,36 +163,48 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
         return stakingToken.decimals();
     }
 
-    function rewardsFor(address account) external view returns (uint256) {
+    function rewardsFor(address account) external view returns (uint256, uint256) {
         // You may have use earned() instead, because of the order in which the contract executes 
-        return rewards[account];
+        return (rewards0[account], rewards1[account]);
     }
 
     function lastTimeRewardApplicable() public override view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
-    function rewardPerToken() public override view returns (uint256) {
+    function rewardPerToken() public override view returns (uint256, uint256) {
         if (_staking_token_supply == 0) {
-            return rewardPerTokenStored;
+            return (rewardPerTokenStored0, rewardPerTokenStored1);
         }
         else {
-            return rewardPerTokenStored.add(
-                lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
+            return (
+                rewardPerTokenStored0.add(
+                    lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate0).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
+                ),
+                rewardPerTokenStored1.add(
+                    lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate1).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
+                )
             );
         }
     }
 
-    function earned(address account) public override view returns (uint256) {
-        return _boosted_balances[account].mul(rewardPerToken().sub(userRewardPerTokenPaid[account])).div(1e18).add(rewards[account]);
+    function earned(address account) public override view returns (uint256, uint256) {
+        (uint256 reward0, uint256 reward1) = rewardPerToken();
+        return (
+            _boosted_balances[account].mul(reward0.sub(userRewardPerTokenPaid0[account])).div(1e18).add(rewards0[account]),
+            _boosted_balances[account].mul(reward1.sub(userRewardPerTokenPaid1[account])).div(1e18).add(rewards1[account])
+        );
     }
 
     // function earned(address account) public override view returns (uint256) {
     //     return _balances[account].mul(rewardPerToken().sub(userRewardPerTokenPaid[account])).add(rewards[account]);
     // }
 
-    function getRewardForDuration() external override view returns (uint256) {
-        return rewardRate.mul(rewardsDuration).mul(crBoostMultiplier()).div(PRICE_PRECISION);
+    function getRewardForDuration() external override view returns (uint256, uint256) {
+        return (
+            rewardRate0.mul(rewardsDuration).mul(crBoostMultiplier()).div(PRICE_PRECISION),
+            rewardRate1.mul(rewardsDuration).mul(crBoostMultiplier()).div(PRICE_PRECISION)
+        );
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -208,6 +232,8 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
         require(secs > 0, "Cannot wait for a negative number");
         require(greylist[msg.sender] == false, "address has been greylisted");
         require(secs >= locked_stake_min_time, StringHelpers.strConcat("Minimum stake time not met (", locked_stake_min_time_str, ")") );
+        require(secs <= locked_stake_time_for_max_multiplier, "You are trying to stake for too long");
+
 
         uint256 multiplier = stakingMultiplier(secs);
         uint256 boostedAmount = amount.mul(multiplier).div(PRICE_PRECISION);

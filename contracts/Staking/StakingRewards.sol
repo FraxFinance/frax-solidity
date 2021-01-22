@@ -42,7 +42,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored = 0;
-    uint256 private pool_weight; // This staking pool's percentage of the total FXS being distributed by all pools, 6 decimals of precision
+    uint256 public pool_weight; // This staking pool's percentage of the total FXS being distributed by all pools, 6 decimals of precision
 
     address public owner_address;
     address public timelock_address; // Governance timelock address
@@ -208,6 +208,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         require(secs > 0, "Cannot wait for a negative number");
         require(greylist[msg.sender] == false, "address has been greylisted");
         require(secs >= locked_stake_min_time, StringHelpers.strConcat("Minimum stake time not met (", locked_stake_min_time_str, ")") );
+        require(secs <= locked_stake_time_for_max_multiplier, "You are trying to stake for too long");
+
 
         uint256 multiplier = stakingMultiplier(secs);
         uint256 boostedAmount = amount.mul(multiplier).div(PRICE_PRECISION);
