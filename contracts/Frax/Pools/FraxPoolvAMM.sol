@@ -13,6 +13,11 @@ pragma experimental ABIEncoderV2;
 // =========================== FraxPoolvAMM ===========================
 // ====================================================================
 
+
+// TODO
+// 1) Have to call getVirtualReserves() on every update of the reserve, such that we can call _update with the averages of the reserve
+
+
 import "../../Math/Math.sol";
 import "../../Math/SafeMath.sol";
 import "../../FXS/FXS.sol";

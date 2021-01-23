@@ -2,6 +2,18 @@
 pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
 
+// ====================================================================
+// |     ______                   _______                             |
+// |    / _____________ __  __   / ____(_____  ____ _____  ________   |
+// |   / /_  / ___/ __ `| |/_/  / /_  / / __ \/ __ `/ __ \/ ___/ _ \  |
+// |  / __/ / /  / /_/ _>  <   / __/ / / / / / /_/ / / / / /__/  __/  |
+// | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
+// |                                                                  |
+// ====================================================================
+// ======================== StakingRewardsDual ========================
+// ====================================================================
+
+
 // Stolen with love from Synthetixio
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 
@@ -15,11 +27,11 @@ import "../Utils/ReentrancyGuard.sol";
 import "../Utils/StringHelpers.sol";
 
 // Inheritance
-import "./IStakingRewards.sol";
-import "./RewardsDistributionRecipient.sol";
+import "./IStakingRewardsDual.sol";
+import "./Owned.sol";
 import "./Pausable.sol";
 
-contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, ReentrancyGuard, Pausable {
+contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Pausable {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -73,6 +85,8 @@ contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, Re
 
     mapping(address => bool) public greylist;
 
+    bool public token1_rewards_on = true;
+
     bool public unlockedStakes; // Release lock stakes in case of system migration
 
     struct LockedStake {
@@ -87,7 +101,6 @@ contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, Re
 
     constructor(
         address _owner,
-        address _rewardsDistribution,
         address _rewardsToken0,
         address _rewardsToken1,
         address _stakingToken,
@@ -101,14 +114,19 @@ contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, Re
         rewardsToken1 = ERC20(_rewardsToken1);
         stakingToken = ERC20(_stakingToken);
         FRAX = FRAXStablecoin(_frax_address);
-        rewardsDistribution = _rewardsDistribution;
         lastUpdateTime = block.timestamp;
         timelock_address = _timelock_address;
         pool_weight0 = _pool_weight0;
         pool_weight1 = _pool_weight1;
-        rewardRate0 = 380517503805175038; // (uint256(12000000e18)).div(365 * 86400); // Base emission rate of 12M FXS over the first year
+
+        // First two weeks there will be no FXS emission
+        rewardRate0 = 0; // (uint256(1000000e18)).div(365 * 86400); // Base emission rate of 1M FXS over the first year
         rewardRate0 = rewardRate0.mul(pool_weight0).div(1e6);
-        rewardRate1 = 826719576719576; // (uint256(1000e18)).div(1209600); // Base emission rate of 1000 SUSHI over two weeks
+
+        // Base emission rate of 527 sushi per day = 192355 SUSHI / year. Half for each of the 2 pools
+        // Divide by locked_stake_max_multiplier and cr_boost_max_multiplier to account for worst case scenarios
+        // Multiply by 95% too to anticipate fluctuating rewards
+        rewardRate1 = (uint256(192355e18)).mul(1e12).mul(95).div(100).div(2).div(cr_boost_max_multiplier).div(locked_stake_max_multiplier).div(365 * 86400); // ; 
         rewardRate1 = rewardRate1.mul(pool_weight1).div(1e6);
         unlockedStakes = false;
     }
@@ -234,7 +252,6 @@ contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, Re
         require(secs >= locked_stake_min_time, StringHelpers.strConcat("Minimum stake time not met (", locked_stake_min_time_str, ")") );
         require(secs <= locked_stake_time_for_max_multiplier, "You are trying to stake for too long");
 
-
         uint256 multiplier = stakingMultiplier(secs);
         uint256 boostedAmount = amount.mul(multiplier).div(PRICE_PRECISION);
         lockedStakes[msg.sender].push(LockedStake(
@@ -312,22 +329,20 @@ contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, Re
     }
 
     function getReward() public override nonReentrant updateReward(msg.sender) {
-        uint256 reward = rewards[msg.sender];
-        if (reward > 0) {
-            rewards[msg.sender] = 0;
-            rewardsToken.transfer(msg.sender, reward);
-            emit RewardPaid(msg.sender, reward);
+        uint256 reward0 = rewards0[msg.sender];
+        uint256 reward1 = rewards1[msg.sender];
+        if (reward0 > 0) {
+            rewards0[msg.sender] = 0;
+            rewardsToken0.transfer(msg.sender, reward0);
+            emit RewardPaid(msg.sender, reward0, address(rewardsToken0));
+        }
+        if (reward1 > 0) {
+            rewards1[msg.sender] = 0;
+            rewardsToken1.transfer(msg.sender, reward1);
+            emit RewardPaid(msg.sender, reward1, address(rewardsToken1));
         }
     }
-/*
-    function exit() external override {
-        withdraw(_balances[msg.sender]);
 
-        // TODO: Add locked stakes too?
-
-        getReward();
-    }
-*/
     function renewIfApplicable() external {
         if (block.timestamp > periodFinish) {
             retroCatchUp();
@@ -344,49 +359,32 @@ contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, Re
         // very high values of rewardRate in the earned and rewardsPerToken functions;
         // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
         uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / rewardsDuration; // Floor division to the nearest period
-        uint balance = rewardsToken.balanceOf(address(this));
-        require(rewardRate.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance, "Not enough FXS available for rewards!");
-
+        uint balance0 = rewardsToken0.balanceOf(address(this));
+        uint balance1 = rewardsToken1.balanceOf(address(this));
+        require(rewardRate0.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance0, "Not enough FXS available for rewards!");
+        
+        
+        if (token1_rewards_on){
+            require(rewardRate1.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance1, "Not enough token1 available for rewards!");
+        }
+        
         // uint256 old_lastUpdateTime = lastUpdateTime;
         // uint256 new_lastUpdateTime = block.timestamp;
 
         // lastUpdateTime = periodFinish;
         periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(rewardsDuration));
 
-        rewardPerTokenStored = rewardPerToken();
+        (uint256 reward0, uint256 reward1) = rewardPerToken();
+        rewardPerTokenStored0 = reward0;
+        rewardPerTokenStored1 = reward1;
         lastUpdateTime = lastTimeRewardApplicable();
 
         emit RewardsPeriodRenewed(address(stakingToken));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
-/*
-    // This notifies people that the reward is being changed
-    function notifyRewardAmount(uint256 reward) external override onlyRewardsDistribution updateReward(address(0)) {
-        // Needed to make compiler happy
 
-        
-        // if (block.timestamp >= periodFinish) {
-        //     rewardRate = reward.mul(crBoostMultiplier()).div(rewardsDuration).div(PRICE_PRECISION);
-        // } else {
-        //     uint256 remaining = periodFinish.sub(block.timestamp);
-        //     uint256 leftover = remaining.mul(rewardRate);
-        //     rewardRate = reward.mul(crBoostMultiplier()).add(leftover).div(rewardsDuration).div(PRICE_PRECISION);
-        // }
-
-        // // Ensure the provided reward amount is not more than the balance in the contract.
-        // // This keeps the reward rate in the right range, preventing overflows due to
-        // // very high values of rewardRate in the earned and rewardsPerToken functions;
-        // // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
-        // uint balance = rewardsToken.balanceOf(address(this));
-        // require(rewardRate <= balance.div(rewardsDuration), "Provided reward too high");
-
-        // lastUpdateTime = block.timestamp;
-        // periodFinish = block.timestamp.add(rewardsDuration);
-        // emit RewardAdded(reward);
-    }
-*/
-    // Added to support recovering LP Rewards from other systems to be distributed to holders
+    // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Admin cannot withdraw the staking token from the contract
         require(tokenAddress != address(stakingToken));
@@ -441,8 +439,13 @@ contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, Re
         unlockedStakes = !unlockedStakes;
     }
 
-    function setRewardRate(uint256 _new_rate) external onlyByOwnerOrGovernance {
-        rewardRate = _new_rate;
+    function setRewardRates(uint256 _new_rate0, uint256 _new_rate1) external onlyByOwnerOrGovernance {
+        rewardRate0 = _new_rate0;
+        rewardRate1 = _new_rate1;
+    }
+
+    function toggleToken1Rewards() external onlyByOwnerOrGovernance {
+        token1_rewards_on = !token1_rewards_on;
     }
 
     function setOwnerAndTimelock(address _new_owner, address _new_timelock) external onlyByOwnerOrGovernance {
@@ -458,12 +461,17 @@ contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, Re
             retroCatchUp();
         }
         else {
-            rewardPerTokenStored = rewardPerToken();
+            (uint256 reward0, uint256 reward1) = rewardPerToken();
+            rewardPerTokenStored0 = reward0;
+            rewardPerTokenStored1 = reward1;
             lastUpdateTime = lastTimeRewardApplicable();
         }
         if (account != address(0)) {
-            rewards[account] = earned(account);
-            userRewardPerTokenPaid[account] = rewardPerTokenStored;
+            (uint256 earned0, uint256 earned1) = earned(account);
+            rewards0[account] = earned0;
+            rewards1[account] = earned1;
+            userRewardPerTokenPaid0[account] = rewardPerTokenStored0;
+            userRewardPerTokenPaid1[account] = rewardPerTokenStored1;
         }
         _;
     }
@@ -480,7 +488,7 @@ contract StakingRewardsDual is IStakingRewards, RewardsDistributionRecipient, Re
     event StakeLocked(address indexed user, uint256 amount, uint256 secs);
     event Withdrawn(address indexed user, uint256 amount);
     event WithdrawnLocked(address indexed user, uint256 amount, bytes32 kek_id);
-    event RewardPaid(address indexed user, uint256 reward);
+    event RewardPaid(address indexed user, uint256 reward, address token_address);
     event RewardsDurationUpdated(uint256 newDuration);
     event Recovered(address token, uint256 amount);
     event RewardsPeriodRenewed(address token);
