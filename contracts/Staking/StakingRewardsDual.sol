@@ -120,13 +120,15 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
         pool_weight1 = _pool_weight1;
 
         // First two weeks there will be no FXS emission
-        rewardRate0 = 0; // (uint256(1000000e18)).div(365 * 86400); // Base emission rate of 1M FXS over the first year
+        rewardRate0 = 0; // (uint256(1000000e18)).div(3).div(365 * 86400); // Base emission rate of 1M FXS over 3 years
         rewardRate0 = rewardRate0.mul(pool_weight0).div(1e6);
 
-        // Base emission rate of 527 sushi per day = 192355 SUSHI / year. Half for each of the 2 pools
-        // Divide by locked_stake_max_multiplier and cr_boost_max_multiplier to account for worst case scenarios
-        // Multiply by 95% too to anticipate fluctuating rewards
-        rewardRate1 = (uint256(192355e18)).mul(1e12).mul(95).div(100).div(2).div(cr_boost_max_multiplier).div(locked_stake_max_multiplier).div(365 * 86400); // ; 
+        // Base emission rate of 527 sushi per day = 192355 SUSHI / year. 
+        // 96177.5 SUSHI per pool, per year
+        // Half for each of the 2 pools
+        // Second token emission will be flat
+        // Remove 2% due to block timing variability (otherwise there might not be enough to collect). Can be governance collected, used to buy FXS, then burned later
+        rewardRate1 = (uint256(961775e17)).mul(98).div(100).div(365 * 86400); 
         rewardRate1 = rewardRate1.mul(pool_weight1).div(1e6);
         unlockedStakes = false;
     }
@@ -196,11 +198,14 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
         }
         else {
             return (
+                // Boosted emission
                 rewardPerTokenStored0.add(
                     lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate0).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
                 ),
+                // Flat emission
+                // Locked stakes will still get more weight with token1 rewards, but the CR boost will be canceled out for everyone
                 rewardPerTokenStored1.add(
-                    lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate1).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
+                    lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate1).mul(1e18).div(_staking_token_boosted_supply)
                 )
             );
         }
@@ -221,7 +226,7 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
     function getRewardForDuration() external override view returns (uint256, uint256) {
         return (
             rewardRate0.mul(rewardsDuration).mul(crBoostMultiplier()).div(PRICE_PRECISION),
-            rewardRate1.mul(rewardsDuration).mul(crBoostMultiplier()).div(PRICE_PRECISION)
+            rewardRate1.mul(rewardsDuration)
         );
     }
 
@@ -365,7 +370,7 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
         
         
         if (token1_rewards_on){
-            require(rewardRate1.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance1, "Not enough token1 available for rewards!");
+            require(rewardRate1.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance1, "Not enough token1 available for rewards!");
         }
         
         // uint256 old_lastUpdateTime = lastUpdateTime;
