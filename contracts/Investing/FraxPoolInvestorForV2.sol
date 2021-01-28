@@ -102,7 +102,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
     }
 
     // This is basically a trick to transfer the USDC from the FraxPool
-    // This contract is essentially marked as a 'pool' so it can call OnlyPools functions like pool_mint and pool_burn_from
+    // This contract is marked as a 'pool' so it can call OnlyPools functions like pool_mint and pool_burn_from
     // on the main FRAX contract
     // It mints FRAX from nothing, and redeems it on the target pool for collateral and FXS
     // The burn can be called separately later on
