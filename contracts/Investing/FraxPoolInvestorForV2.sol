@@ -21,7 +21,10 @@ import "../ERC20/ERC20.sol";
 import "../Oracle/UniswapPairOracle.sol";
 import "../Governance/AccessControl.sol";
 import "../Frax/Pools/FraxPool.sol";
-import "./yearn/IyUSDC_V1.sol";
+import "./yearn/IyUSDC_V2_Partial.sol";
+import "./aave/IAAVELendingPoolV2_Partial.sol";
+import "./bzx/IBZXFulcrum_Partial.sol";
+import "./compound/IcUSDC_Partial.sol";
 
 contract FraxPoolInvestorForV2 is AccessControl {
     using SafeMath for uint256;
@@ -32,12 +35,17 @@ contract FraxPoolInvestorForV2 is AccessControl {
     FRAXShares private FXS;
     FRAXStablecoin private FRAX;
     FraxPool private pool;
-    IyUSDC_V1 private yUSDC_V1 = IyUSDC_V1(0x597aD1e0c13Bfe8025993D9e79C69E1c0233522e);
+    IyUSDC_V2_Partial private yUSDC_V2 = IyUSDC_V2_Partial(0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9);
+    IAAVELendingPoolV2_Partial private aaveUSDC_V2 = IAAVELendingPoolV2_Partial(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
+    IBZXFulcrum_Partial private bzxFulcrum = IBZXFulcrum_Partial(0x32E4c68B3A4a813b710595AebA7f6B7604Ab9c15);
+    IcUSDC_Partial private cUSDC = IcUSDC_Partial(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
+    ERC20 private COMP = ERC20(0xc00e94Cb662C3520282E6f5717214004A7f26888);
 
     address public collateral_address;
     address public pool_address;
     address public owner_address;
     address public timelock_address;
+    address public misc_rewards_custodian;
 
     uint256 public immutable missing_decimals;
 
@@ -74,6 +82,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
         collateral_token = ERC20(_collateral_address);
         timelock_address = _timelock_address;
         owner_address = _owner_address;
+        misc_rewards_custodian = _owner_address;
         missing_decimals = uint(18).sub(collateral_token.decimals());
         
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -137,15 +146,52 @@ contract FraxPoolInvestorForV2 is AccessControl {
         FXS.pool_burn_from(address(this), amount);
     }
 
-    /* ========== yearn ========== */
+    /* ========== yearn V2 ========== */
 
     function yDepositUSDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
-        collateral_token.approve(address(yUSDC_V1), USDC_amount);
-        yUSDC_V1.deposit(USDC_amount);
+        collateral_token.approve(address(yUSDC_V2), USDC_amount);
+        yUSDC_V2.deposit(USDC_amount);
     }
 
     function yWithdrawUSDC(uint256 yUSDC_amount) public onlyByOwnerOrGovernance {
-        yUSDC_V1.withdraw(yUSDC_amount);
+        yUSDC_V2.withdraw(yUSDC_amount);
+    }
+
+    /* ========== AAVE V2 ========== */
+
+    function aaveDepositUSDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
+        collateral_token.approve(address(aaveUSDC_V2), USDC_amount);
+        aaveUSDC_V2.deposit(collateral_address, USDC_amount, address(this), 0);
+    }
+
+    function aaveWithdrawUSDC(uint256 aUSDC_amount) public onlyByOwnerOrGovernance {
+        aaveUSDC_V2.withdraw(collateral_address, aUSDC_amount, address(this));
+    }
+
+    /* ========== BZX Fulcrum ========== */
+
+    function bzxMint_iUSDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
+        collateral_token.approve(address(bzxFulcrum), USDC_amount);
+        bzxFulcrum.mint(address(this), USDC_amount);
+    }
+
+    function bzxBurn_iUSDC(uint256 iUSDC_amount) public onlyByOwnerOrGovernance {
+        bzxFulcrum.burn(address(this), iUSDC_amount);
+    }
+
+    /* ========== Compound cUSDC + COMP ========== */
+
+    function compMint_cUSDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
+        collateral_token.approve(address(cUSDC), USDC_amount);
+        cUSDC.mint(USDC_amount);
+    }
+
+    function compRedeemUnderlying_cUSDC(uint256 cUSDC_amount) public onlyByOwnerOrGovernance {
+        cUSDC.redeemUnderlying(cUSDC_amount);
+    }
+
+    function compWithdrawCOMP(uint256 comp_amount) public onlyByOwnerOrGovernance {
+        COMP.transfer(misc_rewards_custodian, comp_amount);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -156,6 +202,10 @@ contract FraxPoolInvestorForV2 is AccessControl {
 
     function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
         owner_address = _owner_address;
+    }
+
+    function setMiscRewardsCustodian(address _misc_rewards_custodian) external onlyByOwnerOrGovernance {
+        misc_rewards_custodian = _misc_rewards_custodian;
     }
 
     function setPool(address _pool_address) external onlyByOwnerOrGovernance {
