@@ -68,7 +68,7 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
     uint256 public locked_stake_min_time = 604800; // 7 * 86400  (7 days)
     string private locked_stake_min_time_str = "604800"; // 7 days on genesis
 
-    uint256 public cr_boost_max_multiplier = 3000000; // 6 decimals of precision. 1x = 1000000
+    uint256 public cr_boost_max_multiplier = 1000000; // 6 decimals of precision. 1x = 1000000
 
     mapping(address => uint256) public userRewardPerTokenPaid0;
     mapping(address => uint256) public userRewardPerTokenPaid1;
@@ -85,7 +85,7 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
 
     mapping(address => bool) public greylist;
 
-    bool public token1_rewards_on = true;
+    bool public token1_rewards_on = false;
 
     bool public unlockedStakes; // Release lock stakes in case of system migration
 
@@ -119,16 +119,12 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
         pool_weight0 = _pool_weight0;
         pool_weight1 = _pool_weight1;
 
-        // First two weeks there will be no FXS emission
-        rewardRate0 = 0; // (uint256(1000000e18)).div(3).div(365 * 86400); // Base emission rate of 1M FXS over 3 years
+        // 1000 FXS a day
+        rewardRate0 = (uint256(365000e18)).div(365 * 86400); 
         rewardRate0 = rewardRate0.mul(pool_weight0).div(1e6);
 
-        // Base emission rate of 527 sushi per day = 192355 SUSHI / year. 
-        // 96177.5 SUSHI per pool, per year
-        // Half for each of the 2 pools
-        // Second token emission will be flat
-        // Remove 2% due to block timing variability (otherwise there might not be enough to collect). Can be governance collected, used to buy FXS, then burned later
-        rewardRate1 = (uint256(961775e17)).mul(98).div(100).div(365 * 86400); 
+        // ??? CRVDAO a day eventually
+        rewardRate1 = 0; 
         rewardRate1 = rewardRate1.mul(pool_weight1).div(1e6);
         unlockedStakes = false;
     }
@@ -218,10 +214,6 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
             _boosted_balances[account].mul(reward1.sub(userRewardPerTokenPaid1[account])).div(1e18).add(rewards1[account])
         );
     }
-
-    // function earned(address account) public override view returns (uint256) {
-    //     return _balances[account].mul(rewardPerToken().sub(userRewardPerTokenPaid[account])).add(rewards[account]);
-    // }
 
     function getRewardForDuration() external override view returns (uint256, uint256) {
         return (
