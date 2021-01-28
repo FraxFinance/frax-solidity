@@ -1,8 +1,10 @@
 pragma solidity 0.6.11;
 import '../../ERC20/IERC20.sol';
 
-// https://etherscan.io/address/0x597aD1e0c13Bfe8025993D9e79C69E1c0233522e
-interface IyUSDC_V1 is IERC20 {
+// https://etherscan.io/address/0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9
+// Some functions were omitted for brevity. See the contract for details
+
+interface IyUSDC_V2_Partial is IERC20 {
     function balance() external returns (uint);
     function available() external returns (uint);
     function earn() external;
