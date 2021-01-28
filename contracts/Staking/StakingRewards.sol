@@ -30,8 +30,9 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     ERC20 public stakingToken;
     uint256 public periodFinish;
 
-    // Constants for various precisions
+    // Constant for various precisions
     uint256 private constant PRICE_PRECISION = 1e6;
+    uint256 private constant MULTIPLIER_BASE = 1e6;
 
     // Max reward per second
     uint256 public rewardRate;
@@ -58,7 +59,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     uint256 private _staking_token_supply = 0;
     uint256 private _staking_token_boosted_supply = 0;
-    mapping(address => uint256) private _balances;
+    mapping(address => uint256) private _unlocked_balances;
+    mapping(address => uint256) private _locked_balances;
     mapping(address => uint256) private _boosted_balances;
 
     mapping(address => LockedStake[]) private lockedStakes;
@@ -110,39 +112,36 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function stakingMultiplier(uint256 secs) public view returns (uint256) {
-        uint256 multiplier = uint(1e6).add(secs.mul(locked_stake_max_multiplier.sub(1e6)).div(locked_stake_time_for_max_multiplier));
+        uint256 multiplier = uint(MULTIPLIER_BASE).add(secs.mul(locked_stake_max_multiplier.sub(MULTIPLIER_BASE)).div(locked_stake_time_for_max_multiplier));
         if (multiplier > locked_stake_max_multiplier) multiplier = locked_stake_max_multiplier;
         return multiplier;
     }
 
     function crBoostMultiplier() public view returns (uint256) {
-        uint256 multiplier = uint(1e6).add( (uint(1e6).sub(FRAX.global_collateral_ratio())).mul(cr_boost_max_multiplier.sub(1e6)).div(1e6) );
+        uint256 multiplier = uint(MULTIPLIER_BASE).add((uint(MULTIPLIER_BASE).sub(FRAX.global_collateral_ratio())).mul(cr_boost_max_multiplier.sub(MULTIPLIER_BASE)).div(MULTIPLIER_BASE) );
         return multiplier;
     }
 
+    // Total unlocked and locked liquidity tokens
     function balanceOf(address account) external override view returns (uint256) {
-        return _balances[account];
+        return (_unlocked_balances[account]).add(_locked_balances[account]);
     }
 
+    // Total unlocked liquidity tokens
+    function unlockedBalanceOf(address account) external view returns (uint256) {
+        return _unlocked_balances[account];
+    }
+
+    // Total locked liquidity tokens
+    function lockedBalanceOf(address account) public view returns (uint256) {
+        return _locked_balances[account];
+    }
+
+    // Total 'balance' used for calculating the percent of the pool the account owns
+    // Takes into account the locked stake time multiplier
     function boostedBalanceOf(address account) external view returns (uint256) {
         return _boosted_balances[account];
     }
-
-
-    function lockedBalanceOf(address account) public view returns (uint256) {
-        uint256 total_locked_balance = 0;
-        for (uint i = 0; i < lockedStakes[account].length; i++){ 
-            if ( block.timestamp < lockedStakes[account][i].ending_timestamp ){
-                total_locked_balance = total_locked_balance.add(lockedStakes[account][i].amount);
-            }
-        }
-        return total_locked_balance;
-    }
-
-    function unlockedBalanceOf(address account) external view returns (uint256) {
-        return (_balances[account]).sub(lockedBalanceOf(account));
-    }
-
 
     function lockedStakesOf(address account) external view returns (LockedStake[] memory) {
         return lockedStakes[account];
@@ -190,16 +189,17 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         require(amount > 0, "Cannot stake 0");
         require(greylist[msg.sender] == false, "address has been greylisted");
 
+        // Pull the tokens from the staker
+        TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), amount);
+
         // Staking token supply and boosted supply
         _staking_token_supply = _staking_token_supply.add(amount);
         _staking_token_boosted_supply = _staking_token_boosted_supply.add(amount);
 
         // Staking token balance and boosted balance
-        _balances[msg.sender] = _balances[msg.sender].add(amount);
+        _unlocked_balances[msg.sender] = _unlocked_balances[msg.sender].add(amount);
         _boosted_balances[msg.sender] = _boosted_balances[msg.sender].add(amount);
 
-        // Pull the tokens from the staker
-        TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), amount);
         emit Staked(msg.sender, amount);
     }
 
@@ -208,6 +208,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         require(secs > 0, "Cannot wait for a negative number");
         require(greylist[msg.sender] == false, "address has been greylisted");
         require(secs >= locked_stake_min_time, StringHelpers.strConcat("Minimum stake time not met (", locked_stake_min_time_str, ")") );
+        require(secs <= locked_stake_time_for_max_multiplier, "You are trying to stake for too long");
+
 
         uint256 multiplier = stakingMultiplier(secs);
         uint256 boostedAmount = amount.mul(multiplier).div(PRICE_PRECISION);
@@ -219,31 +221,30 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
             multiplier
         ));
 
+        // Pull the tokens from the staker
+        TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), amount);
+
         // Staking token supply and boosted supply
         _staking_token_supply = _staking_token_supply.add(amount);
         _staking_token_boosted_supply = _staking_token_boosted_supply.add(boostedAmount);
 
         // Staking token balance and boosted balance
-        _balances[msg.sender] = _balances[msg.sender].add(amount);
+        _locked_balances[msg.sender] = _locked_balances[msg.sender].add(amount);
         _boosted_balances[msg.sender] = _boosted_balances[msg.sender].add(boostedAmount);
 
-        // Pull the tokens from the staker
-        TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), amount);
-        
-        emit Staked(msg.sender, amount);
         emit StakeLocked(msg.sender, amount, secs);
     }
 
     function withdraw(uint256 amount) public override nonReentrant updateReward(msg.sender) {
         require(amount > 0, "Cannot withdraw 0");
 
+        // Staking token balance and boosted balance
+        _unlocked_balances[msg.sender] = _unlocked_balances[msg.sender].sub(amount);
+        _boosted_balances[msg.sender] = _boosted_balances[msg.sender].sub(amount);
+
         // Staking token supply and boosted supply
         _staking_token_supply = _staking_token_supply.sub(amount);
         _staking_token_boosted_supply = _staking_token_boosted_supply.sub(amount);
-
-        // Staking token balance and boosted balance
-        _balances[msg.sender] = _balances[msg.sender].sub(amount);
-        _boosted_balances[msg.sender] = _boosted_balances[msg.sender].sub(amount);
 
         // Give the tokens to the withdrawer
         stakingToken.safeTransfer(msg.sender, amount);
@@ -261,18 +262,19 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
                 break;
             }
         }
+        require(thisStake.kek_id == kek_id, "Stake not found");
         require(block.timestamp >= thisStake.ending_timestamp || unlockedStakes == true, "Stake is still locked!");
 
         uint256 theAmount = thisStake.amount;
         uint256 boostedAmount = theAmount.mul(thisStake.multiplier).div(PRICE_PRECISION);
         if (theAmount > 0){
+            // Staking token balance and boosted balance
+            _locked_balances[msg.sender] = _locked_balances[msg.sender].sub(theAmount);
+            _boosted_balances[msg.sender] = _boosted_balances[msg.sender].sub(boostedAmount);
+
             // Staking token supply and boosted supply
             _staking_token_supply = _staking_token_supply.sub(theAmount);
             _staking_token_boosted_supply = _staking_token_boosted_supply.sub(boostedAmount);
-
-            // Staking token balance and boosted balance
-            _balances[msg.sender] = _balances[msg.sender].sub(theAmount);
-            _boosted_balances[msg.sender] = _boosted_balances[msg.sender].sub(boostedAmount);
 
             // Remove the stake from the array
             delete lockedStakes[msg.sender][theIndex];
@@ -280,7 +282,6 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
             // Give the tokens to the withdrawer
             stakingToken.safeTransfer(msg.sender, theAmount);
 
-            emit Withdrawn(msg.sender, theAmount);
             emit WithdrawnLocked(msg.sender, theAmount, kek_id);
         }
 
@@ -311,6 +312,9 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     // If the period expired, renew it
     function retroCatchUp() internal {
+        // Failsafe check
+        require(block.timestamp > periodFinish, "Period has not expired yet!");
+
         // Ensure the provided reward amount is not more than the balance in the contract.
         // This keeps the reward rate in the right range, preventing overflows due to
         // very high values of rewardRate in the earned and rewardsPerToken functions;
@@ -360,11 +364,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 */
     // Added to support recovering LP Rewards from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
-        // Cannot recover the staking token or the rewards token
-        require(
-            tokenAddress != address(stakingToken),
-            "Admin cannot withdraw the staking token from the contract"
-        );
+        // Admin cannot withdraw the staking token from the contract
+        require(tokenAddress != address(stakingToken));
         ERC20(tokenAddress).transfer(owner_address, tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
@@ -418,6 +419,11 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     function setRewardRate(uint256 _new_rate) external onlyByOwnerOrGovernance {
         rewardRate = _new_rate;
+    }
+
+    function setOwnerAndTimelock(address _new_owner, address _new_timelock) external onlyByOwnerOrGovernance {
+        owner_address = _new_owner;
+        timelock_address = _new_timelock;
     }
 
     /* ========== MODIFIERS ========== */

@@ -2,6 +2,18 @@
 pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
 
+// ====================================================================
+// |     ______                   _______                             |
+// |    / _____________ __  __   / ____(_____  ____ _____  ________   |
+// |   / /_  / ___/ __ `| |/_/  / /_  / / __ \/ __ `/ __ \/ ___/ _ \  |
+// |  / __/ / /  / /_/ _>  <   / __/ / / / / / /_/ / / / / /__/  __/  |
+// | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
+// |                                                                  |
+// ====================================================================
+// ======================== StakingRewardsDual ========================
+// ====================================================================
+
+
 // Stolen with love from Synthetixio
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 
@@ -15,18 +27,19 @@ import "../Utils/ReentrancyGuard.sol";
 import "../Utils/StringHelpers.sol";
 
 // Inheritance
-import "./IStakingRewards.sol";
-import "./RewardsDistributionRecipient.sol";
+import "./IStakingRewardsDual.sol";
+import "./Owned.sol";
 import "./Pausable.sol";
 
-contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, ReentrancyGuard, Pausable {
+contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Pausable {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
     /* ========== STATE VARIABLES ========== */
 
     FRAXStablecoin private FRAX;
-    ERC20 public rewardsToken;
+    ERC20 public rewardsToken0;
+    ERC20 public rewardsToken1;
     ERC20 public stakingToken;
     uint256 public periodFinish;
 
@@ -35,14 +48,17 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     uint256 private constant MULTIPLIER_BASE = 1e6;
 
     // Max reward per second
-    uint256 public rewardRate;
+    uint256 public rewardRate0;
+    uint256 public rewardRate1;
 
     // uint256 public rewardsDuration = 86400 hours;
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     uint256 public lastUpdateTime;
-    uint256 public rewardPerTokenStored = 0;
-    uint256 private pool_weight; // This staking pool's percentage of the total FXS being distributed by all pools, 6 decimals of precision
+    uint256 public rewardPerTokenStored0 = 0;
+    uint256 public rewardPerTokenStored1 = 0;
+    uint256 public pool_weight0; // This staking pool's percentage of the total FXS being distributed by all pools, 6 decimals of precision
+    uint256 public pool_weight1; // This staking pool's percentage of the total TOKEN 2 being distributed by all pools, 6 decimals of precision
 
     address public owner_address;
     address public timelock_address; // Governance timelock address
@@ -52,10 +68,12 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     uint256 public locked_stake_min_time = 604800; // 7 * 86400  (7 days)
     string private locked_stake_min_time_str = "604800"; // 7 days on genesis
 
-    uint256 public cr_boost_max_multiplier = 3000000; // 6 decimals of precision. 1x = 1000000
+    uint256 public cr_boost_max_multiplier = 1000000; // 6 decimals of precision. 1x = 1000000
 
-    mapping(address => uint256) public userRewardPerTokenPaid;
-    mapping(address => uint256) public rewards;
+    mapping(address => uint256) public userRewardPerTokenPaid0;
+    mapping(address => uint256) public userRewardPerTokenPaid1;
+    mapping(address => uint256) public rewards0;
+    mapping(address => uint256) public rewards1;
 
     uint256 private _staking_token_supply = 0;
     uint256 private _staking_token_boosted_supply = 0;
@@ -66,6 +84,8 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     mapping(address => LockedStake[]) private lockedStakes;
 
     mapping(address => bool) public greylist;
+
+    bool public token1_rewards_on = false;
 
     bool public unlockedStakes; // Release lock stakes in case of system migration
 
@@ -81,23 +101,31 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
 
     constructor(
         address _owner,
-        address _rewardsDistribution,
-        address _rewardsToken,
+        address _rewardsToken0,
+        address _rewardsToken1,
         address _stakingToken,
         address _frax_address,
         address _timelock_address,
-        uint256 _pool_weight
+        uint256 _pool_weight0,
+        uint256 _pool_weight1
     ) public Owned(_owner){
         owner_address = _owner;
-        rewardsToken = ERC20(_rewardsToken);
+        rewardsToken0 = ERC20(_rewardsToken0);
+        rewardsToken1 = ERC20(_rewardsToken1);
         stakingToken = ERC20(_stakingToken);
         FRAX = FRAXStablecoin(_frax_address);
-        rewardsDistribution = _rewardsDistribution;
         lastUpdateTime = block.timestamp;
         timelock_address = _timelock_address;
-        pool_weight = _pool_weight;
-        rewardRate = 380517503805175038; // (uint256(12000000e18)).div(365 * 86400); // Base emission rate of 12M FXS over the first year
-        rewardRate = rewardRate.mul(pool_weight).div(1e6);
+        pool_weight0 = _pool_weight0;
+        pool_weight1 = _pool_weight1;
+
+        // 1000 FXS a day
+        rewardRate0 = (uint256(365000e18)).div(365 * 86400); 
+        rewardRate0 = rewardRate0.mul(pool_weight0).div(1e6);
+
+        // ??? CRVDAO a day eventually
+        rewardRate1 = 0; 
+        rewardRate1 = rewardRate1.mul(pool_weight1).div(1e6);
         unlockedStakes = false;
     }
 
@@ -151,36 +179,47 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
         return stakingToken.decimals();
     }
 
-    function rewardsFor(address account) external view returns (uint256) {
+    function rewardsFor(address account) external view returns (uint256, uint256) {
         // You may have use earned() instead, because of the order in which the contract executes 
-        return rewards[account];
+        return (rewards0[account], rewards1[account]);
     }
 
     function lastTimeRewardApplicable() public override view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
-    function rewardPerToken() public override view returns (uint256) {
+    function rewardPerToken() public override view returns (uint256, uint256) {
         if (_staking_token_supply == 0) {
-            return rewardPerTokenStored;
+            return (rewardPerTokenStored0, rewardPerTokenStored1);
         }
         else {
-            return rewardPerTokenStored.add(
-                lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
+            return (
+                // Boosted emission
+                rewardPerTokenStored0.add(
+                    lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate0).mul(crBoostMultiplier()).mul(1e18).div(PRICE_PRECISION).div(_staking_token_boosted_supply)
+                ),
+                // Flat emission
+                // Locked stakes will still get more weight with token1 rewards, but the CR boost will be canceled out for everyone
+                rewardPerTokenStored1.add(
+                    lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate1).mul(1e18).div(_staking_token_boosted_supply)
+                )
             );
         }
     }
 
-    function earned(address account) public override view returns (uint256) {
-        return _boosted_balances[account].mul(rewardPerToken().sub(userRewardPerTokenPaid[account])).div(1e18).add(rewards[account]);
+    function earned(address account) public override view returns (uint256, uint256) {
+        (uint256 reward0, uint256 reward1) = rewardPerToken();
+        return (
+            _boosted_balances[account].mul(reward0.sub(userRewardPerTokenPaid0[account])).div(1e18).add(rewards0[account]),
+            _boosted_balances[account].mul(reward1.sub(userRewardPerTokenPaid1[account])).div(1e18).add(rewards1[account])
+        );
     }
 
-    // function earned(address account) public override view returns (uint256) {
-    //     return _balances[account].mul(rewardPerToken().sub(userRewardPerTokenPaid[account])).add(rewards[account]);
-    // }
-
-    function getRewardForDuration() external override view returns (uint256) {
-        return rewardRate.mul(rewardsDuration).mul(crBoostMultiplier()).div(PRICE_PRECISION);
+    function getRewardForDuration() external override view returns (uint256, uint256) {
+        return (
+            rewardRate0.mul(rewardsDuration).mul(crBoostMultiplier()).div(PRICE_PRECISION),
+            rewardRate1.mul(rewardsDuration)
+        );
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -208,6 +247,7 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
         require(secs > 0, "Cannot wait for a negative number");
         require(greylist[msg.sender] == false, "address has been greylisted");
         require(secs >= locked_stake_min_time, StringHelpers.strConcat("Minimum stake time not met (", locked_stake_min_time_str, ")") );
+        require(secs <= locked_stake_time_for_max_multiplier, "You are trying to stake for too long");
 
         uint256 multiplier = stakingMultiplier(secs);
         uint256 boostedAmount = amount.mul(multiplier).div(PRICE_PRECISION);
@@ -286,22 +326,20 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     }
 
     function getReward() public override nonReentrant updateReward(msg.sender) {
-        uint256 reward = rewards[msg.sender];
-        if (reward > 0) {
-            rewards[msg.sender] = 0;
-            rewardsToken.transfer(msg.sender, reward);
-            emit RewardPaid(msg.sender, reward);
+        uint256 reward0 = rewards0[msg.sender];
+        uint256 reward1 = rewards1[msg.sender];
+        if (reward0 > 0) {
+            rewards0[msg.sender] = 0;
+            rewardsToken0.transfer(msg.sender, reward0);
+            emit RewardPaid(msg.sender, reward0, address(rewardsToken0));
+        }
+        if (reward1 > 0) {
+            rewards1[msg.sender] = 0;
+            rewardsToken1.transfer(msg.sender, reward1);
+            emit RewardPaid(msg.sender, reward1, address(rewardsToken1));
         }
     }
-/*
-    function exit() external override {
-        withdraw(_balances[msg.sender]);
 
-        // TODO: Add locked stakes too?
-
-        getReward();
-    }
-*/
     function renewIfApplicable() external {
         if (block.timestamp > periodFinish) {
             retroCatchUp();
@@ -318,49 +356,32 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
         // very high values of rewardRate in the earned and rewardsPerToken functions;
         // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
         uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / rewardsDuration; // Floor division to the nearest period
-        uint balance = rewardsToken.balanceOf(address(this));
-        require(rewardRate.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance, "Not enough FXS available for rewards!");
-
+        uint balance0 = rewardsToken0.balanceOf(address(this));
+        uint balance1 = rewardsToken1.balanceOf(address(this));
+        require(rewardRate0.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance0, "Not enough FXS available for rewards!");
+        
+        
+        if (token1_rewards_on){
+            require(rewardRate1.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance1, "Not enough token1 available for rewards!");
+        }
+        
         // uint256 old_lastUpdateTime = lastUpdateTime;
         // uint256 new_lastUpdateTime = block.timestamp;
 
         // lastUpdateTime = periodFinish;
         periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(rewardsDuration));
 
-        rewardPerTokenStored = rewardPerToken();
+        (uint256 reward0, uint256 reward1) = rewardPerToken();
+        rewardPerTokenStored0 = reward0;
+        rewardPerTokenStored1 = reward1;
         lastUpdateTime = lastTimeRewardApplicable();
 
         emit RewardsPeriodRenewed(address(stakingToken));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
-/*
-    // This notifies people that the reward is being changed
-    function notifyRewardAmount(uint256 reward) external override onlyRewardsDistribution updateReward(address(0)) {
-        // Needed to make compiler happy
 
-        
-        // if (block.timestamp >= periodFinish) {
-        //     rewardRate = reward.mul(crBoostMultiplier()).div(rewardsDuration).div(PRICE_PRECISION);
-        // } else {
-        //     uint256 remaining = periodFinish.sub(block.timestamp);
-        //     uint256 leftover = remaining.mul(rewardRate);
-        //     rewardRate = reward.mul(crBoostMultiplier()).add(leftover).div(rewardsDuration).div(PRICE_PRECISION);
-        // }
-
-        // // Ensure the provided reward amount is not more than the balance in the contract.
-        // // This keeps the reward rate in the right range, preventing overflows due to
-        // // very high values of rewardRate in the earned and rewardsPerToken functions;
-        // // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
-        // uint balance = rewardsToken.balanceOf(address(this));
-        // require(rewardRate <= balance.div(rewardsDuration), "Provided reward too high");
-
-        // lastUpdateTime = block.timestamp;
-        // periodFinish = block.timestamp.add(rewardsDuration);
-        // emit RewardAdded(reward);
-    }
-*/
-    // Added to support recovering LP Rewards from other systems to be distributed to holders
+    // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Admin cannot withdraw the staking token from the contract
         require(tokenAddress != address(stakingToken));
@@ -415,8 +436,13 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
         unlockedStakes = !unlockedStakes;
     }
 
-    function setRewardRate(uint256 _new_rate) external onlyByOwnerOrGovernance {
-        rewardRate = _new_rate;
+    function setRewardRates(uint256 _new_rate0, uint256 _new_rate1) external onlyByOwnerOrGovernance {
+        rewardRate0 = _new_rate0;
+        rewardRate1 = _new_rate1;
+    }
+
+    function toggleToken1Rewards() external onlyByOwnerOrGovernance {
+        token1_rewards_on = !token1_rewards_on;
     }
 
     function setOwnerAndTimelock(address _new_owner, address _new_timelock) external onlyByOwnerOrGovernance {
@@ -432,12 +458,17 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
             retroCatchUp();
         }
         else {
-            rewardPerTokenStored = rewardPerToken();
+            (uint256 reward0, uint256 reward1) = rewardPerToken();
+            rewardPerTokenStored0 = reward0;
+            rewardPerTokenStored1 = reward1;
             lastUpdateTime = lastTimeRewardApplicable();
         }
         if (account != address(0)) {
-            rewards[account] = earned(account);
-            userRewardPerTokenPaid[account] = rewardPerTokenStored;
+            (uint256 earned0, uint256 earned1) = earned(account);
+            rewards0[account] = earned0;
+            rewards1[account] = earned1;
+            userRewardPerTokenPaid0[account] = rewardPerTokenStored0;
+            userRewardPerTokenPaid1[account] = rewardPerTokenStored1;
         }
         _;
     }
@@ -454,7 +485,7 @@ contract StakingRewardsV2 is IStakingRewards, RewardsDistributionRecipient, Reen
     event StakeLocked(address indexed user, uint256 amount, uint256 secs);
     event Withdrawn(address indexed user, uint256 amount);
     event WithdrawnLocked(address indexed user, uint256 amount, bytes32 kek_id);
-    event RewardPaid(address indexed user, uint256 reward);
+    event RewardPaid(address indexed user, uint256 reward, address token_address);
     event RewardsDurationUpdated(uint256 newDuration);
     event Recovered(address token, uint256 amount);
     event RewardsPeriodRenewed(address token);

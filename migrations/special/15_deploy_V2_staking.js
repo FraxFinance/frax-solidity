@@ -11,7 +11,6 @@ require('@openzeppelin/test-helpers/configure')({
 
 const { expectEvent, send, shouldFail, time } = require('@openzeppelin/test-helpers');
 const BIG6 = new BigNumber("1e6");
-const BIG12 = new BigNumber("1e12");
 const BIG18 = new BigNumber("1e18");
 const chalk = require('chalk');
 
@@ -19,7 +18,7 @@ const Address = artifacts.require("Utils/Address");
 const BlockMiner = artifacts.require("Utils/BlockMiner");
 const MigrationHelper = artifacts.require("Utils/MigrationHelper");
 const StringHelpers = artifacts.require("Utils/StringHelpers");
-const Math = artifacts.require("Math/Math");
+const Math_Artifact = artifacts.require("Math/Math");
 const SafeMath = artifacts.require("Math/SafeMath");
 const Babylonian = artifacts.require("Math/Babylonian");
 const FixedPoint = artifacts.require("Math/FixedPoint");
@@ -45,26 +44,23 @@ const WETH = artifacts.require("ERC20/WETH");
 const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
 const FakeCollateral_USDT = artifacts.require("FakeCollateral/FakeCollateral_USDT");
 
-
 // Collateral Pools
 const FraxPoolLibrary = artifacts.require("Frax/Pools/FraxPoolLibrary");
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 const Pool_USDT = artifacts.require("Frax/Pools/Pool_USDT");
-
+const Pool_USDC_V2 = artifacts.require("Frax/Pools/Pool_USDC_V2");
+const Pool_USDT_V2 = artifacts.require("Frax/Pools/Pool_USDT_V2");
 
 // Oracles
 const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_WETH");
 const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDC");
 const UniswapPairOracle_FRAX_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDT");
-
 const UniswapPairOracle_FRAX_FXS = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_FXS");
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
 const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
 const UniswapPairOracle_FXS_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDT");
-
 const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
 const UniswapPairOracle_USDT_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDT_WETH");
-
 
 // Chainlink Price Consumer
 const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
@@ -73,26 +69,30 @@ const ChainlinkETHUSDPriceConsumerTest = artifacts.require("Oracle/ChainlinkETHU
 // FRAX core
 const FRAXStablecoin = artifacts.require("Frax/FRAXStablecoin");
 const FRAXShares = artifacts.require("FXS/FRAXShares");
-const TokenVesting = artifacts.require("FXS/TokenVesting");
 
 // Governance related
 const GovernorAlpha = artifacts.require("Governance/GovernorAlpha");
 const Timelock = artifacts.require("Governance/Timelock");
 
 // Staking contracts
-const StakingRewards_FRAX_WETH = artifacts.require("Staking/Variants/Stake_FRAX_WETH.sol");
-const StakingRewards_FRAX_USDC = artifacts.require("Staking/Variants/Stake_FRAX_USDC.sol");
-const StakingRewards_FRAX_FXS = artifacts.require("Staking/Variants/Stake_FRAX_FXS.sol");
-const StakingRewards_FXS_WETH = artifacts.require("Staking/Variants/Stake_FXS_WETH.sol");
+const StakingRewards_FRAX_WETH = artifacts.require("Staking/Variants/Stake_FRAX_WETH");
+const StakingRewards_FRAX_USDC = artifacts.require("Staking/Variants/Stake_FRAX_USDC");
+const StakingRewards_FRAX_FXS = artifacts.require("Staking/Variants/Stake_FRAX_FXS");
+const StakingRewards_FXS_WETH = artifacts.require("Staking/Variants/Stake_FXS_WETH");
+
+// Staking contracts V2
+const StakingRewards_FRAX_WETH_V2 = artifacts.require("Staking/Variants/Stake_FRAX_WETH_V2");
+const StakingRewards_FRAX_USDC_V2 = artifacts.require("Staking/Variants/Stake_FRAX_USDC_V2");
+const StakingRewards_FRAX_FXS_V2 = artifacts.require("Staking/Variants/Stake_FRAX_FXS_V2");
+const StakingRewards_FXS_WETH_V2 = artifacts.require("Staking/Variants/Stake_FXS_WETH_V2");
 
 const DUMP_ADDRESS = "0x6666666666666666666666666666666666666666";
 
 // Make sure Ganache is running beforehand
 module.exports = async function(deployer, network, accounts) {
-	const IS_MAINNET = (process.env.MIGRATION_MODE == 'mainnet');
-
-	// ======== Set the addresses ========
 	
+	// ======== Set the addresses ========
+	console.log(chalk.yellow('===== SET THE ADDRESSES ====='));
 	const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
 	const ORACLE_ADDRESS = accounts[2];
 	const POOL_CREATOR = accounts[3];
@@ -103,7 +103,7 @@ module.exports = async function(deployer, network, accounts) {
 	// const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[8];
 
 	// ======== Set other constants ========
-	
+	const TWENTY_FIVE_DEC6 = new BigNumber("25e6");
 	const ONE_MILLION_DEC18 = new BigNumber("1000000e18");
 	const FIVE_MILLION_DEC18 = new BigNumber("5000000e18");
 	const TEN_MILLION_DEC18 = new BigNumber("10000000e18");
@@ -128,68 +128,45 @@ module.exports = async function(deployer, network, accounts) {
 	let migrationHelperInstance;
 	let fraxInstance;
 	let fxsInstance;
-	let tokenVestingInstance;
 	let governanceInstance;
 	let wethInstance;
 	let col_instance_USDC;
-	let col_instance_USDT;
-	
 	let routerInstance;
 	let uniswapFactoryInstance;
 	let swapToPriceInstance;
 	let oracle_instance_FRAX_WETH;
 	let oracle_instance_FRAX_USDC;
 	let oracle_instance_FRAX_USDT;
-	
 	let oracle_instance_FRAX_FXS;
 	let oracle_instance_FXS_WETH;
 	let oracle_instance_FXS_USDC; 
 	let oracle_instance_FXS_USDT; 
-	
 	let oracle_instance_USDC_WETH;
 	let oracle_instance_USDT_WETH;
-	
-	let stakingInstance_FRAX_WETH;
-	let stakingInstance_FRAX_USDC;
-	let stakingInstance_FRAX_FXS;
-	let stakingInstance_FXS_WETH;
 	let pool_instance_USDC;
 	let pool_instance_USDT;
-	
 
-	// Get the necessary instances
 	if (process.env.MIGRATION_MODE == 'ganache'){
 		timelockInstance = await Timelock.deployed();
 		migrationHelperInstance = await MigrationHelper.deployed()
 		governanceInstance = await GovernorAlpha.deployed();
+		routerInstance = await UniswapV2Router02_Modified.deployed(); 
 		fraxInstance = await FRAXStablecoin.deployed();
 		fxsInstance = await FRAXShares.deployed();
 		wethInstance = await WETH.deployed();
 		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
-		col_instance_USDT = await FakeCollateral_USDT.deployed(); 
-		
-		routerInstance = await UniswapV2Router02_Modified.deployed(); 
 		uniswapFactoryInstance = await UniswapV2Factory.deployed(); 
-		swapToPriceInstance = await SwapToPrice.deployed();
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.deployed();
 		oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.deployed(); 
-		oracle_instance_FRAX_USDT = await UniswapPairOracle_FRAX_USDT.deployed();
-		
-		oracle_instance_FRAX_FXS = await UniswapPairOracle_FRAX_FXS.deployed();
+		oracle_instance_FRAX_USDT = await UniswapPairOracle_FRAX_USDT.deployed(); 
+		oracle_instance_FRAX_FXS = await UniswapPairOracle_FRAX_FXS.deployed(); 
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
 		oracle_instance_FXS_USDC = await UniswapPairOracle_FXS_USDC.deployed(); 
 		oracle_instance_FXS_USDT = await UniswapPairOracle_FXS_USDT.deployed(); 
-		
 		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.deployed();
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.deployed();
-		
-		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
-		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.deployed();
-		stakingInstance_FRAX_FXS = await StakingRewards_FRAX_FXS.deployed();
-		stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.deployed();
 		pool_instance_USDC = await Pool_USDC.deployed();
 		pool_instance_USDT = await Pool_USDT.deployed();
-		
 	}
 	else {
 		CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
@@ -199,51 +176,94 @@ module.exports = async function(deployer, network, accounts) {
 		fxsInstance = await FRAXShares.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].main.FXS);
 		governanceInstance = await GovernorAlpha.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].governance);
 		wethInstance = await WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].weth);
-		col_instance_USDC = await FakeCollateral_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDC);
+		col_instance_USDC = await FakeCollateral_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDC); 
 		col_instance_USDT = await FakeCollateral_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].collateral.USDT); 
-		
 		routerInstance = await UniswapV2Router02.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.router); 
 		uniswapFactoryInstance = await UniswapV2Factory.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].uniswap_other.factory); 
 		swapToPriceInstance = await SwapToPrice.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pricing.swap_to_price); 
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_WETH);
 		oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_USDC); 
 		oracle_instance_FRAX_USDT = await UniswapPairOracle_FRAX_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_USDT); 
-		 
-		oracle_instance_FRAX_FXS = await UniswapPairOracle_FRAX_FXS.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_FXS);
+		oracle_instance_FRAX_FXS = await UniswapPairOracle_FRAX_FXS.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FRAX_FXS); 
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_WETH);
 		oracle_instance_FXS_USDC = await UniswapPairOracle_FXS_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_USDC); 
 		oracle_instance_FXS_USDT = await UniswapPairOracle_FXS_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.FXS_USDT); 
-		
 		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.USDC_WETH);
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.USDT_WETH);
-		
-		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FRAX/WETH"]);
-		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FRAX/USDC"]);
-		stakingInstance_FRAX_FXS = await StakingRewards_FRAX_FXS.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FRAX/FXS"]);
-		stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FXS/WETH"]);
 		pool_instance_USDC = await Pool_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDC);
 		pool_instance_USDT = await Pool_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDT);
-		
 	}
 
-	// return false;
+	return false;
+
+	const pair_addr_FRAX_WETH = await uniswapFactoryInstance.getPair(fraxInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	const pair_addr_FRAX_USDC = await uniswapFactoryInstance.getPair(fraxInstance.address, col_instance_USDC.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+    const pair_addr_FRAX_FXS = await uniswapFactoryInstance.getPair(fraxInstance.address, fxsInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+  	const pair_addr_FXS_WETH = await uniswapFactoryInstance.getPair(fxsInstance.address, wethInstance.address, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 	// CONTINUE MAIN DEPLOY CODE HERE
 	// ====================================================================================================================
 	// ====================================================================================================================
 
-	// ======== Initialize the staking rewards ========
-	console.log(chalk.yellow.bold('======== Initialize the staking rewards ========'));
+	// Have to do these since Truffle gets messy when you want to link already-deployed libraries
+	console.log(chalk.yellow('========== LINK STUFF =========='));
+	console.log(chalk.blue("--- Linking Math ---"));
+	await deployer.link(Math_Artifact, [StakingRewards_FRAX_WETH_V2, StakingRewards_FRAX_USDC_V2, StakingRewards_FRAX_FXS_V2, StakingRewards_FXS_WETH_V2]);
+	
+	console.log(chalk.blue("--- Linking TransferHelper ---"));
+	await deployer.link(TransferHelper, [StakingRewards_FRAX_WETH_V2, StakingRewards_FRAX_USDC_V2, StakingRewards_FRAX_FXS_V2, StakingRewards_FXS_WETH_V2]);
+	
+	console.log(chalk.blue("--- Linking SafeERC20 ---"));
+	await deployer.link(SafeERC20, [StakingRewards_FRAX_WETH_V2, StakingRewards_FRAX_USDC_V2, StakingRewards_FRAX_FXS_V2, StakingRewards_FXS_WETH_V2]);
+	
+	console.log(chalk.blue("--- Linking FRAXStablecoin ---"));
+	await deployer.link(FRAXStablecoin, [StakingRewards_FRAX_WETH_V2, StakingRewards_FRAX_USDC_V2, StakingRewards_FXS_WETH_V2, StakingRewards_FRAX_FXS_V2]);
+	
+	console.log(chalk.blue("--- Linking StringHelpers ---"));
+	await deployer.link(StringHelpers, [StakingRewards_FRAX_WETH_V2, StakingRewards_FRAX_USDC_V2, StakingRewards_FXS_WETH_V2, StakingRewards_FRAX_FXS_V2]);
+	
+	// ======== Deploy the staking contracts ========
+	console.log(chalk.yellow('===== DEPLOY THE STAKING CONTRACTS ====='));
 	await Promise.all([
-		stakingInstance_FRAX_WETH.initializeDefault({ from: STAKING_OWNER }),
-		stakingInstance_FRAX_USDC.initializeDefault({ from: STAKING_OWNER }),
+		deployer.deploy(StakingRewards_FRAX_WETH_V2, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_WETH, FRAXStablecoin.address, timelockInstance.address, 500000),
+		deployer.deploy(StakingRewards_FRAX_USDC_V2, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_USDC, FRAXStablecoin.address, timelockInstance.address, 500000),
+		deployer.deploy(StakingRewards_FRAX_FXS_V2, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FRAX_FXS, FRAXStablecoin.address, timelockInstance.address, 0),
+		deployer.deploy(StakingRewards_FXS_WETH_V2, STAKING_OWNER, STAKING_REWARDS_DISTRIBUTOR, fxsInstance.address, pair_addr_FXS_WETH, FRAXStablecoin.address, timelockInstance.address, 0)
 	])
+	
+	// ======== Get various staking addresses ======== 
+	console.log(chalk.yellow('===== GET VARIOUS STAKING ADDRESSES ====='));
+	const stakingInstance_FRAX_WETH_V2 = await StakingRewards_FRAX_WETH_V2.deployed();
+	const stakingInstance_FRAX_USDC_V2 = await StakingRewards_FRAX_USDC_V2.deployed();
+	const stakingInstance_FRAX_FXS_V2 = await StakingRewards_FRAX_FXS_V2.deployed();
+	const stakingInstance_FXS_WETH_V2 = await StakingRewards_FXS_WETH_V2.deployed();
+	
+	// Transfer FXS to staking contracts
+	console.log(chalk.yellow('===== Transfer FXS to staking contracts ====='));
+	await Promise.all([
+		fxsInstance.transfer(stakingInstance_FRAX_WETH_V2.address, new BigNumber("100000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER }), // eventually should be 6000000e18
+		fxsInstance.transfer(stakingInstance_FRAX_USDC_V2.address, new BigNumber("100000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER }), // eventually should be 6000000e18
+		fxsInstance.transfer(stakingInstance_FRAX_FXS_V2.address, new BigNumber("100e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER }), // eventually should be 1000000e18
+		fxsInstance.transfer(stakingInstance_FXS_WETH_V2.address, new BigNumber("100e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER }) // eventually should be 1000000e18
+	]);
 
-	// console.log(chalk.blue('=== stakingInstance_FRAX_FXS ==='));
-	// await stakingInstance_FRAX_FXS.initializeDefault({ from: STAKING_OWNER });
-	// console.log(chalk.blue('=== stakingInstance_FXS_WETH ==='));
-	// await stakingInstance_FXS_WETH.initializeDefault({ from: STAKING_OWNER });
+	// THIS WILL BE DONE AT A LATER TIME
+	// // ======== Initialize the staking rewards ========
+	// console.log(chalk.yellow.bold('======== Initialize the staking rewards ========'));
+	// await Promise.all([
+	// 	stakingInstance_FRAX_WETH_V2.initializeDefault({ from: STAKING_OWNER }),
+	// 	stakingInstance_FRAX_USDC_V2.initializeDefault({ from: STAKING_OWNER }),
+	// ])
 
-	console.log(`==========================================================`);
-
+	// ============= Print the new staking contracts ========
+	const NEW_STAKING_CONTRACTS = {
+		staking_contracts: {
+			'Uniswap FRAX/WETH': stakingInstance_FRAX_WETH_V2.address,
+			'Uniswap FRAX/USDC': stakingInstance_FRAX_USDC_V2.address,
+			'Uniswap FRAX/FXS': stakingInstance_FRAX_FXS_V2.address,
+			'Uniswap FXS/WETH': stakingInstance_FXS_WETH_V2.address
+		}
+	}
+	console.log("NEW STAKING CONTRACTS: ", NEW_STAKING_CONTRACTS);
 };
+

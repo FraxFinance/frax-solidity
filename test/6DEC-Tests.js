@@ -36,13 +36,13 @@ const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_
 const WETH = artifacts.require("ERC20/WETH");
 const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
 const FakeCollateral_USDT = artifacts.require("FakeCollateral/FakeCollateral_USDT");
-const FakeCollateral_6DEC = artifacts.require("FakeCollateral/FakeCollateral_6DEC");
+
 // const FakeCollateral_yUSD = artifacts.require("FakeCollateral/FakeCollateral_yUSD");
 
 // Collateral Pools
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 const Pool_USDT = artifacts.require("Frax/Pools/Pool_USDT");
-const Pool_6DEC = artifacts.require("Frax/Pools/Pool_6DEC");
+
 // const Pool_yUSD = artifacts.require("Frax/Pools/Pool_yUSD");
 
 // Oracles
@@ -157,7 +157,7 @@ contract('FRAX', async (accounts) => {
 	// Initialize pool instances
 	let pool_instance_USDC;
 	let pool_instance_USDT;
-	let pool_instance_6DEC;
+	
 	// let pool_instance_yUSD;
 
 	// Initialize pair addresses
@@ -249,7 +249,7 @@ contract('FRAX', async (accounts) => {
 		// oracle_instance_FXS_yUSD = await UniswapPairOracle_FXS_yUSD.deployed(); 
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.deployed();
 		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.deployed();
-		oracle_instance_6DEC_WETH = await UniswapPairOracle_6DEC_WETH.deployed();
+		
 
 		// Initialize ETH-USD Chainlink Oracle too
 		//oracle_chainlink_ETH_USD = await ChainlinkETHUSDPriceConsumer.deployed();
@@ -261,7 +261,7 @@ contract('FRAX', async (accounts) => {
 		// Fill pool instances
 		pool_instance_USDC = await Pool_USDC.deployed();
 		pool_instance_USDT = await Pool_USDT.deployed();
-		pool_instance_6DEC = await Pool_6DEC.deployed();
+		
 		// pool_instance_yUSD = await Pool_yUSD.deployed();
 
 		// Initialize the Uniswap Factory Instance
@@ -362,7 +362,7 @@ contract('FRAX', async (accounts) => {
 		// let fxs_price_from_FXS_yUSD = (new BigNumber(await oracle_instance_FXS_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
 		let USDT_price_from_USDT_WETH = (new BigNumber(await oracle_instance_USDT_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
 		let USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
-		let DEC6_price_from_DEC6_WETH = (new BigNumber(await oracle_instance_6DEC_WETH.consult.call(WETH.address, 1e15))).div(1e3).toNumber();
+		let DEC6_price_from_DEC6_WETH = (new BigNumber(await oracle_instance_6DEC_WETH.consult.call(WETH.address, (1e18).toString()))).div(1e6).toNumber();
 
 		// Print the prices
 		console.log("frax_price_from_FRAX_WETH: ", frax_price_from_FRAX_WETH.toString(), " FRAX = 1 WETH");
@@ -544,7 +544,7 @@ contract('FRAX', async (accounts) => {
 		// fxs_price_from_FXS_yUSD = (new BigNumber(await oracle_instance_FXS_yUSD.consult.call(FakeCollateral_yUSD.address, 1e6))).div(BIG6).toNumber();
 		USDT_price_from_USDT_WETH = (new BigNumber(await oracle_instance_USDT_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
 		USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(WETH.address, 1e6))).div(1e6).toNumber();
-		DEC6_price_from_DEC6_WETH = (new BigNumber(await oracle_instance_6DEC_WETH.consult.call(WETH.address, 1e15))).div(1e3).toNumber();
+		DEC6_price_from_DEC6_WETH = (new BigNumber(await oracle_instance_6DEC_WETH.consult.call(WETH.address, (1e18).toString()))).div(1e6).toNumber();
 
 		console.log(chalk.blue("==================PRICES=================="));
 		// Print the new prices
@@ -568,36 +568,36 @@ contract('FRAX', async (accounts) => {
 
 	});
 
+	// [DEPRECATED] SEEDED IN THE MIGRATION FLOW
+	// it('Seed the collateral pools some collateral to start off with', async () => {
+	// 	console.log("========================Collateral Seed========================");
 
-	it('Seed the collateral pools some collateral to start off with', async () => {
-		console.log("========================Collateral Seed========================");
+	// 	// Link the FAKE collateral pool to the FRAX contract
+	// 	await col_instance_USDC.transfer(pool_instance_USDC.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// 	await col_instance_USDT.transfer(pool_instance_USDT.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// 	await col_instance_6DEC.transfer(pool_instance_6DEC.address, COLLATERAL_SEED_DEC6, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// 	// await col_instance_yUSD.transfer(pool_instance_yUSD.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		// Link the FAKE collateral pool to the FRAX contract
-		await col_instance_USDC.transfer(pool_instance_USDC.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await col_instance_USDT.transfer(pool_instance_USDT.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await col_instance_6DEC.transfer(pool_instance_6DEC.address, COLLATERAL_SEED_DEC6, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await col_instance_yUSD.transfer(pool_instance_yUSD.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-		// Refresh the collateral ratio
-		const totalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18);
-		console.log("totalCollateralValue: ", totalCollateralValue.toNumber());
+	// 	// Refresh the collateral ratio
+	// 	const totalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18);
+	// 	console.log("totalCollateralValue: ", totalCollateralValue.toNumber());
 
 		
-		// Advance 1 hr so the collateral ratio can be recalculated
-		//await time.increase(3600 + 1);
-		//await time.advanceBlock();
-		//await fraxInstance.refreshCollateralRatio();
+	// 	// Advance 1 hr so the collateral ratio can be recalculated
+	// 	//await time.increase(3600 + 1);
+	// 	//await time.advanceBlock();
+	// 	//await fraxInstance.refreshCollateralRatio();
 
-		// Advance 1 hr so the collateral ratio can be recalculated
-		//await time.increase(3600 + 1);
-		//await time.advanceBlock();
-		//await fraxInstance.refreshCollateralRatio();
+	// 	// Advance 1 hr so the collateral ratio can be recalculated
+	// 	//await time.increase(3600 + 1);
+	// 	//await time.advanceBlock();
+	// 	//await fraxInstance.refreshCollateralRatio();
 		
 
-		const collateral_ratio_refreshed = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
-		console.log("collateral_ratio_refreshed: ", collateral_ratio_refreshed.toNumber());
-		col_rat = collateral_ratio_refreshed;
-	});
+	// 	const collateral_ratio_refreshed = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+	// 	console.log("collateral_ratio_refreshed: ", collateral_ratio_refreshed.toNumber());
+	// 	col_rat = collateral_ratio_refreshed;
+	// });
 
 
 	it("Mints 6DEC 1-to-1", async () => {

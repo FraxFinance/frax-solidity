@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../src/types/constants'));
+const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -262,14 +262,14 @@ module.exports = async function(deployer, network, accounts) {
 	}
 
 	await Promise.all([
-		oracle_instance_FRAX_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FRAX_USDC.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FRAX_USDT.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FRAX_FXS.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FXS_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FXS_USDC.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_FXS_USDT.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_USDC_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		oracle_instance_USDT_WETH.setPeriod(86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
+		oracle_instance_FRAX_WETH.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_USDC.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_USDT.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FRAX_FXS.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_WETH.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_USDC.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_FXS_USDT.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_USDC_WETH.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		oracle_instance_USDT_WETH.setPeriod(3600, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
 	]);
 };

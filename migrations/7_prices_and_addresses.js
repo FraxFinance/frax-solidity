@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../src/types/constants'));
+const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -164,7 +164,6 @@ module.exports = async function(deployer, network, accounts) {
 		governanceInstance = await GovernorAlpha.deployed();
 		fraxInstance = await FRAXStablecoin.deployed();
 		fxsInstance = await FRAXShares.deployed();
-		//tokenVestingInstance = await TokenVesting.deployed();
 		wethInstance = await WETH.deployed();
 		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
 		col_instance_USDT = await FakeCollateral_USDT.deployed(); 
@@ -218,10 +217,10 @@ module.exports = async function(deployer, network, accounts) {
 		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.USDC_WETH);
 		oracle_instance_USDT_WETH = await UniswapPairOracle_USDT_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].oracles.USDT_WETH);
 		
-		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FRAX/WETH"]);
-		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FRAX/USDC"]);
-		stakingInstance_FRAX_FXS = await StakingRewards_FRAX_FXS.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FRAX/FXS"]);
-		stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts_for_tokens["Uniswap FXS/WETH"]);
+		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FRAX/WETH"]);
+		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FRAX/USDC"]);
+		stakingInstance_FRAX_FXS = await StakingRewards_FRAX_FXS.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FRAX/FXS"]);
+		stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].staking_contracts["Uniswap FXS/WETH"]);
 		pool_instance_USDC = await Pool_USDC.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDC);
 		pool_instance_USDT = await Pool_USDT.at(CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].pools.USDT);
 		
@@ -261,12 +260,12 @@ module.exports = async function(deployer, network, accounts) {
 
 	// Get the prices
 	let frax_price_from_FRAX_WETH = (new BigNumber(await oracle_instance_FRAX_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6);
-	let frax_price_from_FRAX_USDC = (new BigNumber(await oracle_instance_FRAX_USDC.consult.call(col_instance_USDC.address, 1e6))).div(BIG12);
-	let frax_price_from_FRAX_USDT = (new BigNumber(await oracle_instance_FRAX_USDT.consult.call(col_instance_USDT.address, 1e6))).div(BIG12);
+	let frax_price_from_FRAX_USDC = (new BigNumber(await oracle_instance_FRAX_USDC.consult.call(fraxInstance.address, new BigNumber("1e18")))).div(BIG6);
+	let frax_price_from_FRAX_USDT = (new BigNumber(await oracle_instance_FRAX_USDT.consult.call(fraxInstance.address, new BigNumber("1e18")))).div(BIG6);
 	let frax_price_from_FRAX_FXS = (new BigNumber(await oracle_instance_FRAX_FXS.consult.call(fxsInstance.address, 1e6))).div(BIG6);
 	
 	let fxs_price_from_FXS_WETH = (new BigNumber(await oracle_instance_FXS_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6);
-	let USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6);
+	let USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(wethInstance.address, new BigNumber("1e18")))).div(BIG6);
 	
 	const frax_price_initial = new BigNumber(await fraxInstance.frax_price({ from: COLLATERAL_FRAX_AND_FXS_OWNER })).div(BIG6);
 	const fxs_price_initial = new BigNumber(await fraxInstance.fxs_price({ from: COLLATERAL_FRAX_AND_FXS_OWNER })).div(BIG6);
@@ -362,13 +361,13 @@ module.exports = async function(deployer, network, accounts) {
 				UniswapV2Library: (hasLibraries && CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].libraries.UniswapV2Library) || "",
 				FraxPoolLibrary: (hasLibraries && CONTRACT_ADDRESSES[process.env.MIGRATION_MODE].libraries.FraxPoolLibrary) || "",
 			},
-			stake_tokens: {
+			pair_tokens: {
 				'Uniswap FRAX/WETH': pair_instance_FRAX_WETH.address,
 				'Uniswap FRAX/USDC': pair_instance_FRAX_USDC.address,
 				'Uniswap FRAX/FXS': pair_instance_FRAX_FXS.address,
 				'Uniswap FXS/WETH': pair_instance_FXS_WETH.address,
 			},
-			staking_contracts_for_tokens: {
+			staking_contracts: {
 				'Uniswap FRAX/WETH': stakingInstance_FRAX_WETH.address,
 				'Uniswap FRAX/USDC': stakingInstance_FRAX_USDC.address,
 				'Uniswap FRAX/FXS': stakingInstance_FRAX_FXS.address,

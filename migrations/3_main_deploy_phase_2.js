@@ -2,7 +2,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 
-const constants = require(path.join(__dirname, '../src/types/constants'));
+const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
@@ -185,12 +185,14 @@ module.exports = async function(deployer, network, accounts) {
 	}
 
 	let swapToPriceInstance;
-	if (process.env.MIGRATION_MODE == 'ganache'){
-		await deployer.deploy(SwapToPrice, uniswapFactoryInstance.address, routerInstance.address);
-		swapToPriceInstance = await SwapToPrice.deployed();
-	} else {
+	if (IS_MAINNET){
 		swapToPriceInstance = await SwapToPrice.at('0xa61cBe7E326B13A8dbA11D00f42531BE704DF51B'); 
 	}
+	else {
+		await deployer.deploy(SwapToPrice, uniswapFactoryInstance.address, routerInstance.address);
+		swapToPriceInstance = await SwapToPrice.deployed();
+	}
+	
 
 	// ======== Set the Uniswap pairs ========
 	console.log(chalk.yellow('===== SET UNISWAP PAIRS ====='));
@@ -251,8 +253,8 @@ module.exports = async function(deployer, network, accounts) {
 	console.log(chalk.yellow('===== ADD ALLOWANCES TO THE UNISWAP ROUTER ====='));
 	await Promise.all([
 		wethInstance.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		col_instance_USDC.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-		col_instance_USDT.approve(routerInstance.address, new BigNumber(2000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		col_instance_USDC.approve(routerInstance.address, new BigNumber(2000000e6), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		col_instance_USDT.approve(routerInstance.address, new BigNumber(2000000e6), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
 		fraxInstance.approve(routerInstance.address, new BigNumber(1000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
 		fxsInstance.approve(routerInstance.address, new BigNumber(5000000e18), { from: COLLATERAL_FRAX_AND_FXS_OWNER })
 	])
@@ -303,13 +305,13 @@ module.exports = async function(deployer, network, accounts) {
 				UniswapV2Library: UniswapV2Library.address,
 				FraxPoolLibrary: FraxPoolLibrary.address,
 			},
-			stake_tokens: {
+			pair_tokens: {
 				'Uniswap FRAX/WETH': pair_instance_FRAX_WETH.address,
 				'Uniswap FRAX/USDC': pair_instance_FRAX_USDC.address,
 				'Uniswap FRAX/FXS': pair_instance_FRAX_FXS.address,
 				'Uniswap FXS/WETH': pair_instance_FXS_WETH.address,
 			},
-			staking_contracts_for_tokens: {
+			staking_contracts: {
 				'Uniswap FRAX/WETH': stakingInstance_FRAX_WETH.address,
 				'Uniswap FRAX/USDC': stakingInstance_FRAX_USDC.address,
 				'Uniswap FRAX/FXS': stakingInstance_FRAX_FXS.address,

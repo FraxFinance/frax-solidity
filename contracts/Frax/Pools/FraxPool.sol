@@ -6,16 +6,9 @@ import "../../Math/SafeMath.sol";
 import "../../FXS/FXS.sol";
 import "../../Frax/Frax.sol";
 import "../../ERC20/ERC20.sol";
-// import '../../Uniswap/TransferHelper.sol';
 import "../../Oracle/UniswapPairOracle.sol";
 import "../../Governance/AccessControl.sol";
-// import "../../Utils/StringHelpers.sol";
 import "./FraxPoolLibrary.sol";
-
-/*
-   Same as FraxPool.sol, but has some gas optimizations
-*/
-
 
 contract FraxPool is AccessControl {
     using SafeMath for uint256;
@@ -25,13 +18,13 @@ contract FraxPool is AccessControl {
     ERC20 private collateral_token;
     address private collateral_address;
     address private owner_address;
-    // address private oracle_address;
+
     address private frax_contract_address;
     address private fxs_contract_address;
-    address private timelock_address; // Timelock address for the governance contract
+    address private timelock_address;
     FRAXShares private FXS;
     FRAXStablecoin private FRAX;
-    // UniswapPairOracle private oracle;
+
     UniswapPairOracle private collatEthOracle;
     address public collat_eth_oracle_address;
     address private weth_address;
