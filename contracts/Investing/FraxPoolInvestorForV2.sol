@@ -10,7 +10,7 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ========================= FraxPoolInvestorForV2 =========================
+// ======================= FraxPoolInvestorForV2 ======================
 // ====================================================================
 
 
@@ -18,6 +18,7 @@ import "../Math/SafeMath.sol";
 import "../FXS/FXS.sol";
 import "../Frax/Frax.sol";
 import "../ERC20/ERC20.sol";
+import "../ERC20/Variants/Comp.sol";
 import "../Oracle/UniswapPairOracle.sol";
 import "../Governance/AccessControl.sol";
 import "../Frax/Pools/FraxPool.sol";
@@ -25,6 +26,7 @@ import "./yearn/IyUSDC_V2_Partial.sol";
 import "./aave/IAAVELendingPoolV2_Partial.sol";
 import "./bzx/IBZXFulcrum_Partial.sol";
 import "./compound/IcUSDC_Partial.sol";
+
 
 contract FraxPoolInvestorForV2 is AccessControl {
     using SafeMath for uint256;
@@ -39,7 +41,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
     IAAVELendingPoolV2_Partial private aaveUSDC_V2 = IAAVELendingPoolV2_Partial(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
     IBZXFulcrum_Partial private bzxFulcrum = IBZXFulcrum_Partial(0x32E4c68B3A4a813b710595AebA7f6B7604Ab9c15);
     IcUSDC_Partial private cUSDC = IcUSDC_Partial(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
-    ERC20 private COMP = ERC20(0xc00e94Cb662C3520282E6f5717214004A7f26888);
+    Comp private COMP = Comp(0xc00e94Cb662C3520282E6f5717214004A7f26888);
 
     address public collateral_address;
     address public pool_address;
