@@ -10,4 +10,5 @@ import '../../ERC20/IERC20.sol';
 interface IBZXFulcrum_Partial is IERC20  {
     function mint(address receiver, uint256 depositAmount) external returns (uint256);
     function burn(address receiver, uint256 burnAmount) external returns (uint256 loanAmountPaid);
+    function assetBalanceOf(address _owner) external returns (uint256);
 }
