@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: agpl-3.0
 pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
+import '../../ERC20/IERC20.sol';
 
 // Original at https://etherscan.io/address/0xc6845a5c768bf8d7681249f8927877efda425baf#code
 // Address [0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9] used is a proxy
 // Some functions were omitted for brevity. See the contract for details
 
-interface IAAVELendingPoolV2_Partial {
+interface IAAVELendingPool_Partial is IERC20 {
 
   /**
    * @dev Deposits an `amount` of underlying asset into the reserve, receiving in return overlying aTokens.

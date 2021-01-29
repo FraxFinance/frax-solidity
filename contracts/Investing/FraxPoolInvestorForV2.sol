@@ -19,14 +19,16 @@ import "../FXS/FXS.sol";
 import "../Frax/Frax.sol";
 import "../ERC20/ERC20.sol";
 import "../ERC20/Variants/Comp.sol";
+import "../ERC20/Variants/RookToken.sol";
 import "../Oracle/UniswapPairOracle.sol";
 import "../Governance/AccessControl.sol";
 import "../Frax/Pools/FraxPool.sol";
 import "./yearn/IyUSDC_V2_Partial.sol";
-import "./aave/IAAVELendingPoolV2_Partial.sol";
+import "./aave/IAAVELendingPool_Partial.sol";
 import "./bzx/IBZXFulcrum_Partial.sol";
 import "./compound/IcUSDC_Partial.sol";
-
+import "./keeper/IKEEPERLiquidityPoolV2_Partial.sol";
+import "./keeper/IKToken.sol";
 
 contract FraxPoolInvestorForV2 is AccessControl {
     using SafeMath for uint256;
@@ -37,11 +39,17 @@ contract FraxPoolInvestorForV2 is AccessControl {
     FRAXShares private FXS;
     FRAXStablecoin private FRAX;
     FraxPool private pool;
+
+    // Pools and vaults
     IyUSDC_V2_Partial private yUSDC_V2 = IyUSDC_V2_Partial(0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9);
-    IAAVELendingPoolV2_Partial private aaveUSDC_V2 = IAAVELendingPoolV2_Partial(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
+    IAAVELendingPool_Partial private aaveUSDC_Pool = IAAVELendingPool_Partial(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
     IBZXFulcrum_Partial private bzxFulcrum = IBZXFulcrum_Partial(0x32E4c68B3A4a813b710595AebA7f6B7604Ab9c15);
     IcUSDC_Partial private cUSDC = IcUSDC_Partial(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
+    IKEEPERLiquidityPoolV2_Partial private keeperPool_V2 = IKEEPERLiquidityPoolV2_Partial(0x53463cd0b074E5FDafc55DcE7B1C82ADF1a43B2E);
+
+    // Reward Tokens
     Comp private COMP = Comp(0xc00e94Cb662C3520282E6f5717214004A7f26888);
+    RookToken private ROOK = RookToken(0xfA5047c9c78B8877af97BDcb85Db743fD7313d4a);
 
     address public collateral_address;
     address public pool_address;
@@ -162,12 +170,12 @@ contract FraxPoolInvestorForV2 is AccessControl {
     /* ========== AAVE V2 ========== */
 
     function aaveDepositUSDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
-        collateral_token.approve(address(aaveUSDC_V2), USDC_amount);
-        aaveUSDC_V2.deposit(collateral_address, USDC_amount, address(this), 0);
+        collateral_token.approve(address(aaveUSDC_Pool), USDC_amount);
+        aaveUSDC_Pool.deposit(collateral_address, USDC_amount, address(this), 0);
     }
 
     function aaveWithdrawUSDC(uint256 aUSDC_amount) public onlyByOwnerOrGovernance {
-        aaveUSDC_V2.withdraw(collateral_address, aUSDC_amount, address(this));
+        aaveUSDC_Pool.withdraw(collateral_address, aUSDC_amount, address(this));
     }
 
     /* ========== BZX Fulcrum ========== */
@@ -188,12 +196,28 @@ contract FraxPoolInvestorForV2 is AccessControl {
         cUSDC.mint(USDC_amount);
     }
 
-    function compRedeemUnderlying_cUSDC(uint256 cUSDC_amount) public onlyByOwnerOrGovernance {
-        cUSDC.redeemUnderlying(cUSDC_amount);
+    function compRedeem_cUSDC(uint256 cUSDC_amount) public onlyByOwnerOrGovernance {
+        // NOTE that cUSDC is E8, NOT E6
+        cUSDC.redeem(cUSDC_amount);
     }
 
     function compWithdrawCOMP(uint256 comp_amount) public onlyByOwnerOrGovernance {
         COMP.transfer(misc_rewards_custodian, comp_amount);
+    }
+
+    /* ========== KeeperDAO kUSDC + ROOK ========== */
+
+    function keepDeposit_USDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
+        collateral_token.approve(address(keeperPool_V2), USDC_amount);
+        keeperPool_V2.deposit(collateral_address, USDC_amount);
+    }
+
+    function keepRedeem_kUSDC(uint256 kUSDC_amount) public onlyByOwnerOrGovernance {
+        keeperPool_V2.withdraw(payable(address(this)), IKToken(0xac826952bc30504359a099c3a486d44E97415c77), kUSDC_amount);
+    }
+
+    function keepWithdrawROOK(uint256 rook_amount) public onlyByOwnerOrGovernance {
+        ROOK.transfer(misc_rewards_custodian, rook_amount);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -218,6 +242,8 @@ contract FraxPoolInvestorForV2 is AccessControl {
     function setBorrowCap(uint256 _borrow_cap) external onlyByOwnerOrGovernance {
         borrow_cap = _borrow_cap;
     }
+
+
 
     /* ========== EVENTS ========== */
 
