@@ -11,5 +11,5 @@ interface IyUSDC_V2_Partial is IERC20 {
     function earn() external;
     function deposit(uint _amount) external;
     function withdraw(uint _shares) external;
-    function getPricePerFullShare() external returns (uint);
+    function pricePerShare() external returns (uint);
 }
