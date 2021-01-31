@@ -28,13 +28,8 @@ import "../Frax/Pools/FraxPool.sol";
 import "./yearn/IyUSDC_V2_Partial.sol";
 import "./aave/IAAVELendingPool_Partial.sol";
 import "./aave/IAAVE_aUSDC_Partial.sol";
-import "./bzx/IBZXFulcrum_Partial.sol";
+import "./compound/ICompComptrollerPartial.sol";
 import "./compound/IcUSDC_Partial.sol";
-import "./keeper/IKEEPERLiquidityPool_V2.sol";
-import "./keeper/IKToken.sol";
-import "./harvest/IHARVESTDepositHelper_Partial.sol";
-import "./harvest/IHARVESTNoMintRewardPool_Partial.sol";
-import "./harvest/IHARVEST_fUSDC.sol";
 
 // Lower APY: yearn, AAVE, Compound
 // Higher APY: KeeperDAO, BZX, Harvest
@@ -53,19 +48,11 @@ contract FraxPoolInvestorForV2 is AccessControl {
     IyUSDC_V2_Partial private yUSDC_V2 = IyUSDC_V2_Partial(0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9);
     IAAVELendingPool_Partial private aaveUSDC_Pool = IAAVELendingPool_Partial(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
     IAAVE_aUSDC_Partial private aaveUSDC_Token = IAAVE_aUSDC_Partial(0xBcca60bB61934080951369a648Fb03DF4F96263C);
-    IBZXFulcrum_Partial private bzxFulcrum = IBZXFulcrum_Partial(0x32E4c68B3A4a813b710595AebA7f6B7604Ab9c15);
     IcUSDC_Partial private cUSDC = IcUSDC_Partial(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
-    IKEEPERLiquidityPool_V2 private keeperPool_V2 = IKEEPERLiquidityPool_V2(0x53463cd0b074E5FDafc55DcE7B1C82ADF1a43B2E);
-    IHARVESTDepositHelper_Partial private harvestDepositHelper = IHARVESTDepositHelper_Partial(0xF8ce90c2710713552fb564869694B2505Bfc0846);
-    IHARVESTNoMintRewardPool_Partial private harvestNoMintRewardPool = IHARVESTNoMintRewardPool_Partial(0x4F7c28cCb0F1Dbd1388209C67eEc234273C878Bd);
-    IHARVEST_fUSDC private fUSDC = IHARVEST_fUSDC(0xf0358e8c3CD5Fa238a29301d0bEa3D63A17bEdBE);
-    IKToken private kUSDC = IKToken(0xac826952bc30504359a099c3a486d44E97415c77);
 
     // Reward Tokens
     Comp private COMP = Comp(0xc00e94Cb662C3520282E6f5717214004A7f26888);
-    RookToken private ROOK = RookToken(0xfA5047c9c78B8877af97BDcb85Db743fD7313d4a);
-    FarmToken private FARM = FarmToken(0xa0246c9032bC3A600820415aE600c6388619A14D);
-    IDLEToken private IDLE = IDLEToken(0x875773784Af8135eA0ef43b5a374AaD105c5D39e);
+    ICompComptrollerPartial private CompController = ICompComptrollerPartial(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
 
     address public collateral_address;
     address public pool_address;
@@ -82,6 +69,11 @@ contract FraxPoolInvestorForV2 is AccessControl {
     uint256 public borrowed_balance = 0;
     uint256 public borrowed_historical = 0;
     uint256 public paid_back_historical = 0;
+
+    // Allowed strategies (can eventually be made into an array)
+    bool public allow_yearn = true;
+    bool public allow_aave = true;
+    bool public allow_compound = true;
 
     /* ========== MODIFIERS ========== */
 
@@ -121,45 +113,30 @@ contract FraxPoolInvestorForV2 is AccessControl {
 
     /* ========== VIEWS ========== */
 
-    function showAllocations() public returns (uint256[9] memory allocations) {
+    function showAllocations() external returns (uint256[5] memory allocations) {
         // IMPORTANT
-        // IMPORTANT
-        // IMPORTANT
-        // IMPORTANT
-        // TODO: Make sure the entire function or contract does not brick if one of the external calls fails. Strategy boolean array?
+        // Should ONLY be used externally, because it may fail if any one of the functions below fail
 
         // All numbers given are assuming xyzUSDC, etc. is converted back to actual USDC
         allocations[0] = collateral_token.balanceOf(address(this)); // Unallocated
         allocations[1] = (yUSDC_V2.balanceOf(address(this))).mul(yUSDC_V2.pricePerShare()).div(1e6); // yearn
         allocations[2] = aaveUSDC_Token.balanceOf(address(this)); // AAVE
-        allocations[3] = bzxFulcrum.assetBalanceOf(address(this)); // BZX
-        allocations[4] = (cUSDC.balanceOf(address(this)).mul(cUSDC.exchangeRateStored()).div(1e18)); // Compound. Note that cUSDC is E8
-        allocations[5] = keeperPool_V2.underlyingBalance(collateral_address, address(this)); // KeeperDAO
-        allocations[6] = fUSDC.underlyingBalanceWithInvestmentForHolder(address(this)); // Harvest [Unstaked]
-        allocations[7] = (harvestNoMintRewardPool.balanceOf(address(this))).mul(fUSDC.getPricePerFullShare()).div(1e6); // Harvest [Staked]
-    
+        allocations[3] = (cUSDC.balanceOf(address(this)).mul(cUSDC.exchangeRateStored()).div(1e18)); // Compound. Note that cUSDC is E8
+
         uint256 sum_tally = 0;
-        for (uint i = 1; i < 8; i++){ 
+        for (uint i = 1; i < 5; i++){ 
             if (allocations[i] > 0){
                 sum_tally = sum_tally.add(allocations[i]);
             }
         }
 
-        allocations[8] = sum_tally; // Harvest [Staked]
+        allocations[4] = sum_tally; // Total Staked
     }
 
-    function showRewards() public returns (uint256[4] memory rewards) {
+    function showRewards() external returns (uint256[1] memory rewards) {
         // IMPORTANT
-        // IMPORTANT
-        // IMPORTANT
-        // IMPORTANT
-
-        // TODO: Make sure the entire function or contract does not brick if one of the external calls fails. Strategy boolean array?
-
+        // Should ONLY be used externally, because it may fail if COMP.balanceOf() fails
         rewards[0] = COMP.balanceOf(address(this)); // COMP
-        rewards[1] = ROOK.balanceOf(address(this)); // ROOK
-        rewards[2] = IDLE.balanceOf(address(this)); // IDLE
-        rewards[3] = FARM.balanceOf(address(this)); // FARM
     }
 
     /* ========== PUBLIC FUNCTIONS ========== */
@@ -173,8 +150,9 @@ contract FraxPoolInvestorForV2 is AccessControl {
     // This contract is essentially marked as a 'pool' so it can call OnlyPools functions like pool_mint and pool_burn_from
     // on the main FRAX contract
     // It mints FRAX from nothing, and redeems it on the target pool for collateral and FXS
-    // The burn can be called seperately later on
+    // The burn can be called separately later on
     function mintRedeemPart1(uint256 frax_amount) public onlyByOwnerOrGovernance {
+        require(allow_yearn || allow_aave || allow_compound, 'All strategies are currently off');
         uint256 redemption_fee = pool.redemption_fee();
         uint256 col_price_usd = pool.getCollateralPrice();
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
@@ -219,6 +197,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
     /* ========== yearn V2 ========== */
 
     function yDepositUSDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
+        require(allow_yearn, 'yearn strategy is currently off');
         collateral_token.approve(address(yUSDC_V2), USDC_amount);
         yUSDC_V2.deposit(USDC_amount);
     }
@@ -230,6 +209,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
     /* ========== AAVE V2 ========== */
 
     function aaveDepositUSDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
+        require(allow_aave, 'AAVE strategy is currently off');
         collateral_token.approve(address(aaveUSDC_Pool), USDC_amount);
         aaveUSDC_Pool.deposit(collateral_address, USDC_amount, address(this), 0);
     }
@@ -238,20 +218,10 @@ contract FraxPoolInvestorForV2 is AccessControl {
         aaveUSDC_Pool.withdraw(collateral_address, aUSDC_amount, address(this));
     }
 
-    /* ========== BZX Fulcrum ========== */
-
-    function bzxMint_iUSDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
-        collateral_token.approve(address(bzxFulcrum), USDC_amount);
-        bzxFulcrum.mint(address(this), USDC_amount);
-    }
-
-    function bzxBurn_iUSDC(uint256 iUSDC_amount) public onlyByOwnerOrGovernance {
-        bzxFulcrum.burn(address(this), iUSDC_amount);
-    }
-
     /* ========== Compound cUSDC + COMP ========== */
 
     function compoundMint_cUSDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
+        require(allow_compound, 'Compound strategy is currently off');
         collateral_token.approve(address(cUSDC), USDC_amount);
         cUSDC.mint(USDC_amount);
     }
@@ -261,70 +231,14 @@ contract FraxPoolInvestorForV2 is AccessControl {
         cUSDC.redeem(cUSDC_amount);
     }
 
-    /* ========== KeeperDAO kUSDC + ROOK ========== */
-
-    // Note that this has a deposit fee
-    function keeperDeposit_USDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
-        collateral_token.approve(address(keeperPool_V2), USDC_amount);
-        keeperPool_V2.deposit(collateral_address, USDC_amount);
-    }
-
-    function keeperWithdraw_kUSDC(uint256 kUSDC_amount) public onlyByOwnerOrGovernance {
-        kUSDC.approve(address(keeperPool_V2), kUSDC_amount);
-        keeperPool_V2.withdraw(payable(address(this)), kUSDC, kUSDC_amount);
-    }
-
-    /* ========== Harvest fUSDC + FARM + COMP + IDLE ========== */
-
-    function harvestDeposit_USDC(uint256 USDC_amount) public onlyByOwnerOrGovernance {
-        collateral_token.approve(address(harvestDepositHelper), USDC_amount);
-        uint256[] memory amounts = new uint256[](1);
-        amounts[0] = USDC_amount;
-        address[] memory addresses = new address[](1);
-        addresses[0] = address(fUSDC);
-        harvestDepositHelper.depositAll(amounts, addresses);
-    }
-
-    function harvestStake_fUSDC(uint256 fUSDC_amount) public onlyByOwnerOrGovernance {
-        fUSDC.approve(address(harvestNoMintRewardPool), fUSDC_amount);
-        harvestNoMintRewardPool.stake(fUSDC_amount);
-    }
-
-    function harvestWithdrawStake_fUSDC(uint256 fUSDC_amount) public onlyByOwnerOrGovernance {
-        harvestNoMintRewardPool.withdraw(fUSDC_amount);
-    }
-
-    function harvestGetRewardsForStake_fUSDC() public onlyByOwnerOrGovernance {
-        // This gets FARM, IDLE, and COMP tokens
-        harvestNoMintRewardPool.getReward();
-    }
-
-    function harvestExitStake_fUSDC() public onlyByOwnerOrGovernance {
-        harvestNoMintRewardPool.exit();
-    }
-
-    function harvestWithdraw_fUSDC_for_USDC(uint256 fUSDC_amount) public onlyByOwnerOrGovernance {
-        fUSDC.withdraw(fUSDC_amount);
+    function compoundCollectCOMP() public onlyByOwnerOrGovernance {
+        CompController.claimComp(address(this));
     }
 
     /* ========== Custodian ========== */
 
-    function withdrawRewards(
-        uint256 comp_amount, 
-        uint256 rook_amount, 
-        uint256 idle_amount, 
-        uint256 farm_amount
-    ) public onlyCustodian {
-        // IMPORTANT
-        // IMPORTANT
-        // IMPORTANT
-        // IMPORTANT
-        // TODO: Make sure the entire function or contract does not brick if one of the external calls fails. Strategy boolean array?
-
-        if (comp_amount > 0) COMP.transfer(custodian_address, comp_amount);
-        if (rook_amount > 0) ROOK.transfer(custodian_address, rook_amount);
-        if (idle_amount > 0) IDLE.transfer(custodian_address, idle_amount);
-        if (farm_amount > 0) FARM.transfer(custodian_address, farm_amount);
+    function withdrawRewards() public onlyCustodian {
+        COMP.transfer(custodian_address, COMP.balanceOf(address(this)));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -350,28 +264,22 @@ contract FraxPoolInvestorForV2 is AccessControl {
         borrow_cap = _borrow_cap;
     }
 
+    function setAllowedStrategies(bool _yearn, bool _aave, bool _compound) external onlyByOwnerOrGovernance {
+        allow_yearn = _yearn;
+        allow_aave = _aave;
+        allow_compound = _compound;
+    }
+
     function emergencyRecoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
-        // require(tokenAddress != address(collateral_address));
-        ERC20(tokenAddress).transfer(owner_address, tokenAmount);
+        // Can only be triggered by owner or governance, not custodian
+        // Tokens are sent to the custodian, as a sort of safeguard
+
+        ERC20(tokenAddress).transfer(custodian_address, tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
 
-    // TODO
-    // IMPORTANT
-    // IMPORTANT
-    // IMPORTANT
-    // IMPORTANT
-    // function setAllowedStrategies
-    // add in an array of allowed strategies as a failsafe and put checks in all the functions above, or at least
-    // ones where a perma-brick could occur.
 
     /* ========== EVENTS ========== */
-
-    // TODO
-    // ADD MORE EVENTS
-    // ADD MORE EVENTS
-    // ADD MORE EVENTS
-    // ADD MORE EVENTS
 
     event Recovered(address token, uint256 amount);
 
