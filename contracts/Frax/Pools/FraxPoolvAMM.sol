@@ -525,16 +525,14 @@ contract FraxPoolvAMM is AccessControl {
 
     // Withdraw collateral 
     function investorWithdraw(uint256 amount) external onlyInvestor {
-        require(collateral_invested.add(amount) <= availableForInvestment(), 'Investment cap reached');
-
-        collateral_invested = collateral_invested.add(amount);
-
+        collateral_invested = collateral_invested.sub(amount);
         collateral_token.transfer(investor_contract_address, amount);
     }
 
     // Deposit collateral 
     function investorDeposit(uint256 amount) external onlyInvestor {
-        collateral_invested = collateral_invested.sub(amount);
+        require(collateral_invested.add(amount) <= availableForInvestment(), 'Investment cap reached');
+        collateral_invested = collateral_invested.add(amount);
         collateral_token.transferFrom(investor_contract_address, address(this), amount);
     }
 
