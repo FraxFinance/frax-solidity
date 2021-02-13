@@ -16,5 +16,5 @@ interface IcUSDC_Partial is IERC20  {
     function redeemUnderlying(uint redeemAmount) external returns (uint);
 
     // Multiply this by the E8 balance of cUSDC, then divide the product by E16 
-    function exchangeRateStored() external returns (uint);
+    function exchangeRateStored() external view returns (uint);
 }
