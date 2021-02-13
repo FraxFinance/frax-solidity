@@ -19,9 +19,6 @@ import "../FXS/FXS.sol";
 import "../Frax/Frax.sol";
 import "../ERC20/ERC20.sol";
 import "../ERC20/Variants/Comp.sol";
-import "../ERC20/Variants/RookToken.sol";
-import "../ERC20/Variants/FarmToken.sol";
-import "../ERC20/Variants/IDLEToken.sol";
 import "../Oracle/UniswapPairOracle.sol";
 import "../Governance/AccessControl.sol";
 import "../Frax/Pools/FraxPool.sol";
@@ -59,11 +56,13 @@ contract FraxPoolInvestorForV2 is AccessControl {
     address public owner_address;
     address public timelock_address;
     address public custodian_address;
+    address public weth_address = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     uint256 public immutable missing_decimals;
+    uint256 private constant PRICE_PRECISION = 1e6;
 
     // Max amount of collateral this contract can borrow from the FraxPool
-    uint256 public borrow_cap = uint256(100000e6);
+    uint256 public borrow_cap = uint256(20000e6);
 
     // Amount the contract borrowed
     uint256 public borrowed_balance = 0;
@@ -95,6 +94,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
         address _pool_address,
         address _collateral_address,
         address _owner_address,
+        address _custodian_address,
         address _timelock_address
     ) public {
         FRAX = FRAXStablecoin(_frax_contract_address);
@@ -105,7 +105,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
         collateral_token = ERC20(_collateral_address);
         timelock_address = _timelock_address;
         owner_address = _owner_address;
-        custodian_address = _owner_address;
+        custodian_address = _custodian_address;
         missing_decimals = uint(18).sub(collateral_token.decimals());
         
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -113,7 +113,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
 
     /* ========== VIEWS ========== */
 
-    function showAllocations() external returns (uint256[5] memory allocations) {
+    function showAllocations() external view returns (uint256[5] memory allocations) {
         // IMPORTANT
         // Should ONLY be used externally, because it may fail if any one of the functions below fail
 
@@ -133,7 +133,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
         allocations[4] = sum_tally; // Total Staked
     }
 
-    function showRewards() external returns (uint256[1] memory rewards) {
+    function showRewards() external view returns (uint256[1] memory rewards) {
         // IMPORTANT
         // Should ONLY be used externally, because it may fail if COMP.balanceOf() fails
         rewards[0] = COMP.balanceOf(address(this)); // COMP
@@ -142,8 +142,18 @@ contract FraxPoolInvestorForV2 is AccessControl {
     /* ========== PUBLIC FUNCTIONS ========== */
 
     // Needed for the Frax contract to function 
-    function collatDollarBalance() public returns (uint256) {
-        return borrowed_balance;
+    function collatDollarBalance() external view returns (uint256) {
+        // Needs to mimic the FraxPool value and return in E18
+        // Only thing different should be borrowed_balance vs balanceOf()
+        if(pool.collateralPricePaused() == true){
+            return borrowed_balance.mul(10 ** missing_decimals).mul(pool.pausedPrice()).div(PRICE_PRECISION);
+        } else {
+            uint256 eth_usd_price = FRAX.eth_usd_price();
+            uint256 eth_collat_price = UniswapPairOracle(pool.collat_eth_oracle_address()).consult(weth_address, (PRICE_PRECISION * (10 ** missing_decimals)));
+
+            uint256 collat_usd_price = eth_usd_price.mul(PRICE_PRECISION).div(eth_collat_price);
+            return borrowed_balance.mul(10 ** missing_decimals).mul(collat_usd_price).div(PRICE_PRECISION); //.mul(getCollateralPrice()).div(1e6);    
+        }
     }
 
     // This is basically a workaround to transfer USDC from the FraxPool to this investor contract
@@ -202,6 +212,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
         yUSDC_V2.deposit(USDC_amount);
     }
 
+    // E6
     function yWithdrawUSDC(uint256 yUSDC_amount) public onlyByOwnerOrGovernance {
         yUSDC_V2.withdraw(yUSDC_amount);
     }
@@ -214,6 +225,7 @@ contract FraxPoolInvestorForV2 is AccessControl {
         aaveUSDC_Pool.deposit(collateral_address, USDC_amount, address(this), 0);
     }
 
+    // E6
     function aaveWithdrawUSDC(uint256 aUSDC_amount) public onlyByOwnerOrGovernance {
         aaveUSDC_Pool.withdraw(collateral_address, aUSDC_amount, address(this));
     }
@@ -226,13 +238,18 @@ contract FraxPoolInvestorForV2 is AccessControl {
         cUSDC.mint(USDC_amount);
     }
 
+    // E8
     function compoundRedeem_cUSDC(uint256 cUSDC_amount) public onlyByOwnerOrGovernance {
         // NOTE that cUSDC is E8, NOT E6
         cUSDC.redeem(cUSDC_amount);
     }
 
     function compoundCollectCOMP() public onlyByOwnerOrGovernance {
-        CompController.claimComp(address(this));
+        address[] memory cTokens = new address[](1);
+        cTokens[0] = address(cUSDC);
+        CompController.claimComp(address(this), cTokens);
+
+        // CompController.claimComp(address(this), );
     }
 
     /* ========== Custodian ========== */
@@ -249,6 +266,10 @@ contract FraxPoolInvestorForV2 is AccessControl {
 
     function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
         owner_address = _owner_address;
+    }
+
+    function setWethAddress(address _weth_address) external onlyByOwnerOrGovernance {
+        weth_address = _weth_address;
     }
 
     function setMiscRewardsCustodian(address _custodian_address) external onlyByOwnerOrGovernance {

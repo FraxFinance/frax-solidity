@@ -395,7 +395,7 @@ contract FraxPoolvAMM is AccessControl {
         uint256 collat_equivalent = FRAX_amount.div(10 ** missing_decimals);
 
         if(global_collateral_ratio == 1e6) { // 1-to-1
-            collat_out = FRAX_amount.mul(10 ** missing_decimals);
+            collat_out = collat_equivalent;
             fxs_out = 0;
 
         } else if (global_collateral_ratio == 0) { // Algorithmic
@@ -417,7 +417,8 @@ contract FraxPoolvAMM is AccessControl {
         // Sanity check to make sure the collat amount is close to the expected amount from the FRAX input
         // Useful in case of a sandwich attack or some other fault with the virtual reserves
         // Assumes $1 collateral (USDC, USDT, DAI, etc)
-        require(collat_out <= FRAX_amount.mul(global_collateral_ratio).mul(uint256(1e6).add(max_drift_band)).div(1e12), "[max_drift_band] Too much collateral being released");
+
+        require(collat_out.mul(10 ** missing_decimals) <= FRAX_amount.mul(global_collateral_ratio).mul(uint256(1e6).add(max_drift_band)).div(1e12), "[max_drift_band] Too much collateral being released");
         
         redeemCollateralBalances[msg.sender] = redeemCollateralBalances[msg.sender].add(collat_out);
         unclaimedPoolCollateral = unclaimedPoolCollateral.add(collat_out);
@@ -506,6 +507,7 @@ contract FraxPoolvAMM is AccessControl {
         uint256 buyback_available = availableExcessCollatDV().div(10 ** missing_decimals);
         uint256 collat_out = getAmountOut(FXS_amount, fxs_virtual_reserves, collat_virtual_reserves, buyback_fee);
 
+        require(buyback_available > 0, "Zero buyback available");
         require(collat_out <= buyback_available, "Not enough buyback available");
         require(collat_out >= COLLATERAL_out_min, "Slippage limit reached");
         _update(fxs_virtual_reserves.sub(FXS_amount), collat_virtual_reserves.add(collat_out), fxs_virtual_reserves, collat_virtual_reserves);
@@ -523,18 +525,19 @@ contract FraxPoolvAMM is AccessControl {
         return (FXS_amount, collat_out);
     }
 
-    // Withdraw collateral 
-    function investorWithdraw(uint256 amount) external onlyInvestor {
+    // Send collateral to investor contract
+    // Called by INVESTOR CONTRACT
+    function takeOutCollat_Inv(uint256 amount) external onlyInvestor {
         require(collateral_invested.add(amount) <= availableForInvestment(), 'Investment cap reached');
-
         collateral_invested = collateral_invested.add(amount);
-
         collateral_token.transfer(investor_contract_address, amount);
     }
 
-    // Deposit collateral 
-    function investorDeposit(uint256 amount) external onlyInvestor {
-        collateral_invested = collateral_invested.sub(amount);
+    // Deposit collateral back to this contract
+    // Called by INVESTOR CONTRACT
+    function putBackCollat_Inv(uint256 amount) external onlyInvestor {
+        if (amount < collateral_invested) collateral_invested = collateral_invested.sub(amount);
+        else collateral_invested = 0;
         collateral_token.transferFrom(investor_contract_address, address(this), amount);
     }
 
