@@ -258,7 +258,7 @@ contract FraxPoolvAMM is AccessControl {
         
         // Calculate the reserves at the average external price over the last period and the target K
         (uint ext_average_fxs_usd_price, uint ext_k) = getOracleInfo();
-        uint targetK = internal_k < ext_k
+        uint targetK = internal_k > ext_k
             ? Math.max(ext_k, internal_k.sub(internal_k.div(100)))  // Decrease or
             : Math.min(ext_k, internal_k.add(internal_k.div(100))); // Increase K no more than 1% per period
         uint ext_collat_reserves_average_price = sqrt(targetK.mul(ext_average_fxs_usd_price));
