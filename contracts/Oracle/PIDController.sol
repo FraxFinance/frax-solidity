@@ -1,6 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.11;
 
+// ====================================================================
+// |     ______                   _______                             |
+// |    / _____________ __  __   / ____(_____  ____ _____  ________   |
+// |   / /_  / ___/ __ `| |/_/  / /_  / / __ \/ __ `/ __ \/ ___/ _ \  |
+// |  / __/ / /  / /_/ _>  <   / __/ / / / / / /_/ / / / / /__/  __/  |
+// | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
+// |                                                                  |
+// ====================================================================
+// =========================== PIDController ==========================
+// ====================================================================
+// Frax Finance: https://github.com/FraxFinance
+// Sam Kazemian: https://github.com/samkazemian
+// Jason Huan: https://github.com/jasonhuan
+
+// Reviewed by
+// Travis Moore: https://github.com/FortisFortuna
+
 import '../Frax/Frax.sol';
 import "../Math/SafeMath.sol";
 import "./ReserveTracker.sol";
