@@ -258,7 +258,9 @@ contract FraxPoolvAMM is AccessControl {
         
         // Calculate the reserves at the average external price over the last period and the target K
         (uint ext_average_fxs_usd_price, uint ext_k) = getOracleInfo();
-        uint targetK = Math.min(ext_k, internal_k.add(internal_k.div(100))); // Increase K with max 1% per period
+        uint targetK = internal_k > ext_k
+            ? Math.max(ext_k, internal_k.sub(internal_k.div(100)))  // Decrease or
+            : Math.min(ext_k, internal_k.add(internal_k.div(100))); // Increase K no more than 1% per period
         uint ext_collat_reserves_average_price = sqrt(targetK.mul(ext_average_fxs_usd_price));
         uint ext_fxs_reserves_average_price = targetK.div(ext_collat_reserves_average_price);
         
@@ -415,8 +417,12 @@ contract FraxPoolvAMM is AccessControl {
         require(fxs_out >= fxs_out_min, "Slippage limit reached [FXS]");
 
         // Sanity check to make sure the collat amount is close to the expected amount from the FRAX input
-        // Useful in case of a sandwich attack or some other fault with the virtual reserves
-        // Assumes $1 collateral (USDC, USDT, DAI, etc)
+        // This check is redundant since collat_out is essentially supplied by the user
+        // Useful in case of a sandwich attack or some other fault with the virtual reserves	        // fxs_out should receive a sanity check instead
+        // Assumes $1 collateral (USDC, USDT, DAI, etc)	        // one possible way to do this may be to obtain the twap price while infering how much slippage
+        // a trade at that price might incur according to the percentage of the reserves that were 
+        // traded and that may approximate a sane transaction.
+        // Alternatively, maybe it could be done as it is done on lines 496 and 497.
 
         require(collat_out.mul(10 ** missing_decimals) <= FRAX_amount.mul(global_collateral_ratio).mul(uint256(1e6).add(max_drift_band)).div(1e12), "[max_drift_band] Too much collateral being released");
         
