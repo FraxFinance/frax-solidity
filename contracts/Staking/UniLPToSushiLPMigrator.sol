@@ -12,7 +12,14 @@ pragma experimental ABIEncoderV2;
 // ====================================================================
 // ====================== UniLPToSushiLPMigrator ======================
 // ====================================================================
-// Migrates locked Uni LP stakes to locked Sushi LP stakes
+// Frax Finance: https://github.com/FraxFinance
+
+// Primary Author(s)
+// Travis Moore: https://github.com/FortisFortuna
+
+// Reviewer(s) / Contributor(s)
+// Jason Huan: https://github.com/jasonhuan
+// Sam Kazemian: https://github.com/samkazemian
 
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";

@@ -13,11 +13,11 @@ pragma solidity 0.6.11;
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 
-// Primary Authors
+// Primary Author(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
 
-// Reviewed by
+// Reviewer(s) / Contributor(s)
 // Travis Moore: https://github.com/FortisFortuna
 
 import "../Math/SafeMath.sol";

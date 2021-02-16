@@ -11,8 +11,14 @@ pragma solidity ^0.8.0;
 // ====================================================================
 // =========================== FraxBond_NFT ===========================
 // ====================================================================
-// Travis Moore: https://github.com/FortisFortuna
 // Frax Finance: https://github.com/FraxFinance
+
+// Primary Author(s)
+// Travis Moore: https://github.com/FortisFortuna
+
+// Reviewer(s) / Contributor(s)
+// Jason Huan: https://github.com/jasonhuan
+// Sam Kazemian: https://github.com/samkazemian
 
 import "../../ERC721/ERC721.sol";
 import "../../ERC721/V8_0_0/Governance/AccessControl.sol";

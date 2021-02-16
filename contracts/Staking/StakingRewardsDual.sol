@@ -12,9 +12,17 @@ pragma experimental ABIEncoderV2;
 // ====================================================================
 // ======================== StakingRewardsDual ========================
 // ====================================================================
+// Frax Finance: https://github.com/FraxFinance
 
+// Primary Author(s)
+// Travis Moore: https://github.com/FortisFortuna
 
-// Stolen with love from Synthetixio
+// Reviewer(s) / Contributor(s)
+// Jason Huan: https://github.com/jasonhuan
+// Sam Kazemian: https://github.com/samkazemian
+// Sam Sun: https://github.com/samczsun
+
+// Modified originally from Synthetixio
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 
 import "../Math/Math.sol";

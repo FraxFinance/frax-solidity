@@ -12,7 +12,16 @@ pragma experimental ABIEncoderV2;
 // ====================================================================
 // =========================== FraxPoolvAMM ===========================
 // ====================================================================
+// Frax Finance: https://github.com/FraxFinance
 
+// Primary Author(s)
+// Jason Huan: https://github.com/jasonhuan
+// Travis Moore: https://github.com/FortisFortuna
+// Sam Kazemian: https://github.com/samkazemian
+
+// Reviewer(s) / Contributor(s)
+// github.com/denett
+// github.com/realisation
 
 // TODO
 // 1) Have to call getVirtualReserves() on every update of the reserve, such that we can call _update with the averages of the reserve

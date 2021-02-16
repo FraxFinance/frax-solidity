@@ -12,10 +12,12 @@ pragma solidity 0.6.11;
 // =========================== PIDController ==========================
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
+
+// Primary Author(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
 
-// Reviewed by
+// Reviewer(s) / Contributor(s)
 // Travis Moore: https://github.com/FortisFortuna
 
 import '../Frax/Frax.sol';

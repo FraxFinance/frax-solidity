@@ -13,11 +13,13 @@ pragma experimental ABIEncoderV2;
 // ========================== FRAXBonds (FXB) =========================
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
+
+// Primary Author(s)
 // Travis Moore: https://github.com/FortisFortuna
 
-// Reviewed by
-// Sam Kazemian: https://github.com/samkazemian
+// Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
+// Sam Kazemian: https://github.com/samkazemian
 
 import "../Common/Context.sol";
 import "../ERC20/IERC20.sol";
