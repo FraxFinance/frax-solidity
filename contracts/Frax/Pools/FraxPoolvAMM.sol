@@ -417,7 +417,6 @@ contract FraxPoolvAMM is AccessControl {
         // Sanity check to make sure the collat amount is close to the expected amount from the FRAX input
         // Useful in case of a sandwich attack or some other fault with the virtual reserves
         // Assumes $1 collateral (USDC, USDT, DAI, etc)
-
         require(collat_out.mul(10 ** missing_decimals) <= FRAX_amount.mul(global_collateral_ratio).mul(uint256(1e6).add(max_drift_band)).div(1e12), "[max_drift_band] Too much collateral being released");
         
         redeemCollateralBalances[msg.sender] = redeemCollateralBalances[msg.sender].add(collat_out);
