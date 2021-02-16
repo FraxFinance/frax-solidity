@@ -10,7 +10,7 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================= FraxPoolInvestorForV2 ======================
+// ==================== FraxPoolInvestorForV2_MkII ====================
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 
@@ -38,7 +38,7 @@ import "./compound/IcUSDC_Partial.sol";
 // Lower APY: yearn, AAVE, Compound
 // Higher APY: KeeperDAO, BZX, Harvest
 
-contract FraxPoolInvestorForV2 is AccessControl {
+contract FraxPoolInvestorForV2_MkII is AccessControl {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
