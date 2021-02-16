@@ -14,9 +14,10 @@ pragma experimental ABIEncoderV2;
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 // Travis Moore: https://github.com/FortisFortuna
+
+// Reviewed by
 // Sam Kazemian: https://github.com/samkazemian
 // Jason Huan: https://github.com/jasonhuan
-// Special thanks: samczsun
 
 import "../Common/Context.sol";
 import "../ERC20/IERC20.sol";
