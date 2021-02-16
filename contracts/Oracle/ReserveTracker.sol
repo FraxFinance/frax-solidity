@@ -5,21 +5,28 @@ import "../Math/SafeMath.sol";
 import "../Math/Math.sol";
 import "../Uniswap/Interfaces/IUniswapV2Pair.sol";
 import "./UniswapPairOracle.sol";
+import "./ChainlinkETHUSDPriceConsumer.sol";
 
 contract ReserveTracker {
 	using SafeMath for uint256;
+
+    uint256 public CONSULT_FXS_DEC;
+    uint256 public CONSULT_FRAX_DEC;
 
 	address public frax_contract_address;
     address public fxs_contract_address;
 	address public owner_address;
 	address public timelock_address;
 	address public controller_address;
+    address public eth_usd_consumer_address;
 
 	// The pair of which to get FXS price from
-	address public fxs_price_oracle_address;
-	address public fxs_pair_collateral_address;
-	uint256 public fxs_pair_collateral_decimals;
-	UniswapPairOracle public fxs_price_oracle;
+	address public fxs_weth_oracle_address;
+    address public weth_collat_oracle_address;
+	address public weth_address;
+	UniswapPairOracle public fxs_weth_oracle;
+    UniswapPairOracle public weth_collat_oracle;
+    uint256 public weth_collat_decimals;
 
 	// Array of pairs for FXS
 	address[] public fxs_pairs_array;
@@ -61,12 +68,13 @@ contract ReserveTracker {
 
     // Returns FRAX price with 6 decimals of precision
     function getFRAXPrice() public view returns (uint256) {
-        return frax_price_oracle.consult(frax_contract_address, 1e6 * (10 ** (18 - frax_pair_collateral_decimals)));
+        return frax_price_oracle.consult(frax_contract_address, CONSULT_FRAX_DEC);
     }
 
     // Returns FXS price with 6 decimals of precision
     function getFXSPrice() public view returns (uint256) {
-    	return fxs_price_oracle.consult(fxs_contract_address, 1e6 * (10 ** (18 - fxs_pair_collateral_decimals)));
+        uint256 fxs_weth_price = fxs_weth_oracle.consult(fxs_contract_address, 1e6);
+        return weth_collat_oracle.consult(weth_address, CONSULT_FXS_DEC).mul(fxs_weth_price).div(1e6);
     }
 
     function getFXSReserves() public view returns (uint256) {
@@ -96,14 +104,21 @@ contract ReserveTracker {
         frax_pair_collateral_address = _frax_pair_collateral_address;
         frax_pair_collateral_decimals = _frax_pair_collateral_decimals;
         frax_price_oracle = UniswapPairOracle(frax_price_oracle_address);
+        CONSULT_FRAX_DEC = 1e6 * (10 ** (18 - frax_pair_collateral_decimals));
     }
 
-    // Get the pair of which to price FXS from
-    function setFXSPriceOracle(address _fxs_price_oracle_address, address _fxs_pair_collateral_address, uint256 _fxs_pair_collateral_decimals) public onlyByOwnerOrGovernance {
-    	fxs_price_oracle_address = _fxs_price_oracle_address;
-    	fxs_pair_collateral_address = _fxs_pair_collateral_address;
-    	fxs_pair_collateral_decimals = _fxs_pair_collateral_decimals;
-    	fxs_price_oracle = UniswapPairOracle(fxs_price_oracle_address);
+    // Get the pair of which to price FXS from (using FXS-WETH)
+    function setFXSETHOracle(address _fxs_weth_oracle_address, address _weth_address) public onlyByOwnerOrGovernance {
+        fxs_weth_oracle_address = _fxs_weth_oracle_address;
+    	weth_address = _weth_address;
+    	fxs_weth_oracle = UniswapPairOracle(fxs_weth_oracle_address);
+    }
+
+    function setETHCollateralOracle(address _weth_collateral_oracle_address, uint _collateral_decimals) public onlyByOwnerOrGovernance {
+        weth_collat_oracle_address = _weth_collateral_oracle_address;
+        weth_collat_decimals = _collateral_decimals;
+        weth_collat_oracle = UniswapPairOracle(_weth_collateral_oracle_address);
+        CONSULT_FXS_DEC = 1e6 * (10 ** (18 - _collateral_decimals));
     }
 
     // Adds collateral addresses supported, such as tether and busd, must be ERC20 

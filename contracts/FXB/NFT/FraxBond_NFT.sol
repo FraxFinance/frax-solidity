@@ -14,10 +14,10 @@ pragma solidity ^0.8.0;
 // Travis Moore: https://github.com/FortisFortuna
 // Frax Finance: https://github.com/FraxFinance
 
-import "../ERC721/ERC721.sol";
-import "../ERC721/V8_0_0/Governance/AccessControl.sol";
-import "../ERC721/V8_0_0/Math/SafeMath.sol";
-import "../Frax/V8_0_0/IFraxPartial.sol";
+import "../../ERC721/ERC721.sol";
+import "../../ERC721/V8_0_0/Governance/AccessControl.sol";
+import "../../ERC721/V8_0_0/Math/SafeMath.sol";
+import "../../Frax/V8_0_0/IFraxPartial.sol";
 import "./FraxBond_NFT_Library.sol";
 
 contract FraxBond_NFT is ERC721, AccessControl {
