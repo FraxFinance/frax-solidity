@@ -414,9 +414,11 @@ contract FraxPoolvAMM is AccessControl {
         require(collat_out >= collateral_out_min, "Slippage limit reached [collateral]");
         require(fxs_out >= fxs_out_min, "Slippage limit reached [FXS]");
 
-        // Sanity check to make sure the collat amount is close to the expected amount from the FRAX input
-        // Useful in case of a sandwich attack or some other fault with the virtual reserves
-        // Assumes $1 collateral (USDC, USDT, DAI, etc)
+        // This check is redundant since collat_out is essentially supplied by the user
+        // fxs_out should receive a sanity check instead
+        // one possible way to do this may be to obtain the twap price while infering how much slippage
+        // a trade at that price might incur according to the percentage of the reserves that were 
+        // traded and that may approximate a sane transaction.
         require(collat_out <= FRAX_amount.mul(global_collateral_ratio).mul(uint256(1e6).add(max_drift_band)).div(1e12), "[max_drift_band] Too much collateral being released");
         
         redeemCollateralBalances[msg.sender] = redeemCollateralBalances[msg.sender].add(collat_out);
