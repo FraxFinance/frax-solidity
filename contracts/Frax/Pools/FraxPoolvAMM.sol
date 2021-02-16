@@ -419,6 +419,7 @@ contract FraxPoolvAMM is AccessControl {
         // one possible way to do this may be to obtain the twap price while infering how much slippage
         // a trade at that price might incur according to the percentage of the reserves that were 
         // traded and that may approximate a sane transaction.
+        // Alternatively, maybe it could be done as it is done on lines 496 and 497.
         require(collat_out <= FRAX_amount.mul(global_collateral_ratio).mul(uint256(1e6).add(max_drift_band)).div(1e12), "[max_drift_band] Too much collateral being released");
         
         redeemCollateralBalances[msg.sender] = redeemCollateralBalances[msg.sender].add(collat_out);
