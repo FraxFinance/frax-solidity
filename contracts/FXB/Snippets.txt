@@ -1,0 +1,55 @@
+    // Release curve
+    // ========================================================================================
+    
+    // Address for the pre-calculated release curve points
+    address public release_curve_contract_address; 
+    IFraxBond_Curve private RELEASE_CURVE;
+    uint8 release_curve_choice;
+
+
+    // Maximum number of FXB tokens that should be floating outside the contract
+    // The goal is to do a smooth release so price spikes don't happen
+    function max_fxb_releaseable() public view returns (uint256 max_fxb_releaseable) {
+        if (isInEpoch()) {
+            uint256 time_into_epoch = (block.timestamp).sub(epoch_start);
+            if(useCurve) {
+                // Given n points on the curve, find the nearest one
+                // e.g. 100 points total, if the time_into_epoch is 50% of the epoch length, nearest_curve_index should be 50
+                
+                uint256 release_curve_total_points = uint256(RELEASE_CURVE.get_total_points(release_curve_choice));
+
+                // Truncation desired
+                uint256 nearest_curve_index = ((release_curve_total_points).mul(time_into_epoch)) / epoch_length;
+                
+                // Failsafe to avoid out-of-bounds array
+                // Otherwise proceed normally
+                if (nearest_curve_index == release_curve_total_points) max_fxb_releaseable = max_fxb_outstanding;
+                else {
+                    uint256 max_fxb_releaseable = max_fxb_outstanding.mul(RELEASE_CURVE.get_curve_point(release_curve_choice, uint8(nearest_curve_index))).div(PRICE_PRECISION);
+                }
+            }
+            else {
+                // Use linear
+                max_fxb_releaseable = max_fxb_outstanding.mul(time_into_epoch).div(epoch_length);
+            }
+        }
+        else {
+            // No selling outside of an epoch
+            max_fxb_releaseable = 0;
+        }
+
+    }
+    
+
+    function setReleaseCurveContractAndChoice(address _release_curve_contract_address, uint8 _release_curve_choice) external onlyByOwnerOrGovernance {
+        release_curve_contract_address = _release_curve_contract_address;
+        release_curve_choice = _release_curve_choice;
+        RELEASE_CURVE = IFraxBond_Curve(_release_curve_contract_address);
+        require(RELEASE_CURVE.get_total_points(release_curve_choice) != 0, "Invalid curve address or choice");
+        require(RELEASE_CURVE.get_curve_point(release_curve_choice, 1) != 0, "Invalid curve point");
+    }
+
+    function toggleUseCurve() external {
+        require(hasRole(USE_CURVE_TOGGLER, msg.sender));
+        useCurve = !useCurve;
+    }

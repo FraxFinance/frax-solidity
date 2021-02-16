@@ -23,10 +23,12 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     UniswapPairOracle private fraxEthOracle;
     UniswapPairOracle private fxsEthOracle;
     string public symbol;
+    string public name;
     uint8 public constant decimals = 18;
     address public owner_address;
     address public creator_address;
     address public timelock_address; // Governance timelock address
+    address public controller_address; // Controller contract to dynamically adjust system parameters automatically
     address public fxs_address;
     address public frax_eth_oracle_address;
     address public fxs_eth_oracle_address;
@@ -49,6 +51,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     uint256 public frax_step; // Amount to change the collateralization ratio by upon refreshCollateralRatio()
     uint256 public refresh_cooldown; // Seconds to wait before being able to run refreshCollateralRatio() again
     uint256 public price_target; // The price of FRAX at which the collateral ratio will respond to; this value is only used for the collateral ratio mechanism and not for minting and redeeming which are hardcoded at $1
+    uint256 public price_band; // The bound above and below the price target at which the refreshCollateralRatio() will not change the collateral ratio
 
     address public DEFAULT_ADMIN_ADDRESS;
     bytes32 public constant COLLATERAL_RATIO_PAUSER = keccak256("COLLATERAL_RATIO_PAUSER");
@@ -67,7 +70,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     } 
     
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(msg.sender == owner_address || msg.sender == timelock_address || msg.sender == controller_address, "You are not the owner, controller, or the governance timelock");
         _;
     }
 
@@ -83,10 +86,12 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
+        string memory _name,
         string memory _symbol,
         address _creator_address,
         address _timelock_address
     ) public {
+        name = _name;
         symbol = _symbol;
         creator_address = _creator_address;
         timelock_address = _timelock_address;
@@ -100,6 +105,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         global_collateral_ratio = 1000000; // Frax system starts off fully collateralized (6 decimals of precision)
         refresh_cooldown = 3600; // Refresh cooldown period is set to 1 hour (3600 seconds) at genesis
         price_target = 1000000; // Collateral ratio will adjust according to the $1 price target at genesis
+        price_band = 5000; // Collateral ratio will not adjust if between $0.995 and $1.005 at genesis
     }
 
     /* ========== VIEWS ========== */
@@ -176,13 +182,13 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
 
         // Step increments are 0.25% (upon genesis, changable by setFraxStep()) 
         
-        if (frax_price_cur >= price_target) { //decrease collateral ratio
+        if (frax_price_cur > price_target.add(price_band)) { //decrease collateral ratio
             if(global_collateral_ratio <= frax_step){ //if within a step of 0, go to 0
                 global_collateral_ratio = 0;
             } else {
                 global_collateral_ratio = global_collateral_ratio.sub(frax_step);
             }
-        } else { //increase collateral ratio
+        } else if (frax_price_cur < price_target.sub(price_band)) { //increase collateral ratio
             if(global_collateral_ratio.add(frax_step) >= 1000000){
                 global_collateral_ratio = 1000000; // cap collateral ratio at 1.000000
             } else {
@@ -195,11 +201,6 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    // Public implementation of internal _mint()
-    function mint(uint256 amount) public virtual onlyByOwnerGovernanceOrPool {
-        _mint(msg.sender, amount);
-    }
-
     // Used by pools when user redeems
     function pool_burn_from(address b_address, uint256 b_amount) public onlyPools {
         super._burnFrom(b_address, b_amount);
@@ -209,6 +210,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
     // This function is what other frax pools will call to mint new FRAX 
     function pool_mint(address m_address, uint256 m_amount) public onlyPools {
         super._mint(m_address, m_amount);
+        emit FRAXMinted(msg.sender, m_address, m_amount);
     }
 
     // Adds collateral addresses supported, such as tether and busd, must be ERC20 
@@ -272,6 +274,14 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
         timelock_address = new_timelock;
     }
 
+    function setController(address _controller_address) external onlyByOwnerOrGovernance {
+        controller_address = _controller_address;
+    }
+
+    function setPriceBand(uint256 _price_band) external onlyByOwnerOrGovernance {
+        price_band = _price_band;
+    }
+
     // Sets the FRAX_ETH Uniswap oracle address 
     function setFRAXEthOracle(address _frax_oracle_addr, address _weth_address) public onlyByOwnerOrGovernance {
         frax_eth_oracle_address = _frax_oracle_addr;
@@ -292,6 +302,9 @@ contract FRAXStablecoin is ERC20Custom, AccessControl {
 
     /* ========== EVENTS ========== */
 
-    // Track FXS burned
+    // Track FRAX burned
     event FRAXBurned(address indexed from, address indexed to, uint256 amount);
+
+    // Track FRAX minted
+    event FRAXMinted(address indexed from, address indexed to, uint256 amount);
 }

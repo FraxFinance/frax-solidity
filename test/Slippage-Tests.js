@@ -45,16 +45,16 @@ const Pool_USDT = artifacts.require("Frax/Pools/Pool_USDT");
 // const Pool_yUSD = artifacts.require("Frax/Pools/Pool_yUSD");
 
 // Oracles
-const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_WETH");
-const UniswapPairOracle_FRAX_USDT = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_USDT");
-const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_USDC");
-// const UniswapPairOracle_FRAX_yUSD = artifacts.require("Oracle/Fakes/UniswapPairOracle_FRAX_yUSD");
-const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_WETH");
-const UniswapPairOracle_FXS_USDT = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_USDT");
-const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_USDC");
-// const UniswapPairOracle_FXS_yUSD = artifacts.require("Oracle/Fakes/UniswapPairOracle_FXS_yUSD");
-const UniswapPairOracle_USDT_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_USDT_WETH");
-const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Fakes/UniswapPairOracle_USDC_WETH");
+const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_WETH");
+const UniswapPairOracle_FRAX_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDT");
+const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDC");
+// const UniswapPairOracle_FRAX_yUSD = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_yUSD");
+const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
+const UniswapPairOracle_FXS_USDT = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDT");
+const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
+// const UniswapPairOracle_FXS_yUSD = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_yUSD");
+const UniswapPairOracle_USDT_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDT_WETH");
+const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
 
 // Chainlink Price Consumer
 //const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
@@ -63,14 +63,14 @@ const ChainlinkETHUSDPriceConsumerTest = artifacts.require("Oracle/ChainlinkETHU
 // FRAX core
 const FRAXStablecoin = artifacts.require("Frax/FRAXStablecoin");
 const FRAXShares = artifacts.require("FXS/FRAXShares");
-const StakingRewards_FRAX_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_WETH.sol");
-const StakingRewards_FRAX_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDC.sol");
-const StakingRewards_FRAX_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_USDT.sol");
-// const StakingRewards_FRAX_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FRAX_yUSD.sol");
-const StakingRewards_FXS_WETH = artifacts.require("Staking/Fake_Stakes/Stake_FXS_WETH.sol");
-const StakingRewards_FXS_USDC = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDC.sol");
-const StakingRewards_FXS_USDT = artifacts.require("Staking/Fake_Stakes/Stake_FXS_USDT.sol");
-// const StakingRewards_FXS_yUSD = artifacts.require("Staking/Fake_Stakes/Stake_FXS_yUSD.sol");
+const StakingRewards_FRAX_WETH = artifacts.require("Staking/Variants/Stake_FRAX_WETH.sol");
+const StakingRewards_FRAX_USDC = artifacts.require("Staking/Variants/Stake_FRAX_USDC.sol");
+const StakingRewards_FRAX_USDT = artifacts.require("Staking/Variants/Stake_FRAX_USDT.sol");
+// const StakingRewards_FRAX_yUSD = artifacts.require("Staking/Variants/Stake_FRAX_yUSD.sol");
+const StakingRewards_FXS_WETH = artifacts.require("Staking/Variants/Stake_FXS_WETH.sol");
+const StakingRewards_FXS_USDC = artifacts.require("Staking/Variants/Stake_FXS_USDC.sol");
+const StakingRewards_FXS_USDT = artifacts.require("Staking/Variants/Stake_FXS_USDT.sol");
+// const StakingRewards_FXS_yUSD = artifacts.require("Staking/Variants/Stake_FXS_yUSD.sol");
 
 // Governance related
 const GovernorAlpha = artifacts.require("Governance/GovernorAlpha");
@@ -750,34 +750,35 @@ contract('FRAX', async (accounts) => {
 	});
 0x01 */
 
-	it('Seed the collateral pools some collateral to start off with', async () => {
-		console.log("========================Collateral Seed========================");
+	// [DEPRECATED] SEEDED IN THE MIGRATION FLOW
+	// it('Seed the collateral pools some collateral to start off with', async () => {
+	// 	console.log("========================Collateral Seed========================");
 
-		// Link the FAKE collateral pool to the FRAX contract
-		await col_instance_USDC.transfer(pool_instance_USDC.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await col_instance_USDT.transfer(pool_instance_USDT.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await col_instance_yUSD.transfer(pool_instance_yUSD.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// 	// Link the FAKE collateral pool to the FRAX contract
+	// 	await col_instance_USDC.transfer(pool_instance_USDC.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// 	await col_instance_USDT.transfer(pool_instance_USDT.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// 	// await col_instance_yUSD.transfer(pool_instance_yUSD.address, COLLATERAL_SEED_DEC18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		// Refresh the collateral ratio
-		const totalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18);
-		console.log("totalCollateralValue: ", totalCollateralValue.toNumber());
+	// 	// Refresh the collateral ratio
+	// 	const totalCollateralValue = new BigNumber(await fraxInstance.globalCollateralValue.call()).div(BIG18);
+	// 	console.log("totalCollateralValue: ", totalCollateralValue.toNumber());
 
-		/*
-		// Advance 1 hr so the collateral ratio can be recalculated
-		await time.increase(3600 + 1);
-		await time.advanceBlock();
-		await fraxInstance.refreshCollateralRatio();
+	// 	/*
+	// 	// Advance 1 hr so the collateral ratio can be recalculated
+	// 	await time.increase(3600 + 1);
+	// 	await time.advanceBlock();
+	// 	await fraxInstance.refreshCollateralRatio();
 
-		// Advance 1 hr so the collateral ratio can be recalculated
-		await time.increase(3600 + 1);
-		await time.advanceBlock();
-		await fraxInstance.refreshCollateralRatio();
-		*/
+	// 	// Advance 1 hr so the collateral ratio can be recalculated
+	// 	await time.increase(3600 + 1);
+	// 	await time.advanceBlock();
+	// 	await fraxInstance.refreshCollateralRatio();
+	// 	*/
 
-		const collateral_ratio_refreshed = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
-		console.log("collateral_ratio_refreshed: ", collateral_ratio_refreshed.toNumber());
-		col_rat = collateral_ratio_refreshed;
-	});
+	// 	const collateral_ratio_refreshed = new BigNumber(await fraxInstance.global_collateral_ratio.call()).div(BIG6);
+	// 	console.log("collateral_ratio_refreshed: ", collateral_ratio_refreshed.toNumber());
+	// 	col_rat = collateral_ratio_refreshed;
+	// });
 /*
 	it('Mint some FRAX using USDC as collateral (collateral ratio = 1) [mint1t1FRAX]', async () => {
 		console.log("=========================mint1t1FRAX=========================");
@@ -1905,7 +1906,7 @@ contract('FRAX', async (accounts) => {
 		console.log("REWARDS CONTRACT lastTimeRewardApplicable: ", rewards_contract_lastTimeRewardApplicable.toString());
 		
 		// Note the total FRAX supply
-		const rewards_contract_stored_uni_pool = new BigNumber(await stakingInstance_FRAX_USDC.stakingTokenSupply.call()).div(BIG18);
+		const rewards_contract_stored_uni_pool = new BigNumber(await stakingInstance_FRAX_USDC.totalSupply.call()).div(BIG18);
 		console.log("REWARDS CONTRACT STORED UNI POOL: ", rewards_contract_stored_uni_pool.toString());
 
 		// Note the reward per token

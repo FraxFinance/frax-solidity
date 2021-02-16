@@ -15,6 +15,7 @@ contract FRAXShares is ERC20Custom, AccessControl {
     /* ========== STATE VARIABLES ========== */
 
     string public symbol;
+    string public name;
     uint8 public constant decimals = 18;
     address public FRAXStablecoinAdd;
     
@@ -55,11 +56,13 @@ contract FRAXShares is ERC20Custom, AccessControl {
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
+        string memory _name,
         string memory _symbol, 
         address _oracle_address,
         address _owner_address,
         address _timelock_address
     ) public {
+        name = _name;
         symbol = _symbol;
         owner_address = _owner_address;
         oracle_address = _oracle_address;
