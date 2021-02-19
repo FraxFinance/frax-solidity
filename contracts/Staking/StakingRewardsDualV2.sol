@@ -452,10 +452,14 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
         token1_rewards_on = !token1_rewards_on;
     }
 
-    function setOwnerAndTimelock(address _new_owner, address _new_timelock) external onlyByOwnerOrGovernance {
-        owner_address = _new_owner;
-        timelock_address = _new_timelock;
+    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+        owner_address = _owner_address;
     }
+
+    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        timelock_address = new_timelock;
+    }
+
 
     /* ========== MODIFIERS ========== */
 

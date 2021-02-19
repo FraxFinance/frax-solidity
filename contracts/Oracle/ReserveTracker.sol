@@ -36,8 +36,6 @@ contract ReserveTracker {
     address public fxs_contract_address;
 	address public owner_address;
 	address public timelock_address;
-	address public controller_address;
-    address public eth_usd_consumer_address;
 
 	// The pair of which to get FXS price from
 	address public fxs_weth_oracle_address;
@@ -61,11 +59,10 @@ contract ReserveTracker {
     uint256 public frax_pair_collateral_decimals;
     UniswapPairOracle public frax_price_oracle;
 
-
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner_address || msg.sender == timelock_address || msg.sender == controller_address, "You are not the owner, controller, or the governance timelock");
+        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
         _;
     }
 
@@ -123,7 +120,7 @@ contract ReserveTracker {
         frax_pair_collateral_address = _frax_pair_collateral_address;
         frax_pair_collateral_decimals = _frax_pair_collateral_decimals;
         frax_price_oracle = UniswapPairOracle(frax_price_oracle_address);
-        CONSULT_FRAX_DEC = 1e6 * (10 ** (18 - frax_pair_collateral_decimals));
+        CONSULT_FRAX_DEC = 1e6 * (10 ** (uint256(18).sub(frax_pair_collateral_decimals)));
     }
 
     // Get the pair of which to price FXS from (using FXS-WETH)
@@ -137,7 +134,7 @@ contract ReserveTracker {
         weth_collat_oracle_address = _weth_collateral_oracle_address;
         weth_collat_decimals = _collateral_decimals;
         weth_collat_oracle = UniswapPairOracle(_weth_collateral_oracle_address);
-        CONSULT_FXS_DEC = 1e6 * (10 ** (18 - _collateral_decimals));
+        CONSULT_FXS_DEC = 1e6 * (10 ** (uint256(18).sub(_collateral_decimals)));
     }
 
     // Adds collateral addresses supported, such as tether and busd, must be ERC20 
@@ -163,5 +160,11 @@ contract ReserveTracker {
         }
     }
 
+    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+        owner_address = _owner_address;
+    }
 
+    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        timelock_address = new_timelock;
+    }
 }

@@ -68,11 +68,25 @@ contract FraxBondIssuer is AccessControl {
     bytes32 public constant BUYING_PAUSER = keccak256("BUYING_PAUSER");
     bytes32 public constant SELLING_PAUSER = keccak256("SELLING_PAUSER");
     bytes32 public constant REDEEMING_PAUSER = keccak256("REDEEMING_PAUSER");
+    bytes32 public constant DEPOSITING_PAUSER = keccak256("DEPOSITING_PAUSER");
+    bytes32 public constant DEPOSIT_REDEEMING_PAUSER = keccak256("DEPOSIT_REDEEMING_PAUSER");
     bytes32 public constant DEFAULT_DISCOUNT_TOGGLER = keccak256("DEFAULT_DISCOUNT_TOGGLER");
     bool public buyingPaused = false;
     bool public sellingPaused = false;
     bool public redeemingPaused = false;
+    bool public depositingPaused = false;
+    bool public depositRedeemingPaused = false;
     bool public useDefaultInitialDiscount = false;
+
+    // BondDeposit variables
+    struct BondDeposit {
+        bytes32 kek_id;
+        uint256 amount;
+        uint256 deposit_timestamp;
+        uint256 epoch_end_timestamp;
+    }
+    uint256 public deposited_fxb = 0; // Balance of deposited FXB, E18
+    mapping(address => BondDeposit[]) public bondDeposits;
 
     /* ========== MODIFIERS ========== */
 
@@ -93,6 +107,16 @@ contract FraxBondIssuer is AccessControl {
 
     modifier notRedeemingPaused() {
         require(redeemingPaused == false, "Redeeming is paused");
+        _;
+    }
+
+    modifier notDepositingPaused() {
+        require(depositingPaused == false, "Depositing is paused");
+        _;
+    }
+
+    modifier notDepositRedeemingPaused() {
+        require(depositRedeemingPaused == false, "Deposit redeeming is paused");
         _;
     }
 
@@ -118,6 +142,10 @@ contract FraxBondIssuer is AccessControl {
         grantRole(SELLING_PAUSER, _timelock_address);
         grantRole(REDEEMING_PAUSER, _owner_address);
         grantRole(REDEEMING_PAUSER, _timelock_address);
+        grantRole(DEPOSITING_PAUSER, _owner_address);
+        grantRole(DEPOSITING_PAUSER, _timelock_address);
+        grantRole(DEPOSIT_REDEEMING_PAUSER, _owner_address);
+        grantRole(DEPOSIT_REDEEMING_PAUSER, _timelock_address);
         grantRole(DEFAULT_DISCOUNT_TOGGLER, _owner_address);
         grantRole(DEFAULT_DISCOUNT_TOGGLER, _timelock_address);
     }
@@ -139,7 +167,7 @@ contract FraxBondIssuer is AccessControl {
         in_epoch = ((block.timestamp >= epoch_start) && (block.timestamp < epoch_end));
     }
 
-    // Checks if the bond is in a maturity epoch
+    // Calculates FXB outside the contract
     function FXB_Outside_Contract() public view returns (uint256 fxb_outside_contract) {
         fxb_outside_contract = (FXB.totalSupply()).sub(FXB.balanceOf(address(this)));
     }
@@ -230,12 +258,32 @@ contract FraxBondIssuer is AccessControl {
         amountOut = getAmountOut(amountIn, reserveIn, reserveOut, 0);
     }
 
-    function buyFXBfromAMM(uint256 frax_amount, uint256 fxb_out_min) external notBuyingPaused returns (uint256 fxb_out, uint256 fxb_fee_amt) {
+    function depositFXB(uint256 fxb_amount) external notDepositingPaused returns (bytes32 kek_id) {
+        require(isInEpoch(), 'Not in an epoch');
+
+        // Burn FXB from the sender
+        FXB.issuer_burn_from(msg.sender, fxb_amount);
+
+        // Mark the deposit
+        deposited_fxb = deposited_fxb.add(fxb_amount);
+        kek_id = keccak256(abi.encodePacked(msg.sender, block.timestamp, fxb_amount));
+        bondDeposits[msg.sender].push(BondDeposit(
+            kek_id,
+            fxb_amount,
+            block.timestamp,
+            epoch_end
+        ));
+
+        emit FXB_Deposited(msg.sender, fxb_amount, epoch_end, kek_id);
+    }
+
+    function buyFXBfromAMM(uint256 frax_amount, uint256 fxb_out_min, bool should_deposit) external notBuyingPaused returns (uint256 fxb_out, uint256 fxb_fee_amt, bytes32 kek_id) {
         require(isInEpoch(), 'Not in an epoch');
         require(frax_amount >= minimum_frax_for_AMM_buy(), "Not enough FRAX to satisfy the floor price minimum");
 
         // Get the expected amount of FXB via the AMM
-        uint256 fxb_out = getAmountOutNoFee(frax_amount, FRAX.balanceOf(address(this)), FXB.balanceOf(address(this)));
+        uint256 amm_fxb_balance = FXB.balanceOf(address(this));
+        uint256 fxb_out = getAmountOutNoFee(frax_amount, FRAX.balanceOf(address(this)), amm_fxb_balance);
         uint256 effective_fxb_price = frax_amount.mul(PRICE_PRECISION).div(fxb_out); 
 
         // The AMM will never sell its FXB below this
@@ -253,8 +301,35 @@ contract FraxBondIssuer is AccessControl {
         // Take FRAX from the sender
         FRAX.transferFrom(msg.sender, address(this), frax_amount);
 
-        // Give FXB to the sender
-        FXB.transfer(msg.sender, fxb_out);
+        // The "Forgetful FXB Owner Problem"
+        // Since the FXB price resets to the discount after each epoch and cooldown period,
+        // you can optionally deposit your FXB tokens and redeem them any time after that epoch ends
+        // This is because FXB tokens are fungible and have no 'memory' of which epoch they were issued in
+        // If you forgot to redeem your FXB tokens otherwise, you would have to wait until the next cooldown period
+        // Or take a loss and sell on the open market
+        if (should_deposit){
+            require(depositingPaused == false, "Depositing is paused");
+
+            // Burn the FXB that would have been transfered out to the sender had they not deposited
+            // This is needed to not mess with the AMM balanceOf(address(this))
+            FXB.issuer_burn_from(address(this), fxb_out);
+
+            // Mark the deposit
+            deposited_fxb = deposited_fxb.add(fxb_out);
+            kek_id = keccak256(abi.encodePacked(msg.sender, block.timestamp, fxb_out));
+            bondDeposits[msg.sender].push(BondDeposit(
+                kek_id,
+                fxb_out,
+                block.timestamp,
+                epoch_end
+            ));
+
+            emit FXB_Deposited(msg.sender, fxb_out, epoch_end, kek_id);
+        }
+        else {
+            // Give FXB to the sender
+            FXB.transfer(msg.sender, fxb_out);
+        }
     }
 
     function sellFXBintoAMM(uint256 fxb_amount, uint256 frax_out_min) external notSellingPaused returns (uint256 frax_out, uint256 frax_fee_amt) {
@@ -285,7 +360,7 @@ contract FraxBondIssuer is AccessControl {
         FRAX.transfer(msg.sender, frax_out);
     }
 
-    function redeemFXB(uint256 fxb_amount, uint256 frax_out_min) external notRedeemingPaused returns (uint256 frax_out, uint256 frax_fee) {
+    function redeemFXB(uint256 fxb_amount) external notRedeemingPaused returns (uint256 frax_out, uint256 frax_fee) {
         require(isInCooldown(), 'Not in the cooldown period');
         
         // Take FXB from the sender
@@ -295,28 +370,56 @@ contract FraxBondIssuer is AccessControl {
         frax_fee = fxb_amount.mul(redemption_fee).div(PRICE_PRECISION);
         frax_out = fxb_amount.sub(frax_fee);
 
-        // Check frax_out_min
-        require(frax_out >= frax_out_min, "[redeemFXB frax_out_min]: Slippage limit reached");
-
-        FRAX.transfer(msg.sender, frax_out);
+        FRAX.pool_mint(msg.sender, frax_out);
 
         emit FXB_Redeemed(msg.sender, fxb_amount, frax_out);
     }
 
+    function redeemDepositedFXB(bytes32 kek_id) external notDepositRedeemingPaused returns (uint256 frax_out, uint256 frax_fee) {
+        BondDeposit memory thisDeposit;
+        thisDeposit.amount = 0;
+        uint theIndex;
+        for (uint i = 0; i < bondDeposits[msg.sender].length; i++){ 
+            if (kek_id == bondDeposits[msg.sender][i].kek_id){
+                thisDeposit = bondDeposits[msg.sender][i];
+                theIndex = i;
+                break;
+            }
+        }
+        require(thisDeposit.kek_id == kek_id, "Deposit not found");
+        require(block.timestamp >= thisDeposit.epoch_end_timestamp  == true, "Deposit is still maturing!");
+        uint256 fxb_amount = thisDeposit.amount;
+
+        // Remove the bond deposit from the array
+        delete bondDeposits[msg.sender][theIndex];
+
+        // Decrease the deposited bonds tracker
+        deposited_fxb = deposited_fxb.sub(fxb_amount);
+        
+        // Give 1 FRAX per 1 FXB, minus the redemption fee
+        frax_fee = fxb_amount.mul(redemption_fee).div(PRICE_PRECISION);
+        uint256 frax_out = fxb_amount.sub(frax_fee);
+
+        FRAX.pool_mint(msg.sender, frax_out);
+
+        emit FXB_Deposit_Redeemed(msg.sender, fxb_amount, frax_out, epoch_end, kek_id);
+    }
+   
     /* ========== RESTRICTED INTERNAL FUNCTIONS ========== */
 
     // Burns as much FXB as possible that the contract owns
     // Some could still remain outside of the contract
-    function _burnExcessFXB() internal returns (uint256 fxb_total_supply, uint256 fxb_inside_contract, uint256 fxb_outside_contract, uint256 burn_amount) {
+    function _burnExcessFXB() internal returns (uint256 fxb_total_supply, uint256 fxb_adjusted_total_supply, uint256 fxb_inside_contract, uint256 fxb_outside_contract, uint256 burn_amount) {
         // Get the balances
         fxb_total_supply = FXB.totalSupply();
+        fxb_adjusted_total_supply = fxb_total_supply.add(deposited_fxb); // Don't forget to account for deposited FXB
         fxb_inside_contract = FXB.balanceOf(address(this));
         fxb_outside_contract = fxb_total_supply.sub(fxb_inside_contract);
 
         // Only need to burn if there is an excess
-        if (fxb_total_supply > max_fxb_outstanding){
-            uint256 total_excess_fxb = fxb_total_supply.sub(max_fxb_outstanding);
-
+        if (fxb_adjusted_total_supply > max_fxb_outstanding){
+            uint256 total_excess_fxb = fxb_adjusted_total_supply.sub(max_fxb_outstanding);
+            
             // If the contract has some excess FXB, try to burn it
             if(fxb_inside_contract >= total_excess_fxb){
                 // Burn the entire excess amount
@@ -332,7 +435,9 @@ contract FraxBondIssuer is AccessControl {
 
             // Fetch the new balances
             fxb_total_supply = FXB.totalSupply();
+            fxb_adjusted_total_supply = fxb_total_supply.add(deposited_fxb);
             fxb_inside_contract = FXB.balanceOf(address(this));
+            fxb_outside_contract = fxb_total_supply.sub(fxb_inside_contract);
         }
 
     }
@@ -378,7 +483,7 @@ contract FraxBondIssuer is AccessControl {
     // Starts a new epoch and rebalances the AMM
     function startNewEpoch() external onlyByOwnerOrGovernance {
         require(!isInEpoch(), 'Already in an existing epoch');
-        require(!isInCooldown(), 'Bonds are currently settling');
+        require(!isInCooldown(), 'Bonds are currently settling in the cooldown');
 
         uint256 initial_discount = getInitialDiscount();
 
@@ -389,13 +494,13 @@ contract FraxBondIssuer is AccessControl {
         // They may also accumulate over time
         {
             // Burn any excess FXB
-            (uint256 fxb_total_supply, uint256 fxb_inside_contract, uint256 fxb_outside_contract, ) = _burnExcessFXB();
+            (uint256 fxb_total_supply, uint256 fxb_adjusted_total_supply, uint256 fxb_inside_contract, uint256 fxb_outside_contract, ) = _burnExcessFXB();
 
             // Fail if there is still too much FXB
-            require(fxb_total_supply <= max_fxb_outstanding, "Still too much FXB outstanding" ); 
+            require(fxb_adjusted_total_supply <= max_fxb_outstanding, "Still too much FXB outstanding" ); 
 
             // Mint FXB up to max_fxb_outstanding
-            uint256 fxb_needed = max_fxb_outstanding.sub(fxb_outside_contract).sub(fxb_inside_contract);
+            uint256 fxb_needed = max_fxb_outstanding.sub(fxb_outside_contract).sub(fxb_inside_contract).sub(deposited_fxb);
             FXB.issuer_mint(address(this), fxb_needed);
         }
 
@@ -437,6 +542,16 @@ contract FraxBondIssuer is AccessControl {
         redeemingPaused = !redeemingPaused;
     }
 
+    function toggleDepositing() external {
+        require(hasRole(DEPOSITING_PAUSER, msg.sender));
+        depositingPaused = !depositingPaused;
+    }
+
+    function toggleDepositRedeeming() external {
+        require(hasRole(DEPOSIT_REDEEMING_PAUSER, msg.sender));
+        depositRedeemingPaused = !depositRedeemingPaused;
+    }
+
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
         timelock_address = new_timelock;
     }
@@ -460,7 +575,7 @@ contract FraxBondIssuer is AccessControl {
         redemption_fee = _redemption_fee;
     }
 
-    function setSettlementPeriod(uint256 _cooldown_period) external onlyByOwnerOrGovernance {
+    function setCooldownPeriod(uint256 _cooldown_period) external onlyByOwnerOrGovernance {
         cooldown_period = _cooldown_period;
     }
 
@@ -489,6 +604,9 @@ contract FraxBondIssuer is AccessControl {
     event Recovered(address token, address to, uint256 amount);
 
     // Track bond redeeming
+    event FXB_Deposited(address indexed from, uint256 fxb_amount, uint256 epoch_end, bytes32 kek_id);
+    event FXB_Deposit_Redeemed(address indexed from, uint256 fxb_amount, uint256 frax_out, uint256 epoch_end, bytes32 kek_id);
+    
     event FXB_Redeemed(address indexed from, uint256 fxb_amount, uint256 frax_out);
     event FXB_EpochStarted(address indexed from, uint256 _epoch_start, uint256 _epoch_end, uint256 _epoch_length, uint256 _initial_discount, uint256 _max_fxb_amount);
 
