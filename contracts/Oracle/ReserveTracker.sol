@@ -1,30 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.11;
 
-// ====================================================================
-// |     ______                   _______                             |
-// |    / _____________ __  __   / ____(_____  ____ _____  ________   |
-// |   / /_  / ___/ __ `| |/_/  / /_  / / __ \/ __ `/ __ \/ ___/ _ \  |
-// |  / __/ / /  / /_/ _>  <   / __/ / / / / / /_/ / / / / /__/  __/  |
-// | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
-// |                                                                  |
-// ====================================================================
-// =========================== ReserveTracker =========================
-// ====================================================================
-// Frax Finance: https://github.com/FraxFinance
-
-// Primary Author(s)
-// Jason Huan: https://github.com/jasonhuan
-// Sam Kazemian: https://github.com/samkazemian
-
-// Reviewer(s) / Contributor(s)
-// Travis Moore: https://github.com/FortisFortuna
-
 import "../Math/SafeMath.sol";
 import "../Math/Math.sol";
 import "../Uniswap/Interfaces/IUniswapV2Pair.sol";
 import "./UniswapPairOracle.sol";
 import "./ChainlinkETHUSDPriceConsumer.sol";
+//import "../Curve/MetaImplementationUSD.vy";
+import "../Curve/IMetaImplementationUSD.sol";
 
 contract ReserveTracker {
 	using SafeMath for uint256;
@@ -36,6 +19,8 @@ contract ReserveTracker {
     address public fxs_contract_address;
 	address public owner_address;
 	address public timelock_address;
+	address public controller_address;
+    address public eth_usd_consumer_address;
 
 	// The pair of which to get FXS price from
 	address public fxs_weth_oracle_address;
@@ -58,11 +43,14 @@ contract ReserveTracker {
     address public frax_pair_collateral_address;
     uint256 public frax_pair_collateral_decimals;
     UniswapPairOracle public frax_price_oracle;
+    address public frax_metapool_address;
+    IMetaImplementationUSD public frax_metapool;
+
 
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(msg.sender == owner_address || msg.sender == timelock_address || msg.sender == controller_address, "You are not the owner, controller, or the governance timelock");
         _;
     }
 
@@ -86,6 +74,19 @@ contract ReserveTracker {
     function getFRAXPrice() public view returns (uint256) {
         return frax_price_oracle.consult(frax_contract_address, CONSULT_FRAX_DEC);
     }
+
+
+    uint256 public last_timestamp;
+    uint256[2] public old_twap;
+    function getFRAXCurvePrice() public returns (uint256) {
+        uint256[2] memory new_twap = frax_metapool.get_price_cumulative_last();
+        uint256[2] memory balances = frax_metapool.get_twap_balances(old_twap, new_twap, block.timestamp - last_timestamp);
+        last_timestamp = block.timestamp;
+        old_twap = new_twap;
+        uint256 twap_price = frax_metapool.get_dy(1, 0, 1e18, balances).mul(1e6).div(frax_metapool.get_virtual_price());
+        return twap_price;
+    }
+
 
     // Returns FXS price with 6 decimals of precision
     function getFXSPrice() public view returns (uint256) {
@@ -120,7 +121,12 @@ contract ReserveTracker {
         frax_pair_collateral_address = _frax_pair_collateral_address;
         frax_pair_collateral_decimals = _frax_pair_collateral_decimals;
         frax_price_oracle = UniswapPairOracle(frax_price_oracle_address);
-        CONSULT_FRAX_DEC = 1e6 * (10 ** (uint256(18).sub(frax_pair_collateral_decimals)));
+        CONSULT_FRAX_DEC = 1e6 * (10 ** (18 - frax_pair_collateral_decimals));
+    }
+
+    function setMetapool(address _frax_metapool_address) public onlyByOwnerOrGovernance {
+        frax_metapool_address = _frax_metapool_address;
+        frax_metapool = IMetaImplementationUSD(_frax_metapool_address);
     }
 
     // Get the pair of which to price FXS from (using FXS-WETH)
@@ -134,7 +140,7 @@ contract ReserveTracker {
         weth_collat_oracle_address = _weth_collateral_oracle_address;
         weth_collat_decimals = _collateral_decimals;
         weth_collat_oracle = UniswapPairOracle(_weth_collateral_oracle_address);
-        CONSULT_FXS_DEC = 1e6 * (10 ** (uint256(18).sub(_collateral_decimals)));
+        CONSULT_FXS_DEC = 1e6 * (10 ** (18 - _collateral_decimals));
     }
 
     // Adds collateral addresses supported, such as tether and busd, must be ERC20 
@@ -160,11 +166,5 @@ contract ReserveTracker {
         }
     }
 
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
-    }
 
-    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
-        timelock_address = new_timelock;
-    }
 }
