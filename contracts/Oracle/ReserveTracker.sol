@@ -25,6 +25,8 @@ import "../Math/Math.sol";
 import "../Uniswap/Interfaces/IUniswapV2Pair.sol";
 import "./UniswapPairOracle.sol";
 import "./ChainlinkETHUSDPriceConsumer.sol";
+//import "../Curve/MetaImplementationUSD.vy";
+import "../Curve/IMetaImplementationUSD.sol";
 
 contract ReserveTracker {
 	using SafeMath for uint256;
@@ -58,6 +60,8 @@ contract ReserveTracker {
     address public frax_pair_collateral_address;
     uint256 public frax_pair_collateral_decimals;
     UniswapPairOracle public frax_price_oracle;
+    address public frax_metapool_address;
+    IMetaImplementationUSD public frax_metapool;
 
     /* ========== MODIFIERS ========== */
 
@@ -86,6 +90,19 @@ contract ReserveTracker {
     function getFRAXPrice() public view returns (uint256) {
         return frax_price_oracle.consult(frax_contract_address, CONSULT_FRAX_DEC);
     }
+
+
+    uint256 public last_timestamp;
+    uint256[2] public old_twap;
+    function getFRAXCurvePrice() public returns (uint256) {
+        uint256[2] memory new_twap = frax_metapool.get_price_cumulative_last();
+        uint256[2] memory balances = frax_metapool.get_twap_balances(old_twap, new_twap, block.timestamp - last_timestamp);
+        last_timestamp = block.timestamp;
+        old_twap = new_twap;
+        uint256 twap_price = frax_metapool.get_dy(1, 0, 1e18, balances).mul(1e6).div(frax_metapool.get_virtual_price());
+        return twap_price;
+    }
+
 
     // Returns FXS price with 6 decimals of precision
     function getFXSPrice() public view returns (uint256) {
@@ -121,6 +138,11 @@ contract ReserveTracker {
         frax_pair_collateral_decimals = _frax_pair_collateral_decimals;
         frax_price_oracle = UniswapPairOracle(frax_price_oracle_address);
         CONSULT_FRAX_DEC = 1e6 * (10 ** (uint256(18).sub(frax_pair_collateral_decimals)));
+    }
+
+    function setMetapool(address _frax_metapool_address) public onlyByOwnerOrGovernance {
+        frax_metapool_address = _frax_metapool_address;
+        frax_metapool = IMetaImplementationUSD(_frax_metapool_address);
     }
 
     // Get the pair of which to price FXS from (using FXS-WETH)
