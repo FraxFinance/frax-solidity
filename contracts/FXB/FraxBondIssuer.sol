@@ -10,7 +10,7 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ================== Bond Issuer for FRAXBonds (FXB) =================
+// ========= Bond Issuer with virtual AMM for FraxBonds (FXB) =========
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 
@@ -31,25 +31,38 @@ contract FraxBondIssuer is AccessControl {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
+    enum DirectionChoice { BELOW_TO_PRICE_FRAX_IN, ABOVE_TO_PRICE }
 
     FRAXStablecoin private FRAX;
-    FRAXBonds private FXB;
+    FraxBond private FXB;
 
     address public owner_address;
     address public timelock_address;
+    address public controller_address;
 
-    uint256 private constant PRICE_PRECISION = 1e6;
+    uint256 public constant PRICE_PRECISION = 1e6;
+    uint256 private constant PRICE_PRECISION_SQUARED = 1e12;
+    uint256 private constant PRICE_PRECISION_SQRT = 1e3;
 
     // Minimum cooldown period before a new epoch, in seconds
     // Bonds should be redeemed during this time, or they risk being rebalanced with a new epoch
-    uint256 public cooldown_period = 259200; // 3 days
+    uint256 public cooldown_period = 864000; // 10 days
 
     // Max FXB outstanding
-    uint256 public max_fxb_outstanding = uint256(100000e18);
+    uint256 public max_fxb_outstanding = 1000000e18;
+
+    // Target liquidity of FXB for the vAMM
+    uint256 public target_liquidity_fxb = 500000e18;
+
+    // Issuable FXB
+    // This will be sold at the floor price until depleted, and bypass the vAMM
+    uint256 public issuable_fxb = 80000e18;
+    uint256 public issue_price = 750000;
 
     // Set fees, E6
-    uint256 public buying_fee = 1000; // 0.10% initially
-    uint256 public selling_fee = 1000; // 0.10% initially
+    uint256 public issue_fee = 500; // 0.05% initially
+    uint256 public buying_fee = 1500; // 0.15% initially
+    uint256 public selling_fee = 1500; // 0.15% initially
     uint256 public redemption_fee = 500; // 0.05% initially
 
     // Epoch start and end times
@@ -57,41 +70,40 @@ contract FraxBondIssuer is AccessControl {
     uint256 public epoch_end;
     
     // Epoch length
-    uint256 public epoch_length = 2592000; // 30 days
+    uint256 public epoch_length = 31536000; // 1 year
 
     // Initial discount rates per epoch, in E6
-    uint256 public default_initial_discount = 400000; // 40% initially
-    uint256 public failsafe_max_initial_discount = 500000; // 50%. Failsafe max discount rate, in case _calcInitialDiscount() fails
+    uint256 public initial_discount = 200000; // 20% initially
 
     // Governance variables
     address public DEFAULT_ADMIN_ADDRESS;
+    bytes32 public constant ISSUING_PAUSER = keccak256("ISSUING_PAUSER");
     bytes32 public constant BUYING_PAUSER = keccak256("BUYING_PAUSER");
     bytes32 public constant SELLING_PAUSER = keccak256("SELLING_PAUSER");
     bytes32 public constant REDEEMING_PAUSER = keccak256("REDEEMING_PAUSER");
-    bytes32 public constant DEPOSITING_PAUSER = keccak256("DEPOSITING_PAUSER");
-    bytes32 public constant DEPOSIT_REDEEMING_PAUSER = keccak256("DEPOSIT_REDEEMING_PAUSER");
-    bytes32 public constant DEFAULT_DISCOUNT_TOGGLER = keccak256("DEFAULT_DISCOUNT_TOGGLER");
+    bool public issuingPaused = false;
     bool public buyingPaused = false;
     bool public sellingPaused = false;
     bool public redeemingPaused = false;
-    bool public depositingPaused = false;
-    bool public depositRedeemingPaused = false;
-    bool public useDefaultInitialDiscount = false;
 
-    // BondDeposit variables
-    struct BondDeposit {
-        bytes32 kek_id;
-        uint256 amount;
-        uint256 deposit_timestamp;
-        uint256 epoch_end_timestamp;
-    }
-    uint256 public deposited_fxb = 0; // Balance of deposited FXB, E18
-    mapping(address => BondDeposit[]) public bondDeposits;
+    // Virtual balances
+    uint256 public vBal_FRAX;
+    uint256 public vBal_FXB;
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == timelock_address || msg.sender == owner_address, "You are not the owner or the governance timelock");
+    modifier onlyByOwnerControllerOrGovernance() {
+        require(msg.sender == owner_address || msg.sender == timelock_address || msg.sender == controller_address, "You are not the owner, controller, or the governance timelock");
+        _;
+    }
+
+    modifier onlyByOwnerOrTimelock() {
+        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        _;
+    }
+
+    modifier notIssuingPaused() {
+        require(issuingPaused == false, "Issuing is paused");
         _;
     }
 
@@ -110,16 +122,6 @@ contract FraxBondIssuer is AccessControl {
         _;
     }
 
-    modifier notDepositingPaused() {
-        require(depositingPaused == false, "Depositing is paused");
-        _;
-    }
-
-    modifier notDepositRedeemingPaused() {
-        require(depositRedeemingPaused == false, "Deposit redeeming is paused");
-        _;
-    }
-
     /* ========== CONSTRUCTOR ========== */
     
     constructor(
@@ -127,39 +129,59 @@ contract FraxBondIssuer is AccessControl {
         address _fxb_contract_address,
         address _owner_address,
         address _timelock_address,
-        address _custodian_address
+        address _controller_address
     ) public {
         FRAX = FRAXStablecoin(_frax_contract_address);
-        FXB = FRAXBonds(_fxb_contract_address);
+        FXB = FraxBond(_fxb_contract_address);
         owner_address = _owner_address;
         timelock_address = _timelock_address;
+        controller_address = _controller_address;
+
+        // Needed for initialization
+        epoch_start = (block.timestamp).sub(cooldown_period).sub(epoch_length);
+        epoch_end = (block.timestamp).sub(cooldown_period);
         
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         DEFAULT_ADMIN_ADDRESS = _msgSender();
+        grantRole(ISSUING_PAUSER, _owner_address);
+        grantRole(ISSUING_PAUSER, _timelock_address);
+        grantRole(ISSUING_PAUSER, _controller_address);
         grantRole(BUYING_PAUSER, _owner_address);
         grantRole(BUYING_PAUSER, _timelock_address);
+        grantRole(BUYING_PAUSER, _controller_address);
         grantRole(SELLING_PAUSER, _owner_address);
         grantRole(SELLING_PAUSER, _timelock_address);
+        grantRole(SELLING_PAUSER, _controller_address);
         grantRole(REDEEMING_PAUSER, _owner_address);
         grantRole(REDEEMING_PAUSER, _timelock_address);
-        grantRole(DEPOSITING_PAUSER, _owner_address);
-        grantRole(DEPOSITING_PAUSER, _timelock_address);
-        grantRole(DEPOSIT_REDEEMING_PAUSER, _owner_address);
-        grantRole(DEPOSIT_REDEEMING_PAUSER, _timelock_address);
-        grantRole(DEFAULT_DISCOUNT_TOGGLER, _owner_address);
-        grantRole(DEFAULT_DISCOUNT_TOGGLER, _timelock_address);
+        grantRole(REDEEMING_PAUSER, _controller_address);
     }
 
     /* ========== VIEWS ========== */
 
-    // Needed for the Frax contract to function 
-    function collatDollarBalance() external view returns (uint256) {
-        return 1; // 1e0
+    // Returns some info
+    function issuer_info() public view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256, bool, bool, uint256, uint256) {
+        return (
+            issue_fee,
+            buying_fee,
+            selling_fee,
+            redemption_fee,
+            issuable_fxb,
+            epoch_start,
+            epoch_end,
+            maximum_fxb_AMM_sellable_above_floor(),
+            amm_spot_price(),
+            floor_price(),
+            isInEpoch(),
+            isInCooldown(),
+            cooldown_period,
+            issue_price
+        );
     }
 
-    // Checks if the bond is in the cooldown period
-    function isInCooldown() public view returns (bool in_cooldown) {
-        in_cooldown = ((block.timestamp >= epoch_end) && (block.timestamp < epoch_end.add(cooldown_period)));
+    // Needed for the Frax contract to function without bricking
+    function collatDollarBalance() external view returns (uint256 dummy_dollar_balance) {
+        dummy_dollar_balance =  uint256(1e18); // 1 nonexistant USDC
     }
 
     // Checks if the bond is in a maturity epoch
@@ -167,77 +189,63 @@ contract FraxBondIssuer is AccessControl {
         in_epoch = ((block.timestamp >= epoch_start) && (block.timestamp < epoch_end));
     }
 
-    // Calculates FXB outside the contract
-    function FXB_Outside_Contract() public view returns (uint256 fxb_outside_contract) {
-        fxb_outside_contract = (FXB.totalSupply()).sub(FXB.balanceOf(address(this)));
+    // Checks if the bond is in the cooldown period
+    function isInCooldown() public view returns (bool in_cooldown) {
+        in_cooldown = ((block.timestamp >= epoch_end) && (block.timestamp < epoch_end.add(cooldown_period)));
     }
 
-    // Algorithmically calculated optimal initial discount rate
-    function algorithmicInitialDiscount() public view returns (uint256 initial_discount) {
-        // TODO: Some fancy algorithm
-        initial_discount = default_initial_discount;
+    // Liquidity balances for the floor price
+    function getVirtualFloorLiquidityBalances() public view returns (uint256 frax_balance, uint256 fxb_balance) {
+        frax_balance = target_liquidity_fxb.mul(floor_price()).div(PRICE_PRECISION);
+        fxb_balance = target_liquidity_fxb;
     }
 
-    // AMM price for 1 FXB, in FRAX
+    // vAMM price for 1 FXB, in FRAX
     // The contract won't necessarily sell or buy at this price
     function amm_spot_price() public view returns (uint256 fxb_price) {
-        fxb_price = getAmountOutNoFee(uint256(1e18), FRAX.balanceOf(address(this)), FXB.balanceOf(address(this)));
+        fxb_price = vBal_FRAX.mul(PRICE_PRECISION).div(vBal_FXB);
     }
 
     // FXB floor price for 1 FXB, in FRAX
     // Will be used to help prevent someone from doing a huge arb with cheap bonds right before they mature
-    // Also prevents dumping FXB into the AMM and depressing the price too much
+    // Also allows the vAMM to buy back cheap FXB under the floor and retire it, meaning less to pay back later at face value
     function floor_price() public view returns (uint256 floor_price) {
         uint256 time_into_epoch = (block.timestamp).sub(epoch_start);
-        uint256 initial_discount = getInitialDiscount();
         floor_price = (PRICE_PRECISION.sub(initial_discount)).add(initial_discount.mul(time_into_epoch).div(epoch_length));
     }
 
     function initial_price() public view returns (uint256 initial_price) {
-        initial_price = (PRICE_PRECISION.sub(getInitialDiscount()));
+        initial_price = (PRICE_PRECISION.sub(initial_discount));
     }
 
-    function getInitialDiscount() public view returns (uint256 initial_discount) {
-        if (useDefaultInitialDiscount){
-            initial_discount = default_initial_discount;
-        }
-        else {
-            initial_discount = algorithmicInitialDiscount();
-        }
+    // How much FRAX is needed to buy out the remaining unissued FXB
+    function frax_to_buy_out_issue() public view returns (uint256 frax_value) {
+        uint256 fxb_fee_amt = issuable_fxb.mul(issue_fee).div(PRICE_PRECISION);
+        frax_value = (issuable_fxb.add(fxb_fee_amt)).mul(issue_price).div(PRICE_PRECISION);
     }
 
-    // Minimum amount of FRAX needed to buy FXB
-    // If the AMM price is below the floor, you will need to buy up more to bring it back up
-    // Will be 0 if the AMM price is above the floor price
-    function minimum_frax_for_AMM_buy() public view returns (uint256 minimum_frax_for_buy) {
-        uint256 frax_contract_balance = FRAX.balanceOf(address(this));
-        uint256 fxb_contract_balance = FXB.balanceOf(address(this));
+    // Maximum amount of FXB you can sell into the vAMM at market prices before it hits the floor price and either cuts off
+    // or sells at the floor price, dependingon how sellFXBintoAMM is called
+    // If the vAMM price is above the floor, you may sell FXB until doing so would push the price down to the floor
+    // Will be 0 if the vAMM price is at or below the floor price
+    function maximum_fxb_AMM_sellable_above_floor() public view returns (uint256 maximum_fxb_for_sell) {
         uint256 the_floor_price = floor_price();
-        uint256 floored_frax_amount = fxb_contract_balance.mul(the_floor_price).div(PRICE_PRECISION);
 
-        if (frax_contract_balance >= floored_frax_amount){
-            minimum_frax_for_buy = 0;
-        }
-        else {
-            minimum_frax_for_buy = floored_frax_amount.sub(frax_contract_balance);
-        }
-
-    }
-
-    // Maximum amount of FXB you can sell into the AMM before it hits the floor price and cuts off
-    // If the AMM price is above the floor, you may sell FXB until doing so would push the price down to the floor
-    // Will be 0 if the AMM price is at or below the floor price
-    function maximum_fxb_for_AMM_sell() public view returns (uint256 maximum_fxb_for_sell) {
-        uint256 frax_contract_balance = FRAX.balanceOf(address(this));
-        uint256 fxb_contract_balance = FXB.balanceOf(address(this));
-        uint256 the_floor_price = floor_price();
-        uint256 floored_fxb_amount = frax_contract_balance.mul(PRICE_PRECISION).div(the_floor_price);
-
-        if (fxb_contract_balance > floored_fxb_amount){
-            maximum_fxb_for_sell = fxb_contract_balance.sub(floored_fxb_amount);
+        if (amm_spot_price() > the_floor_price){
+            maximum_fxb_for_sell = getBoundedIn(DirectionChoice.ABOVE_TO_PRICE, the_floor_price);
         }
         else {
             maximum_fxb_for_sell = 0;
+        }
+    }
+
+    // Used for buying up to the issue price from below
+    function frax_from_spot_to_issue() public view returns (uint256 frax_spot_to_issue) {
+        if (amm_spot_price() < issue_price){
+            frax_spot_to_issue = getBoundedIn(DirectionChoice.BELOW_TO_PRICE_FRAX_IN, issue_price);
+        }
+        else {
+            frax_spot_to_issue = 0;
         }
     }
 
@@ -248,9 +256,9 @@ contract FraxBondIssuer is AccessControl {
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut, uint the_fee) public view returns (uint amountOut) {
         require(amountIn > 0, 'FraxBondIssuer: INSUFFICIENT_INPUT_AMOUNT');
         require(reserveIn > 0 && reserveOut > 0, 'FraxBondIssuer: INSUFFICIENT_LIQUIDITY');
-        uint amountInWithFee = amountIn.mul(uint(1e6).sub(the_fee));
+        uint amountInWithFee = amountIn.mul(uint(PRICE_PRECISION).sub(the_fee));
         uint numerator = amountInWithFee.mul(reserveOut);
-        uint denominator = (reserveIn.mul(1e6)).add(amountInWithFee);
+        uint denominator = (reserveIn.mul(PRICE_PRECISION)).add(amountInWithFee);
         amountOut = numerator / denominator;
     }
 
@@ -258,36 +266,60 @@ contract FraxBondIssuer is AccessControl {
         amountOut = getAmountOut(amountIn, reserveIn, reserveOut, 0);
     }
 
-    function depositFXB(uint256 fxb_amount) external notDepositingPaused returns (bytes32 kek_id) {
+    function buyUnissuedFXB(uint256 frax_in, uint256 fxb_out_min) public notIssuingPaused returns (uint256 fxb_out, uint256 fxb_fee_amt) {
         require(isInEpoch(), 'Not in an epoch');
+        require(issuable_fxb > 0, 'No new FXB to issue');
 
-        // Burn FXB from the sender
-        FXB.issuer_burn_from(msg.sender, fxb_amount);
+        // Get the expected amount of FXB from the floor-priced portion
+        fxb_out = frax_in.mul(PRICE_PRECISION).div(issue_price);
 
-        // Mark the deposit
-        deposited_fxb = deposited_fxb.add(fxb_amount);
-        kek_id = keccak256(abi.encodePacked(msg.sender, block.timestamp, fxb_amount));
-        bondDeposits[msg.sender].push(BondDeposit(
-            kek_id,
-            fxb_amount,
-            block.timestamp,
-            epoch_end
-        ));
+        // Calculate and apply the normal buying fee
+        fxb_fee_amt = fxb_out.mul(issue_fee).div(PRICE_PRECISION);
 
-        emit FXB_Deposited(msg.sender, fxb_amount, epoch_end, kek_id);
+        // Apply the fee
+        fxb_out = fxb_out.sub(fxb_fee_amt);
+
+        // Check fxb_out_min
+        require(fxb_out >= fxb_out_min, "[buyUnissuedFXB fxb_out_min]: Slippage limit reached");
+
+        // Check the limit
+        require(fxb_out <= issuable_fxb, 'Trying to buy too many unissued bonds');
+
+        // Safety check
+        require(((FXB.totalSupply()).add(fxb_out)) <= max_fxb_outstanding, "New issue would exceed max_fxb_outstanding");
+
+        // Decrement the unissued amount
+        issuable_fxb = issuable_fxb.sub(fxb_out);
+
+        // Zero out precision-related crumbs if less than 1 FXB left 
+        if (issuable_fxb < uint256(1e18)) {
+            issuable_fxb = 0;
+        }
+
+        // Burn FRAX from the sender. No vAMM balance change here
+        FRAX.pool_burn_from(msg.sender, frax_in);
+
+        // Mint FXB to the sender. No vAMM balance change here
+        FXB.issuer_mint(msg.sender, fxb_out);
     }
 
-    function buyFXBfromAMM(uint256 frax_amount, uint256 fxb_out_min, bool should_deposit) external notBuyingPaused returns (uint256 fxb_out, uint256 fxb_fee_amt, bytes32 kek_id) {
+    function buyFXBfromAMM(uint256 frax_in, uint256 fxb_out_min) external notBuyingPaused returns (uint256 fxb_out, uint256 fxb_fee_amt) {
         require(isInEpoch(), 'Not in an epoch');
-        require(frax_amount >= minimum_frax_for_AMM_buy(), "Not enough FRAX to satisfy the floor price minimum");
 
-        // Get the expected amount of FXB via the AMM
-        uint256 amm_fxb_balance = FXB.balanceOf(address(this));
-        uint256 fxb_out = getAmountOutNoFee(frax_amount, FRAX.balanceOf(address(this)), amm_fxb_balance);
-        uint256 effective_fxb_price = frax_amount.mul(PRICE_PRECISION).div(fxb_out); 
+        // Get the vAMM price
+        uint256 spot_price = amm_spot_price();
 
-        // The AMM will never sell its FXB below this
-        require(effective_fxb_price >= floor_price(), "[buyFXBfromAMM]: floor price reached");
+        // Rebalance the vAMM if applicable
+        // This may be the case if the floor price moved up slowly and nobody made any purchases for a while
+        {
+            if (spot_price < floor_price()){
+                _rebalance_AMM_FXB();
+                _rebalance_AMM_FRAX_to_price(floor_price());
+            }
+        }
+
+        // Calculate the FXB output
+        fxb_out = getAmountOutNoFee(frax_in, vBal_FRAX, vBal_FXB);
 
         // Calculate and apply the normal buying fee
         fxb_fee_amt = fxb_out.mul(buying_fee).div(PRICE_PRECISION);
@@ -298,233 +330,219 @@ contract FraxBondIssuer is AccessControl {
         // Check fxb_out_min
         require(fxb_out >= fxb_out_min, "[buyFXBfromAMM fxb_out_min]: Slippage limit reached");
 
-        // Take FRAX from the sender
-        FRAX.transferFrom(msg.sender, address(this), frax_amount);
+        // Safety check
+        require(((FXB.totalSupply()).add(fxb_out)) <= max_fxb_outstanding, "New issue would exceed max_fxb_outstanding");
 
-        // The "Forgetful FXB Owner Problem"
-        // Since the FXB price resets to the discount after each epoch and cooldown period,
-        // you can optionally deposit your FXB tokens and redeem them any time after that epoch ends
-        // This is because FXB tokens are fungible and have no 'memory' of which epoch they were issued in
-        // If you forgot to redeem your FXB tokens otherwise, you would have to wait until the next cooldown period
-        // Or take a loss and sell on the open market
-        if (should_deposit){
-            require(depositingPaused == false, "Depositing is paused");
+        // Burn FRAX from the sender and increase the virtual balance
+        FRAX.burnFrom(msg.sender, frax_in);
+        vBal_FRAX = vBal_FRAX.add(frax_in);
 
-            // Burn the FXB that would have been transfered out to the sender had they not deposited
-            // This is needed to not mess with the AMM balanceOf(address(this))
-            FXB.issuer_burn_from(address(this), fxb_out);
+        // Mint FXB to the sender and decrease the virtual balance
+        FXB.issuer_mint(msg.sender, fxb_out);
+        vBal_FXB = vBal_FXB.sub(fxb_out);
 
-            // Mark the deposit
-            deposited_fxb = deposited_fxb.add(fxb_out);
-            kek_id = keccak256(abi.encodePacked(msg.sender, block.timestamp, fxb_out));
-            bondDeposits[msg.sender].push(BondDeposit(
-                kek_id,
-                fxb_out,
-                block.timestamp,
-                epoch_end
-            ));
-
-            emit FXB_Deposited(msg.sender, fxb_out, epoch_end, kek_id);
-        }
-        else {
-            // Give FXB to the sender
-            FXB.transfer(msg.sender, fxb_out);
+        // vAMM will burn FRAX if the effective sale price is above 1. It is essentially free FRAX and a protocol-level profit
+        {
+            uint256 effective_sale_price = frax_in.mul(PRICE_PRECISION).div(fxb_out);
+            if(effective_sale_price > PRICE_PRECISION){
+                // Rebalance to $1
+                _rebalance_AMM_FXB();
+                _rebalance_AMM_FRAX_to_price(PRICE_PRECISION);
+            }
         }
     }
 
-    function sellFXBintoAMM(uint256 fxb_amount, uint256 frax_out_min) external notSellingPaused returns (uint256 frax_out, uint256 frax_fee_amt) {
+    function sellFXBintoAMM(uint256 fxb_in, uint256 frax_out_min) external notSellingPaused returns (uint256 fxb_bought_above_floor, uint256 fxb_sold_under_floor, uint256 frax_out, uint256 frax_fee_amt) {
         require(isInEpoch(), 'Not in an epoch');
-        require(fxb_amount <= maximum_fxb_for_AMM_sell(), "Sale would push FXB below the floor price");
 
-        // Get the expected amount of FRAX via the AMM
-        frax_out = getAmountOutNoFee(fxb_amount, FXB.balanceOf(address(this)), FRAX.balanceOf(address(this)));
-        uint256 effective_fxb_price = frax_out.mul(PRICE_PRECISION).div(fxb_amount); 
+        fxb_bought_above_floor = fxb_in;
+        fxb_sold_under_floor = 0;
 
-        // The AMM will never buy the FXB back below this
-        require(effective_fxb_price >= floor_price(), "[sellFXBintoAMM]: floor price reached");
+        // The vAMM will buy back FXB at market rates in all cases
+        // However, any FXB bought back under the floor price will be burned
+        uint256 max_above_floor_sellable_fxb = maximum_fxb_AMM_sellable_above_floor();
+        if(fxb_in >= max_above_floor_sellable_fxb){
+            fxb_bought_above_floor = max_above_floor_sellable_fxb;
+            fxb_sold_under_floor = fxb_in.sub(max_above_floor_sellable_fxb);
+        }
+        else {
+            // no change to fxb_bought_above_floor
+            fxb_sold_under_floor = 0;
+        }
 
-        // The AMM will never buy the FXB back above 1
-        require(effective_fxb_price <= PRICE_PRECISION, "[sellFXBintoAMM]: price is above 1");
+        // Get the expected amount of FRAX from above the floor
+        uint256 frax_out_above_floor = 0;
+        if (fxb_bought_above_floor > 0){
+            frax_out_above_floor = getAmountOutNoFee(fxb_bought_above_floor, vBal_FXB, vBal_FRAX);
+        
+            // Apply the normal selling fee to this portion
+            uint256 fee_above_floor = frax_out_above_floor.mul(selling_fee).div(PRICE_PRECISION);
+            frax_out_above_floor = frax_out_above_floor.sub(fee_above_floor);
 
-        // Apply the normal selling fee
-        frax_fee_amt = frax_out.mul(selling_fee).div(PRICE_PRECISION);
-        frax_out = frax_out.sub(frax_fee_amt);
+            // Informational for return values
+            frax_fee_amt += fee_above_floor;
+            frax_out += frax_out_above_floor;
+        }
 
+        // Get the expected amount of FRAX from below the floor
+        // Need to adjust the balances virtually for this
+        uint256 frax_out_under_floor = 0;
+        if (fxb_sold_under_floor > 0){
+            // Get the virtual amount under the floor
+            (uint256 frax_floor_balance_virtual, uint256 fxb_floor_balance_virtual) = getVirtualFloorLiquidityBalances();
+            frax_out_under_floor = getAmountOutNoFee(fxb_sold_under_floor, fxb_floor_balance_virtual.add(fxb_bought_above_floor), frax_floor_balance_virtual.sub(frax_out_above_floor));
+
+            // Apply the normal selling fee to this portion
+            uint256 fee_below_floor = frax_out_under_floor.mul(selling_fee).div(PRICE_PRECISION);
+            frax_out_under_floor = frax_out_under_floor.sub(fee_below_floor);
+
+            // Informational for return values
+            frax_fee_amt += fee_below_floor;
+            frax_out += frax_out_under_floor;
+        }
+        
         // Check frax_out_min
         require(frax_out >= frax_out_min, "[sellFXBintoAMM frax_out_min]: Slippage limit reached");
 
-        // Take FXB from the sender
-        FXB.transferFrom(msg.sender, address(this), fxb_amount);
-
-        // Give FRAX to sender
-        FRAX.transfer(msg.sender, frax_out);
-    }
-
-    function redeemFXB(uint256 fxb_amount) external notRedeemingPaused returns (uint256 frax_out, uint256 frax_fee) {
-        require(isInCooldown(), 'Not in the cooldown period');
+        // Take FXB from the sender and increase the virtual balance
+        FXB.burnFrom(msg.sender, fxb_in);
+        vBal_FXB = vBal_FXB.add(fxb_in);
         
-        // Take FXB from the sender
-        FXB.transferFrom(msg.sender, address(this), fxb_amount);
-
-        // Give 1 FRAX per 1 FXB, minus the redemption fee
-        frax_fee = fxb_amount.mul(redemption_fee).div(PRICE_PRECISION);
-        frax_out = fxb_amount.sub(frax_fee);
-
+        // Give FRAX to sender from the vAMM and decrease the virtual balance
         FRAX.pool_mint(msg.sender, frax_out);
+        vBal_FRAX = vBal_FRAX.sub(frax_out);
 
-        emit FXB_Redeemed(msg.sender, fxb_amount, frax_out);
-    }
-
-    function redeemDepositedFXB(bytes32 kek_id) external notDepositRedeemingPaused returns (uint256 frax_out, uint256 frax_fee) {
-        BondDeposit memory thisDeposit;
-        thisDeposit.amount = 0;
-        uint theIndex;
-        for (uint i = 0; i < bondDeposits[msg.sender].length; i++){ 
-            if (kek_id == bondDeposits[msg.sender][i].kek_id){
-                thisDeposit = bondDeposits[msg.sender][i];
-                theIndex = i;
-                break;
-            }
+        // If any FXB was sold under the floor price, retire / burn it and rebalance the pool
+        // This is less FXB that will have to be redeemed at full value later and is essentially a protocol-level profit
+        if (fxb_sold_under_floor > 0){
+            // Rebalance to the floor
+            _rebalance_AMM_FXB();
+            _rebalance_AMM_FRAX_to_price(floor_price());
         }
-        require(thisDeposit.kek_id == kek_id, "Deposit not found");
-        require(block.timestamp >= thisDeposit.epoch_end_timestamp  == true, "Deposit is still maturing!");
-        uint256 fxb_amount = thisDeposit.amount;
+    }
 
-        // Remove the bond deposit from the array
-        delete bondDeposits[msg.sender][theIndex];
-
-        // Decrease the deposited bonds tracker
-        deposited_fxb = deposited_fxb.sub(fxb_amount);
+    function redeemFXB(uint256 fxb_in) external notRedeemingPaused returns (uint256 frax_out, uint256 frax_fee) {
+        require(!isInEpoch(), 'Not in the cooldown period or outside an epoch');
         
-        // Give 1 FRAX per 1 FXB, minus the redemption fee
-        frax_fee = fxb_amount.mul(redemption_fee).div(PRICE_PRECISION);
-        uint256 frax_out = fxb_amount.sub(frax_fee);
+        // Burn FXB from the sender
+        FXB.burnFrom(msg.sender, fxb_in);
 
+        // Give 1 FRAX per 1 FXB, minus the redemption fee
+        frax_fee = fxb_in.mul(redemption_fee).div(PRICE_PRECISION);
+        frax_out = fxb_in.sub(frax_fee);
+
+        // Give the FRAX to the redeemer
         FRAX.pool_mint(msg.sender, frax_out);
 
-        emit FXB_Deposit_Redeemed(msg.sender, fxb_amount, frax_out, epoch_end, kek_id);
+        emit FXB_Redeemed(msg.sender, fxb_in, frax_out);
     }
    
     /* ========== RESTRICTED INTERNAL FUNCTIONS ========== */
 
-    // Burns as much FXB as possible that the contract owns
-    // Some could still remain outside of the contract
-    function _burnExcessFXB() internal returns (uint256 fxb_total_supply, uint256 fxb_adjusted_total_supply, uint256 fxb_inside_contract, uint256 fxb_outside_contract, uint256 burn_amount) {
-        // Get the balances
-        fxb_total_supply = FXB.totalSupply();
-        fxb_adjusted_total_supply = fxb_total_supply.add(deposited_fxb); // Don't forget to account for deposited FXB
-        fxb_inside_contract = FXB.balanceOf(address(this));
-        fxb_outside_contract = fxb_total_supply.sub(fxb_inside_contract);
+    function _rebalance_AMM_FRAX_to_price(uint256 rebalance_price) internal {
+        // Safety checks
+        require(rebalance_price <= PRICE_PRECISION, "Rebalance price too high");
+        require(rebalance_price >= (PRICE_PRECISION.sub(initial_discount)), "Rebalance price too low"); 
 
-        // Only need to burn if there is an excess
-        if (fxb_adjusted_total_supply > max_fxb_outstanding){
-            uint256 total_excess_fxb = fxb_adjusted_total_supply.sub(max_fxb_outstanding);
-            
-            // If the contract has some excess FXB, try to burn it
-            if(fxb_inside_contract >= total_excess_fxb){
-                // Burn the entire excess amount
-                burn_amount = total_excess_fxb;
-            }
-            else {
-                // Burn as much as you can
-                burn_amount = fxb_inside_contract;
-            }
+        uint256 frax_required = target_liquidity_fxb.mul(rebalance_price).div(PRICE_PRECISION);
+        if (frax_required > vBal_FRAX){
+            // Virtually add the deficiency
+            vBal_FRAX = vBal_FRAX.add(frax_required.sub(vBal_FRAX));
+        }
+        else if (frax_required < vBal_FRAX){
+            // Virtually subtract the excess
+            vBal_FRAX = vBal_FRAX.sub(vBal_FRAX.sub(frax_required));
+        }
+        else if (frax_required == vBal_FRAX){
+            // Do nothing
+        }
+    }
 
-            // Do the burning
-            FXB.issuer_burn_from(address(this), burn_amount);
-
-            // Fetch the new balances
-            fxb_total_supply = FXB.totalSupply();
-            fxb_adjusted_total_supply = fxb_total_supply.add(deposited_fxb);
-            fxb_inside_contract = FXB.balanceOf(address(this));
-            fxb_outside_contract = fxb_total_supply.sub(fxb_inside_contract);
+    function _rebalance_AMM_FXB() internal {
+        uint256 fxb_required = target_liquidity_fxb;
+        if (fxb_required > vBal_FXB){
+            // Virtually add the deficiency
+            vBal_FXB = vBal_FXB.add(fxb_required.sub(vBal_FXB));
+        }
+        else if (fxb_required < vBal_FXB){
+            // Virtually subtract the excess
+            vBal_FXB = vBal_FXB.sub(vBal_FXB.sub(fxb_required));
+        }
+        else if (fxb_required == vBal_FXB){
+            // Do nothing
         }
 
+        // Quick safety check
+        require(((FXB.totalSupply()).add(issuable_fxb)) <= max_fxb_outstanding, "Rebalance would exceed max_fxb_outstanding");
+    }
+
+    function getBoundedIn(DirectionChoice choice, uint256 the_price) internal view returns (uint256 bounded_amount) {        
+        if (choice == DirectionChoice.BELOW_TO_PRICE_FRAX_IN) {
+            uint256 numerator = sqrt(vBal_FRAX).mul(sqrt(vBal_FXB)).mul(PRICE_PRECISION_SQRT);
+            // The "price" here needs to be inverted 
+            uint256 denominator = sqrt((PRICE_PRECISION_SQUARED).div(the_price));
+            bounded_amount = numerator.div(denominator).sub(vBal_FRAX);
+        }
+        else if (choice == DirectionChoice.ABOVE_TO_PRICE) {
+            uint256 numerator = sqrt(vBal_FRAX).mul(sqrt(vBal_FXB)).mul(PRICE_PRECISION_SQRT);
+            uint256 denominator = sqrt(the_price);
+            bounded_amount = numerator.div(denominator).sub(vBal_FXB);
+        }
     }
 
     /* ========== RESTRICTED EXTERNAL FUNCTIONS ========== */
 
-    // Allows for burning new FXB in the middle of an epoch
-    // The contraction must occur at the current AMM price, so both sides (FRAX and FXB) need to be burned
-    function contract_mid_epoch(uint256 fxb_contraction_amount) external onlyByOwnerOrGovernance {
+    // Allows for expanding the liquidity mid-epoch
+    // The expansion must occur at the current vAMM price
+    function expand_AMM_liquidity(uint256 fxb_expansion_amount) external onlyByOwnerControllerOrGovernance {
         require(isInEpoch(), 'Not in an epoch');
 
-        // Get the AMM spot price
-        uint256 fxb_spot_price = amm_spot_price();
-        
-        // Update max_fxb_outstanding
-        max_fxb_outstanding = max_fxb_outstanding.sub(fxb_contraction_amount);
+        // Expand the FXB target liquidity
+        target_liquidity_fxb = target_liquidity_fxb.add(fxb_expansion_amount);
 
-        // Burn the required FRAX
-        FRAX.pool_burn_from(address(this), fxb_contraction_amount.mul(fxb_spot_price).div(1e18));
-
-        // Burn the required FXB
-        FXB.issuer_burn_from(address(this), fxb_contraction_amount);
+        // Do the rebalance
+        rebalance_AMM_liquidity_to_price(amm_spot_price());
     }
 
-    // Allows for minting new FXB in the middle of an epoch
-    // The expansion must occur at the current AMM price, so both sides (FRAX and FXB) need to be minted
-    function expand_mid_epoch(uint256 fxb_expansion_amount) external onlyByOwnerOrGovernance {
+    // Allows for contracting the liquidity mid-epoch
+    // The expansion must occur at the current vAMM price
+    function contract_AMM_liquidity(uint256 fxb_contraction_amount) external onlyByOwnerControllerOrGovernance {
         require(isInEpoch(), 'Not in an epoch');
 
-        // Get the AMM spot price
-        uint256 fxb_spot_price = amm_spot_price();
+        // Expand the FXB target liquidity
+        target_liquidity_fxb = target_liquidity_fxb.sub(fxb_contraction_amount);
 
-        // Update max_fxb_outstanding
-        max_fxb_outstanding = max_fxb_outstanding.add(fxb_expansion_amount);
-
-        // Mint the required FRAX
-        FRAX.pool_mint(address(this), fxb_expansion_amount.mul(fxb_spot_price).div(1e18));
-
-        // Mint the required FXB
-        FXB.issuer_mint(address(this), fxb_expansion_amount);
+        // Do the rebalance
+        rebalance_AMM_liquidity_to_price(amm_spot_price());
     }
 
-    // Starts a new epoch and rebalances the AMM
-    function startNewEpoch() external onlyByOwnerOrGovernance {
+    // Rebalance vAMM to a desired price
+    function rebalance_AMM_liquidity_to_price(uint256 rebalance_price) public onlyByOwnerControllerOrGovernance {
+        // Rebalance the FXB
+        _rebalance_AMM_FXB();
+
+        // Rebalance the FRAX
+        _rebalance_AMM_FRAX_to_price(rebalance_price);
+    }
+
+    // Starts a new epoch and rebalances the vAMM
+    function startNewEpoch() external onlyByOwnerControllerOrGovernance {
         require(!isInEpoch(), 'Already in an existing epoch');
         require(!isInCooldown(), 'Bonds are currently settling in the cooldown');
 
-        uint256 initial_discount = getInitialDiscount();
-
-        // Sanity check in case algorithmicInitialDiscount() messes up somehow or is exploited
-        require(initial_discount <= failsafe_max_initial_discount, "Initial discount is more than max failsafe");
-
-        // There still will be probably still be some bonds floating around outside, so we need to account for those
-        // They may also accumulate over time
-        {
-            // Burn any excess FXB
-            (uint256 fxb_total_supply, uint256 fxb_adjusted_total_supply, uint256 fxb_inside_contract, uint256 fxb_outside_contract, ) = _burnExcessFXB();
-
-            // Fail if there is still too much FXB
-            require(fxb_adjusted_total_supply <= max_fxb_outstanding, "Still too much FXB outstanding" ); 
-
-            // Mint FXB up to max_fxb_outstanding
-            uint256 fxb_needed = max_fxb_outstanding.sub(fxb_outside_contract).sub(fxb_inside_contract).sub(deposited_fxb);
-            FXB.issuer_mint(address(this), fxb_needed);
-        }
-
-        // Mint or burn FRAX to get to the initial_discount
-        {
-            uint256 desired_frax_amount = max_fxb_outstanding.mul(PRICE_PRECISION.sub(initial_discount)).div(PRICE_PRECISION);
-            uint256 frax_inside_contract = FRAX.balanceOf(address(this));
-            if (desired_frax_amount > frax_inside_contract){
-                // Mint the deficiency
-                FRAX.pool_mint(address(this), desired_frax_amount.sub(frax_inside_contract));
-            }
-            else if (desired_frax_amount < frax_inside_contract){
-                // Burn the excess
-                FRAX.pool_burn_from(address(this), frax_inside_contract.sub(desired_frax_amount));
-            }
-            else { /* Do nothing */ }
-        }
+        // Rebalance the vAMM liquidity
+        rebalance_AMM_liquidity_to_price(PRICE_PRECISION.sub(initial_discount));
 
         // Set state variables
         epoch_start = block.timestamp;
         epoch_end = epoch_start.add(epoch_length);
 
-
         emit FXB_EpochStarted(msg.sender, epoch_start, epoch_end, epoch_length, initial_discount, max_fxb_outstanding);
+    }
+
+    function toggleIssuing() external {
+        require(hasRole(ISSUING_PAUSER, msg.sender));
+        issuingPaused = !issuingPaused;
     }
 
     function toggleBuying() external {
@@ -542,74 +560,95 @@ contract FraxBondIssuer is AccessControl {
         redeemingPaused = !redeemingPaused;
     }
 
-    function toggleDepositing() external {
-        require(hasRole(DEPOSITING_PAUSER, msg.sender));
-        depositingPaused = !depositingPaused;
-    }
-
-    function toggleDepositRedeeming() external {
-        require(hasRole(DEPOSIT_REDEEMING_PAUSER, msg.sender));
-        depositRedeemingPaused = !depositRedeemingPaused;
-    }
-
-    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
-        timelock_address = new_timelock;
-    }
-
-    function toggleDefaultInitialDiscount() external {
-        require(hasRole(DEFAULT_DISCOUNT_TOGGLER, msg.sender));
-        useDefaultInitialDiscount = !useDefaultInitialDiscount;
-    }
-
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
-    }
-
-    function setMaxFXBOutstanding(uint256 _max_fxb_outstanding) external onlyByOwnerOrGovernance {
+    function setMaxFXBOutstanding(uint256 _max_fxb_outstanding) external onlyByOwnerControllerOrGovernance {
         max_fxb_outstanding = _max_fxb_outstanding;
     }
 
-    function setFees(uint256 _buying_fee, uint256 _selling_fee, uint256 _redemption_fee) external onlyByOwnerOrGovernance {
+    function setTargetLiquidity(uint256 _target_liquidity_fxb, bool _rebalance_vAMM) external onlyByOwnerControllerOrGovernance {
+        target_liquidity_fxb = _target_liquidity_fxb;
+        if (_rebalance_vAMM){
+            rebalance_AMM_liquidity_to_price(amm_spot_price());
+        }
+    }
+
+    function clearIssuableFXB() external onlyByOwnerControllerOrGovernance {
+        issuable_fxb = 0;
+        issue_price = PRICE_PRECISION;
+    }
+
+    function setIssuableFXB(uint256 _issuable_fxb, uint256 _issue_price) external onlyByOwnerControllerOrGovernance {
+        if (_issuable_fxb > issuable_fxb){
+            require(((FXB.totalSupply()).add(_issuable_fxb)) <= max_fxb_outstanding, "New issue would exceed max_fxb_outstanding");
+        }
+        issuable_fxb = _issuable_fxb;
+        issue_price = _issue_price;
+    }
+
+    function setFees(uint256 _issue_fee, uint256 _buying_fee, uint256 _selling_fee, uint256 _redemption_fee) external onlyByOwnerControllerOrGovernance {
+        issue_fee = _issue_fee;
         buying_fee = _buying_fee;
         selling_fee = _selling_fee;
         redemption_fee = _redemption_fee;
     }
 
-    function setCooldownPeriod(uint256 _cooldown_period) external onlyByOwnerOrGovernance {
+    function setCooldownPeriod(uint256 _cooldown_period) external onlyByOwnerControllerOrGovernance {
         cooldown_period = _cooldown_period;
     }
 
-    function setEpochLength(uint256 _epoch_length) external onlyByOwnerOrGovernance {
+    function setEpochLength(uint256 _epoch_length) external onlyByOwnerControllerOrGovernance {
         epoch_length = _epoch_length;
     }
 
-    function setDefaultInitialDiscount(uint256 _default_initial_discount) external onlyByOwnerOrGovernance {
-        default_initial_discount = _default_initial_discount;
+    function setInitialDiscount(uint256 _initial_discount, bool _rebalance_AMM) external onlyByOwnerControllerOrGovernance {
+        initial_discount = _initial_discount;
+        if (_rebalance_AMM){
+            rebalance_AMM_liquidity_to_price(PRICE_PRECISION.sub(initial_discount));
+        }
     }
 
-    function setFailsafeMaxInitialDiscount(uint256 _failsafe_max_initial_discount) external onlyByOwnerOrGovernance {
-        failsafe_max_initial_discount = _failsafe_max_initial_discount;
+    /* ========== HIGHLY RESTRICTED EXTERNAL FUNCTIONS [Owner and Timelock only]  ========== */
+
+    function setController(address _controller_address) external onlyByOwnerOrTimelock {
+        controller_address = _controller_address;
     }
 
-    function emergencyRecoverERC20(address tokenAddress, uint256 tokenAmount, address destination_address) external onlyByOwnerOrGovernance {
+    function setTimelock(address new_timelock) external onlyByOwnerOrTimelock {
+        timelock_address = new_timelock;
+    }
+
+    function setOwner(address _owner_address) external onlyByOwnerOrTimelock {
+        owner_address = _owner_address;
+    }
+
+    function emergencyRecoverERC20(address destination_address, address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrTimelock {
         ERC20(tokenAddress).transfer(destination_address, tokenAmount);
         emit Recovered(tokenAddress, destination_address, tokenAmount);
     }
 
     /* ========== PURE FUNCTIONS ========== */
 
+    // Babylonian method
+    function sqrt(uint y) internal pure returns (uint z) {
+        if (y > 3) {
+            z = y;
+            uint x = y / 2 + 1;
+            while (x < z) {
+                z = x;
+                x = (y / x + x) / 2;
+            }
+        } else if (y != 0) {
+            z = 1;
+        }
+        // else z = 0
+    }
 
     /* ========== EVENTS ========== */
 
     event Recovered(address token, address to, uint256 amount);
 
     // Track bond redeeming
-    event FXB_Deposited(address indexed from, uint256 fxb_amount, uint256 epoch_end, bytes32 kek_id);
-    event FXB_Deposit_Redeemed(address indexed from, uint256 fxb_amount, uint256 frax_out, uint256 epoch_end, bytes32 kek_id);
-    
     event FXB_Redeemed(address indexed from, uint256 fxb_amount, uint256 frax_out);
     event FXB_EpochStarted(address indexed from, uint256 _epoch_start, uint256 _epoch_end, uint256 _epoch_length, uint256 _initial_discount, uint256 _max_fxb_amount);
-
 }
 
 

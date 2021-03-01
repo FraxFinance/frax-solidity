@@ -1,6 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.11;
 
+// ====================================================================
+// |     ______                   _______                             |
+// |    / _____________ __  __   / ____(_____  ____ _____  ________   |
+// |   / /_  / ___/ __ `| |/_/  / /_  / / __ \/ __ `/ __ \/ ___/ _ \  |
+// |  / __/ / /  / /_/ _>  <   / __/ / / / / / /_/ / / / / /__/  __/  |
+// | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
+// |                                                                  |
+// ====================================================================
+// =========================== PIDController ==========================
+// ====================================================================
+// Frax Finance: https://github.com/FraxFinance
+
+// Primary Author(s)
+// Jason Huan: https://github.com/jasonhuan
+// Sam Kazemian: https://github.com/samkazemian
+
+// Reviewer(s) / Contributor(s)
+// Travis Moore: https://github.com/FortisFortuna
+
 import '../Frax/Frax.sol';
 import "../Math/SafeMath.sol";
 import "./ReserveTracker.sol";
@@ -43,6 +62,8 @@ contract PIDController {
         _;
     }
 
+	/* ========== CONSTRUCTOR ========== */
+
 	constructor(
 		address _frax_contract_address,
 		address _fxs_contract_address,
@@ -60,33 +81,10 @@ contract PIDController {
 		FRAX = FRAXStablecoin(frax_contract_address);
 		FXS = FRAXShares(fxs_contract_address);
 
-		// upon genesis, if GR changes by more than 1% percent, enable change of collateral ratio
+		// Upon genesis, if GR changes by more than 1% percent, enable change of collateral ratio
 		GR_top_band = 1000;
 		GR_bottom_band = 1000; 
 		is_active = false;
-	}
-
-	function activate(bool _state) external onlyByOwnerOrGovernance {
-		is_active = _state;
-	}
-
-	function setFraxStep(uint256 _new_step) external onlyByOwnerOrGovernance {
-		frax_step = _new_step;
-	}
-
-	function setPriceBands(uint256 _top_band, uint256 _bottom_band) external onlyByOwnerOrGovernance {
-		FRAX_top_band = _top_band;
-		FRAX_bottom_band = _bottom_band;
-	}
-
-	// as a percentage added/subtracted from the previous; e.g. top_band = 4000 = 0.4% -> will decollat if GR increases by 0.4% or more
-	function setGrowthRatioBands(uint256 _GR_top_band, uint256 _GR_bottom_band) external onlyByOwnerOrGovernance {
-		GR_top_band = _GR_top_band;
-		GR_bottom_band = _GR_bottom_band;
-	}
-
-	function setInternalCooldown(uint256 _internal_cooldown) external onlyByOwnerOrGovernance {
-		internal_cooldown = _internal_cooldown;
 	}
 
 	function setReserveTracker(address _reserve_tracker_address) external onlyByOwnerOrGovernance {
@@ -107,17 +105,17 @@ contract PIDController {
 		uint256 fxs_reserves = reserve_tracker.getFXSReserves();
 		uint256 fxs_price = reserve_tracker.getFXSPrice();
 		
-		uint256 fxs_liquidity = (fxs_reserves.mul(fxs_price)); // has 6 decimals of precision
+		uint256 fxs_liquidity = (fxs_reserves.mul(fxs_price)); // Has 6 decimals of precision
 
 		uint256 frax_supply = FRAX.totalSupply();
 		//uint256 frax_price = reserve_tracker.getFRAXPrice(); // Using Uniswap
 		// Get the FRAX TWAP on Curve Metapool
-		uint256[2] memory new_twap = frax_metapool.get_price_cumulative_last();
-		uint256[2] memory balances = frax_metapool.get_twap_balances(old_twap, new_twap, block.timestamp - last_update);
-		old_twap = new_twap;
-		uint256 frax_price = frax_metapool.get_dy(1, 0, 1e18, balances).mul(1e6).div(frax_metapool.get_virtual_price());
+        uint256[2] memory new_twap = frax_metapool.get_price_cumulative_last();
+        uint256[2] memory balances = frax_metapool.get_twap_balances(old_twap, new_twap, block.timestamp - last_update);
+        old_twap = new_twap;
+        uint256 frax_price = frax_metapool.get_dy(1, 0, 1e18, balances).mul(1e6).div(frax_metapool.get_virtual_price());
 
-		uint256 new_growth_ratio = fxs_liquidity.div(frax_supply);
+		uint256 new_growth_ratio = fxs_liquidity.div(frax_supply); // (E18 + E6) / E18
 
 		uint256 last_collateral_ratio = FRAX.global_collateral_ratio();
 		uint256 new_collateral_ratio = last_collateral_ratio;
@@ -138,37 +136,72 @@ contract PIDController {
 			}
 		}
 
+		// No need for checking CR under 0 as the last_collateral_ratio.sub(frax_step) will throw 
+		// an error above in that case
 		if(new_collateral_ratio > 1e6){
 			new_collateral_ratio = 1e6;
 		}
 
-		// for testing purposes
+		// For testing purposes
 		if(is_active){
 			uint256 delta_collateral_ratio;
 			if(new_collateral_ratio > last_collateral_ratio){
 				delta_collateral_ratio = new_collateral_ratio - last_collateral_ratio;
-				FRAX.setPriceTarget(0); // set to zero to increase CR
+				FRAX.setPriceTarget(0); // Set to zero to increase CR
 				emit FRAXdecollateralize(new_collateral_ratio);
 			} else if (new_collateral_ratio < last_collateral_ratio){
 				delta_collateral_ratio = last_collateral_ratio - new_collateral_ratio;
-				FRAX.setPriceTarget(1000e6); // set to high value to decrease CR
+				FRAX.setPriceTarget(1000e6); // Set to high value to decrease CR
 				emit FRAXrecollateralize(new_collateral_ratio);
 			}
 
-			FRAX.setFraxStep(delta_collateral_ratio); // change by the delta
-			FRAX.setRefreshCooldown(0); // unlock the CR cooldown
+			FRAX.setFraxStep(delta_collateral_ratio); // Change by the delta
+			uint256 cooldown_before = FRAX.refresh_cooldown(); // Note the existing cooldown period
+			FRAX.setRefreshCooldown(0); // Unlock the CR cooldown
 
-			FRAX.refreshCollateralRatio(); // refresh CR
+			FRAX.refreshCollateralRatio(); // Refresh CR
 
-			//reset params
+			// Reset params
 			FRAX.setFraxStep(0);
-			FRAX.setRefreshCooldown(86400); // auto-lock for one day, or until next controller refresh
+			FRAX.setRefreshCooldown(cooldown_before); // Set the cooldown period to what it was before, or until next controller refresh
 			FRAX.setPriceTarget(1e6);			
 		}
 		
 		growth_ratio = new_growth_ratio;
 		last_update = block.timestamp;
 	}
+
+	function activate(bool _state) external onlyByOwnerOrGovernance {
+		is_active = _state;
+	}
+
+	// As a percentage added/subtracted from the previous; e.g. top_band = 4000 = 0.4% -> will decollat if GR increases by 0.4% or more
+	function setGrowthRatioBands(uint256 _GR_top_band, uint256 _GR_bottom_band) external onlyByOwnerOrGovernance {
+		GR_top_band = _GR_top_band;
+		GR_bottom_band = _GR_bottom_band;
+	}
+
+	function setInternalCooldown(uint256 _internal_cooldown) external onlyByOwnerOrGovernance {
+		internal_cooldown = _internal_cooldown;
+	}
+
+	function setFraxStep(uint256 _new_step) external onlyByOwnerOrGovernance {
+		frax_step = _new_step;
+	}
+
+	function setPriceBands(uint256 _top_band, uint256 _bottom_band) external onlyByOwnerOrGovernance {
+		FRAX_top_band = _top_band;
+		FRAX_bottom_band = _bottom_band;
+	}
+
+	function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+        owner_address = _owner_address;
+    }
+
+    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        timelock_address = new_timelock;
+    }
+
 
     /* ========== EVENTS ========== */	
     event FRAXdecollateralize(uint256 new_collateral_ratio);

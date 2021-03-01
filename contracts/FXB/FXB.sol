@@ -10,7 +10,7 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ========================== FRAXBonds (FXB) =========================
+// ========================== FRAXBond (FXB) ==========================
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 
@@ -29,7 +29,7 @@ import "../Math/SafeMath.sol";
 import "./FraxBondIssuer.sol";
 import "../Governance/AccessControl.sol";
 
-contract FRAXBonds is ERC20Custom, AccessControl {
+contract FraxBond is ERC20Custom, AccessControl {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -38,7 +38,6 @@ contract FRAXBonds is ERC20Custom, AccessControl {
     string public name;
     uint8 public constant decimals = 18;
     address public owner_address;
-    address public creator_address;
     address public timelock_address; // Governance timelock address
     address public controller_address; // Controller contract to dynamically adjust system parameters automatically
 
@@ -63,8 +62,13 @@ contract FRAXBonds is ERC20Custom, AccessControl {
         _;
     } 
     
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnerControllerOrGovernance() {
         require(msg.sender == owner_address || msg.sender == timelock_address || msg.sender == controller_address, "You are not the owner, controller, or the governance timelock");
+        _;
+    }
+
+    modifier onlyByOwnerOrTimelock() {
+        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
         _;
     }
 
@@ -73,16 +77,18 @@ contract FRAXBonds is ERC20Custom, AccessControl {
     constructor(
         string memory _name,
         string memory _symbol,
-        address _creator_address,
-        address _timelock_address
+        address _owner_address,
+        address _timelock_address,
+        address _controller_address
     ) public {
         name = _name;
         symbol = _symbol;
-        creator_address = _creator_address;
-        owner_address = _creator_address;
+        owner_address = _owner_address;
         timelock_address = _timelock_address;
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        DEFAULT_ADMIN_ADDRESS = _msgSender();
+        controller_address = _controller_address;
+        
+        _setupRole(DEFAULT_ADMIN_ROLE, _owner_address);
+        DEFAULT_ADMIN_ADDRESS = _owner_address;
     }
 
     /* ========== VIEWS ========== */
@@ -92,26 +98,26 @@ contract FRAXBonds is ERC20Custom, AccessControl {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // Used by issuers when user mints
-    function issuer_mint(address m_address, uint256 m_amount) public onlyIssuers {
+    function issuer_mint(address m_address, uint256 m_amount) external onlyIssuers {
         super._mint(m_address, m_amount);
         emit FXBMinted(msg.sender, m_address, m_amount);
     }
 
     // Used by issuers when user redeems
-    function issuer_burn_from(address b_address, uint256 b_amount) public onlyIssuers {
+    function issuer_burn_from(address b_address, uint256 b_amount) external onlyIssuers {
         super._burnFrom(b_address, b_amount);
         emit FXBBurned(b_address, msg.sender, b_amount);
     }
 
     // Adds an issuer
-    function addIssuer(address issuer_address) public onlyByOwnerOrGovernance {
+    function addIssuer(address issuer_address) external onlyByOwnerControllerOrGovernance {
         require(bond_issuers[issuer_address] == false, "address already exists");
         bond_issuers[issuer_address] = true; 
         bond_issuers_array.push(issuer_address);
     }
 
     // Removes an issuer 
-    function removeIssuer(address issuer_address) public onlyByOwnerOrGovernance {
+    function removeIssuer(address issuer_address) external onlyByOwnerControllerOrGovernance {
         require(bond_issuers[issuer_address] == true, "address doesn't exist already");
         
         // Delete from the mapping
@@ -126,15 +132,17 @@ contract FRAXBonds is ERC20Custom, AccessControl {
         }
     }
 
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+    /* ========== HIGHLY RESTRICTED EXTERNAL FUNCTIONS [Owner and Timelock only]  ========== */
+
+    function setOwner(address _owner_address) external onlyByOwnerOrTimelock {
         owner_address = _owner_address;
     }
 
-    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address new_timelock) external onlyByOwnerOrTimelock {
         timelock_address = new_timelock;
     }
 
-    function setController(address _controller_address) external onlyByOwnerOrGovernance {
+    function setController(address _controller_address) external onlyByOwnerOrTimelock {
         controller_address = _controller_address;
     }
 
