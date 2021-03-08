@@ -20,6 +20,7 @@ pragma experimental ABIEncoderV2;
 // Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
+// Dennis: github.com/denett
 
 import "../Math/SafeMath.sol";
 import "./FXB.sol";
@@ -74,6 +75,9 @@ contract FraxBondIssuer is AccessControl {
 
     // Initial discount rates per epoch, in E6
     uint256 public initial_discount = 200000; // 20% initially
+
+    // Minimum collateral ratio
+    uint256 public min_collateral_ratio = 850000;
 
     // Governance variables
     address public DEFAULT_ADMIN_ADDRESS;
@@ -248,6 +252,8 @@ contract FraxBondIssuer is AccessControl {
             frax_spot_to_issue = 0;
         }
     }
+    
+
 
     /* ========== PUBLIC FUNCTIONS ========== */
 
@@ -259,7 +265,7 @@ contract FraxBondIssuer is AccessControl {
         uint amountInWithFee = amountIn.mul(uint(PRICE_PRECISION).sub(the_fee));
         uint numerator = amountInWithFee.mul(reserveOut);
         uint denominator = (reserveIn.mul(PRICE_PRECISION)).add(amountInWithFee);
-        amountOut = numerator / denominator;
+        amountOut = numerator.div(denominator);
     }
 
     function getAmountOutNoFee(uint amountIn, uint reserveIn, uint reserveOut) public view returns (uint amountOut) {
@@ -269,9 +275,20 @@ contract FraxBondIssuer is AccessControl {
     function buyUnissuedFXB(uint256 frax_in, uint256 fxb_out_min) public notIssuingPaused returns (uint256 fxb_out, uint256 fxb_fee_amt) {
         require(isInEpoch(), 'Not in an epoch');
         require(issuable_fxb > 0, 'No new FXB to issue');
+        require(FRAX.frax_price() < PRICE_PRECISION, "FRAX price must be less than $1");
+        require(FRAX.global_collateral_ratio() >= min_collateral_ratio, "FRAX is already too undercollateralized");
 
+        // Issue at the issue_price or the floor_price, whichever is higher
+        uint256 price_to_use = issue_price;
+        {
+            uint256 the_floor_price = floor_price();
+            if (the_floor_price > issue_price) {
+                price_to_use = the_floor_price;
+            }
+        }
+        
         // Get the expected amount of FXB from the floor-priced portion
-        fxb_out = frax_in.mul(PRICE_PRECISION).div(issue_price);
+        fxb_out = frax_in.mul(PRICE_PRECISION).div(price_to_use);
 
         // Calculate and apply the normal buying fee
         fxb_fee_amt = fxb_out.mul(issue_fee).div(PRICE_PRECISION);
@@ -494,26 +511,30 @@ contract FraxBondIssuer is AccessControl {
 
     // Allows for expanding the liquidity mid-epoch
     // The expansion must occur at the current vAMM price
-    function expand_AMM_liquidity(uint256 fxb_expansion_amount) external onlyByOwnerControllerOrGovernance {
+    function expand_AMM_liquidity(uint256 fxb_expansion_amount, bool do_rebalance) external onlyByOwnerControllerOrGovernance {
         require(isInEpoch(), 'Not in an epoch');
 
         // Expand the FXB target liquidity
         target_liquidity_fxb = target_liquidity_fxb.add(fxb_expansion_amount);
 
-        // Do the rebalance
-        rebalance_AMM_liquidity_to_price(amm_spot_price());
+        // Optionally do the rebalance. If not, it will be done at an applicable time in one of the buy / sell functions
+        if (do_rebalance) {
+            rebalance_AMM_liquidity_to_price(amm_spot_price());
+        }
     }
 
     // Allows for contracting the liquidity mid-epoch
     // The expansion must occur at the current vAMM price
-    function contract_AMM_liquidity(uint256 fxb_contraction_amount) external onlyByOwnerControllerOrGovernance {
+    function contract_AMM_liquidity(uint256 fxb_contraction_amount, bool do_rebalance) external onlyByOwnerControllerOrGovernance {
         require(isInEpoch(), 'Not in an epoch');
 
         // Expand the FXB target liquidity
         target_liquidity_fxb = target_liquidity_fxb.sub(fxb_contraction_amount);
 
-        // Do the rebalance
-        rebalance_AMM_liquidity_to_price(amm_spot_price());
+        // Optionally do the rebalance. If not, it will be done at an applicable time in one of the buy / sell functions
+        if (do_rebalance) {
+            rebalance_AMM_liquidity_to_price(amm_spot_price());
+        }
     }
 
     // Rebalance vAMM to a desired price
@@ -597,6 +618,10 @@ contract FraxBondIssuer is AccessControl {
 
     function setEpochLength(uint256 _epoch_length) external onlyByOwnerControllerOrGovernance {
         epoch_length = _epoch_length;
+    }
+
+    function setMinCollateralRatio(uint256 _min_collateral_ratio) external onlyByOwnerControllerOrGovernance {
+        min_collateral_ratio = _min_collateral_ratio;
     }
 
     function setInitialDiscount(uint256 _initial_discount, bool _rebalance_AMM) external onlyByOwnerControllerOrGovernance {
