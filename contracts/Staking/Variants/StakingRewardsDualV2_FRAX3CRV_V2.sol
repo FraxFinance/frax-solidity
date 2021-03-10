@@ -12,10 +12,9 @@ contract StakingRewardsDualV2_FRAX3CRV_V2 is StakingRewardsDualV2 {
         address _stakingToken,
         address _frax_address,
         address _timelock_address,
-        address _migrator_address,
         uint256 _pool_weight0,
         uint256 _pool_weight1
     ) 
-    StakingRewardsDualV2(_owner, _rewardsToken0, _rewardsToken1, _stakingToken, _frax_address, _timelock_address, _migrator_address, _pool_weight0, _pool_weight1)
+    StakingRewardsDualV2(_owner, _rewardsToken0, _rewardsToken1, _stakingToken, _frax_address, _timelock_address, _pool_weight0, _pool_weight1)
     public {}
 }
