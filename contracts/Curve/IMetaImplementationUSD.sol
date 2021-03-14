@@ -3,6 +3,7 @@ pragma solidity 0.6.11;
 
 
 interface IMetaImplementationUSD {
+
 	// Deployment
 	function __init__() external;
 	function initialize(string memory _name, string memory _symbol, address _coin, uint _decimals, uint _A, uint _fee, address _admin) external;
@@ -12,6 +13,9 @@ interface IMetaImplementationUSD {
 	function transfer(address _to, uint _value) external returns (uint256);
 	function transferFrom(address _from, address _to, uint _value) external returns (bool);
 	function approve(address _spender, uint _value) external returns (bool);
+	function balanceOf(address _owner) external view returns (uint256);
+	function totalSupply() external view returns (uint256);
+
 
 	// StableSwap Functionality
 	function get_previous_balances() external view returns (uint[2] memory);

@@ -71,7 +71,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     address public owner_address;
     address public timelock_address; // Governance timelock address
 
-    uint256 public locked_stake_max_multiplier = 3000000; // 6 decimals of precision. 1x = 1000000
+    uint256 public locked_stake_max_multiplier = 2000000; // 6 decimals of precision. 1x = 1000000
     uint256 public locked_stake_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
     uint256 public locked_stake_min_time = 604800; // 7 * 86400  (7 days)
     string private locked_stake_min_time_str = "604800"; // 7 days on genesis
@@ -308,7 +308,9 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     // Staker can disallow a previously-allowed migrator  
     function stakerDisallowMigrator(address migrator_address) public {
         require(staker_allowed_migrators[msg.sender][migrator_address] == true, "Address doesn't exist already");
-        require(valid_migrators[migrator_address], "Invalid migrator address");
+        
+        // Redundant
+        // require(valid_migrators[migrator_address], "Invalid migrator address");
 
         // Delete from the mapping
         delete staker_allowed_migrators[msg.sender][migrator_address];
