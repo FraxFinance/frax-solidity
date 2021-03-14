@@ -219,6 +219,7 @@ contract FraxLendingAMO is AccessControl {
 
     // E18
     function creamDeposit_FRAX(uint256 FRAX_amount) public onlyByOwnerOrGovernance {
+        require(allow_cream, 'Cream strategy is disabled');
         FRAX.approve(address(crFRAX), FRAX_amount);
         crFRAX.mint(FRAX_amount);
     }
@@ -238,6 +239,7 @@ contract FraxLendingAMO is AccessControl {
     /* --== Staking ==-- */
 
     function fnxIntegratedStakeFPTs_FRAX_FNX(uint256 FRAX_amount, uint256 FNX_amount, uint256 lock_period) public onlyByOwnerOrGovernance {
+        require(allow_finnexus, 'FinNexus strategy is disabled');
         FRAX.approve(address(fnxIntegratedStake), FRAX_amount);
         FNX.approve(address(fnxIntegratedStake), FNX_amount);
         
@@ -255,6 +257,7 @@ contract FraxLendingAMO is AccessControl {
     }
 
     function fnxStakeFRAXForFPT_FRAX(uint256 FRAX_amount, uint256 lock_period) public onlyByOwnerOrGovernance {
+        require(allow_finnexus, 'FinNexus strategy is disabled');
         FRAX.approve(address(fnxIntegratedStake), FRAX_amount);
 
         address[] memory fpta_tokens = new address[](1);
