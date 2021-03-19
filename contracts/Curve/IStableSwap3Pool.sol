@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.11;
-
+pragma experimental ABIEncoderV2;
 
 interface IStableSwap3Pool {
 	// Deployment
@@ -27,7 +27,7 @@ interface IStableSwap3Pool {
 	function remove_liquidity(uint256 _amount, uint256[3] memory min_amounts) external;
 	function remove_liquidity_imbalance(uint256[3] memory amounts, uint256 max_burn_amount) external;
 	function calc_withdraw_one_coin(uint256 _token_amount, int128 i) external view returns (uint256);
-	function remove_liquidity_one_coin(uint256 _token_amount, int128 i, uint256 min_amount) external returns (uint256);
+	function remove_liquidity_one_coin(uint256 _token_amount, int128 i, uint256 min_amount) external;
 	
 	// Admin functions
 	function ramp_A(uint256 _future_A, uint256 _future_time) external;
