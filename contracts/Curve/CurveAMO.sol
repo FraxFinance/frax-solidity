@@ -202,7 +202,7 @@ contract CurveAMO is AccessControl {
 
     function get_D() public view returns (uint256) {
         // Setting up constants
-        uint256 A = frax3crv_metapool.A();
+        uint256 _A = frax3crv_metapool.A_precise();
         uint256 A_PRECISION = 100;
         uint256[2] memory _xp = [three_pool_erc20.balanceOf(frax3crv_metapool_address), FRAX.balanceOf(frax3crv_metapool_address)];
 
@@ -211,8 +211,11 @@ contract CurveAMO is AccessControl {
         for(uint i = 0; i < N_COINS; i++){
             S += _xp[i];
         }
+        if(S == 0){
+            return 0;
+        }
         uint256 D = S;
-        uint256 Ann = N_COINS * (A / A_PRECISION); // A / A_PRECISION = _A
+        uint256 Ann = N_COINS * _A;
         
         uint256 Dprev = 0;
         uint256 D_P;
@@ -223,7 +226,7 @@ contract CurveAMO is AccessControl {
                 D_P = D * D / (_xp[j] * N_COINS);
             }
             Dprev = D;
-            D + (Ann * S / A_PRECISION + D_P * N_COINS) * D / ((Ann - A_PRECISION) * D / A_PRECISION + (N_COINS + 1) * D_P);
+            D = (Ann * S / A_PRECISION + D_P * N_COINS) * D / ((Ann - A_PRECISION) * D / A_PRECISION + (N_COINS + 1) * D_P);
 
             // Check if iteration has converged
             if(D > Dprev){
@@ -240,6 +243,80 @@ contract CurveAMO is AccessControl {
         // Placeholder, in case it does not converge (should do so within <= 4 rounds)
         // TODO: consider changing this to return a safe value that won't brick everything if it is reached
         revert("Convergence not reached");
+    }
+
+    // TESTING PURPOSES ONLY – WILL BE REMOVED
+    function get_D_and_iterations() public view returns (uint256, uint256) {
+        // Setting up constants
+        uint256 _A = frax3crv_metapool.A_precise();
+        uint256 A_PRECISION = 100;
+        uint256[2] memory _xp = [three_pool_erc20.balanceOf(frax3crv_metapool_address), FRAX.balanceOf(frax3crv_metapool_address)];
+
+        uint256 N_COINS = 2;
+        uint256 S;
+        for(uint i = 0; i < N_COINS; i++){
+            S += _xp[i];
+        }
+        if(S == 0){
+            return (0, 0);
+        }
+        uint256 D = S;
+        uint256 Ann = N_COINS * _A;
+        
+        uint256 Dprev = 0;
+        uint256 D_P;
+        // Iteratively converge upon D
+        for(uint i = 0; i < 256; i++){
+            D_P = D;
+            for(uint j = 0; j < N_COINS; j++){
+                D_P = D * D / (_xp[j] * N_COINS);
+            }
+            Dprev = D;
+            D = (Ann * S / A_PRECISION + D_P * N_COINS) * D / ((Ann - A_PRECISION) * D / A_PRECISION + (N_COINS + 1) * D_P);
+
+            // Check if iteration has converged
+            if(D > Dprev){
+                if(D - Dprev <= 1){
+                    return (D, i);
+                }
+            } else {
+                if(Dprev - D <= 1){
+                    return (D, i);
+                }
+            }
+        }
+
+        revert("Convergence not reached");
+    }
+
+    // returns hypothetical reserves of metapool if the FRAX price went to the CR,
+    // assuming no removal of liquidity from the metapool.
+
+    // I will add safemath later, currently still need ease of reading regular operations
+    uint256 public convergence_window = 1e15; // 1/10th of a cent, TODO: add a setter
+    function iterate() public view returns (uint256, uint256, uint256) {
+        uint256 frax_balance = FRAX.balanceOf(frax3crv_metapool_address);
+        uint256 crv3_balance = three_pool_erc20.balanceOf(frax3crv_metapool_address);
+
+        // 3crv is usually slightly above $1 due to collecting 3pool swap fees
+        uint256 one_dollar_3crv = uint(1e18).div(three_pool.get_virtual_price());
+
+        uint256 floor_price_frax = uint(1e18).mul(FRAX.global_collateral_ratio()).div(1e6);
+        
+        uint256 frax_received;
+        for(uint i = 0; i < 256; i++){
+            // how much FRAX received for $1 worth of 3CRV
+            frax_received = frax3crv_metapool.get_dy(1, 0, one_dollar_3crv, [frax_balance, crv3_balance]);
+            if(frax_received <= floor_price_frax + convergence_window){
+                return (frax_balance, crv3_balance, i);
+            } else if (frax_received + convergence_window <= floor_price_frax){ // if overshot
+                return (frax_balance, crv3_balance, i);
+            }
+            uint256 frax_to_swap = frax_balance / 10;
+            crv3_balance = crv3_balance - frax3crv_metapool.get_dy(0, 1, frax_to_swap, [frax_balance, crv3_balance]);
+            frax_balance = frax_balance + frax_to_swap;
+        }
+        revert("Didn't find hypothetical point on curve within 256 rounds");
     }
 
     // In FRAX
