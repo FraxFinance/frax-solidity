@@ -288,7 +288,6 @@ contract FraxLendingAMO is AccessControl {
 
     // FPT-B = Staked FNX
     function fnxUnStakeFPT_B(uint256 FPT_B_amount) public onlyByOwnerOrGovernance {
-        fnxFPT_B.approve(address(fnxMinePool), FPT_B_amount);
         fnxMinePool.unstakeFPTB(FPT_B_amount);
     }
 
