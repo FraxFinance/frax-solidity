@@ -98,6 +98,9 @@ contract CurveAMO is AccessControl {
     bool public custom_floor = false;    
     uint256 public frax_floor;
 
+    bool public set_discount = false;
+    uint256 public discount_rate;
+
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
@@ -217,7 +220,7 @@ contract CurveAMO is AccessControl {
         if(fraxBalance() > collat_info[4]){
             return (collat_info[3] * (10 ** missing_decimals));
         } else {
-            return (collat_info[3] * (10 ** missing_decimals)) + (collat_info[4].sub(fraxBalance())).mul(fraxFloor()).div(1e6);
+            return (collat_info[3] * (10 ** missing_decimals)) + (collat_info[4].sub(fraxBalance())).mul(fraxDiscountRate()).div(1e6);
         }
     }
 
@@ -293,6 +296,14 @@ contract CurveAMO is AccessControl {
     function fraxFloor() public view returns (uint256) {
         if(custom_floor){
             return frax_floor;
+        } else {
+            return FRAX.global_collateral_ratio();
+        }
+    }
+
+    function fraxDiscountRate() public view returns (uint256) {
+        if(set_discount){
+            return discount_rate;
         } else {
             return FRAX.global_collateral_ratio();
         }
@@ -521,6 +532,12 @@ contract CurveAMO is AccessControl {
     function setCustomFloor(bool _state, uint256 _floor_price) external onlyByOwnerOrGovernance {
         custom_floor = _state;
         frax_floor = _floor_price;
+    }
+
+    // in terms of 1e6 (overriding global_collateral_ratio)
+    function setDiscountRate(bool _state, uint256 _discount_rate) external onlyByOwnerOrGovernance {
+        set_discount = _state;
+        discount_rate = _discount_rate;
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
