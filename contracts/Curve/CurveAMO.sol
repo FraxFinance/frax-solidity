@@ -90,8 +90,8 @@ contract CurveAMO is AccessControl {
     uint256 public liq_slippage_3crv = 900000;
 
     // Min ratio of (FRAX + 3CRV) <-> FRAX3CRV-f-2 metapool conversions via add_liquidity / remove_liquidity; 1e6
-    uint256 public add_liq_slippage_metapool = 500000;
-    uint256 public rem_liq_slippage_metapool = 500000;
+    uint256 public add_liq_slippage_metapool = 800000;
+    uint256 public rem_liq_slippage_metapool = 800000;
 
     // 3pool collateral index
     int128 public THREE_POOL_COIN_INDEX = 1;
@@ -140,41 +140,7 @@ contract CurveAMO is AccessControl {
 
     /* ========== VIEWS ========== */
 
-    function showAllocations() external view returns (uint256[9] memory allocations) {
-        // IMPORTANT
-        // Should ONLY be used externally, because it may fail if any one of the functions below fail
-
-        {
-            // Get collateral info
-            uint256[5] memory collat_info = collatDollarBalanceExtended();
-
-            //(uint256 frax_withdrawable , , ) = iterate();
-            //frax_withdrawable = frax_withdrawable.mul(collat_info[0]).div(collat_info[1]);
-
-            allocations[0] = FRAX.balanceOf(address(this)); // Unallocated FRAX
-            allocations[1] = collat_info[4]; // FRAX withdrawable from the metapool LP
-            allocations[2] = collateral_token.balanceOf(address(this)); // Free collateral
-            allocations[3] = collat_info[3]; // Collateral withdrawable from the metapool LP
-            allocations[4] = 0; // freeCRV(); // Free CRV
-            allocations[5] = 0; // TODO: Staked CRV
-        }
-
-        uint256 sum_frax = allocations[0];
-        sum_frax = sum_frax.add(allocations[1]);
-        allocations[6] = sum_frax; // Total FRAX possessed in various forms
-
-        uint256 sum_collat = allocations[2];
-        sum_collat = sum_collat.add(allocations[3]);
-        allocations[7] = sum_collat; // Total Collateral possessed in various forms
-
-        uint256 sum_crv = allocations[4];
-        sum_crv = sum_crv.add(allocations[5]);
-        allocations[8] = sum_crv; // Total CRV possessed in various forms
-
-
-    }
-
-    function collatDollarBalanceExtended() public view returns (uint256[5] memory return_arr) {
+    function showAllocations() public view returns (uint256[10] memory return_arr) {
         // ------------LP Balance------------
         // Free LP
         uint256 lp_owned = frax3crv_metapool.balanceOf(address(this));
@@ -186,26 +152,53 @@ contract CurveAMO is AccessControl {
         // Uses iterate() to get metapool withdrawable amounts at FRAX floor price (global_collateral_ratio)
         uint256 frax3crv_supply = frax3crv_metapool.totalSupply();
 
-        uint256 _frax_withdrawable;
+        uint256 frax_withdrawable;
         uint256 _3pool_withdrawable;
-        (_frax_withdrawable, _3pool_withdrawable, ) = iterate();
+        (frax_withdrawable, _3pool_withdrawable, ) = iterate();
         if (frax3crv_supply > 0) {
             _3pool_withdrawable = _3pool_withdrawable.mul(lp_owned).div(frax3crv_supply);
-            _frax_withdrawable = _frax_withdrawable.mul(lp_owned).div(frax3crv_supply);
+            frax_withdrawable = frax_withdrawable.mul(lp_owned).div(frax3crv_supply);
         }
         else _3pool_withdrawable = 0;
          
+        // ------------Frax Balance------------
+        // Frax sums
+        uint256 frax_in_contract = FRAX.balanceOf(address(this));
+        uint256 frax_total = frax_withdrawable.add(frax_in_contract);
+
         // ------------Collateral Balance------------
         // Free Collateral
-        uint256 usdc_owned = collateral_token.balanceOf(address(this));
+        uint256 usdc_in_contract = collateral_token.balanceOf(address(this));
 
         // Returns the dollar value withdrawable of USDC if the contract redeemed its 3CRV from the metapool; assume 1 USDC = $1
-        usdc_owned = usdc_owned.add(_3pool_withdrawable.mul(three_pool.get_virtual_price()).div(1e18).div(10 ** missing_decimals));
+        uint256 usdc_withdrawable = _3pool_withdrawable.mul(three_pool.get_virtual_price()).div(1e18).div(10 ** missing_decimals);
 
-        uint256 frax_owned = FRAX.balanceOf(address(this));
-        frax_owned = frax_owned.add(_frax_withdrawable);
+        // USDC subtotal assuming FRAX drops to the CR and all reserves are arbed
+        uint256 usdc_subtotal = usdc_in_contract.add(usdc_withdrawable);
+
+        // USDC total under optimistic conditions
+        uint256 usdc_total;
+        {
+            uint256 frax_bal = fraxBalance();
+            if(frax_bal > frax_total){
+                usdc_total = usdc_subtotal;
+            } else {
+                usdc_total = usdc_subtotal + (frax_total.sub(frax_bal)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals));
+            }
+        }
         
-        return [lp_owned, frax3crv_supply, _3pool_withdrawable, usdc_owned, frax_owned];
+        return [
+            frax_in_contract, // [0]
+            frax_withdrawable, // [1]
+            frax_total, // [2]
+            usdc_in_contract, // [3]
+            usdc_withdrawable, // [4]
+            usdc_subtotal, // [5]
+            usdc_total, // [6]
+            lp_owned, // [7]
+            frax3crv_supply, // [8]
+            _3pool_withdrawable // [9]
+        ];
     }
 
     bool public override_collat_balance = false;
@@ -214,13 +207,7 @@ contract CurveAMO is AccessControl {
         if(override_collat_balance){
             return override_collat_balance_amount;
         }
-        uint256[5] memory collat_info = collatDollarBalanceExtended();
-
-        if(fraxBalance() > collat_info[4]){
-            return (collat_info[3] * (10 ** missing_decimals));
-        } else {
-            return (collat_info[3] * (10 ** missing_decimals)) + (collat_info[4].sub(fraxBalance())).mul(fraxDiscountRate()).div(1e6);
-        }
+        return (showAllocations()[6] * (10 ** missing_decimals));
     }
 
     function get_D() public view returns (uint256) {
