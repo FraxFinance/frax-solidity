@@ -34,7 +34,7 @@ import "../Frax/Frax.sol";
 import "../FXS/FXS.sol";
 import "../Math/SafeMath.sol";
 
-contract CurveAMO is AccessControl {
+contract CurveAMO_Old is AccessControl {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -75,7 +75,7 @@ contract CurveAMO is AccessControl {
     uint256 public returned_collat_historical = 0;
 
     // Max amount of collateral the contract can borrow from the FraxPool
-    uint256 public collat_borrow_cap = uint256(1000000e6);
+    uint256 public collat_borrow_cap = uint256(20000e6);
 
     // Minimum collateral ratio needed for new FRAX minting
     uint256 public min_cr = 850000;
@@ -87,11 +87,11 @@ contract CurveAMO is AccessControl {
     uint256 private constant PRICE_PRECISION = 1e6;
 
     // Min ratio of collat <-> 3crv conversions via add_liquidity / remove_liquidity; 1e6
-    uint256 public liq_slippage_3crv = 900000;
+    uint256 public liq_slippage_3crv = 985000;
 
     // Min ratio of (FRAX + 3CRV) <-> FRAX3CRV-f-2 metapool conversions via add_liquidity / remove_liquidity; 1e6
-    uint256 public add_liq_slippage_metapool = 950000;
-    uint256 public rem_liq_slippage_metapool = 950000;
+    uint256 public add_liq_slippage_metapool = 985000;
+    uint256 public rem_liq_slippage_metapool = 985000;
 
     // 3pool collateral index
     int128 public THREE_POOL_COIN_INDEX = 1;
@@ -194,7 +194,11 @@ contract CurveAMO is AccessControl {
         uint256 usdc_total;
         {
             uint256 frax_bal = fraxBalance();
-            usdc_total = usdc_subtotal + (frax_in_contract.add(frax_withdrawable)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals));
+            if(frax_bal > frax_total){
+                usdc_total = usdc_subtotal;
+            } else {
+                usdc_total = usdc_subtotal + (frax_total.sub(frax_bal)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals));
+            }
         }
 
         return [
@@ -382,35 +386,27 @@ contract CurveAMO is AccessControl {
         FXS.pool_burn_from(address(this), amount);
     }
 
-    // AT LEAST 1 USDC MUST BE INCLUDED EACH TIME, DUE TO VYPER
     function metapoolDeposit(uint256 _frax_amount, uint256 _collateral_amount) public onlyByOwnerOrGovernance returns (uint256 metapool_LP_received) {
         // Mint the FRAX component
         FRAX.pool_mint(address(this), _frax_amount);
         minted_frax_historical = minted_frax_historical.add(_frax_amount);
         require(fraxBalance() <= max_frax_outstanding, "Too much FRAX would be minted [max_frax_outstanding reached]");
 
-        uint256 threeCRV_received = 0;
-        if (_collateral_amount > 0) {
-            // Approve the collateral to be added to 3pool
-            collateral_token.approve(address(three_pool), _collateral_amount);
+        // Approve the collateral to be added to 3pool
+        collateral_token.approve(address(three_pool), _collateral_amount);
 
-            // Convert collateral into 3pool
-            uint256[3] memory three_pool_collaterals;
-            three_pool_collaterals[uint256(THREE_POOL_COIN_INDEX)] = _collateral_amount;
-            {
-                uint256 min_3pool_out = (_collateral_amount * (10 ** missing_decimals)).mul(liq_slippage_3crv).div(PRICE_PRECISION);
-                three_pool.add_liquidity(three_pool_collaterals, min_3pool_out);
-            }
-
-            // Approve the 3pool for the metapool
-            threeCRV_received = three_pool_erc20.balanceOf(address(this));
-
-            // WEIRD ISSUE: NEED TO DO three_pool_erc20.approve(address(three_pool), 0); first before every time
-            // May be related to https://github.com/vyperlang/vyper/blob/3e1ff1eb327e9017c5758e24db4bdf66bbfae371/examples/tokens/ERC20.vy#L85
-            three_pool_erc20.approve(frax3crv_metapool_address, 0);
-            three_pool_erc20.approve(frax3crv_metapool_address, threeCRV_received);
+        // Convert collateral into 3pool
+        uint256[3] memory three_pool_collaterals;
+        three_pool_collaterals[uint256(THREE_POOL_COIN_INDEX)] = _collateral_amount;
+        {
+            uint256 min_3pool_out = (_collateral_amount * (10 ** missing_decimals)).mul(liq_slippage_3crv).div(PRICE_PRECISION);
+            three_pool.add_liquidity(three_pool_collaterals, min_3pool_out);
         }
-        
+
+        // Approve the 3pool for the metapool
+        uint threeCRV_received = three_pool_erc20.balanceOf(address(this));
+        three_pool_erc20.approve(frax3crv_metapool_address, threeCRV_received);
+
         // Approve the FRAX for the metapool
         FRAX.approve(frax3crv_metapool_address, _frax_amount);
 
@@ -427,34 +423,6 @@ contract CurveAMO is AccessControl {
         require (new_cr >= min_cr, "Minting caused the collateral ratio to be too low");
         
         return metapool_LP_received;
-    }
-
-    function metapoolWithdrawAtCurRatio(uint256 _metapool_lp_in, bool burn_the_frax, uint256 min_frax, uint256 min_3pool) public onlyByOwnerOrGovernance returns (uint256 frax_received) {
-        // Approve the metapool LP tokens for the metapool contract
-        frax3crv_metapool.approve(address(this), _metapool_lp_in);
-
-        // Withdraw FRAX and 3pool from the metapool at the current balance
-        uint256 three_pool_received;
-        {
-            uint256[2] memory result_arr = frax3crv_metapool.remove_liquidity(_metapool_lp_in, [min_frax, min_3pool]);
-            frax_received = result_arr[0];
-            three_pool_received = result_arr[1];
-        }
-
-        // Convert the 3pool into the collateral
-        three_pool_erc20.approve(address(three_pool), 0);
-        three_pool_erc20.approve(address(three_pool), three_pool_received);
-        {
-            // Add the FRAX and the collateral to the metapool
-            uint256 min_collat_out = three_pool_received.mul(liq_slippage_3crv).div(PRICE_PRECISION * (10 ** missing_decimals));
-            three_pool.remove_liquidity_one_coin(three_pool_received, THREE_POOL_COIN_INDEX, min_collat_out);
-        }
-
-        // Optionally burn the FRAX
-        if (burn_the_frax){
-            burnFRAX(frax_received);
-        }
-        
     }
 
     function metapoolWithdrawFrax(uint256 _metapool_lp_in, bool burn_the_frax) public onlyByOwnerOrGovernance returns (uint256 frax_received) {
@@ -476,17 +444,9 @@ contract CurveAMO is AccessControl {
 
     function three_pool_to_collateral(uint256 _3pool_in) public onlyByOwnerOrGovernance {
         // Convert the 3pool into the collateral
-        // WEIRD ISSUE: NEED TO DO three_pool_erc20.approve(address(three_pool), 0); first before every time
-        // May be related to https://github.com/vyperlang/vyper/blob/3e1ff1eb327e9017c5758e24db4bdf66bbfae371/examples/tokens/ERC20.vy#L85
-        three_pool_erc20.approve(address(three_pool), 0);
         three_pool_erc20.approve(address(three_pool), _3pool_in);
         uint256 min_collat_out = _3pool_in.mul(liq_slippage_3crv).div(PRICE_PRECISION * (10 ** missing_decimals));
         three_pool.remove_liquidity_one_coin(_3pool_in, THREE_POOL_COIN_INDEX, min_collat_out);
-    }
-
-    function metapoolWithdrawAndConvert3pool(uint256 _metapool_lp_in) public onlyByOwnerOrGovernance {
-        metapoolWithdraw3pool(_metapool_lp_in);
-        three_pool_to_collateral(three_pool_erc20.balanceOf(address(this)));
     }
 
     // // Deposit Metapool LP tokens into the Curve DAO for gauge rewards, if any

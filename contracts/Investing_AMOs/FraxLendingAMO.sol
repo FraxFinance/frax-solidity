@@ -129,7 +129,7 @@ contract FraxLendingAMO is AccessControl {
 
     /* ========== VIEWS ========== */
 
-    function showAllocations() external view returns (uint256[9] memory allocations) {
+    function showAllocations() external view returns (uint256[10] memory allocations) {
         // IMPORTANT
         // Should ONLY be used externally, because it may fail if any one of the functions below fail
 
@@ -152,6 +152,7 @@ contract FraxLendingAMO is AccessControl {
         sum_frax = sum_frax.add(allocations[2]);
         sum_frax = sum_frax.add(allocations[3]);
         allocations[8] = sum_frax; // Total FRAX possessed in various forms
+        allocations[9] = collatDollarBalance();
     }
 
     function showRewards() external view returns (uint256[1] memory rewards) {
@@ -162,15 +163,29 @@ contract FraxLendingAMO is AccessControl {
 
     // In FRAX
     function mintedBalance() public view returns (uint256){
-        if (minted_sum_historical >= burned_sum_historical) return minted_sum_historical.sub(burned_sum_historical);
+        if (minted_sum_historical > burned_sum_historical) return minted_sum_historical.sub(burned_sum_historical);
+        else return 0;
+    }
+
+    // In FRAX
+    function historicalProfit() public view returns (uint256){
+        if (burned_sum_historical > minted_sum_historical) return burned_sum_historical.sub(minted_sum_historical);
         else return 0;
     }
 
     /* ========== PUBLIC FUNCTIONS ========== */
 
     // Needed for the Frax contract to not brick
-    function collatDollarBalance() external view returns (uint256) {
-        return 1e18; // 1 USDC
+    bool public override_collat_balance = false;
+    uint256 public override_collat_balance_amount;
+    function collatDollarBalance() public view returns (uint256) {
+        if(override_collat_balance){
+            return override_collat_balance_amount;
+        }
+
+        // E18 for dollars, not E6
+        // Assumes $1 FRAX and $1 USDC
+        return (mintedBalance()).mul(FRAX.global_collateral_ratio()).div(PRICE_PRECISION);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -362,6 +377,11 @@ contract FraxLendingAMO is AccessControl {
     function setAllowedStrategies(bool _cream, bool _finnexus) external onlyByOwnerOrGovernance {
         allow_cream = _cream;
         allow_finnexus = _finnexus;
+    }
+
+    function setOverrideCollatBalance(bool _state, uint256 _balance) external onlyByOwnerOrGovernance {
+        override_collat_balance = _state;
+        override_collat_balance_amount = _balance;
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
