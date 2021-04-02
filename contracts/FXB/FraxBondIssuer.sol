@@ -528,7 +528,6 @@ contract FraxBondIssuer is AccessControl {
     // The expansion must occur at the current vAMM price
     function contract_AMM_liquidity(uint256 fxb_contraction_amount, bool do_rebalance) external onlyByOwnerControllerOrGovernance {
         require(isInEpoch(), 'Not in an epoch');
-        require(FRAX.global_collateral_ratio() >= min_collateral_ratio, "FRAX is already too undercollateralized");
 
         // Expand the FXB target liquidity
         target_liquidity_fxb = target_liquidity_fxb.sub(fxb_contraction_amount);
