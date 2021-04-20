@@ -16,10 +16,10 @@ pragma experimental ABIEncoderV2;
 
 // Primary Author(s)
 // Travis Moore: https://github.com/FortisFortuna
-// Sam Kazemian: https://github.com/samkazemian
 
 // Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
+// Sam Kazemian: https://github.com/samkazemian
 
 import "../Math/SafeMath.sol";
 import "../FXS/FXS.sol";
@@ -41,6 +41,7 @@ contract FXS1559_AMO is AccessControl {
     FRAXShares private FXS;
     FraxPoolInvestorForV2 private InvestorAMO;
     FraxPool private pool;
+    IUniswapV2Router02 private UniRouterV2 = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     
     address public collateral_address;
     address public pool_address;
@@ -65,6 +66,10 @@ contract FXS1559_AMO is AccessControl {
 
     // FRAX -> FXS max slippage
     uint256 public max_slippage = 200000; // 20%
+
+    // AMO profits
+    bool public override_amo_profits = false;
+    uint256 public overridden_amo_profit = 0;
 
     /* ========== CONSTRUCTOR ========== */
     
@@ -110,11 +115,16 @@ contract FXS1559_AMO is AccessControl {
 
     /* ========== VIEWS ========== */
 
-    function unspentInvestorAMOProfit_E18() public view returns (uint256 unspent_profit) {
-        uint256[5] memory allocations = InvestorAMO.showAllocations();
-        uint256 borrowed_USDC = InvestorAMO.borrowed_balance();
-        unspent_profit = allocations[1].add(allocations[2]).add(allocations[3]).sub(borrowed_USDC);
-        unspent_profit = unspent_profit.mul(10 ** missing_decimals);
+    function unspentInvestorAMOProfit_E18() public view returns (uint256 unspent_profit_e18) {
+        if (override_amo_profits){
+            unspent_profit_e18 = overridden_amo_profit;
+        }
+        else {
+            uint256[5] memory allocations = InvestorAMO.showAllocations();
+            uint256 borrowed_USDC = InvestorAMO.borrowed_balance();
+            unspent_profit_e18 = allocations[1].add(allocations[2]).add(allocations[3]).sub(borrowed_USDC);
+            unspent_profit_e18 = unspent_profit_e18.mul(10 ** missing_decimals);
+        }
     }
 
     function cr_info() public view returns (
@@ -144,7 +154,7 @@ contract FXS1559_AMO is AccessControl {
 
     /* ========== PUBLIC FUNCTIONS ========== */
 
-    // Needed for the Frax contract to not brick
+    // Needed for the Frax contract to not brick when this contract is added as a pool
     function collatDollarBalance() public view returns (uint256) {
         return 1e18; // Anti-brick
     }
@@ -158,7 +168,7 @@ contract FXS1559_AMO is AccessControl {
         require (FRAX.global_collateral_ratio() > min_cr, "Collateral ratio is already too low");
 
         // Make sure the FRAX minting wouldn't push the CR down too much
-        uint256 current_collateral_E18 = (FRAX.globalCollateralValue()).mul(10 ** missing_decimals);
+        uint256 current_collateral_E18 = (FRAX.globalCollateralValue());
         uint256 cur_frax_supply = FRAX.totalSupply();
         uint256 new_frax_supply = cur_frax_supply.add(frax_amount);
         uint256 new_cr = (current_collateral_E18.mul(PRICE_PRECISION)).div(new_frax_supply);
@@ -173,7 +183,7 @@ contract FXS1559_AMO is AccessControl {
         // Get the FXS price
         uint256 fxs_price = FRAX.fxs_price();
 
-        // Approve the collat for the router
+        // Approve the FRAX for the router
         FRAX.approve(UNISWAP_ROUTER_ADDRESS, frax_amount);
 
         address[] memory FRAX_FXS_PATH = new address[](2);
@@ -184,7 +194,7 @@ contract FXS1559_AMO is AccessControl {
         min_fxs_out = min_fxs_out.sub(min_fxs_out.mul(max_slippage).div(PRICE_PRECISION));
 
         // Buy some FXS with FRAX
-        (uint[] memory amounts) = IUniswapV2Router02(UNISWAP_ROUTER_ADDRESS).swapExactTokensForTokens(
+        (uint[] memory amounts) = UniRouterV2.swapExactTokensForTokens(
             frax_amount,
             min_fxs_out,
             FRAX_FXS_PATH,
@@ -196,7 +206,6 @@ contract FXS1559_AMO is AccessControl {
 
 
     // Burn unneeded or excess FRAX
-    // Can be globally callable???
     function mintSwapBurn() public onlyByOwnerOrGovernance {
         (, , , uint256 mintable_frax) = cr_info();
         _mintFRAXForSwap(mintable_frax);
@@ -239,8 +248,14 @@ contract FXS1559_AMO is AccessControl {
         max_slippage = _max_slippage;
     }
 
-    function setRouterAddress(address payable _router_address) external onlyByOwnerOrGovernance {
+    function setAMOProfits(uint256 _overridden_amo_profit_e18, bool _override_amo_profits) external onlyByOwnerOrGovernance {
+        overridden_amo_profit = _overridden_amo_profit_e18; // E18
+        override_amo_profits = _override_amo_profits;
+    }
+
+    function setRouter(address payable _router_address) external onlyByOwnerOrGovernance {
         UNISWAP_ROUTER_ADDRESS = _router_address;
+        UniRouterV2 = IUniswapV2Router02(_router_address);
     }
 
     function setInvestorAMO(address _investor_amo_address) external onlyByOwnerOrGovernance {
