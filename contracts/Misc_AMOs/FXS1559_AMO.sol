@@ -168,13 +168,14 @@ contract FXS1559_AMO is AccessControl {
         require (FRAX.global_collateral_ratio() > min_cr, "Collateral ratio is already too low");
 
         // Make sure the FRAX minting wouldn't push the CR down too much
-        uint256 current_collateral_E18 = (FRAX.globalCollateralValue());
+        uint256 current_collateral_E18 = (FRAX.globalCollateralValue()).add(unspentInvestorAMOProfit_E18());
         uint256 cur_frax_supply = FRAX.totalSupply();
         uint256 new_frax_supply = cur_frax_supply.add(frax_amount);
         uint256 new_cr = (current_collateral_E18.mul(PRICE_PRECISION)).div(new_frax_supply);
         require (new_cr > min_cr, "Minting would cause collateral ratio to be too low");
 
         // Mint the frax 
+        minted_sum_historical = minted_sum_historical.add(frax_amount);
         FRAX.pool_mint(address(this), frax_amount);
     }
 
@@ -206,8 +207,14 @@ contract FXS1559_AMO is AccessControl {
 
 
     // Burn unneeded or excess FRAX
-    function mintSwapBurn() public onlyByOwnerOrGovernance {
-        (, , , uint256 mintable_frax) = cr_info();
+    function mintSwapBurn(uint256 override_USDC_amount, bool use_override) public onlyByOwnerOrGovernance {
+        uint256 mintable_frax;
+        if (use_override){
+            mintable_frax = override_USDC_amount.mul(10 ** missing_decimals).mul(COLLATERAL_RATIO_PRECISION).div(FRAX.global_collateral_ratio());
+        }
+        else {
+            (, , , mintable_frax) = cr_info();
+        }
         _mintFRAXForSwap(mintable_frax);
         (, uint256 fxs_received_ ) = _swapFRAXforFXS(mintable_frax);
         burnFXS(fxs_received_);
