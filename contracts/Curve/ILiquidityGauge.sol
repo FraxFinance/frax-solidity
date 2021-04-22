@@ -30,6 +30,7 @@ interface ILiquidityGauge {
 
     // External functions
     function user_checkpoint(address) external returns (bool);
+    function claim_rewards(address) external;
     function claimable_tokens(address) external view returns (uint256); // function can be manually changed to "view" in the ABI
     function kick(address) external;
     function set_approve_deposit(address, bool) external;

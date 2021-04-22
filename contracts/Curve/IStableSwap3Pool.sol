@@ -20,7 +20,7 @@ interface IStableSwap3Pool {
 	function A() external view returns (uint);
 	function get_virtual_price() external view returns (uint);
 	function calc_token_amount(uint[3] memory amounts, bool deposit) external view returns (uint);
-	function add_liquidity(uint[3] memory amounts, uint min_mint_amount) external;
+	function add_liquidity(uint256[3] memory amounts, uint256 min_mint_amount) external;
 	function get_dy(int128 i, int128 j, uint256 dx) external view returns (uint256);
 	function get_dy_underlying(int128 i, int128 j, uint256 dx) external view returns (uint256);
 	function exchange(int128 i, int128 j, uint256 dx, uint256 min_dy) external;
