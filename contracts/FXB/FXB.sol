@@ -26,7 +26,6 @@ import "../ERC20/IERC20.sol";
 import "../ERC20/ERC20Custom.sol";
 import "../ERC20/ERC20.sol";
 import "../Math/SafeMath.sol";
-import "./FraxBondIssuer.sol";
 import "../Governance/AccessControl.sol";
 
 contract FraxBond is ERC20Custom, AccessControl {
