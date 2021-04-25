@@ -76,10 +76,6 @@ contract veFXS is ReentrancyGuard{
 
     /* ========== STATE VARIABLES ========== */
 
-    // Constant for various precisions
-    uint256 private constant MULTIPLIER_PRECISION = 1e6;
-    uint256 private constant MULTIPLIER_BASE = 1e6;
-
     address public token; // FXS
     uint256 public supply;
 
@@ -164,7 +160,8 @@ contract veFXS is ReentrancyGuard{
         transfersEnabled = true;
 
         uint256 _decimals = ERC20(token_addr).decimals();
-        assert(decimals <= 255);
+        assert(_decimals <= 255);
+        decimals = _decimals;
 
         name = _name;
         symbol = _symbol;
@@ -346,7 +343,7 @@ contract veFXS is ReentrancyGuard{
     /**
         * @notice Record global and per-user data to checkpoint
         * @param addr User's wallet address. No user checkpoint if 0x0
-        * @param old_locked Pevious locked amount / end lock time for the user
+        * @param old_locked Previous locked amount / end lock time for the user
         * @param new_locked New locked amount / end lock time for the user
     */
     function _checkpoint(address addr, LockedBalance memory old_locked, LockedBalance memory new_locked) internal {
