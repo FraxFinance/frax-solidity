@@ -70,7 +70,7 @@ interface SmartWalletChecker {
     function check(address addr) external returns (bool);
 }
 
-contract veFXS is ReentrancyGuard{
+contract veFXS_Solidity is ReentrancyGuard{
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -109,11 +109,13 @@ contract veFXS is ReentrancyGuard{
     int128 public constant INCREASE_LOCK_AMOUNT = 2;
     int128 public constant INCREASE_UNLOCK_TIME = 3;
 
-    address public constant ZERO_ADDRESS = 0x0000000000000000000000000000000000000000;
+    address public constant ZERO_ADDRESS = address(0);
 
     uint256 public constant WEEK = 7 * 86400; // all future times are rounded by week
     uint256 public constant MAXTIME = 3 * 365 * 86400; // 3 years
     uint256 public constant MULTIPLIER = 10 ** 18;
+
+
 
     // We cannot really do block numbers per se b/c slope is per time, not per block
     // and per block could be fairly bad b/c Ethereum changes blocktimes.
@@ -170,6 +172,24 @@ contract veFXS is ReentrancyGuard{
 
     /* ========== VIEWS ========== */
 
+    // Constant structs not allowed yet, so this will have to do
+    function EMPTY_POINT_FACTORY() internal view returns (Point memory){
+        return Point({
+            bias: 0, 
+            slope: 0, 
+            ts: 0, 
+            blk: 0
+        });
+    }
+
+    // Constant structs not allowed yet, so this will have to do
+    function EMPTY_LOCKED_BALANCE_FACTORY() internal view returns (LockedBalance memory){
+        return LockedBalance({
+            amount: 0, 
+            end: 0 
+        });
+    }
+
     /**
         * @notice Get the most recently recorded rate of voting power decrease for `addr`
         * @param addr Address of the user wallet
@@ -208,11 +228,15 @@ contract veFXS is ReentrancyGuard{
     */
     function balanceOf(address addr, uint256 _t) public view returns (uint256) {
         uint256 _epoch = user_point_epoch[addr];
-        if (_epoch == 0) return 0;
+        if (_epoch == 0) {
+            return 0;
+        }
         else {
             Point memory last_point = user_point_history[addr][_epoch];
-            last_point.bias -= last_point.slope * int128(_t - last_point.ts);
-            if (last_point.bias < 0) last_point.bias = 0;
+            last_point.bias -= last_point.slope * (int128(_t) - int128(last_point.ts));
+            if (last_point.bias < 0) {
+                last_point.bias = 0;
+            }
             return uint256(last_point.bias);
         }
     }
@@ -245,10 +269,16 @@ contract veFXS is ReentrancyGuard{
 
         // Will be always enough for 128-bit numbers
         for(uint i = 0; i < 128; i++){
-            if (_min >= _max) break;
+            if (_min >= _max) {
+                break;
+            }
             uint256 _mid = (_min + _max + 1) / 2;
-            if (user_point_history[addr][_mid].blk <= _block) _min = _mid;
-            else _max = _mid - 1;
+            if (user_point_history[addr][_mid].blk <= _block) {
+                _min = _mid;
+            }
+            else {
+                _max = _mid - 1;
+            }
         }
 
         Point memory upoint = user_point_history[addr][_min];
@@ -270,11 +300,17 @@ contract veFXS is ReentrancyGuard{
         }
 
         uint256 block_time = point_0.ts;
-        if (d_block != 0) block_time += d_t * (_block - point_0.blk) / d_block;
+        if (d_block != 0) {
+            block_time += d_t * (_block - point_0.blk) / d_block;
+        }
 
-        upoint.bias -= upoint.slope * int128(block_time - upoint.ts);
-        if (upoint.bias >= 0) return uint256(upoint.bias);
-        else return 0;
+        upoint.bias -= upoint.slope * (int128(block_time) - int128(upoint.ts));
+        if (upoint.bias >= 0) {
+            return uint256(upoint.bias);
+        }
+        else {
+            return 0;
+        }
     }
 
     /**
@@ -312,10 +348,14 @@ contract veFXS is ReentrancyGuard{
 
         if (target_epoch < _epoch) {
             Point memory point_next = point_history[target_epoch + 1];
-            if (point.blk != point_next.blk) dt = (_block - point.blk) * (point_next.ts - point.ts) / (point_next.blk - point.blk);
+            if (point.blk != point_next.blk) {
+                dt = ((_block - point.blk) * (point_next.ts - point.ts)) / (point_next.blk - point.blk);
+            }
         }
         else {
-            if (point.blk != block.number) dt = (_block - point.blk) * (block.timestamp - point.ts) / (block.number - point.blk);
+            if (point.blk != block.number) {
+                dt = ((_block - point.blk) * (block.timestamp - point.ts)) / (block.number - point.blk);
+            }
         }
 
         // Now dt contains info on how far are we beyond point
@@ -347,8 +387,8 @@ contract veFXS is ReentrancyGuard{
         * @param new_locked New locked amount / end lock time for the user
     */
     function _checkpoint(address addr, LockedBalance memory old_locked, LockedBalance memory new_locked) internal {
-        Point memory u_old;
-        Point memory u_new;
+        Point memory u_old = EMPTY_POINT_FACTORY();
+        Point memory u_new = EMPTY_POINT_FACTORY();
         int128 old_dslope = 0;
         int128 new_dslope = 0;
         uint256 _epoch = epoch;
@@ -358,12 +398,12 @@ contract veFXS is ReentrancyGuard{
             // Kept at zero when they have to
             if ((old_locked.end > block.timestamp) && (old_locked.amount > 0)){
                 u_old.slope = old_locked.amount / int128(MAXTIME);
-                u_old.bias = u_old.slope * int128(old_locked.end - block.timestamp);
+                u_old.bias = u_old.slope * (int128(old_locked.end) - int128(block.timestamp));
             }
 
             if ((new_locked.end > block.timestamp) && (new_locked.amount > 0)){
                 u_new.slope = new_locked.amount / int128(MAXTIME);
-                u_new.bias = u_new.slope * int128(new_locked.end - block.timestamp);
+                u_new.bias = u_new.slope * (int128(new_locked.end) - int128(block.timestamp));
             }
 
             // Read values of scheduled changes in the slope
@@ -371,8 +411,12 @@ contract veFXS is ReentrancyGuard{
             // new_locked.end can ONLY by in the FUTURE unless everything expired: than zeros
             old_dslope = slope_changes[old_locked.end];
             if (new_locked.end != 0) {
-                if (new_locked.end == old_locked.end) new_dslope = old_dslope;
-                else new_dslope = slope_changes[new_locked.end];
+                if (new_locked.end == old_locked.end) {
+                    new_dslope = old_dslope;
+                }
+                else {
+                    new_dslope = slope_changes[new_locked.end];
+                }
             }
 
         }
@@ -383,7 +427,9 @@ contract veFXS is ReentrancyGuard{
             ts: block.timestamp, 
             blk: block.number
         });
-        if (_epoch > 0) last_point = point_history[_epoch];
+        if (_epoch > 0) {
+            last_point = point_history[_epoch];
+        }
         uint256 last_checkpoint = last_point.ts;
 
         // initial_last_point is used for extrapolation to calculate block number
@@ -399,28 +445,36 @@ contract veFXS is ReentrancyGuard{
         // But that's ok b/c we know the block in such case
 
         // Go over weeks to fill history and calculate what the current point is
-        {
-            uint256 t_i = (last_checkpoint / WEEK) * WEEK;
-            for(uint i = 0; i < 255; i++){
-                // Hopefully it won't happen that this won't get used in 5 years!
-                // If it does, users will be able to withdraw but vote weight will be broken
-                t_i += WEEK;
-                int128 d_slope = 0;
-                if (t_i > block.timestamp) t_i = block.timestamp;
-                else d_slope = slope_changes[t_i];
-                last_point.bias -= last_point.slope * int128(t_i - last_checkpoint);
-                last_point.slope += d_slope;
-                if (last_point.bias < 0) last_point.bias = 0; // This can happen
-                if (last_point.slope < 0) last_point.slope = 0; // This cannot happen - just in case
-                last_checkpoint = t_i;
-                last_point.ts = t_i;
-                last_point.blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / MULTIPLIER;
-                _epoch += 1;
-                if (t_i == block.timestamp){
-                    last_point.blk = block.number;
-                    break;
-                }
-                else point_history[_epoch] = last_point;
+        uint256 t_i = (last_checkpoint / WEEK) * WEEK;
+        for(uint i = 0; i < 255; i++){
+            // Hopefully it won't happen that this won't get used in 4 years!
+            // If it does, users will be able to withdraw but vote weight will be broken
+            t_i += WEEK;
+            int128 d_slope = 0;
+            if (t_i > block.timestamp) {
+                t_i = block.timestamp;
+            }
+            else {
+                d_slope = slope_changes[t_i];
+            }
+            last_point.bias -= last_point.slope * (int128(t_i) - int128(last_checkpoint));
+            last_point.slope += d_slope;
+            if (last_point.bias < 0) {
+                last_point.bias = 0; // This can happen
+            }
+            if (last_point.slope < 0) {
+                last_point.slope = 0; // This cannot happen - just in case
+            }
+            last_checkpoint = t_i;
+            last_point.ts = t_i;
+            last_point.blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / MULTIPLIER;
+            _epoch += 1;
+            if (t_i == block.timestamp){
+                last_point.blk = block.number;
+                break;
+            }
+            else {
+                point_history[_epoch] = last_point;
             }
         }
 
@@ -432,13 +486,16 @@ contract veFXS is ReentrancyGuard{
             // But in such case we have 0 slope(s)
             last_point.slope += (u_new.slope - u_old.slope);
             last_point.bias += (u_new.bias - u_old.bias);
-            if (last_point.slope < 0) last_point.slope = 0;
-            if (last_point.bias < 0) last_point.bias = 0;
+            if (last_point.slope < 0) {
+                last_point.slope = 0;
+            }
+            if (last_point.bias < 0) {
+                last_point.bias = 0;
+            }
         }
 
         // Record the changed point into history
         point_history[_epoch] = last_point;
-
 
         if (addr != ZERO_ADDRESS) {
             // Schedule the slope changes (slope is going down)
@@ -447,7 +504,9 @@ contract veFXS is ReentrancyGuard{
             if (old_locked.end > block.timestamp) {
                 // old_dslope was <something> - u_old.slope, so we cancel that
                 old_dslope += u_old.slope;
-                if (new_locked.end == old_locked.end) old_dslope -= u_new.slope;  // It was a new deposit, not extension
+                if (new_locked.end == old_locked.end) {
+                    old_dslope -= u_new.slope;  // It was a new deposit, not extension
+                }
                 slope_changes[old_locked.end] = old_dslope;
             }
 
@@ -460,14 +519,27 @@ contract veFXS is ReentrancyGuard{
             }
 
             // Now handle user history
-            uint256 user_epoch = user_point_epoch[addr] + 1;
-
-            user_point_epoch[addr] = user_epoch;
-            u_new.ts = block.timestamp;
-            u_new.blk = block.number;
-            user_point_history[addr][user_epoch] = u_new;
+            // Second function needed for 'stack too deep' issues
+            _checkpoint_part_two(addr, u_new.bias, u_new.slope);
         }
 
+    }
+    /**
+        * @notice Needed for 'stack too deep' issues in _checkpoint()
+        * @param addr User's wallet address. No user checkpoint if 0x0
+        * @param _bias from unew
+        * @param _slope from unew
+    */
+    function _checkpoint_part_two(address addr, int128 _bias, int128 _slope) internal {
+        uint256 user_epoch = user_point_epoch[addr] + 1;
+
+        user_point_epoch[addr] = user_epoch;
+        user_point_history[addr][user_epoch] = Point({
+            bias: _bias, 
+            slope: _slope, 
+            ts: block.timestamp, 
+            blk: block.number
+        });
     }
 
     /**
@@ -485,7 +557,9 @@ contract veFXS is ReentrancyGuard{
         LockedBalance memory old_locked = _locked;
         // Adding to existing lock, or if a lock is expired - creating a new one
         _locked.amount += int128(_value);
-        if (unlock_time != 0) _locked.end = unlock_time;
+        if (unlock_time != 0) {
+            _locked.end = unlock_time;
+        }
         locked[_addr] = _locked;
 
         // Possibilities:
@@ -494,7 +568,9 @@ contract veFXS is ReentrancyGuard{
         // _locked.end > block.timestamp (always)
         _checkpoint(_addr, old_locked, _locked);
 
-        if (_value != 0) assert(ERC20(token).transferFrom(_addr, address(this), _value));
+        if (_value != 0) {
+            assert(ERC20(token).transferFrom(_addr, address(this), _value));
+        }
 
         emit Deposit(_addr, _value, _locked.end, _type, block.timestamp);
         emit Supply(supply_before, supply_before + _value);
@@ -516,10 +592,16 @@ contract veFXS is ReentrancyGuard{
 
         // Will be always enough for 128-bit numbers
         for (uint i = 0; i < 128; i++){
-            if (_min >= _max) break;
+            if (_min >= _max) {
+                break;
+            }
             uint256 _mid = (_min + _max + 1) / 2;
-            if (point_history[_mid].blk <= _block) _min = _mid;
-            else _max = _mid - 1;
+            if (point_history[_mid].blk <= _block) {
+                _min = _mid;
+            }
+            else {
+                _max = _mid - 1;
+            }
         }
 
         return _min;
@@ -532,21 +614,29 @@ contract veFXS is ReentrancyGuard{
         * @return Total voting power at that time
     */
     function supply_at(Point memory point, uint256 t) internal view returns (uint256) {
-        Point memory last_point;
+        Point memory last_point = point;
         uint256 t_i = (last_point.ts / WEEK) * WEEK;
 
         for(uint i = 0; i < 255; i++){
             t_i += WEEK;
             int128 d_slope = 0;
-            if (t_i > t) t_i = t;
-            else d_slope = slope_changes[t_i];
-            last_point.bias -= last_point.slope * int128(t_i - last_point.ts);
-            if (t_i == t) break;
+            if (t_i > t) {
+                t_i = t;
+            }
+            else {
+                d_slope = slope_changes[t_i];
+            }
+            last_point.bias -= last_point.slope * (int128(t_i) - int128(last_point.ts));
+            if (t_i == t) {
+                break;
+            }
             last_point.slope += d_slope;
             last_point.ts = t_i;
         }
 
-        if (last_point.bias < 0) last_point.bias = 0;
+        if (last_point.bias < 0) {
+            last_point.bias = 0;
+        }
         return uint256(last_point.bias);
     }
 
@@ -557,8 +647,7 @@ contract veFXS is ReentrancyGuard{
         * @notice Record global data to checkpoint
     */
     function checkpoint(address _addr) external {
-        LockedBalance memory EMPTY_LOCKED_BALANCE;
-        _checkpoint(ZERO_ADDRESS, EMPTY_LOCKED_BALANCE, EMPTY_LOCKED_BALANCE);
+        _checkpoint(ZERO_ADDRESS, EMPTY_LOCKED_BALANCE_FACTORY(), EMPTY_LOCKED_BALANCE_FACTORY());
     }
 
     /**
@@ -589,7 +678,7 @@ contract veFXS is ReentrancyGuard{
         require (_value > 0, "need non-zero value");
         require (_locked.amount == 0, "Withdraw old tokens first");
         require (unlock_time > block.timestamp, "Can only lock until time in the future");
-        require (unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max");
+        require (unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 3 years max");
         _deposit_for(msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE);
     }
 
@@ -621,7 +710,7 @@ contract veFXS is ReentrancyGuard{
         require(_locked.end > block.timestamp, "Lock expired");
         require(_locked.amount > 0, "Nothing is locked");
         require(unlock_time > _locked.end, "Can only increase lock duration");
-        require(unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 4 years max");
+        require(unlock_time <= block.timestamp + MAXTIME, "Voting lock can be 3 years max");
 
         _deposit_for(msg.sender, 0, unlock_time, _locked, INCREASE_UNLOCK_TIME);
     }
