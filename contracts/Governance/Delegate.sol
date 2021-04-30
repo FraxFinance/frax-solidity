@@ -10,7 +10,7 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================= StakingRewardsDualV2 =======================
+// =========================== GovernanceAMO ==========================
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 
@@ -23,7 +23,7 @@ import "../Frax/Frax.sol";
 import "../Utils/ReentrancyGuard.sol";
 import "../Utils/StringHelpers.sol";
 import "./GovernorBravoDelegate.sol";
-import "./Comp.sol";
+import "../ERC20/Variants/Comp.sol";
 
 // Inheritance
 import "../Staking/Owned.sol";
