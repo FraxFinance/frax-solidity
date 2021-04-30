@@ -10,39 +10,36 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ============================= CurveAMO =============================
+// ============================ CurveAMO_V2 ===========================
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 
 // Primary Author(s)
-// Jason Huan: https://github.com/jasonhuan
 // Travis Moore: https://github.com/FortisFortuna
+// Jason Huan: https://github.com/jasonhuan
 
 // Reviewer(s) / Contributor(s)
 // Sam Kazemian: https://github.com/samkazemian
 // github.com/denett
 
-// NOTE: Gauge and CRV related methods have been commented out here and saved until V2, since this is
-// almost a chicken-and-egg problem (need to be large enough to qualify for one first)
-
 import "./IStableSwap3Pool.sol";
 import "./IMetaImplementationUSD.sol";
-// import "./ILiquidityGauge.sol";
-// import "./IMinter.sol";
+import "./ILiquidityGauge.sol";
+import "./IMinter.sol";
 import "../ERC20/ERC20.sol";
 import "../Frax/Frax.sol";
 import "../FXS/FXS.sol";
 import "../Math/SafeMath.sol";
 
-contract CurveAMO_Old is AccessControl {
+contract CurveAMO_V2_Non_Impl is AccessControl {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
 
     IMetaImplementationUSD private frax3crv_metapool;
     IStableSwap3Pool private three_pool;
-    // ILiquidityGauge private gauge_frax3crv;
-    // IMinter private crv_minter;
+    ILiquidityGauge private gauge_frax3crv;
+    IMinter private crv_minter;
     ERC20 private three_pool_erc20;
     FRAXStablecoin private FRAX;
     FraxPool private pool;
@@ -53,8 +50,8 @@ contract CurveAMO_Old is AccessControl {
     address public frax3crv_metapool_address;
     address public three_pool_address;
     address public three_pool_token_address;
-    // address public gauge_3crv_address;
-    // address public crv_minter_address;
+    address public gauge_frax3crv_address;
+    address public crv_minter_address;
     address public frax_contract_address;
     address public fxs_contract_address;
     address public collateral_token_address;
@@ -75,7 +72,7 @@ contract CurveAMO_Old is AccessControl {
     uint256 public returned_collat_historical = 0;
 
     // Max amount of collateral the contract can borrow from the FraxPool
-    uint256 public collat_borrow_cap = uint256(20000e6);
+    uint256 public collat_borrow_cap = uint256(1000000e6);
 
     // Minimum collateral ratio needed for new FRAX minting
     uint256 public min_cr = 850000;
@@ -87,11 +84,11 @@ contract CurveAMO_Old is AccessControl {
     uint256 private constant PRICE_PRECISION = 1e6;
 
     // Min ratio of collat <-> 3crv conversions via add_liquidity / remove_liquidity; 1e6
-    uint256 public liq_slippage_3crv = 985000;
+    uint256 public liq_slippage_3crv = 800000;
 
     // Min ratio of (FRAX + 3CRV) <-> FRAX3CRV-f-2 metapool conversions via add_liquidity / remove_liquidity; 1e6
-    uint256 public add_liq_slippage_metapool = 985000;
-    uint256 public rem_liq_slippage_metapool = 985000;
+    uint256 public add_liq_slippage_metapool = 950000;
+    uint256 public rem_liq_slippage_metapool = 950000;
 
     // 3pool collateral index
     int128 public THREE_POOL_COIN_INDEX = 1;
@@ -115,7 +112,8 @@ contract CurveAMO_Old is AccessControl {
         address _frax3crv_metapool_address,
         address _three_pool_address,
         address _three_pool_token_address,
-        address _pool_address
+        address _pool_address,
+        address _gauge_frax3crv_address
     ) public {
         FRAX = FRAXStablecoin(_frax_contract_address);
         FXS = FRAXShares(_fxs_contract_address);
@@ -137,6 +135,11 @@ contract CurveAMO_Old is AccessControl {
         pool_address = _pool_address;
         pool = FraxPool(_pool_address);
 
+        gauge_frax3crv_address = _gauge_frax3crv_address;
+        gauge_frax3crv = ILiquidityGauge(_gauge_frax3crv_address);
+
+        crv_minter_address = gauge_frax3crv.minter();
+        crv_minter = IMinter(crv_minter_address);
     }
 
     /* ========== MODIFIERS ========== */
@@ -153,13 +156,14 @@ contract CurveAMO_Old is AccessControl {
 
     /* ========== VIEWS ========== */
 
-    function showAllocations() public view returns (uint256[10] memory return_arr) {
+    function showAllocations() public view returns (uint256[11] memory return_arr) {
         // ------------LP Balance------------
         // Free LP
         uint256 lp_owned = frax3crv_metapool.balanceOf(address(this));
 
         // Staked in the gauge
-        // lp_owned = lp_owned.add(gauge_frax3crv.balanceOf(address(this)));
+        uint256 lp_in_gauge = gauge_frax3crv.balanceOf(address(this));
+        lp_owned = lp_owned.add(lp_in_gauge);
 
         // ------------3pool Withdrawable------------
         // Uses iterate() to get metapool withdrawable amounts at FRAX floor price (global_collateral_ratio)
@@ -177,7 +181,6 @@ contract CurveAMO_Old is AccessControl {
         // ------------Frax Balance------------
         // Frax sums
         uint256 frax_in_contract = FRAX.balanceOf(address(this));
-        uint256 frax_total = frax_withdrawable.add(frax_in_contract);
 
         // ------------Collateral Balance------------
         // Free Collateral
@@ -194,24 +197,21 @@ contract CurveAMO_Old is AccessControl {
         uint256 usdc_total;
         {
             uint256 frax_bal = fraxBalance();
-            if(frax_bal > frax_total){
-                usdc_total = usdc_subtotal;
-            } else {
-                usdc_total = usdc_subtotal + (frax_total.sub(frax_bal)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals));
-            }
+            usdc_total = usdc_subtotal + (frax_in_contract.add(frax_withdrawable)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals));
         }
 
         return [
             frax_in_contract, // [0]
             frax_withdrawable, // [1]
-            frax_total, // [2]
+            frax_withdrawable.add(frax_in_contract), // [2]
             usdc_in_contract, // [3]
             usdc_withdrawable, // [4]
             usdc_subtotal, // [5]
             usdc_total, // [6]
             lp_owned, // [7]
             frax3crv_supply, // [8]
-            _3pool_withdrawable // [9]
+            _3pool_withdrawable, // [9]
+            lp_in_gauge // [10]
         ];
     }
 
@@ -321,22 +321,26 @@ contract CurveAMO_Old is AccessControl {
         else return 0;
     }
 
-    // // Amount of FRAX3CRV deposited in the gauge contract
-    // function metapoolLPInGauge() public view returns (uint256){
-    //     return gauge_frax3crv.balanceOf(address(this));
-    // }
+    // Amount of FRAX3CRV deposited in the gauge contract
+    function metapoolLPInGauge() public view returns (uint256){
+        return gauge_frax3crv.balanceOf(address(this));
+    }
 
     // This function is problematic because it can be either a view or non-view
-    // // Amount of CRV rewards mintable / claimable
-    // function claimableCRV() public view returns (uint256){
-    //     return gauge_frax3crv.claimable_tokens(address(this));
-    //     // return 0;
-    // }
+    // The self._checkpoint(addr) call inside of it is mutative...
+    // Amount of CRV rewards mintable / claimable
+    function claimableCRV() public view returns (uint256){
+        // Have to manually replicate the formula inside of LiquidityGaugeV2.vy
+        // otherwise, it would just be this: return gauge_frax3crv.claimable_tokens(address(this));
+        uint256 integrate_fraction = gauge_frax3crv.integrate_fraction(address(this));
+        uint256 other_side = crv_minter.minted(address(this), gauge_frax3crv_address);
+        return integrate_fraction.sub(other_side);
+    }
 
-    // // Amount of CRV in the contract
-    // function freeCRV() public view returns (uint256){
-    //     return CRV.balanceOf(address(this));
-    // }
+    // Amount of CRV in the contract
+    function freeCRV() public view returns (uint256){
+        return CRV.balanceOf(address(this));
+    }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
@@ -392,21 +396,28 @@ contract CurveAMO_Old is AccessControl {
         minted_frax_historical = minted_frax_historical.add(_frax_amount);
         require(fraxBalance() <= max_frax_outstanding, "Too much FRAX would be minted [max_frax_outstanding reached]");
 
-        // Approve the collateral to be added to 3pool
-        collateral_token.approve(address(three_pool), _collateral_amount);
+        uint256 threeCRV_received = 0;
+        if (_collateral_amount > 0) {
+            // Approve the collateral to be added to 3pool
+            collateral_token.approve(address(three_pool), _collateral_amount);
 
-        // Convert collateral into 3pool
-        uint256[3] memory three_pool_collaterals;
-        three_pool_collaterals[uint256(THREE_POOL_COIN_INDEX)] = _collateral_amount;
-        {
-            uint256 min_3pool_out = (_collateral_amount * (10 ** missing_decimals)).mul(liq_slippage_3crv).div(PRICE_PRECISION);
-            three_pool.add_liquidity(three_pool_collaterals, min_3pool_out);
+            // Convert collateral into 3pool
+            uint256[3] memory three_pool_collaterals;
+            three_pool_collaterals[uint256(THREE_POOL_COIN_INDEX)] = _collateral_amount;
+            {
+                uint256 min_3pool_out = (_collateral_amount * (10 ** missing_decimals)).mul(liq_slippage_3crv).div(PRICE_PRECISION);
+                three_pool.add_liquidity(three_pool_collaterals, min_3pool_out);
+            }
+
+            // Approve the 3pool for the metapool
+            threeCRV_received = three_pool_erc20.balanceOf(address(this));
+
+            // WEIRD ISSUE: NEED TO DO three_pool_erc20.approve(address(three_pool), 0); first before every time
+            // May be related to https://github.com/vyperlang/vyper/blob/3e1ff1eb327e9017c5758e24db4bdf66bbfae371/examples/tokens/ERC20.vy#L85
+            three_pool_erc20.approve(frax3crv_metapool_address, 0);
+            three_pool_erc20.approve(frax3crv_metapool_address, threeCRV_received);
         }
-
-        // Approve the 3pool for the metapool
-        uint threeCRV_received = three_pool_erc20.balanceOf(address(this));
-        three_pool_erc20.approve(frax3crv_metapool_address, threeCRV_received);
-
+        
         // Approve the FRAX for the metapool
         FRAX.approve(frax3crv_metapool_address, _frax_amount);
 
@@ -423,6 +434,34 @@ contract CurveAMO_Old is AccessControl {
         require (new_cr >= min_cr, "Minting caused the collateral ratio to be too low");
         
         return metapool_LP_received;
+    }
+
+    function metapoolWithdrawAtCurRatio(uint256 _metapool_lp_in, bool burn_the_frax, uint256 min_frax, uint256 min_3pool) public onlyByOwnerOrGovernance returns (uint256 frax_received) {
+        // Approve the metapool LP tokens for the metapool contract
+        frax3crv_metapool.approve(address(this), _metapool_lp_in);
+
+        // Withdraw FRAX and 3pool from the metapool at the current balance
+        uint256 three_pool_received;
+        {
+            uint256[2] memory result_arr = frax3crv_metapool.remove_liquidity(_metapool_lp_in, [min_frax, min_3pool]);
+            frax_received = result_arr[0];
+            three_pool_received = result_arr[1];
+        }
+
+        // Convert the 3pool into the collateral
+        three_pool_erc20.approve(address(three_pool), 0);
+        three_pool_erc20.approve(address(three_pool), three_pool_received);
+        {
+            // Add the FRAX and the collateral to the metapool
+            uint256 min_collat_out = three_pool_received.mul(liq_slippage_3crv).div(PRICE_PRECISION * (10 ** missing_decimals));
+            three_pool.remove_liquidity_one_coin(three_pool_received, THREE_POOL_COIN_INDEX, min_collat_out);
+        }
+
+        // Optionally burn the FRAX
+        if (burn_the_frax){
+            burnFRAX(frax_received);
+        }
+        
     }
 
     function metapoolWithdrawFrax(uint256 _metapool_lp_in, bool burn_the_frax) public onlyByOwnerOrGovernance returns (uint256 frax_received) {
@@ -444,37 +483,51 @@ contract CurveAMO_Old is AccessControl {
 
     function three_pool_to_collateral(uint256 _3pool_in) public onlyByOwnerOrGovernance {
         // Convert the 3pool into the collateral
+        // WEIRD ISSUE: NEED TO DO three_pool_erc20.approve(address(three_pool), 0); first before every time
+        // May be related to https://github.com/vyperlang/vyper/blob/3e1ff1eb327e9017c5758e24db4bdf66bbfae371/examples/tokens/ERC20.vy#L85
+        three_pool_erc20.approve(address(three_pool), 0);
         three_pool_erc20.approve(address(three_pool), _3pool_in);
         uint256 min_collat_out = _3pool_in.mul(liq_slippage_3crv).div(PRICE_PRECISION * (10 ** missing_decimals));
         three_pool.remove_liquidity_one_coin(_3pool_in, THREE_POOL_COIN_INDEX, min_collat_out);
     }
 
-    // // Deposit Metapool LP tokens into the Curve DAO for gauge rewards, if any
-    // function depositToGauge(uint256 _metapool_lp_in) public onlyByOwnerOrGovernance {
-    //     // Approve the metapool LP tokens for the gauge contract
-    //     frax3crv_metapool.approve(address(gauge_frax3crv), _metapool_lp_in);
+    function metapoolWithdrawAndConvert3pool(uint256 _metapool_lp_in) public onlyByOwnerOrGovernance {
+        metapoolWithdraw3pool(_metapool_lp_in);
+        three_pool_to_collateral(three_pool_erc20.balanceOf(address(this)));
+    }
+
+    // Deposit Metapool LP tokens into the Curve DAO for gauge rewards, if any
+    function depositToGauge(uint256 _metapool_lp_in) public onlyByOwnerOrGovernance {
+        // Approve the metapool LP tokens for the gauge contract
+        frax3crv_metapool.approve(address(gauge_frax3crv), _metapool_lp_in);
         
-    //     // Deposit the metapool LP into the gauge contract
-    //     gauge_frax3crv.deposit(_metapool_lp_in);
-    // }
+        // Deposit the metapool LP into the gauge contract
+        gauge_frax3crv.deposit(_metapool_lp_in);
+    }
 
-    // // Withdraw Metapool LP from Curve DAO back to this contract
-    // function withdrawFromGauge(uint256 _metapool_lp_out) public onlyByOwnerOrGovernance {
-    //     gauge_frax3crv.withdraw(_metapool_lp_out);
-    // }
+    // Withdraw Metapool LP from Curve DAO back to this contract
+    function withdrawFromGauge(uint256 _metapool_lp_out) public onlyByOwnerOrGovernance {
+        gauge_frax3crv.withdraw(_metapool_lp_out);
+    }
 
-    // // Retrieve CRV gauge rewards, if any
-    // function collectCRVFromGauge() public onlyByOwnerOrGovernance {
-    //     crv_minter.mint(address(this));
-    // }
+    // Checkpoint the Gauge for this address
+    function checkpointGauge() public onlyByOwnerOrGovernance {
+        gauge_frax3crv.user_checkpoint(address(this));
+    }
+
+    // Retrieve CRV gauge rewards, if any
+    function collectCRVFromGauge() public onlyByOwnerOrGovernance {
+        gauge_frax3crv.claim_rewards(address(this));
+        crv_minter.mint(gauge_frax3crv_address);
+    }
 
     /* ========== Custodian ========== */
 
-    // // NOTE: The custodian_address can be set to the governance contract to be used as
-    // // a mega-voter or sorts. The CRV here can be converted to veCRV and then used to vote
-    // function withdrawCRVRewards() public onlyCustodian {
-    //     CRV.transfer(custodian_address, CRV.balanceOf(address(this)));
-    // }
+    // NOTE: The custodian_address can be set to the governance contract to be used as
+    // a mega-voter or sorts. The CRV here can be converted to veCRV and then used to vote
+    function withdrawCRVRewards() public onlyCustodian {
+        CRV.transfer(custodian_address, CRV.balanceOf(address(this)));
+    }
 
     /* ========== RESTRICTED GOVERNANCE FUNCTIONS ========== */
 
@@ -507,14 +560,14 @@ contract CurveAMO_Old is AccessControl {
         frax3crv_metapool = IMetaImplementationUSD(_metapool_address);
     }
 
-    // function setGauge(address _gauge_3crv_address) public onlyByOwnerOrGovernance {
-    //     gauge_3crv_address = _gauge_3crv_address;
-    //     gauge_frax3crv = ILiquidityGauge(_gauge_3crv_address);
+    function setGauge(address _gauge_frax3crv_address) public onlyByOwnerOrGovernance {
+        gauge_frax3crv_address = _gauge_frax3crv_address;
+        gauge_frax3crv = ILiquidityGauge(_gauge_frax3crv_address);
 
-    //     // Set the minter too
-    //     crv_minter_address = gauge_frax3crv.minter();
-    //     crv_minter = IMinter(crv_minter_address);
-    // }
+        // Set the minter too
+        crv_minter_address = gauge_frax3crv.minter();
+        crv_minter = IMinter(crv_minter_address);
+    }
 
     function setCollatBorrowCap(uint256 _collat_borrow_cap) external onlyByOwnerOrGovernance {
         collat_borrow_cap = _collat_borrow_cap;

@@ -30,8 +30,9 @@ import "../ERC20/ERC20.sol";
 import "../Frax/Frax.sol";
 import "../FXS/FXS.sol";
 import "../Math/SafeMath.sol";
+import "../Proxy/Initializable.sol";
 
-contract CurveAMO_V2 is AccessControl {
+contract CurveAMO_V2 is AccessControl, Initializable {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -39,70 +40,72 @@ contract CurveAMO_V2 is AccessControl {
     IMetaImplementationUSD private frax3crv_metapool;
     IStableSwap3Pool private three_pool;
     ILiquidityGauge private gauge_frax3crv;
-    IMinter private crv_minter;
     ERC20 private three_pool_erc20;
     FRAXStablecoin private FRAX;
     FraxPool private pool;
-    FRAXShares private FXS;
     ERC20 private collateral_token;
-    ERC20 private CRV = ERC20(0xD533a949740bb3306d119CC777fa900bA034cd52);
+
+    address private three_pool_address;
+    address private three_pool_token_address;
+    address private fxs_contract_address;
+    address private collateral_token_address;
+    address private crv_address;
 
     address public frax3crv_metapool_address;
-    address public three_pool_address;
-    address public three_pool_token_address;
     address public gauge_frax3crv_address;
-    address public crv_minter_address;
-    address public frax_contract_address;
-    address public fxs_contract_address;
-    address public collateral_token_address;
     address public timelock_address;
     address public owner_address;
     address public custodian_address;
     address public pool_address;
 
     // Tracks FRAX
-    uint256 public minted_frax_historical = 0;
-    uint256 public burned_frax_historical = 0;
+    uint256 public minted_frax_historical;
+    uint256 public burned_frax_historical;
 
     // Max amount of FRAX outstanding the contract can mint from the FraxPool
-    uint256 public max_frax_outstanding = uint256(2000000e18);
+    uint256 public max_frax_outstanding;
     
     // Tracks collateral
-    uint256 public borrowed_collat_historical = 0;
-    uint256 public returned_collat_historical = 0;
+    uint256 public borrowed_collat_historical;
+    uint256 public returned_collat_historical;
 
     // Max amount of collateral the contract can borrow from the FraxPool
-    uint256 public collat_borrow_cap = uint256(1000000e6);
+    uint256 public collat_borrow_cap;
 
     // Minimum collateral ratio needed for new FRAX minting
-    uint256 public min_cr = 850000;
+    uint256 public min_cr;
 
     // Number of decimals under 18, for collateral token
     uint256 private missing_decimals;
 
     // Precision related
-    uint256 private constant PRICE_PRECISION = 1e6;
+    uint256 private PRICE_PRECISION;
 
     // Min ratio of collat <-> 3crv conversions via add_liquidity / remove_liquidity; 1e6
-    uint256 public liq_slippage_3crv = 800000;
+    uint256 public liq_slippage_3crv;
 
     // Min ratio of (FRAX + 3CRV) <-> FRAX3CRV-f-2 metapool conversions via add_liquidity / remove_liquidity; 1e6
-    uint256 public add_liq_slippage_metapool = 950000;
-    uint256 public rem_liq_slippage_metapool = 950000;
+    uint256 public add_liq_slippage_metapool;
+    uint256 public rem_liq_slippage_metapool;
 
-    // 3pool collateral index
-    int128 public THREE_POOL_COIN_INDEX = 1;
+    // Convergence window
+    uint256 public convergence_window; // 1 cent
 
-    // default will use global_collateral_ratio()
-    bool public custom_floor = false;    
+    // Default will use global_collateral_ratio()
+    bool public custom_floor;    
     uint256 public frax_floor;
 
-    bool public set_discount = false;
+    // Discount
+    bool public set_discount;
     uint256 public discount_rate;
 
-    /* ========== CONSTRUCTOR ========== */
+    // Collateral balance related
+    bool public override_collat_balance;
+    uint256 public override_collat_balance_amount;
 
-    constructor(
+    /* ========== INITIALIZER ========== */
+
+    function initialize(
         address _frax_contract_address,
         address _fxs_contract_address,
         address _collateral_address,
@@ -114,18 +117,17 @@ contract CurveAMO_V2 is AccessControl {
         address _three_pool_token_address,
         address _pool_address,
         address _gauge_frax3crv_address
-    ) public {
+    ) public payable initializer {
         FRAX = FRAXStablecoin(_frax_contract_address);
-        FXS = FRAXShares(_fxs_contract_address);
-        frax_contract_address = _frax_contract_address;
         fxs_contract_address = _fxs_contract_address;
         collateral_token_address = _collateral_address;
         collateral_token = ERC20(_collateral_address);
+        crv_address = 0xD533a949740bb3306d119CC777fa900bA034cd52;
         missing_decimals = uint(18).sub(collateral_token.decimals());
         timelock_address = _timelock_address;
         owner_address = _creator_address;
         custodian_address = _custodian_address;
-
+        
         frax3crv_metapool_address = _frax3crv_metapool_address;
         frax3crv_metapool = IMetaImplementationUSD(_frax3crv_metapool_address);
         three_pool_address = _three_pool_address;
@@ -138,19 +140,33 @@ contract CurveAMO_V2 is AccessControl {
         gauge_frax3crv_address = _gauge_frax3crv_address;
         gauge_frax3crv = ILiquidityGauge(_gauge_frax3crv_address);
 
-        crv_minter_address = gauge_frax3crv.minter();
-        crv_minter = IMinter(crv_minter_address);
+        // Other variable initializations
+        minted_frax_historical = 0;
+        burned_frax_historical = 0;
+        max_frax_outstanding = uint256(2000000e18);
+        borrowed_collat_historical = 0;
+        returned_collat_historical = 0;
+        collat_borrow_cap = uint256(1000000e6);
+        min_cr = 850000;
+        PRICE_PRECISION = 1e6;
+        liq_slippage_3crv = 800000;
+        add_liq_slippage_metapool = 950000;
+        rem_liq_slippage_metapool = 950000;
+        convergence_window = 1e16;
+        custom_floor = false;  
+        set_discount = false;
+        override_collat_balance = false;
     }
 
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == timelock_address || msg.sender == owner_address, "You are not the owner or the governance timelock");
+        require(msg.sender == timelock_address || msg.sender == owner_address, "Must be owner or timelock");
         _;
     }
 
     modifier onlyCustodian() {
-        require(msg.sender == custodian_address, "You are not the rewards custodian");
+        require(msg.sender == custodian_address, "Must be rewards custodian");
         _;
     }
 
@@ -196,7 +212,7 @@ contract CurveAMO_V2 is AccessControl {
         // uint256 usdc_total;
         uint256 usdc_total;
         {
-            uint256 frax_bal = fraxBalance();
+            // uint256 frax_bal = fraxBalance();
             usdc_total = usdc_subtotal + (frax_in_contract.add(frax_withdrawable)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals));
         }
 
@@ -215,8 +231,6 @@ contract CurveAMO_V2 is AccessControl {
         ];
     }
 
-    bool public override_collat_balance = false;
-    uint256 public override_collat_balance_amount;
     function collatDollarBalance() public view returns (uint256) {
         if(override_collat_balance){
             return override_collat_balance_amount;
@@ -226,7 +240,6 @@ contract CurveAMO_V2 is AccessControl {
 
     function get_D() public view returns (uint256) {
         // Setting up constants
-        uint256 _A = frax3crv_metapool.A_precise();
         uint256 A_PRECISION = 100;
         uint256[2] memory _xp = [three_pool_erc20.balanceOf(frax3crv_metapool_address), FRAX.balanceOf(frax3crv_metapool_address)];
 
@@ -239,7 +252,7 @@ contract CurveAMO_V2 is AccessControl {
             return 0;
         }
         uint256 D = S;
-        uint256 Ann = N_COINS * _A;
+        uint256 Ann = N_COINS * frax3crv_metapool.A_precise();
         
         uint256 Dprev = 0;
         uint256 D_P;
@@ -270,7 +283,6 @@ contract CurveAMO_V2 is AccessControl {
 
     // Returns hypothetical reserves of metapool if the FRAX price went to the CR,
     // assuming no removal of liquidity from the metapool.
-    uint256 public convergence_window = 1e16; // 1 cent
     function iterate() public view returns (uint256, uint256, uint256) {
         uint256 frax_balance = FRAX.balanceOf(frax3crv_metapool_address);
         uint256 crv3_balance = three_pool_erc20.balanceOf(frax3crv_metapool_address);
@@ -290,7 +302,7 @@ contract CurveAMO_V2 is AccessControl {
             crv3_balance = crv3_balance.sub(frax3crv_metapool.get_dy(0, 1, frax_to_swap, [frax_balance, crv3_balance]));
             frax_balance = frax_balance.add(frax_to_swap);
         }
-        revert("Didn't find hypothetical point on curve within 256 rounds");
+        revert("No hypothetical point"); // in 256 rounds
     }
 
     function fraxFloor() public view returns (uint256) {
@@ -321,26 +333,23 @@ contract CurveAMO_V2 is AccessControl {
         else return 0;
     }
 
-    // Amount of FRAX3CRV deposited in the gauge contract
-    function metapoolLPInGauge() public view returns (uint256){
-        return gauge_frax3crv.balanceOf(address(this));
-    }
+    // REMOVED FOR CONTRACT SIZE CONSIDERATIONS 
+    // // Amount of FRAX3CRV deposited in the gauge contract
+    // function metapoolLPInGauge() public view returns (uint256){
+    //     return gauge_frax3crv.balanceOf(address(this));
+    // }
 
-    // This function is problematic because it can be either a view or non-view
-    // The self._checkpoint(addr) call inside of it is mutative...
-    // Amount of CRV rewards mintable / claimable
-    function claimableCRV() public view returns (uint256){
-        // Have to manually replicate the formula inside of LiquidityGaugeV2.vy
-        // otherwise, it would just be this: return gauge_frax3crv.claimable_tokens(address(this));
-        uint256 integrate_fraction = gauge_frax3crv.integrate_fraction(address(this));
-        uint256 other_side = crv_minter.minted(address(this), gauge_frax3crv_address);
-        return integrate_fraction.sub(other_side);
-    }
-
-    // Amount of CRV in the contract
-    function freeCRV() public view returns (uint256){
-        return CRV.balanceOf(address(this));
-    }
+    // REMOVED FOR CONTRACT SIZE CONSIDERATIONS 
+    // // This function is problematic because it can be either a view or non-view
+    // // The self._checkpoint(addr) call inside of it is mutative...
+    // // Amount of CRV rewards mintable / claimable
+    // function claimableCRV() public view returns (uint256){
+    //     // Have to manually replicate the formula inside of LiquidityGaugeV2.vy
+    //     // otherwise, it would just be this: return gauge_frax3crv.claimable_tokens(address(this));
+    //     uint256 integrate_fraction = gauge_frax3crv.integrate_fraction(address(this));
+    //     uint256 other_side = IMinter(gauge_frax3crv.minter()).minted(address(this), gauge_frax3crv_address);
+    //     return integrate_fraction.sub(other_side);
+    // }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
@@ -358,7 +367,7 @@ contract CurveAMO_V2 is AccessControl {
         uint256 expected_collat_amount = redeem_amount_E6.mul(global_collateral_ratio).div(1e6);
         expected_collat_amount = expected_collat_amount.mul(1e6).div(col_price_usd);
 
-        require(collateralBalance().add(expected_collat_amount) <= collat_borrow_cap, "Borrow cap reached");
+        require(collateralBalance().add(expected_collat_amount) <= collat_borrow_cap, "Borrow cap");
         borrowed_collat_historical = borrowed_collat_historical.add(expected_collat_amount);
 
         // Mint the frax 
@@ -386,15 +395,15 @@ contract CurveAMO_V2 is AccessControl {
     }
    
     function burnFXS(uint256 amount) public onlyByOwnerOrGovernance {
-        FXS.approve(address(this), amount);
-        FXS.pool_burn_from(address(this), amount);
+        FRAXShares(fxs_contract_address).approve(address(this), amount);
+        FRAXShares(fxs_contract_address).pool_burn_from(address(this), amount);
     }
 
     function metapoolDeposit(uint256 _frax_amount, uint256 _collateral_amount) public onlyByOwnerOrGovernance returns (uint256 metapool_LP_received) {
         // Mint the FRAX component
         FRAX.pool_mint(address(this), _frax_amount);
         minted_frax_historical = minted_frax_historical.add(_frax_amount);
-        require(fraxBalance() <= max_frax_outstanding, "Too much FRAX would be minted [max_frax_outstanding reached]");
+        require(fraxBalance() <= max_frax_outstanding, "max_frax_outstanding reached");
 
         uint256 threeCRV_received = 0;
         if (_collateral_amount > 0) {
@@ -403,7 +412,7 @@ contract CurveAMO_V2 is AccessControl {
 
             // Convert collateral into 3pool
             uint256[3] memory three_pool_collaterals;
-            three_pool_collaterals[uint256(THREE_POOL_COIN_INDEX)] = _collateral_amount;
+            three_pool_collaterals[uint256(1)] = _collateral_amount;
             {
                 uint256 min_3pool_out = (_collateral_amount * (10 ** missing_decimals)).mul(liq_slippage_3crv).div(PRICE_PRECISION);
                 three_pool.add_liquidity(three_pool_collaterals, min_3pool_out);
@@ -431,7 +440,7 @@ contract CurveAMO_V2 is AccessControl {
         uint256 current_collateral_E18 = (FRAX.globalCollateralValue()).mul(10 ** missing_decimals);
         uint256 cur_frax_supply = FRAX.totalSupply();
         uint256 new_cr = (current_collateral_E18.mul(PRICE_PRECISION)).div(cur_frax_supply);
-        require (new_cr >= min_cr, "Minting caused the collateral ratio to be too low");
+        require (new_cr >= min_cr, "CR would be too low");
         
         return metapool_LP_received;
     }
@@ -454,7 +463,7 @@ contract CurveAMO_V2 is AccessControl {
         {
             // Add the FRAX and the collateral to the metapool
             uint256 min_collat_out = three_pool_received.mul(liq_slippage_3crv).div(PRICE_PRECISION * (10 ** missing_decimals));
-            three_pool.remove_liquidity_one_coin(three_pool_received, THREE_POOL_COIN_INDEX, min_collat_out);
+            three_pool.remove_liquidity_one_coin(three_pool_received, 1, min_collat_out);
         }
 
         // Optionally burn the FRAX
@@ -488,7 +497,7 @@ contract CurveAMO_V2 is AccessControl {
         three_pool_erc20.approve(address(three_pool), 0);
         three_pool_erc20.approve(address(three_pool), _3pool_in);
         uint256 min_collat_out = _3pool_in.mul(liq_slippage_3crv).div(PRICE_PRECISION * (10 ** missing_decimals));
-        three_pool.remove_liquidity_one_coin(_3pool_in, THREE_POOL_COIN_INDEX, min_collat_out);
+        three_pool.remove_liquidity_one_coin(_3pool_in, 1, min_collat_out);
     }
 
     function metapoolWithdrawAndConvert3pool(uint256 _metapool_lp_in) public onlyByOwnerOrGovernance {
@@ -518,7 +527,7 @@ contract CurveAMO_V2 is AccessControl {
     // Retrieve CRV gauge rewards, if any
     function collectCRVFromGauge() public onlyByOwnerOrGovernance {
         gauge_frax3crv.claim_rewards(address(this));
-        crv_minter.mint(gauge_frax3crv_address);
+        IMinter(gauge_frax3crv.minter()).mint(gauge_frax3crv_address);
     }
 
     /* ========== Custodian ========== */
@@ -526,7 +535,7 @@ contract CurveAMO_V2 is AccessControl {
     // NOTE: The custodian_address can be set to the governance contract to be used as
     // a mega-voter or sorts. The CRV here can be converted to veCRV and then used to vote
     function withdrawCRVRewards() public onlyCustodian {
-        CRV.transfer(custodian_address, CRV.balanceOf(address(this)));
+        ERC20(crv_address).transfer(custodian_address, ERC20(crv_address).balanceOf(address(this)));
     }
 
     /* ========== RESTRICTED GOVERNANCE FUNCTIONS ========== */
@@ -563,10 +572,6 @@ contract CurveAMO_V2 is AccessControl {
     function setGauge(address _gauge_frax3crv_address) public onlyByOwnerOrGovernance {
         gauge_frax3crv_address = _gauge_frax3crv_address;
         gauge_frax3crv = ILiquidityGauge(_gauge_frax3crv_address);
-
-        // Set the minter too
-        crv_minter_address = gauge_frax3crv.minter();
-        crv_minter = IMinter(crv_minter_address);
     }
 
     function setCollatBorrowCap(uint256 _collat_borrow_cap) external onlyByOwnerOrGovernance {
@@ -611,13 +616,6 @@ contract CurveAMO_V2 is AccessControl {
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Can only be triggered by owner or governance, not custodian
         // Tokens are sent to the custodian, as a sort of safeguard
-
         ERC20(tokenAddress).transfer(custodian_address, tokenAmount);
-        emit Recovered(tokenAddress, tokenAmount);
     }
-
-    /* ========== EVENTS ========== */
-
-    event Recovered(address token, uint256 amount);
-
 }

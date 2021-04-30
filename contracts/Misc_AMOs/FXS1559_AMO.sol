@@ -122,7 +122,7 @@ contract FXS1559_AMO is AccessControl {
         else {
             uint256[5] memory allocations = InvestorAMO.showAllocations();
             uint256 borrowed_USDC = InvestorAMO.borrowed_balance();
-            unspent_profit_e18 = allocations[1].add(allocations[2]).add(allocations[3]).sub(borrowed_USDC);
+            unspent_profit_e18 = allocations[0].add(allocations[4]).sub(borrowed_USDC);
             unspent_profit_e18 = unspent_profit_e18.mul(10 ** missing_decimals);
         }
     }
