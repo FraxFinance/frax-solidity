@@ -36,12 +36,12 @@ import "./aave/IStakedAave.sol";
 import "./aave/IAaveIncentivesControllerPartial.sol";
 import "./compound/ICompComptrollerPartial.sol";
 import "./compound/IcUSDC_Partial.sol";
-import "../Proxy/Initializable.sol";
+//import "../Proxy/Initializable.sol";
 
 // Lower APY: yearn, AAVE, Compound
 // Higher APY: KeeperDAO, BZX, Harvest
 
-contract InvestorAMO_V2 is AccessControl, Initializable {
+contract InvestorAMO_V2 is AccessControl {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -105,9 +105,9 @@ contract InvestorAMO_V2 is AccessControl, Initializable {
         _;
     }
 
-    /* ========== INITIALIZER ========== */
-
-    function initialize(
+    /* ========== CONSTRUCTOR ========== */
+    
+    constructor(
         address _frax_contract_address,
         address _fxs_contract_address,
         address _pool_address,
@@ -115,7 +115,7 @@ contract InvestorAMO_V2 is AccessControl, Initializable {
         address _owner_address,
         address _custodian_address,
         address _timelock_address
-    ) public payable initializer {
+    ) public {
         FRAX = FRAXStablecoin(_frax_contract_address);
         FXS = FRAXShares(_fxs_contract_address);
         pool_address = _pool_address;
