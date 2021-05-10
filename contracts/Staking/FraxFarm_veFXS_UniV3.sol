@@ -147,8 +147,15 @@ contract FraxFarm is Owned, ReentrancyGuard, Pausable {
         if (account != address(0)) {
             // To keep the math correct, the user's combined weight must be recomputed to account for their
             // ever-changing veFXS balance. 
-            uint256 old_combined_weight = _combined_weights[account];
-            uint256 new_combined_weight = calcCombinedWeight(account);
+            (
+                ,
+                uint256 old_combined_weight, 
+                uint256 new_vefxs_multiplier,
+                uint256 new_combined_weight 
+            ) = calcCurCombinedWeight(account);
+
+            // Update the user's stored veFXS multiplier
+            _vefxsMultiplierStored[account] = new_vefxs_multiplier;
 
             // Update the user's and the global combined weights
             if (new_combined_weight >= old_combined_weight){
@@ -262,11 +269,38 @@ contract FraxFarm is Owned, ReentrancyGuard, Pausable {
         return stakingToken.decimals();
     }
 
-    function calcCombinedWeight(address account) public view returns (uint256) {
-        uint256 current_combined_weight = _combined_weights[account];
-        return current_combined_weight;
+    function calcCurCombinedWeight(address account) public view returns (
+        uint256 old_vefxs_multiplier,
+        uint256 old_combined_weight, 
+        uint256 new_vefxs_multiplier,
+        uint256 new_combined_weight 
+    ) {
+        // Get the old values
+        old_vefxs_multiplier = _vefxsMultiplierStored[account];
+        old_combined_weight = _combined_weights[account];
+
+        // Get the new veFXS multiplier
+        new_vefxs_multiplier = veFXSMultiplier(account);
+
+        // Get the new non-locked component first
+        uint256 unlocked_tally = _unlocked_balances[account].mul(new_vefxs_multiplier).div(PRICE_PRECISION);
+
+        // Loop through the locked stakes next, first by getting the amount * lock_multiplier part
+        uint256 locked_tally = 0;
+        for (uint i = 0; i < lockedStakes[account].length; i++){ 
+            uint256 lock_multiplier = lockedStakes[account][i].lock_multiplier;
+            uint256 amount = lockedStakes[account][i].amount;
+            uint256 lock_boosted_portion = amount.mul(lock_multiplier).div(PRICE_PRECISION);
+            locked_tally = locked_tally.add(lock_boosted_portion);
+        }
+
+        // Now factor in the veFXS multiplier
+        locked_tally = locked_tally.mul(new_vefxs_multiplier).div(PRICE_PRECISION);
+
+        // Get the new combined weight
+        new_combined_weight = unlocked_tally.add(locked_tally);
     }
-    
+
     function rewardsFor(address account) external view returns (uint256) {
         // You may have use earned() instead, because of the order in which the contract executes 
         return rewards0[account];
@@ -347,9 +381,8 @@ contract FraxFarm is Owned, ReentrancyGuard, Pausable {
         // Pull the tokens from the source_address
         TransferHelper.safeTransferFrom(address(stakingToken), source_address, address(this), amount);
 
-        // Calculate the combined weight
-        uint256 vefxs_multiplier = veFXSMultiplier(staker_address); 
-        uint256 combined_weight_to_add = amount.mul(vefxs_multiplier).div(PRICE_PRECISION);
+        // Calculate the combined weight to add
+        uint256 combined_weight_to_add = amount.mul(_vefxsMultiplierStored[staker_address]).div(PRICE_PRECISION);
 
         // Staking token supply and combined weight
         _total_tokens_staked = _total_tokens_staked.add(amount);
@@ -358,7 +391,6 @@ contract FraxFarm is Owned, ReentrancyGuard, Pausable {
         // Staking token balance, combined weight, and veFXS multiplier
         _unlocked_balances[staker_address] = _unlocked_balances[staker_address].add(amount);
         _combined_weights[staker_address] = _combined_weights[staker_address].add(combined_weight_to_add);
-        _vefxsMultiplierStored[staker_address] = vefxs_multiplier;
 
         emit Staked(staker_address, amount, source_address);
     }
@@ -378,15 +410,14 @@ contract FraxFarm is Owned, ReentrancyGuard, Pausable {
         require(secs >= lock_time_min, StringHelpers.strConcat("Minimum stake time not met (", lock_time_min_str, ")") );
         require(secs <= lock_time_for_max_multiplier, "You are trying to stake for too long");
 
-        uint256 multiplier = lockMultiplier(secs);
-        uint256 vefxs_multiplier = veFXSMultiplier(staker_address); 
-        uint256 combined_weight_to_add = amount.mul(multiplier).mul(vefxs_multiplier).div(PRICE_PRECISION ** 2);
+        uint256 lock_multiplier = lockMultiplier(secs);
+        uint256 combined_weight_to_add = amount.mul(lock_multiplier).mul(_vefxsMultiplierStored[staker_address]).div(PRICE_PRECISION ** 2);
         lockedStakes[staker_address].push(LockedStake(
             keccak256(abi.encodePacked(staker_address, block.timestamp, amount)),
             block.timestamp,
             amount,
             block.timestamp.add(secs),
-            multiplier
+            lock_multiplier
         ));
 
         // Pull the tokens from the source_address
@@ -399,7 +430,6 @@ contract FraxFarm is Owned, ReentrancyGuard, Pausable {
         // Staking token balance, combined weight, and veFXS multiplier
         _locked_balances[staker_address] = _locked_balances[staker_address].add(amount);
         _combined_weights[staker_address] = _combined_weights[staker_address].add(combined_weight_to_add);
-        _vefxsMultiplierStored[staker_address] = vefxs_multiplier;
 
         emit StakeLocked(staker_address, amount, secs, source_address);
     }
@@ -418,8 +448,7 @@ contract FraxFarm is Owned, ReentrancyGuard, Pausable {
         _unlocked_balances[staker_address] = _unlocked_balances[staker_address].sub(amount);
 
         // updateRewardAndBalance() above should make this math correct and not leave a gap
-        uint256 vefxs_multiplier = veFXSMultiplier(staker_address); 
-        uint256 combined_weight_to_sub = amount.mul(vefxs_multiplier).div(PRICE_PRECISION);
+        uint256 combined_weight_to_sub = amount.mul(_vefxsMultiplierStored[staker_address]).div(PRICE_PRECISION);
         _combined_weights[staker_address] = _combined_weights[staker_address].sub(combined_weight_to_sub);
 
         // Staking token supply and combined weight
@@ -455,8 +484,7 @@ contract FraxFarm is Owned, ReentrancyGuard, Pausable {
         uint256 theAmount = thisStake.amount;
 
         // updateRewardAndBalance() above should make this math correct and not leave a gap
-        uint256 vefxs_multiplier = veFXSMultiplier(staker_address); 
-        uint256 combined_weight_to_sub = theAmount.mul(thisStake.lock_multiplier).mul(vefxs_multiplier).div(PRICE_PRECISION ** 2);
+        uint256 combined_weight_to_sub = theAmount.mul(thisStake.lock_multiplier).mul(_vefxsMultiplierStored[staker_address]).div(PRICE_PRECISION ** 2);
 
         if (theAmount > 0){
             // Staking token supply and combined weight
