@@ -1,4 +1,4 @@
-# @version 0.2.8
+# @version 0.2.12
 # (c) Curve.Fi, 2020
 # Pool for DAI/USDC/USDT
 

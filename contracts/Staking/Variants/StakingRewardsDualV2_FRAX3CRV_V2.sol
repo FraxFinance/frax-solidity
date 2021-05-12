@@ -2,19 +2,19 @@
 pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
 
-import "../StakingRewardsDualV2.sol";
+import "../FraxFarm_UniV3_veFXS.sol";
 
-contract StakingRewardsDualV2_FRAX3CRV_V2 is StakingRewardsDualV2 {
+contract FraxFarm_UniV3_veFXS_FRAX_USDC is FraxFarm_UniV3_veFXS {
     constructor(
         address _owner,
         address _rewardsToken0,
-        address _rewardsToken1,
-        address _stakingToken,
+        address _stakingTokenNFT,
         address _frax_address,
         address _timelock_address,
-        uint256 _pool_weight0,
-        uint256 _pool_weight1
+        address _veFXS_address,
+        address _uni_token0,
+        address _uni_token1
     ) 
-    StakingRewardsDualV2(_owner, _rewardsToken0, _rewardsToken1, _stakingToken, _frax_address, _timelock_address, _pool_weight0, _pool_weight1)
+    FraxFarm_UniV3_veFXS(_owner, _rewardsToken0, _stakingTokenNFT, _frax_address, _timelock_address, _veFXS_address, _uni_token0, _uni_token1)
     public {}
 }
