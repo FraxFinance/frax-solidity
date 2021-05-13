@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.11;
+pragma solidity >=0.6.11;
 import '../../ERC20/IERC20.sol';
 
 // Address [0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139] used is a proxy

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.11;
+pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
 // ====================================================================
@@ -421,7 +421,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function stakeLocked(uint256 token_id, uint256 secs) public {
+    function stakeLocked(uint256 token_id, uint256 secs) external {
         _stakeLocked(msg.sender, msg.sender, token_id, secs);
     }
 
@@ -468,7 +468,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function withdrawLocked(uint256 token_id) public {
+    function withdrawLocked(uint256 token_id) external {
         _withdrawLocked(msg.sender, msg.sender, token_id);
     }
 
@@ -521,7 +521,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     // Two different getReward functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function getReward() public {
+    function getReward() external {
         _getReward(msg.sender, msg.sender);
     }
 

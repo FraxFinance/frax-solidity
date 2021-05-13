@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.11;
+pragma solidity >=0.6.11;
 
 interface IFraxBond_Curve {
     function get_total_points(uint8 curve_choice) external view returns (uint32);

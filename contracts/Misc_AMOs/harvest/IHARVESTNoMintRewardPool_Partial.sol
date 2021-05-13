@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.11;
+pragma solidity >=0.6.11;
 pragma experimental ABIEncoderV2;
 
 // Original at https://etherscan.io/address/0x4F7c28cCb0F1Dbd1388209C67eEc234273C878Bd#code
