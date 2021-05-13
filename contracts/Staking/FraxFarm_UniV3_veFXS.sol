@@ -304,11 +304,6 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         // new_combined_weight = old_combined_weight.mul(new_vefxs_multiplier).div(old_vefxs_multiplier);
     }
 
-    function rewardsFor(address account) external view returns (uint256) {
-        // You may have use earned() instead, because of the order in which the contract executes
-        return rewards0[account];
-    }
-
     function lastTimeRewardApplicable() public view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }

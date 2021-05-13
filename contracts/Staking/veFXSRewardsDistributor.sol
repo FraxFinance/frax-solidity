@@ -111,16 +111,11 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         lastUpdateTime = block.timestamp;
         timelock_address = _timelock_address;
 
-        // 1 FXS a day
+        // 1 FXS a day at initialization
         rewardRate0 = (uint256(365e18)).div(365 * 86400);
     }
 
     /* ========== VIEWS ========== */
-
-    function rewardsFor(address account) external view returns (uint256) {
-        // You may have use earned() instead, because of the order in which the contract executes
-        return rewards0[account];
-    }
 
     function fractionParticipating() external view returns (uint256) {
         return totalVeFXSParticipating.mul(PRICE_PRECISION).div(totalVeFXSSupplyStored);
@@ -166,11 +161,11 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
         sync();
 
-        // Optionally update the user's stored veFXS multiplier
+        // Get the old and the new veFXS balances
         uint256 old_vefxs_balance = userVeFXSCheckpointed[account];
         uint256 new_vefxs_balance = veFXS.balanceOf(account);
 
-        // Update the user's balance
+        // Update the user's stored veFXS balance
         userVeFXSCheckpointed[account] = new_vefxs_balance;
 
         // Update the total amount participating
@@ -190,7 +185,7 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         }
     }
 
-    function checkpoint() external nonReentrant {
+    function checkpoint() external {
         _updateReward(msg.sender);
     }
 
@@ -227,7 +222,6 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         uint256 balance0 = rewardsToken0.balanceOf(address(this));
         require(rewardRate0.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance0, "Not enough FXS available for rewards!");
 
-        // lastUpdateTime = periodFinish;
         periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(rewardsDuration));
 
         uint256 reward0 = rewardPerToken();
@@ -276,9 +270,7 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function setPauses(
-        bool _rewardsCollectionPaused
-    ) external onlyByOwnerOrGovernance {
+    function setPauses(bool _rewardsCollectionPaused) external onlyByOwnerOrGovernance {
         rewardsCollectionPaused = _rewardsCollectionPaused;
     }
 
