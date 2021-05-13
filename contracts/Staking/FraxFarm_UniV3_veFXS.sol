@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.11;
+pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
 // ====================================================================
@@ -26,7 +26,8 @@ pragma experimental ABIEncoderV2;
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
 
-// Originally inspired by Synthetixio, but heavily modified (Locked, veFXS, and UniV3 portions)
+// Originally inspired by Synthetixio, but heavily modified by the Frax team
+// (Locked, veFXS, and UniV3 portions are new)
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 
 import "../Math/Math.sol";
@@ -55,6 +56,8 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     // Constant for various precisions
     uint256 private constant PRICE_PRECISION = 1e6;
+    uint256 private constant VEFXS_MULTIPLIER_PRECISION = 1e18;
+    uint256 private constant VEFXS_PRICE_DECIMAL_DIFFERENCE = 1e12;
 
     // Reward and period related
     uint256 public periodFinish;
@@ -69,7 +72,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     // veFXS related
     uint256 public vefxs_pct_for_max_boost = 50000; // E6. Percent of the total veFXS supply you need to have for the max boost
-    uint256 public vefxs_max_multiplier = 2500000; // E6. 1x = 1000000
+    uint256 public vefxs_max_multiplier = uint256(25e17); // E18. 1x = 1e18
     mapping(address => uint256) private _vefxsMultiplierStoredOld;
     mapping(address => uint256) private _vefxsMultiplierStored;
 
@@ -196,22 +199,18 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         // The claimer gets a boost depending on their share of the total veFXS supply at claim time, multiplied by a scalar and
         // capped at the vefxs_max_multiplier
         uint256 veFXS_for_max_boost = (veFXS.totalSupply()).mul(vefxs_pct_for_max_boost).div(PRICE_PRECISION);
-        uint256 user_vefxs_fraction = (veFXS.balanceOf(account)).mul(PRICE_PRECISION).div(veFXS_for_max_boost);
-        uint256 vefxs_multiplier = uint256(PRICE_PRECISION).add(
+        uint256 user_vefxs_fraction = (veFXS.balanceOf(account)).mul(VEFXS_MULTIPLIER_PRECISION).div(veFXS_for_max_boost);
+        uint256 vefxs_multiplier = uint256(VEFXS_MULTIPLIER_PRECISION).add(
                 (user_vefxs_fraction)
-                    .mul(vefxs_max_multiplier.sub(PRICE_PRECISION))
-                    .div(PRICE_PRECISION)
+                    .mul(vefxs_max_multiplier.sub(VEFXS_MULTIPLIER_PRECISION))
+                    .div(VEFXS_MULTIPLIER_PRECISION)
             );
 
         // Cap the boost to the vefxs_max_multiplier
         if (vefxs_multiplier > vefxs_max_multiplier)
             vefxs_multiplier = vefxs_max_multiplier;
 
-        return vefxs_multiplier;
-
-        // Temporarily return 1x here
-        // return PRICE_PRECISION;
-        
+        return vefxs_multiplier;        
     }
 
     function checkUniV3NFT(uint256 token_id, bool fail_if_false) public view returns (bool is_valid, uint256 liquidity) {
@@ -243,12 +242,15 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
             require(tickUpper <= uni_tick_upper,"Uniswap tickUpper is too high");
             is_valid = true;
         } else {
-            if ((token0 == uni_token0) && 
-            (token1 == uni_token1) && 
-            (fee == uni_required_fee) && 
-            (tickLower >= uni_tick_lower) && 
-            (tickUpper <= uni_tick_upper)
-            ) is_valid = true;
+            if (
+                (token0 == uni_token0) && 
+                (token1 == uni_token1) && 
+                (fee == uni_required_fee) && 
+                (tickLower >= uni_tick_lower) && 
+                (tickUpper <= uni_tick_upper)
+            ) {
+                is_valid = true;
+            }
         }
         return (is_valid, liquidity);
     }
@@ -279,6 +281,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     {
         // Get the old values
         old_vefxs_multiplier = _vefxsMultiplierStored[account];
+        if (old_vefxs_multiplier == 0) old_vefxs_multiplier = VEFXS_MULTIPLIER_PRECISION;
         old_combined_weight = _combined_weights[account];
 
         // Get the new veFXS multiplier
@@ -294,7 +297,11 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         }
 
         // Now factor in the veFXS multiplier
-        new_combined_weight = locked_tally.mul(new_vefxs_multiplier).div(PRICE_PRECISION);
+        new_combined_weight = locked_tally.mul(new_vefxs_multiplier).div(VEFXS_MULTIPLIER_PRECISION);
+
+        // // CAN'T USE THIS SHORTCUT AS IT GENERATES LEFTOVER CRUMBS
+        // // Divide by the old veFXS multiplier and multiply by the new one
+        // new_combined_weight = old_combined_weight.mul(new_vefxs_multiplier).div(old_vefxs_multiplier);
     }
 
     function rewardsFor(address account) external view returns (uint256) {
@@ -414,7 +421,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function stakeLocked(uint256 token_id, uint256 secs) public {
+    function stakeLocked(uint256 token_id, uint256 secs) external {
         _stakeLocked(msg.sender, msg.sender, token_id, secs);
     }
 
@@ -435,7 +442,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         require(is_valid, "Invalid token ID");
 
         uint256 lock_multiplier = lockMultiplier(secs);
-        uint256 combined_weight_to_add = liquidity.mul(lock_multiplier).mul(_vefxsMultiplierStored[staker_address]).div(PRICE_PRECISION**2);
+        uint256 combined_weight_to_add = liquidity.mul(lock_multiplier).mul(_vefxsMultiplierStored[staker_address]).div(PRICE_PRECISION).div(VEFXS_MULTIPLIER_PRECISION);
         lockedNFTs[staker_address].push(
             LockedNFT(
                 token_id,
@@ -461,7 +468,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function withdrawLocked(uint256 token_id) public {
+    function withdrawLocked(uint256 token_id) external {
         _withdrawLocked(msg.sender, msg.sender, token_id);
     }
 
@@ -489,7 +496,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
         // updateRewardAndBalance() above should make this math correct and not leave a gap
         // need to use _vefxsMultiplierStoredOld instead of _vefxsMultiplierStored
-        uint256 combined_weight_to_sub = theLiquidity.mul(thisStake.lock_multiplier).mul(_vefxsMultiplierStoredOld[staker_address]).div(PRICE_PRECISION**2);
+        uint256 combined_weight_to_sub = theLiquidity.mul(thisStake.lock_multiplier).mul(_vefxsMultiplierStoredOld[staker_address]).div(PRICE_PRECISION).div(VEFXS_MULTIPLIER_PRECISION);
 
         if (theLiquidity > 0) {
             // Staking token liquidity and combined weight
@@ -506,15 +513,15 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
             // Give the tokens to the destination_address
             stakingTokenNFT.safeTransferFrom(address(this), destination_address, token_id);
 
-            // // Called here again to make sure the new balances are correct
-            // _updateRewardAndBalance(staker_address);
+            // Need to call again to make sure everything is correct
+            _updateRewardAndBalance(staker_address);
 
             emit WithdrawLocked(staker_address, theLiquidity, token_id, destination_address);
         }
     }
 
     // Two different getReward functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function getReward() public {
+    function getReward() external {
         _getReward(msg.sender, msg.sender);
     }
 
@@ -637,8 +644,8 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     function setMultipliers(uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_pct_for_max_boost) external onlyByOwnerOrGovernance {
-        require(_lock_max_multiplier >= 1, "Multiplier must be greater than or equal to 1");
-        require(_vefxs_max_multiplier >= 1, "Max veFXS multiplier must be greater than or equal to 1");
+        require(_lock_max_multiplier >= uint256(1e6), "Multiplier must be greater than or equal to 1e6");
+        require(_vefxs_max_multiplier >= uint256(1e18), "Max veFXS multiplier must be greater than or equal to 1e18");
         require(_vefxs_pct_for_max_boost >= 1000, "veFXS pct max must be greater than or equal to .001e6");
         require(_vefxs_pct_for_max_boost <= 1000000, "veFXS pct max must be less then or equal to 1e6");
 
