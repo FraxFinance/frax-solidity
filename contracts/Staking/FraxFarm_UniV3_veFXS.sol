@@ -726,7 +726,6 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     /* ========== EVENTS ========== */
 
-    event RewardAdded(uint256 reward);
     event LockNFT(address indexed user, uint256 liquidity, uint256 token_id, uint256 secs, address source_address);
     event WithdrawLocked(address indexed user, uint256 liquidity, uint256 token_id, address destination_address);
     event RewardPaid(address indexed user, uint256 reward, address token_address, address destination_address);
