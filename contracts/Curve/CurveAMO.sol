@@ -93,9 +93,6 @@ contract CurveAMO is AccessControl {
     uint256 public add_liq_slippage_metapool = 950000;
     uint256 public rem_liq_slippage_metapool = 950000;
 
-    // 3pool collateral index
-    int128 public THREE_POOL_COIN_INDEX = 1;
-
     // default will use global_collateral_ratio()
     bool public custom_floor = false;    
     uint256 public frax_floor;
@@ -116,7 +113,7 @@ contract CurveAMO is AccessControl {
         address _three_pool_address,
         address _three_pool_token_address,
         address _pool_address
-    ) public {
+    ) {
         FRAX = FRAXStablecoin(_frax_contract_address);
         FXS = FRAXShares(_fxs_contract_address);
         frax_contract_address = _frax_contract_address;
@@ -193,7 +190,7 @@ contract CurveAMO is AccessControl {
         // uint256 usdc_total;
         uint256 usdc_total;
         {
-            uint256 frax_bal = fraxBalance();
+            // uint256 frax_bal = fraxBalance();
             usdc_total = usdc_subtotal + (frax_in_contract.add(frax_withdrawable)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals));
         }
 
@@ -396,7 +393,7 @@ contract CurveAMO is AccessControl {
 
             // Convert collateral into 3pool
             uint256[3] memory three_pool_collaterals;
-            three_pool_collaterals[uint256(THREE_POOL_COIN_INDEX)] = _collateral_amount;
+            three_pool_collaterals[1] = _collateral_amount;
             {
                 uint256 min_3pool_out = (_collateral_amount * (10 ** missing_decimals)).mul(liq_slippage_3crv).div(PRICE_PRECISION);
                 three_pool.add_liquidity(three_pool_collaterals, min_3pool_out);
@@ -447,7 +444,7 @@ contract CurveAMO is AccessControl {
         {
             // Add the FRAX and the collateral to the metapool
             uint256 min_collat_out = three_pool_received.mul(liq_slippage_3crv).div(PRICE_PRECISION * (10 ** missing_decimals));
-            three_pool.remove_liquidity_one_coin(three_pool_received, THREE_POOL_COIN_INDEX, min_collat_out);
+            three_pool.remove_liquidity_one_coin(three_pool_received, 1, min_collat_out);
         }
 
         // Optionally burn the FRAX
@@ -481,7 +478,7 @@ contract CurveAMO is AccessControl {
         three_pool_erc20.approve(address(three_pool), 0);
         three_pool_erc20.approve(address(three_pool), _3pool_in);
         uint256 min_collat_out = _3pool_in.mul(liq_slippage_3crv).div(PRICE_PRECISION * (10 ** missing_decimals));
-        three_pool.remove_liquidity_one_coin(_3pool_in, THREE_POOL_COIN_INDEX, min_collat_out);
+        three_pool.remove_liquidity_one_coin(_3pool_in, 1, min_collat_out);
     }
 
     function metapoolWithdrawAndConvert3pool(uint256 _metapool_lp_in) public onlyByOwnerOrGovernance {

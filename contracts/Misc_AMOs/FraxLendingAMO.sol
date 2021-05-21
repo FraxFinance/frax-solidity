@@ -100,7 +100,7 @@ contract FraxLendingAMO is AccessControl {
         address _owner_address,
         address _custodian_address,
         address _timelock_address
-    ) public {
+    ) {
         FRAX = FRAXStablecoin(_frax_contract_address);
         FXS = FRAXShares(_fxs_contract_address);
         pool_address = _pool_address;

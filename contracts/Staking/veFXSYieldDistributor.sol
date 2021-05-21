@@ -10,9 +10,9 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// =======================veFXSRewardsDistributor======================
+// =======================veFXSYieldDistributor========================
 // ====================================================================
-// Collects rewards based on veFXS balance
+// Distributes Frax protocol yield based on the claimer's veFXS balance
 
 // Frax Finance: https://github.com/FraxFinance
 
@@ -24,7 +24,7 @@ pragma experimental ABIEncoderV2;
 // Sam Kazemian: https://github.com/samkazemian
 
 // Originally inspired by Synthetixio, but heavily modified by the Frax team (veFXS portion)
-// https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
+// https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingYield.sol
 
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
@@ -34,7 +34,7 @@ import "../ERC20/SafeERC20.sol";
 import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
 
-contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
+contract veFXSYieldDistributor is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -42,10 +42,10 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
 
     // Instances
     IveFXS private veFXS;
-    ERC20 public rewardsToken0;
+    ERC20 public emittedToken;
 
     // Addresses
-    address rewards_token_0_address;
+    address emitted_token_address;
 
     // Admin addresses
     address public owner_address;
@@ -54,16 +54,16 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
     // Constant for price precision
     uint256 private constant PRICE_PRECISION = 1e6;
 
-    // Reward and period related
+    // Yield and period related
     uint256 public periodFinish;
     uint256 public lastUpdateTime;
-    uint256 public rewardRate0;
-    uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
+    uint256 public yieldRate;
+    uint256 public yieldDuration = 604800; // 7 * 86400  (7 days)
 
-    // Rewards tracking
-    uint256 public rewardPerTokenStored0 = 0;
-    mapping(address => uint256) public userRewardPerTokenPaid0;
-    mapping(address => uint256) public rewards0;
+    // Yield tracking
+    uint256 public yieldPerVeFXSStored = 0;
+    mapping(address => uint256) public userYieldPerTokenPaid;
+    mapping(address => uint256) public yields;
 
     // veFXS tracking
     uint256 public totalVeFXSParticipating = 0;
@@ -74,7 +74,7 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
     mapping(address => bool) public greylist;
 
     // Admin booleans for emergencies
-    bool public rewardsCollectionPaused = false; // For emergencies
+    bool public yieldCollectionPaused = false; // For emergencies
 
 
     /* ========== MODIFIERS ========== */
@@ -84,13 +84,13 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         _;
     }
 
-    modifier notRewardsCollectionPaused() {
-        require(rewardsCollectionPaused == false,"Rewards collection is paused");
+    modifier notYieldCollectionPaused() {
+        require(yieldCollectionPaused == false,"Yield collection is paused");
         _;
     }
 
-    modifier updateReward(address account) {
-        _updateReward(account);
+    modifier checkpointUser(address account) {
+        _checkpointUser(account);
         _;
     }
 
@@ -98,21 +98,20 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
 
     constructor(
         address _owner,
-        address _rewardsToken0,
-        address _frax_address,
+        address _emittedToken,
         address _timelock_address,
         address _veFXS_address
-    ) public Owned(_owner) {
+    ) Owned(_owner) {
         owner_address = _owner;
-        rewards_token_0_address = _rewardsToken0;
-        rewardsToken0 = ERC20(_rewardsToken0);
+        emitted_token_address = _emittedToken;
+        emittedToken = ERC20(_emittedToken);
 
         veFXS = IveFXS(_veFXS_address);
         lastUpdateTime = block.timestamp;
         timelock_address = _timelock_address;
 
         // 1 FXS a day at initialization
-        rewardRate0 = (uint256(365e18)).div(365 * 86400);
+        yieldRate = (uint256(365e18)).div(365 * 86400);
     }
 
     /* ========== VIEWS ========== */
@@ -121,19 +120,19 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         return totalVeFXSParticipating.mul(PRICE_PRECISION).div(totalVeFXSSupplyStored);
     }
 
-    function lastTimeRewardApplicable() public view returns (uint256) {
+    function lastTimeYieldApplicable() public view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
-    function rewardPerToken() public view returns (uint256) {
+    function yieldPerVeFXS() public view returns (uint256) {
         if (totalVeFXSSupplyStored == 0) {
-            return rewardPerTokenStored0;
+            return yieldPerVeFXSStored;
         } else {
             return (
-                rewardPerTokenStored0.add(
-                    lastTimeRewardApplicable()
+                yieldPerVeFXSStored.add(
+                    lastTimeYieldApplicable()
                         .sub(lastUpdateTime)
-                        .mul(rewardRate0)
+                        .mul(yieldRate)
                         .mul(1e18)
                         .div(totalVeFXSSupplyStored)
                 )
@@ -142,22 +141,22 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
     }
 
     function earned(address account) public view returns (uint256) {
-        uint256 reward0 = rewardPerToken();
+        uint256 yield0 = yieldPerVeFXS();
         return (
             userVeFXSCheckpointed[account]
-                .mul(reward0.sub(userRewardPerTokenPaid0[account]))
+                .mul(yield0.sub(userYieldPerTokenPaid[account]))
                 .div(1e18)
-                .add(rewards0[account])
+                .add(yields[account])
         );
     }
 
-    function getRewardForDuration() external view returns (uint256) {
-        return (rewardRate0.mul(rewardsDuration));
+    function getYieldForDuration() external view returns (uint256) {
+        return (yieldRate.mul(yieldDuration));
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function _updateReward(address account) internal {
+    function _checkpointUser(address account) internal {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
         sync();
 
@@ -180,23 +179,24 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         if (account != address(0)) {
             // Calculate the earnings
             uint256 earned0 = earned(account);
-            rewards0[account] = earned0;
-            userRewardPerTokenPaid0[account] = rewardPerTokenStored0;
+            yields[account] = earned0;
+            userYieldPerTokenPaid[account] = yieldPerVeFXSStored;
         }
     }
 
+    // Checkpoints the user
     function checkpoint() external {
-        _updateReward(msg.sender);
+        _checkpointUser(msg.sender);
     }
 
-    function getReward() external nonReentrant notRewardsCollectionPaused updateReward(msg.sender) {
+    function getYield() external nonReentrant notYieldCollectionPaused checkpointUser(msg.sender) {
         require(greylist[msg.sender] == false, "Address has been greylisted");
 
-        uint256 reward0 = rewards0[msg.sender];
-        if (reward0 > 0) {
-            rewards0[msg.sender] = 0;
-            rewardsToken0.transfer(msg.sender, reward0);
-            emit RewardPaid(msg.sender, reward0, rewards_token_0_address);
+        uint256 yield0 = yields[msg.sender];
+        if (yield0 > 0) {
+            yields[msg.sender] = 0;
+            emittedToken.transfer(msg.sender, yield0);
+            emit YieldCollected(msg.sender, yield0, emitted_token_address);
         }
     }
 
@@ -214,21 +214,21 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         // Failsafe check
         require(block.timestamp > periodFinish, "Period has not expired yet!");
 
-        // Ensure the provided reward amount is not more than the balance in the contract.
-        // This keeps the reward rate in the right range, preventing overflows due to
-        // very high values of rewardRate in the earned and rewardsPerToken functions;
-        // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
-        uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / rewardsDuration; // Floor division to the nearest period
-        uint256 balance0 = rewardsToken0.balanceOf(address(this));
-        require(rewardRate0.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance0, "Not enough FXS available for rewards!");
+        // Ensure the provided yield amount is not more than the balance in the contract.
+        // This keeps the yield rate in the right range, preventing overflows due to
+        // very high values of yieldRate in the earned and yieldPerToken functions;
+        // Yield + leftover must be less than 2^256 / 10^18 to avoid overflow.
+        uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / yieldDuration; // Floor division to the nearest period
+        uint256 balance0 = emittedToken.balanceOf(address(this));
+        require(yieldRate.mul(yieldDuration).mul(num_periods_elapsed + 1) <= balance0, "Not enough emittedToken available for yield distribution!");
 
-        periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(rewardsDuration));
+        periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(yieldDuration));
 
-        uint256 reward0 = rewardPerToken();
-        rewardPerTokenStored0 = reward0;
-        lastUpdateTime = lastTimeRewardApplicable();
+        uint256 yield0 = yieldPerVeFXS();
+        yieldPerVeFXSStored = yield0;
+        lastUpdateTime = lastTimeYieldApplicable();
 
-        emit RewardsPeriodRenewed(rewards_token_0_address);
+        emit YieldPeriodRenewed(emitted_token_address);
     }
 
     function sync() public {
@@ -238,30 +238,30 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         if (block.timestamp > periodFinish) {
             retroCatchUp();
         } else {
-            uint256 reward0 = rewardPerToken();
-            rewardPerTokenStored0 = reward0;
-            lastUpdateTime = lastTimeRewardApplicable();
+            uint256 yield0 = yieldPerVeFXS();
+            yieldPerVeFXSStored = yield0;
+            lastUpdateTime = lastTimeYieldApplicable();
         }
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
+    // Added to support recovering LP Yield and other mistaken tokens from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Only the owner address can ever receive the recovery withdrawal
         ERC20(tokenAddress).transfer(owner_address, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
-    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernance {
-        require(periodFinish == 0 || block.timestamp > periodFinish, "Previous rewards period must be complete before changing the duration for the new period");
-        rewardsDuration = _rewardsDuration;
-        emit RewardsDurationUpdated(rewardsDuration);
+    function setYieldDuration(uint256 _yieldDuration) external onlyByOwnerOrGovernance {
+        require(periodFinish == 0 || block.timestamp > periodFinish, "Previous yield period must be complete before changing the duration for the new period");
+        yieldDuration = _yieldDuration;
+        emit YieldDurationUpdated(yieldDuration);
     }
 
     function initializeDefault() external onlyByOwnerOrGovernance {
         lastUpdateTime = block.timestamp;
-        periodFinish = block.timestamp.add(rewardsDuration);
+        periodFinish = block.timestamp.add(yieldDuration);
         totalVeFXSSupplyStored = veFXS.totalSupply();
         emit DefaultInitialization();
     }
@@ -270,12 +270,12 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function setPauses(bool _rewardsCollectionPaused) external onlyByOwnerOrGovernance {
-        rewardsCollectionPaused = _rewardsCollectionPaused;
+    function setPauses(bool _yieldCollectionPaused) external onlyByOwnerOrGovernance {
+        yieldCollectionPaused = _yieldCollectionPaused;
     }
 
-    function setRewardRate(uint256 _new_rate0, bool sync_too) external onlyByOwnerOrGovernance {
-        rewardRate0 = _new_rate0;
+    function setYieldRate(uint256 _new_rate0, bool sync_too) external onlyByOwnerOrGovernance {
+        yieldRate = _new_rate0;
 
         if (sync_too) {
             sync();
@@ -292,10 +292,10 @@ contract veFXSRewardsDistributor is Owned, ReentrancyGuard {
 
     /* ========== EVENTS ========== */
 
-    event RewardPaid(address indexed user, uint256 reward, address token_address);
-    event RewardsDurationUpdated(uint256 newDuration);
+    event YieldCollected(address indexed user, uint256 yield, address token_address);
+    event YieldDurationUpdated(uint256 newDuration);
     event RecoveredERC20(address token, uint256 amount);
-    event RewardsPeriodRenewed(address token);
+    event YieldPeriodRenewed(address token);
     event DefaultInitialization();
 
     /* ========== A CHICKEN ========== */

@@ -134,7 +134,7 @@ contract FraxBondIssuer is AccessControl {
         address _owner_address,
         address _timelock_address,
         address _controller_address
-    ) public {
+    ) {
         FRAX = FRAXStablecoin(_frax_contract_address);
         FXB = FraxBond(_fxb_contract_address);
         owner_address = _owner_address;
@@ -184,8 +184,8 @@ contract FraxBondIssuer is AccessControl {
     }
 
     // Needed for the Frax contract to function without bricking
-    function collatDollarBalance() external view returns (uint256 dummy_dollar_balance) {
-        dummy_dollar_balance =  uint256(1e18); // 1 nonexistant USDC
+    function collatDollarBalance() external pure returns (uint256) {
+        return uint256(1e18); // 1 nonexistant USDC
     }
 
     // Checks if the bond is in a maturity epoch
@@ -213,13 +213,13 @@ contract FraxBondIssuer is AccessControl {
     // FXB floor price for 1 FXB, in FRAX
     // Will be used to help prevent someone from doing a huge arb with cheap bonds right before they mature
     // Also allows the vAMM to buy back cheap FXB under the floor and retire it, meaning less to pay back later at face value
-    function floor_price() public view returns (uint256 floor_price) {
+    function floor_price() public view returns (uint256 _floor_price) {
         uint256 time_into_epoch = (block.timestamp).sub(epoch_start);
-        floor_price = (PRICE_PRECISION.sub(initial_discount)).add(initial_discount.mul(time_into_epoch).div(epoch_length));
+        _floor_price = (PRICE_PRECISION.sub(initial_discount)).add(initial_discount.mul(time_into_epoch).div(epoch_length));
     }
 
-    function initial_price() public view returns (uint256 initial_price) {
-        initial_price = (PRICE_PRECISION.sub(initial_discount));
+    function initial_price() public view returns (uint256 _initial_price) {
+        _initial_price = (PRICE_PRECISION.sub(initial_discount));
     }
 
     // How much FRAX is needed to buy out the remaining unissued FXB
@@ -259,7 +259,7 @@ contract FraxBondIssuer is AccessControl {
 
     // Given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
     // Uses constant product concept https://uniswap.org/docs/v2/core-concepts/swaps/
-    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut, uint the_fee) public view returns (uint amountOut) {
+    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut, uint the_fee) public pure returns (uint amountOut) {
         require(amountIn > 0, 'FraxBondIssuer: INSUFFICIENT_INPUT_AMOUNT');
         require(reserveIn > 0 && reserveOut > 0, 'FraxBondIssuer: INSUFFICIENT_LIQUIDITY');
         uint amountInWithFee = amountIn.mul(uint(PRICE_PRECISION).sub(the_fee));
@@ -268,7 +268,7 @@ contract FraxBondIssuer is AccessControl {
         amountOut = numerator.div(denominator);
     }
 
-    function getAmountOutNoFee(uint amountIn, uint reserveIn, uint reserveOut) public view returns (uint amountOut) {
+    function getAmountOutNoFee(uint amountIn, uint reserveIn, uint reserveOut) public pure returns (uint amountOut) {
         amountOut = getAmountOut(amountIn, reserveIn, reserveOut, 0);
     }
 

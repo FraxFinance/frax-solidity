@@ -29,7 +29,7 @@ contract FraxBridge is AccessControl {
 		address _frax_contract_address,
 		address _creator_address,
 		address _timelock_address
-	) public {
+	) {
 		FRAX = FRAXStablecoin(_frax_contract_address);
         timelock_address = _timelock_address;
         owner_address = _creator_address;
@@ -39,8 +39,8 @@ contract FraxBridge is AccessControl {
 	/* ========== VIEWS ========== */
 
 	// Needed for compatibility to use pool_mint()
-	function collatDollarBalance() public view returns (uint256) {
-		return 0;
+	function collatDollarBalance() public pure returns (uint256) {
+		return uint256(1e18);
 	}
 
 	/* ========== PUBLIC FUNCTIONS ========== */

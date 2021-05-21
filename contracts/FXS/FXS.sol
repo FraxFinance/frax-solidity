@@ -285,7 +285,7 @@ contract FRAXShares is ERC20Custom, AccessControl {
         return a - b;
     }
 
-    function getChainId() internal pure returns (uint) {
+    function getChainId() internal view returns (uint) {
         uint256 chainId;
         assembly { chainId := chainid() }
         return chainId;

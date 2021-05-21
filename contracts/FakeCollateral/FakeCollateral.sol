@@ -50,7 +50,7 @@ contract FakeCollateral is Context, IERC20 {
         uint256 _genesis_supply,
         string memory _symbol,
         uint8 _decimals
-    ) public {
+    ) {
         genesis_supply = _genesis_supply;
         creator_address = _creator_address;
         symbol = _symbol;

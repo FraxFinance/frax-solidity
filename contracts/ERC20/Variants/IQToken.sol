@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
 pragma experimental ABIEncoderV2;
-import "../BEP20.sol";
+import "../ERC20.sol";
 
-// Mock Farm token
-contract FraxMock is BEP20("Frax", "FRAX") {
+// Mock IQ token
+contract IQToken is ERC20("Everipedia IQ", "IQ") {
 
 }

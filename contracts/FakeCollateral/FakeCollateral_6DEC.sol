@@ -11,5 +11,5 @@ contract FakeCollateral_6DEC is FakeCollateral {
         uint8 _decimals
     ) 
     FakeCollateral(_creator_address, _genesis_supply, _symbol, _decimals)
-    public {}
+    {}
 }

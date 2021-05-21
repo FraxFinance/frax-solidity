@@ -154,7 +154,7 @@ contract FraxPoolvAMM is AccessControl {
         address _uniswap_factory_address,
         address _fxs_usdc_oracle_addr,
         uint256 _pool_ceiling
-    ) public {
+    ) {
         FRAX = FRAXStablecoin(_frax_contract_address);
         FXS = FRAXShares(_fxs_contract_address);
         frax_contract_address = _frax_contract_address;
@@ -209,7 +209,7 @@ contract FraxPoolvAMM is AccessControl {
 
     // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
     // uses constant product concept https://uniswap.org/docs/v2/core-concepts/swaps/
-    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut, uint the_fee) public view returns (uint amountOut) {
+    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut, uint the_fee) public pure returns (uint amountOut) {
         require(amountIn > 0, 'FRAX_vAMM: INSUFFICIENT_INPUT_AMOUNT');
         require(reserveIn > 0 && reserveOut > 0, 'FRAX_vAMM: INSUFFICIENT_LIQUIDITY');
         uint amountInWithFee = amountIn.mul(uint(1e6).sub(the_fee));
@@ -296,14 +296,14 @@ contract FraxPoolvAMM is AccessControl {
     }
     
     // Gets the external average fxs price over the previous period and the external K
-    function getOracleInfo() public returns (uint ext_average_fxs_usd_price, uint ext_k) {
+    function getOracleInfo() public view returns (uint ext_average_fxs_usd_price, uint ext_k) {
         ext_average_fxs_usd_price = fxsUSDCOracle.consult(fxs_contract_address, 1e18);
         (uint112 reserve0, uint112 reserve1, ) = fxsUSDCOracle.pair().getReserves();
         ext_k = uint(reserve0).mul(uint(reserve1));
     }
 
     // Needed for compatibility with FraxPool standard
-    function collatDollarBalance() public returns (uint256) {
+    function collatDollarBalance() public view returns (uint256) {
         return (collateral_token.balanceOf(address(this)).add(collateral_invested).sub(unclaimedPoolCollateral)).mul(10 ** missing_decimals);
     }
 

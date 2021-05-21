@@ -2,62 +2,62 @@
 /**
  *Submitted for verification at Etherscan.io on 2020-03-04
 */
-pragma solidity 0.6.11;
+pragma solidity >=0.6.11;
 pragma experimental ABIEncoderV2;
 
 contract Comp {
-    /// @notice EIP-20 token name for this token
+    // EIP-20 token name for this token
     string public constant name = "Compound";
 
-    /// @notice EIP-20 token symbol for this token
+    // EIP-20 token symbol for this token
     string public constant symbol = "COMP";
 
-    /// @notice EIP-20 token decimals for this token
+    // EIP-20 token decimals for this token
     uint8 public constant decimals = 18;
 
-    /// @notice Total number of tokens in circulation
+    // Total number of tokens in circulation
     uint public constant totalSupply = 10000000e18; // 10 million Comp
 
-    /// @notice Allowance amounts on behalf of others
+    // Allowance amounts on behalf of others
     mapping (address => mapping (address => uint96)) internal allowances;
 
-    /// @notice Official record of token balances for each account
+    // Official record of token balances for each account
     mapping (address => uint96) internal balances;
 
-    /// @notice A record of each accounts delegate
+    // A record of each accounts delegate
     mapping (address => address) public delegates;
 
-    /// @notice A checkpoint for marking number of votes from a given block
+    // A checkpoint for marking number of votes from a given block
     struct Checkpoint {
         uint32 fromBlock;
         uint96 votes;
     }
 
-    /// @notice A record of votes checkpoints for each account, by index
+    // A record of votes checkpoints for each account, by index
     mapping (address => mapping (uint32 => Checkpoint)) public checkpoints;
 
-    /// @notice The number of checkpoints for each account
+    // The number of checkpoints for each account
     mapping (address => uint32) public numCheckpoints;
 
-    /// @notice The EIP-712 typehash for the contract's domain
+    // The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
-    /// @notice The EIP-712 typehash for the delegation struct used by the contract
+    // The EIP-712 typehash for the delegation struct used by the contract
     bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
-    /// @notice A record of states for signing / validating signatures
+    // A record of states for signing / validating signatures
     mapping (address => uint) public nonces;
 
-    /// @notice An event thats emitted when an account changes its delegate
+    // An event thats emitted when an account changes its delegate
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
 
-    /// @notice An event thats emitted when a delegate account's vote balance changes
+    // An event thats emitted when a delegate account's vote balance changes
     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
 
-    /// @notice The standard EIP-20 transfer event
+    // The standard EIP-20 transfer event
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
-    /// @notice The standard EIP-20 approval event
+    // The standard EIP-20 approval event
     event Approval(address indexed owner, address indexed spender, uint256 amount);
 
     /**
@@ -89,8 +89,8 @@ contract Comp {
      */
     function approve(address spender, uint rawAmount) external returns (bool) {
         uint96 amount;
-        if (rawAmount == uint(-1)) {
-            amount = uint96(-1);
+        if (rawAmount == type(uint).max) {
+            amount = type(uint96).max;
         } else {
             amount = safe96(rawAmount, "Comp::approve: amount exceeds 96 bits");
         }
@@ -134,7 +134,7 @@ contract Comp {
         uint96 spenderAllowance = allowances[src][spender];
         uint96 amount = safe96(rawAmount, "Comp::approve: amount exceeds 96 bits");
 
-        if (spender != src && spenderAllowance != uint96(-1)) {
+        if (spender != src && spenderAllowance != type(uint96).max) {
             uint96 newAllowance = sub96(spenderAllowance, amount, "Comp::transferFrom: transfer amount exceeds spender allowance");
             allowances[src][spender] = newAllowance;
 
@@ -169,7 +169,7 @@ contract Comp {
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "Comp::delegateBySig: invalid signature");
         require(nonce == nonces[signatory]++, "Comp::delegateBySig: invalid nonce");
-        require(now <= expiry, "Comp::delegateBySig: signature expired");
+        require(block.timestamp <= expiry, "Comp::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
 
@@ -297,7 +297,7 @@ contract Comp {
         return a - b;
     }
 
-    function getChainId() internal pure returns (uint) {
+    function getChainId() internal view returns (uint) {
         uint256 chainId;
         assembly { chainId := chainid() }
         return chainId;

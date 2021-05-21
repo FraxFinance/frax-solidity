@@ -110,7 +110,7 @@ contract FraxBond_NFT is ERC721, AccessControl {
         uint256 _discount,
         uint256 _min_early_redeem_secs,
         uint256 _max_early_redemption_penalty_pct
-    ) ERC721(FraxBond_NFT_Library.fxb_namer(_series, _face_value, _maturity_months), FraxBond_NFT_Library.fxb_symboler(_series, _face_value, _maturity_months)) public {
+    ) ERC721(FraxBond_NFT_Library.fxb_namer(_series, _face_value, _maturity_months), FraxBond_NFT_Library.fxb_symboler(_series, _face_value, _maturity_months)) {
         controller_address = _controller_address;
         timelock_address = _timelock_address;
 
@@ -244,7 +244,7 @@ contract FraxBond_NFT is ERC721, AccessControl {
         emit BondRedeemed(msg.sender, symbol(), serial_number);
     }
 
-    function burn(uint256 serial_number) external {
+    function burn() external pure {
         // Allowing bonds to be burned would disrupt the issuance of token_ids
         revert("Bonds can never be burned");
     }

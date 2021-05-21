@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.2;
+pragma solidity >=0.6.11;
 pragma experimental ABIEncoderV2;
 
 import "../MigratableFarmBSC.sol";
@@ -13,5 +13,5 @@ contract MigratableFarmBSC_FRAX_FXS is MigratableFarmBSC {
         address _timelock_address
     ) 
     MigratableFarmBSC(_owner, _rewardsToken0, _rewardsToken1, _stakingToken, _timelock_address)
-    public {}
+    {}
 }
