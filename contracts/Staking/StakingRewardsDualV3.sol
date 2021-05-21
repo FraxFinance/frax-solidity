@@ -499,15 +499,15 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
     }
     
     // Two different getReward functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function getReward() external {
-        _getReward(msg.sender, msg.sender);
+    function getReward() external returns (uint256, uint256) {
+        return _getReward(msg.sender, msg.sender);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable
     // This distinction is important for the migrator
-    function _getReward(address rewardee, address destination_address) internal nonReentrant notRewardsCollectionPaused updateRewardAndBalance(rewardee, true) {
-        uint256 reward0 = rewards0[rewardee];
-        uint256 reward1 = rewards1[rewardee];
+    function _getReward(address rewardee, address destination_address) internal nonReentrant notRewardsCollectionPaused updateRewardAndBalance(rewardee, true) returns (uint256 reward0, uint256 reward1) {
+        reward0 = rewards0[rewardee];
+        reward1 = rewards1[rewardee];
         if (reward0 > 0) {
             rewards0[rewardee] = 0;
             rewardsToken0.transfer(destination_address, reward0);
@@ -520,6 +520,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
                 emit RewardPaid(rewardee, reward1, address(rewardsToken1), destination_address);
             }
         // }
+
     }
 
     function renewIfApplicable() external {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.7.6;
+pragma solidity >=0.6.11;
 pragma experimental ABIEncoderV2;
 
 // ====================================================================
@@ -189,10 +189,10 @@ contract veFXSYieldDistributor is Owned, ReentrancyGuard {
         _checkpointUser(msg.sender);
     }
 
-    function getYield() external nonReentrant notYieldCollectionPaused checkpointUser(msg.sender) {
+    function getYield() external nonReentrant notYieldCollectionPaused checkpointUser(msg.sender) returns (uint256 yield0) {
         require(greylist[msg.sender] == false, "Address has been greylisted");
 
-        uint256 yield0 = yields[msg.sender];
+        yield0 = yields[msg.sender];
         if (yield0 > 0) {
             yields[msg.sender] = 0;
             emittedToken.transfer(msg.sender, yield0);

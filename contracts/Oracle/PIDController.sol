@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.7.6;
+pragma solidity >=0.6.11;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -24,7 +24,7 @@ import '../Frax/Frax.sol';
 import "../Math/SafeMath.sol";
 import "./ReserveTracker.sol";
 import "../Curve/IMetaImplementationUSD.sol";
-import "./ChainlinkFXSUSDPriceConsumer.sol";
+
 
 contract PIDController {
     using SafeMath for uint256;
@@ -33,10 +33,6 @@ contract PIDController {
     FRAXShares public FXS;
     ReserveTracker public reserve_tracker;
     IMetaImplementationUSD public frax_metapool;
-    ChainlinkFXSUSDPriceConsumer public chainlink_fxs_oracle;
-
-    uint256 public chainlink_fxs_oracle_decimals;
-    uint256 public PRICE_PRECISION = 1e6;
 
     address public frax_contract_address;
     address public fxs_contract_address;
@@ -103,32 +99,18 @@ contract PIDController {
         frax_metapool = IMetaImplementationUSD(_metapool_address);
     }
 
-    function setChainlinkFXSOracle(address _chainlink_fxs_oracle) external onlyByOwnerOrGovernance {
-        chainlink_fxs_oracle = ChainlinkFXSUSDPriceConsumer(_chainlink_fxs_oracle);
-        chainlink_fxs_oracle_decimals = uint256(chainlink_fxs_oracle.getDecimals());
-    }
-
-    function getFXSPrice() public view returns (uint256) {
-        return (uint256(chainlink_fxs_oracle.getLatestPrice()).mul(PRICE_PRECISION).div(chainlink_fxs_oracle_decimals));
-    }
-
-    uint256 last_frax_supply;
-    uint256 last_update;
-    uint256[2] public old_twap;
+    uint256 public last_update;
     function setCollateralRatio() public {
         require(block.timestamp - last_update >= internal_cooldown, "internal cooldown not passed");
         uint256 fxs_reserves = reserve_tracker.getFXSReserves();
-        uint256 fxs_price = getFXSPrice();
+        uint256 fxs_price = reserve_tracker.getFXSPrice();
         
         uint256 fxs_liquidity = (fxs_reserves.mul(fxs_price)); // Has 6 decimals of precision
 
         uint256 frax_supply = FRAX.totalSupply();
-        //uint256 frax_price = reserve_tracker.getFRAXPrice(); // Using Uniswap
+        
         // Get the FRAX TWAP on Curve Metapool
-        uint256[2] memory new_twap = frax_metapool.get_price_cumulative_last();
-        uint256[2] memory balances = frax_metapool.get_twap_balances(old_twap, new_twap, block.timestamp - last_update);
-        old_twap = new_twap;
-        uint256 frax_price = frax_metapool.get_dy(1, 0, 1e18, balances).mul(1e6).div(frax_metapool.get_virtual_price());
+        uint256 frax_price = reserve_tracker.frax_twap_price();
 
         uint256 new_growth_ratio = fxs_liquidity.div(frax_supply); // (E18 + E6) / E18
 

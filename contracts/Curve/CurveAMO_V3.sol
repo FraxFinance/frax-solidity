@@ -220,7 +220,7 @@ contract CurveAMO_V3 is AccessControl, Initializable {
             usdc_in_contract, // [3]
             usdc_withdrawable, // [4]
             usdc_subtotal, // [5]
-            usdc_subtotal + (frax_in_contract.add(frax_withdrawable)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals)), // [6] USDC Total
+            usdc_subtotal.add((frax_in_contract.add(frax_withdrawable)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals))), // [6] USDC Total
             lp_owned, // [7]
             frax3crv_supply, // [8]
             _3pool_withdrawable, // [9]
