@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.7.6;
+pragma solidity >=0.6.11;
 pragma experimental ABIEncoderV2;
 
 // ====================================================================
@@ -112,7 +112,7 @@ contract FXS1559_AMO_V2 is Initializable {
         yield_distributor_address = _yield_distributor_address;
         
         // Initializations
-        UNISWAP_ROUTER_ADDRESS = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+        UNISWAP_ROUTER_ADDRESS = payable(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         investor_amo_address = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
         UniRouterV2 = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         min_cr = 835000;

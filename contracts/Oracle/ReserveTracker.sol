@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.7.6;
+pragma solidity >=0.6.11;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -25,30 +25,35 @@ import "../Math/Math.sol";
 import "../Uniswap/Interfaces/IUniswapV2Pair.sol";
 import "./UniswapPairOracle.sol";
 import "./ChainlinkETHUSDPriceConsumer.sol";
-//import "../Curve/MetaImplementationUSD.vy";
 import "../Curve/IMetaImplementationUSD.sol";
+import "./ChainlinkFXSUSDPriceConsumer.sol";
 
 contract ReserveTracker {
-	using SafeMath for uint256;
+    using SafeMath for uint256;
 
     uint256 public CONSULT_FXS_DEC;
     uint256 public CONSULT_FRAX_DEC;
 
-	address public frax_contract_address;
+    address public frax_contract_address;
     address public fxs_contract_address;
-	address public owner_address;
-	address public timelock_address;
+    address public owner_address;
+    address public timelock_address;
 
-	// The pair of which to get FXS price from
-	address public fxs_weth_oracle_address;
+    // The pair of which to get FXS price from
+    address public fxs_weth_oracle_address;
     address public weth_collat_oracle_address;
-	address public weth_address;
-	UniswapPairOracle public fxs_weth_oracle;
+    address public weth_address;
+    UniswapPairOracle public fxs_weth_oracle;
     UniswapPairOracle public weth_collat_oracle;
     uint256 public weth_collat_decimals;
 
-	// Array of pairs for FXS
-	address[] public fxs_pairs_array;
+    // Chainlink
+    ChainlinkFXSUSDPriceConsumer public chainlink_fxs_oracle;
+    uint256 public chainlink_fxs_oracle_decimals;
+    uint256 public PRICE_PRECISION = 1e6;
+
+    // Array of pairs for FXS
+    address[] public fxs_pairs_array;
 
     // Mapping is also used for faster verification
     mapping(address => bool) public fxs_pairs; 
@@ -72,42 +77,63 @@ contract ReserveTracker {
 
     /* ========== CONSTRUCTOR ========== */
 
-	constructor(
+    constructor(
         address _frax_contract_address,
-		address _fxs_contract_address,
-		address _creator_address,
-		address _timelock_address
-	) {
+        address _fxs_contract_address,
+        address _creator_address,
+        address _timelock_address
+    ) {
         frax_contract_address = _frax_contract_address;
-		fxs_contract_address = _fxs_contract_address;
-		owner_address = _creator_address;
-		timelock_address = _timelock_address;
-	}
+        fxs_contract_address = _fxs_contract_address;
+        owner_address = _creator_address;
+        timelock_address = _timelock_address;
+    }
 
     /* ========== VIEWS ========== */
 
-    // Returns FRAX price with 6 decimals of precision
+    // // Returns FRAX price with 6 decimals of precision
+    // function getFRAXPrice() public view returns (uint256) {
+    //     return frax_price_oracle.consult(frax_contract_address, CONSULT_FRAX_DEC);
+    // }
+
+
     function getFRAXPrice() public view returns (uint256) {
-        return frax_price_oracle.consult(frax_contract_address, CONSULT_FRAX_DEC);
+        return frax_twap_price;
     }
 
 
     uint256 public last_timestamp;
     uint256[2] public old_twap;
-    function getFRAXCurvePrice() public returns (uint256) {
+    uint256 public frax_twap_price;
+    uint256 public PERIOD = 3600; // 1-hour TWAP on deployment
+    function setFRAXCurvePrice() public returns (uint256) {
+        require(block.timestamp - last_timestamp >= PERIOD, 'ReserveTracker: PERIOD_NOT_ELAPSED');
         uint256[2] memory new_twap = frax_metapool.get_price_cumulative_last();
         uint256[2] memory balances = frax_metapool.get_twap_balances(old_twap, new_twap, block.timestamp - last_timestamp);
         last_timestamp = block.timestamp;
         old_twap = new_twap;
-        uint256 twap_price = frax_metapool.get_dy(1, 0, 1e18, balances).mul(1e6).div(frax_metapool.get_virtual_price());
-        return twap_price;
+        frax_twap_price = frax_metapool.get_dy(1, 0, 1e18, balances).mul(1e6).div(frax_metapool.get_virtual_price());
+        return frax_twap_price;
     }
 
+    function setCurveTWAPPeriod(uint _period) external onlyByOwnerOrGovernance {
+        PERIOD = _period;
+    }
 
-    // Returns FXS price with 6 decimals of precision
+    // // Returns FXS price with 6 decimals of precision
+    // function getFXSPrice() public view returns (uint256) {
+    //     uint256 fxs_weth_price = fxs_weth_oracle.consult(fxs_contract_address, 1e6);
+    //     return weth_collat_oracle.consult(weth_address, CONSULT_FXS_DEC).mul(fxs_weth_price).div(1e6);
+    // }
+
+
+    function setChainlinkFXSOracle(address _chainlink_fxs_oracle) external onlyByOwnerOrGovernance {
+        chainlink_fxs_oracle = ChainlinkFXSUSDPriceConsumer(_chainlink_fxs_oracle);
+        chainlink_fxs_oracle_decimals = uint256(chainlink_fxs_oracle.getDecimals());
+    }
+
     function getFXSPrice() public view returns (uint256) {
-        uint256 fxs_weth_price = fxs_weth_oracle.consult(fxs_contract_address, 1e6);
-        return weth_collat_oracle.consult(weth_address, CONSULT_FXS_DEC).mul(fxs_weth_price).div(1e6);
+        return uint256(chainlink_fxs_oracle.getLatestPrice()).mul(PRICE_PRECISION).div(10 ** chainlink_fxs_oracle_decimals);
     }
 
     function getFXSReserves() public view returns (uint256) {
@@ -148,8 +174,8 @@ contract ReserveTracker {
     // Get the pair of which to price FXS from (using FXS-WETH)
     function setFXSETHOracle(address _fxs_weth_oracle_address, address _weth_address) public onlyByOwnerOrGovernance {
         fxs_weth_oracle_address = _fxs_weth_oracle_address;
-    	weth_address = _weth_address;
-    	fxs_weth_oracle = UniswapPairOracle(fxs_weth_oracle_address);
+        weth_address = _weth_address;
+        fxs_weth_oracle = UniswapPairOracle(fxs_weth_oracle_address);
     }
 
     function setETHCollateralOracle(address _weth_collateral_oracle_address, uint _collateral_decimals) public onlyByOwnerOrGovernance {

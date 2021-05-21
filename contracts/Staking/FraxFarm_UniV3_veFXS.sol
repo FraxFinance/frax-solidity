@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.7.6;
+pragma solidity >=0.6.11;
 pragma experimental ABIEncoderV2;
 
 // ====================================================================
@@ -51,7 +51,6 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     IUniswapV3PositionsNFT public stakingTokenNFT; // UniV3 uses an NFT
 
     // Admin addresses
-    address public owner_address;
     address public timelock_address;
 
     // Constant for various precisions
@@ -124,12 +123,12 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(msg.sender == owner || msg.sender == timelock_address, "You are not the owner or the governance timelock");
         _;
     }
 
     modifier onlyByOwnerOrGovernanceOrMigrator() {
-        require(msg.sender == owner_address || msg.sender == timelock_address || valid_migrators[msg.sender] == true, "You are not the owner, governance timelock, or a migrator");
+        require(msg.sender == owner || msg.sender == timelock_address || valid_migrators[msg.sender] == true, "You are not the owner, governance timelock, or a migrator");
         _;
     }
 
@@ -163,8 +162,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         address _veFXS_address,
         address _uni_token0,
         address _uni_token1
-    ) public Owned(_owner) {
-        owner_address = _owner;
+    ) Owned(_owner) {
         rewardsToken0 = ERC20(_rewardsToken0);
         stakingTokenNFT = IUniswapV3PositionsNFT(_stakingTokenNFT);
 
@@ -548,14 +546,14 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     // Two different getReward functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function getReward() external {
-        _getReward(msg.sender, msg.sender);
+    function getReward() external returns (uint256) {
+        return _getReward(msg.sender, msg.sender);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable
     // This distinction is important for the migrator
-    function _getReward(address rewardee, address destination_address) internal nonReentrant notRewardsCollectionPaused updateRewardAndBalance(rewardee, true) {
-        uint256 reward0 = rewards0[rewardee];
+    function _getReward(address rewardee, address destination_address) internal nonReentrant notRewardsCollectionPaused updateRewardAndBalance(rewardee, true) returns (uint256 reward0) {
+        reward0 = rewards0[rewardee];
         if (reward0 > 0) {
             rewards0[rewardee] = 0;
             rewardsToken0.transfer(destination_address, reward0);
@@ -647,7 +645,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         }
 
         // Only the owner address can ever receive the recovery withdrawal
-        ERC20(tokenAddress).transfer(owner_address, tokenAmount);
+        ERC20(tokenAddress).transfer(owner, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
@@ -659,7 +657,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         }
         // Only the owner address can ever receive the recovery withdrawal
         // IUniswapV3PositionsNFT inherits IERC721 so the latter does not need to be imported
-        IUniswapV3PositionsNFT(tokenAddress).safeTransferFrom( address(this), owner_address, token_id);
+        IUniswapV3PositionsNFT(tokenAddress).safeTransferFrom( address(this), owner, token_id);
         emit RecoveredERC721(tokenAddress, token_id);
     }
 
@@ -739,10 +737,6 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         if (sync_too) {
             sync();
         }
-    }
-
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
     }
 
     function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance
