@@ -106,7 +106,7 @@ interface ICREAM_crFRAX is IERC20  {
 //         /* Get the allowance, infinite for the account owner */
 //         uint startingAllowance = 0;
 //         if (spender == src) {
-//             startingAllowance = uint(-1);
+//             startingAllowance = type(uint).max;
 //         } else {
 //             startingAllowance = transferAllowances[src][spender];
 //         }
@@ -140,7 +140,7 @@ interface ICREAM_crFRAX is IERC20  {
 //         accountTokens[dst] = dstTokensNew;
 
 //         /* Eat some of the allowance (if necessary) */
-//         if (startingAllowance != uint(-1)) {
+//         if (startingAllowance != type(uint).max) {
 //             transferAllowances[src][spender] = allowanceNew;
 //         }
 
@@ -897,7 +897,7 @@ interface ICREAM_crFRAX is IERC20  {
 //         }
 
 //         /* If repayAmount == -1, repayAmount = accountBorrows */
-//         if (repayAmount == uint(-1)) {
+//         if (repayAmount == type(uint).max) {
 //             vars.repayAmount = vars.accountBorrows;
 //         } else {
 //             vars.repayAmount = repayAmount;
@@ -1003,7 +1003,7 @@ interface ICREAM_crFRAX is IERC20  {
 //         }
 
 //         /* Fail if repayAmount = -1 */
-//         if (repayAmount == uint(-1)) {
+//         if (repayAmount == type(uint).max) {
 //             return (fail(Error.INVALID_CLOSE_AMOUNT_REQUESTED, FailureInfo.LIQUIDATE_CLOSE_AMOUNT_IS_UINT_MAX), 0);
 //         }
 

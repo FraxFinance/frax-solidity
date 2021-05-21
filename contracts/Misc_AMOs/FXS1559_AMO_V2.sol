@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.11;
+pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
 // ====================================================================
@@ -10,7 +10,7 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ============================ FXS1559_AMO ===========================
+// ========================== FXS1559_AMO_V2 ==========================
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 
@@ -27,11 +27,12 @@ import "../Frax/Frax.sol";
 import "../ERC20/ERC20.sol";
 import "../Frax/Pools/FraxPool.sol";
 import "../Oracle/UniswapPairOracle.sol";
-import "../Governance/AccessControl.sol";
 import '../Misc_AMOs/FraxPoolInvestorForV2.sol';
+import '../Misc_AMOs/InvestorAMO_V2.sol';
 import '../Uniswap/UniswapV2Router02_Modified.sol';
+import "../Proxy/Initializable.sol";
 
-contract FXS1559_AMO is AccessControl {
+contract FXS1559_AMO_V2 is Initializable {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -40,40 +41,47 @@ contract FXS1559_AMO is AccessControl {
     FRAXStablecoin private FRAX;
     FRAXShares private FXS;
     FraxPoolInvestorForV2 private InvestorAMO;
+    InvestorAMO_V2 private InvestorAMO_2;
     FraxPool private pool;
-    IUniswapV2Router02 private UniRouterV2 = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    IUniswapV2Router02 private UniRouterV2;
     
     address public collateral_address;
     address public pool_address;
     address public owner_address;
+    address public future_owner_address;
     address public timelock_address;
     address public custodian_address;
     address public frax_address;
     address public fxs_address;
-    address payable public UNISWAP_ROUTER_ADDRESS = payable(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-    address public investor_amo_address = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address public yield_distributor_address;
+    address payable public UNISWAP_ROUTER_ADDRESS;
+    address public investor_amo_address;
+    address public investor_amo_v2_address;
 
-    uint256 public immutable missing_decimals;
+    uint256 private missing_decimals;
     uint256 private constant PRICE_PRECISION = 1e6;
     uint256 private constant COLLATERAL_RATIO_PRECISION = 1e6;
 
     // Minimum collateral ratio needed for new FRAX minting
-    uint256 public min_cr = 850000;
+    uint256 public min_cr;
 
     // Amount the contract borrowed
-    uint256 public minted_sum_historical = 0;
-    uint256 public burned_sum_historical = 0;
+    uint256 public minted_sum_historical;
+    uint256 public burned_sum_historical;
 
     // FRAX -> FXS max slippage
-    uint256 public max_slippage = 200000; // 20%
+    uint256 public max_slippage;
 
     // AMO profits
-    bool public override_amo_profits = false;
-    uint256 public overridden_amo_profit = 0;
+    bool public override_amo_profits;
+    uint256 public overridden_amo_profit;
+
+    // Burned vs given to yield distributor
+    uint256 burn_fraction; // E6. Fraction of FXS burned vs transferred to the yield distributor
 
     /* ========== CONSTRUCTOR ========== */
     
-    constructor(
+    function initialize(
         address _frax_contract_address,
         address _fxs_contract_address,
         address _pool_address,
@@ -81,8 +89,10 @@ contract FXS1559_AMO is AccessControl {
         address _owner_address,
         address _custodian_address,
         address _timelock_address,
-        address _investor_amo_address
-    ) {
+        address _investor_amo_address,
+        address _investor_amo_v2_address,
+        address _yield_distributor_address
+    ) public payable initializer {
         frax_address = _frax_contract_address;
         FRAX = FRAXStablecoin(_frax_contract_address);
         fxs_address = _fxs_contract_address;
@@ -92,13 +102,26 @@ contract FXS1559_AMO is AccessControl {
         collateral_address = _collateral_address;
         collateral_token = ERC20(_collateral_address);
         investor_amo_address = _investor_amo_address;
+        investor_amo_v2_address = _investor_amo_v2_address;
         InvestorAMO = FraxPoolInvestorForV2(_investor_amo_address);
+        InvestorAMO_2 = InvestorAMO_V2(_investor_amo_v2_address);
         timelock_address = _timelock_address;
         owner_address = _owner_address;
         custodian_address = _custodian_address;
         missing_decimals = uint(18).sub(collateral_token.decimals());
+        yield_distributor_address = _yield_distributor_address;
         
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        // Initializations
+        UNISWAP_ROUTER_ADDRESS = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+        investor_amo_address = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+        UniRouterV2 = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        min_cr = 835000;
+        minted_sum_historical = 0;
+        burned_sum_historical = 0;
+        max_slippage = 200000; // 20%
+        override_amo_profits = false;
+        overridden_amo_profit = 0;
+        burn_fraction = 500000;
     }
 
     /* ========== MODIFIERS ========== */
@@ -121,8 +144,12 @@ contract FXS1559_AMO is AccessControl {
         }
         else {
             uint256[5] memory allocations = InvestorAMO.showAllocations();
+            uint256[5] memory allocations_2 = InvestorAMO_2.showAllocations();
+
             uint256 borrowed_USDC = InvestorAMO.borrowed_balance();
-            unspent_profit_e18 = (allocations[4]).sub(borrowed_USDC);
+            uint256 borrowed_USDC2 = InvestorAMO_2.borrowed_balance();
+
+            unspent_profit_e18 = (allocations[4]).add(allocations_2[4]).sub(borrowed_USDC).sub(borrowed_USDC2);
             unspent_profit_e18 = unspent_profit_e18.mul(10 ** missing_decimals);
         }
     }
@@ -179,7 +206,6 @@ contract FXS1559_AMO is AccessControl {
         FRAX.pool_mint(address(this), frax_amount);
     }
 
-
     function _swapFRAXforFXS(uint256 frax_amount) internal returns (uint256 frax_spent, uint256 fxs_received) {
         // Get the FXS price
         uint256 fxs_price = FRAX.fxs_price();
@@ -216,8 +242,17 @@ contract FXS1559_AMO is AccessControl {
             (, , , mintable_frax) = cr_info();
         }
         _mintFRAXForSwap(mintable_frax);
-        (, uint256 fxs_received_ ) = _swapFRAXforFXS(mintable_frax);
-        burnFXS(fxs_received_);
+        (, uint256 fxs_received ) = _swapFRAXforFXS(mintable_frax);
+
+        // Calculate the amount to burn vs give to the yield distributor
+        uint256 amt_to_burn = fxs_received.mul(burn_fraction).div(PRICE_PRECISION);
+        uint256 amt_to_yield_distributor = fxs_received.sub(amt_to_burn);
+
+        // Burn some of the FXS
+        burnFXS(amt_to_burn);
+
+        // Give the rest to the yield distributor
+        FXS.transfer(yield_distributor_address, amt_to_yield_distributor);
     }
 
     // Burn unneeded or excess FRAX
@@ -238,8 +273,18 @@ contract FXS1559_AMO is AccessControl {
         timelock_address = new_timelock;
     }
 
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
+    function setFutureOwner(address _future_owner_address) external onlyByOwnerOrGovernance {
+        future_owner_address = _future_owner_address;
+    }
+
+    function acceptOwnership() external {
+        require(msg.sender == future_owner_address, "You are not the future owner");
+        require(future_owner_address != address(0));
+        owner_address = future_owner_address;
+    }
+
+    function setBurnFraction(uint256 _burn_fraction) external onlyByOwnerOrGovernance {
+        burn_fraction = _burn_fraction;
     }
 
     function setPool(address _pool_address) external onlyByOwnerOrGovernance {
@@ -260,14 +305,20 @@ contract FXS1559_AMO is AccessControl {
         override_amo_profits = _override_amo_profits;
     }
 
+    function setYieldDistributor(address _yield_distributor_address) external onlyByOwnerOrGovernance {
+        yield_distributor_address = _yield_distributor_address;
+    }
+
     function setRouter(address payable _router_address) external onlyByOwnerOrGovernance {
         UNISWAP_ROUTER_ADDRESS = _router_address;
         UniRouterV2 = IUniswapV2Router02(_router_address);
     }
 
-    function setInvestorAMO(address _investor_amo_address) external onlyByOwnerOrGovernance {
+    function setInvestorAMOs(address _investor_amo_address, address _investor_amo_v2_address) external onlyByOwnerOrGovernance {
         investor_amo_address = _investor_amo_address;
+        investor_amo_v2_address = _investor_amo_v2_address;
         InvestorAMO = FraxPoolInvestorForV2(_investor_amo_address);
+        InvestorAMO_2 = InvestorAMO_V2(_investor_amo_v2_address);
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {

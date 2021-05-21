@@ -146,7 +146,7 @@ contract FXSRewards {
         return FXS.balanceOf(address(veFXS)).mul(uint256(fxs_usd_pricer.getLatestPrice())).div(10 ** fxs_usd_pricer_decimals);
     }
 
-    function collatDollarBalance() public view returns (uint256) {
+    function collatDollarBalance() public pure returns (uint256) {
         return 1e18; // Anti-brick
     }
 

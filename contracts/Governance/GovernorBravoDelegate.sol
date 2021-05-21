@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity 0.6.11;
 pragma experimental ABIEncoderV2;
 
@@ -5,37 +6,37 @@ import "./GovernorBravoInterfaces.sol";
 
 contract GovernorBravoDelegate is GovernorBravoDelegateStorageV1, GovernorBravoEvents {
 
-    /// @notice The name of this contract
+    // The name of this contract
     string public constant name = "Compound Governor Bravo";
 
-    /// @notice The minimum setable proposal threshold
+    // The minimum setable proposal threshold
     uint public constant MIN_PROPOSAL_THRESHOLD = 50000e18; // 50,000 Comp
 
-    /// @notice The maximum setable proposal threshold
+    // The maximum setable proposal threshold
     uint public constant MAX_PROPOSAL_THRESHOLD = 100000e18; //100,000 Comp
 
-    /// @notice The minimum setable voting period
+    // The minimum setable voting period
     uint public constant MIN_VOTING_PERIOD = 5760; // About 24 hours
 
-    /// @notice The max setable voting period
+    // The max setable voting period
     uint public constant MAX_VOTING_PERIOD = 80640; // About 2 weeks
 
-    /// @notice The min setable voting delay
+    // The min setable voting delay
     uint public constant MIN_VOTING_DELAY = 1;
 
-    /// @notice The max setable voting delay
+    // The max setable voting delay
     uint public constant MAX_VOTING_DELAY = 40320; // About 1 week
 
-    /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
+    // The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
     uint public constant quorumVotes = 400000e18; // 400,000 = 4% of Comp
 
-    /// @notice The maximum number of actions that can be included in a proposal
+    // The maximum number of actions that can be included in a proposal
     uint public constant proposalMaxOperations = 10; // 10 actions
 
-    /// @notice The EIP-712 typehash for the contract's domain
+    // The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
-    /// @notice The EIP-712 typehash for the ballot struct used by the contract
+    // The EIP-712 typehash for the ballot struct used by the contract
     bytes32 public constant BALLOT_TYPEHASH = keccak256("Ballot(uint256 proposalId,uint8 support)");
 
     /**
@@ -143,7 +144,7 @@ contract GovernorBravoDelegate is GovernorBravoDelegateStorageV1, GovernorBravoE
         Proposal storage proposal = proposals[proposalId];
         proposal.executed = true;
         for (uint i = 0; i < proposal.targets.length; i++) {
-            timelock.executeTransaction.value(proposal.values[i])(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
+            timelock.executeTransaction{value: proposal.values[i]}(proposal.targets[i], proposal.values[i], proposal.signatures[i], proposal.calldatas[i], proposal.eta);
         }
         emit ProposalExecuted(proposalId);
     }

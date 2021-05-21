@@ -126,7 +126,7 @@ contract CurveAMO_V2 is AccessControl {
         address _three_pool_token_address,
         address _pool_address,
         address _gauge_frax3crv_address
-    ) public {
+    ) {
         FRAX = FRAXStablecoin(_frax_contract_address);
         fxs_contract_address = _fxs_contract_address;
         collateral_token_address = _collateral_address;

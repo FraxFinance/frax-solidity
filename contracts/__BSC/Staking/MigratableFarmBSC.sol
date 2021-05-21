@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.2;
+pragma solidity >=0.6.11;
 pragma experimental ABIEncoderV2;
 
 // ====================================================================
@@ -159,7 +159,7 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
         address _rewardsToken1,
         address _stakingToken,
         address _timelock_address
-    ) public Owned(_owner){
+    ) Owned(_owner){
         owner_address = _owner;
         rewardsToken0 = BEP20(_rewardsToken0);
         rewardsToken1 = BEP20(_rewardsToken1);

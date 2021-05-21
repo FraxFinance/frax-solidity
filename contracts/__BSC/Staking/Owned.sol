@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.2;
+pragma solidity >=0.6.11;
 
 // https://docs.synthetix.io/contracts/Owned
 contract Owned {
     address public owner;
     address public nominatedOwner;
 
-    constructor(address _owner) public {
+    constructor(address _owner) {
         require(_owner != address(0), "Owner address cannot be 0");
         owner = _owner;
         emit OwnerChanged(address(0), _owner);

@@ -29,20 +29,22 @@ contract FraxBond_Curves_RC_Discharge {
     // plot 1000000 * (1 - (1 / (1.7320^(x/20)))) from x = 0 to 100
     // Each epoch can be broken down into 100 discrete points
 
-    function get_total_points(uint8 curve_choice) public returns (uint256) {
+    function get_total_points(uint8 curve_choice) public view returns (uint256) {
         if (curve_choice == 0) return RC_3ROOT_CURVE.length;
         else if (curve_choice == 1) return RC_4ROOT_CURVE.length;
         else if (curve_choice == 2) return RC_5ROOT_CURVE.length;
         else if (curve_choice == 3) return RC_EULER_CURVE.length;
         else if (curve_choice == 4) return RC_PI_CURVE.length;
+        return 0;
     }
     
-    function get_curve_point(uint8 curve_choice, uint8 index) public returns (uint256) {
+    function get_curve_point(uint8 curve_choice, uint8 index) public view returns (uint256) {
         if (curve_choice == 0) return RC_3ROOT_CURVE[index];
         else if (curve_choice == 1) return RC_4ROOT_CURVE[index];
         else if (curve_choice == 2) return RC_5ROOT_CURVE[index];
         else if (curve_choice == 3) return RC_EULER_CURVE[index];
         else if (curve_choice == 4) return RC_PI_CURVE[index];
+        return 0;
     } 
 
     // Square root of 3 curve
@@ -570,6 +572,6 @@ contract FraxBond_Curves_RC_Discharge {
         996732
     ];
 
-    constructor() public { }
+    constructor() { }
 
 } 

@@ -115,7 +115,7 @@ contract InvestorAMO_V2 is AccessControl {
         address _owner_address,
         address _custodian_address,
         address _timelock_address
-    ) public {
+    ) {
         FRAX = FRAXStablecoin(_frax_contract_address);
         FXS = FRAXShares(_fxs_contract_address);
         pool_address = _pool_address;
@@ -191,11 +191,11 @@ contract InvestorAMO_V2 is AccessControl {
     }
 
     // Return the cooldown end time
-    function aaveCooldown_Time_Left() external view returns (int128) {
+    function aaveCooldown_Time_Left() external view returns (int256) {
         uint256 cooldown_length = stkAAVE.COOLDOWN_SECONDS();
         uint256 cooldown_end = stkAAVE.stakersCooldowns(address(this)) + cooldown_length;
 
-        return (int128(cooldown_end) - int128(block.timestamp));
+        return (int256(cooldown_end) - int256(block.timestamp));
     }
 
     /* ========== PUBLIC FUNCTIONS ========== */

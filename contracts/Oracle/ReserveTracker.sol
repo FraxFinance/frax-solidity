@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.11;
+pragma solidity 0.7.6;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -77,7 +77,7 @@ contract ReserveTracker {
 		address _fxs_contract_address,
 		address _creator_address,
 		address _timelock_address
-	) public {
+	) {
         frax_contract_address = _frax_contract_address;
 		fxs_contract_address = _fxs_contract_address;
 		owner_address = _creator_address;

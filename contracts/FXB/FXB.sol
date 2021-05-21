@@ -79,7 +79,7 @@ contract FraxBond is ERC20Custom, AccessControl {
         address _owner_address,
         address _timelock_address,
         address _controller_address
-    ) public {
+    ) {
         name = _name;
         symbol = _symbol;
         owner_address = _owner_address;
