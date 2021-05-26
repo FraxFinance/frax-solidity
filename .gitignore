@@ -1,3 +1,13 @@
+# Hardhat
+src/hardhat/artifacts/*
+src/hardhat/artifacts/*/*
+src/hardhat/artifacts/*/*/*
+src/hardhat/artifacts/*/*/*/*
+src/hardhat/cache/*
+src/hardhat/cache/*/*
+src/hardhat/cache/*/*/*
+src/hardhat/cache/*/*/*/*
+
 package-lock.json
 
 node_modules/*
