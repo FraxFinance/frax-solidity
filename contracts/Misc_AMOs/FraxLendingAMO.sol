@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -29,6 +28,8 @@ import "../ERC20/Variants/Comp.sol";
 import "../Oracle/UniswapPairOracle.sol";
 import "../Governance/AccessControl.sol";
 import "../Frax/Pools/FraxPool.sol";
+import "../Staking/Owned.sol";
+import '../Uniswap/TransferHelper.sol';
 import "./cream/ICREAM_crFRAX.sol";
 import "./finnexus/IFNX_CFNX.sol";
 import "./finnexus/IFNX_FPT_FRAX.sol";
@@ -40,7 +41,7 @@ import "./finnexus/IFNX_ManagerProxy.sol";
 import "./finnexus/IFNX_Oracle.sol";
 
 
-contract FraxLendingAMO is AccessControl {
+contract FraxLendingAMO is AccessControl, Owned {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -69,7 +70,6 @@ contract FraxLendingAMO is AccessControl {
 
     address public collateral_address;
     address public pool_address;
-    address public owner_address;
     address public timelock_address;
     address public custodian_address;
 
@@ -97,10 +97,10 @@ contract FraxLendingAMO is AccessControl {
         address _fxs_contract_address,
         address _pool_address,
         address _collateral_address,
-        address _owner_address,
+        address _creator_address,
         address _custodian_address,
         address _timelock_address
-    ) {
+    ) Owned(_creator_address) {
         FRAX = FRAXStablecoin(_frax_contract_address);
         FXS = FRAXShares(_fxs_contract_address);
         pool_address = _pool_address;
@@ -108,7 +108,6 @@ contract FraxLendingAMO is AccessControl {
         collateral_address = _collateral_address;
         collateral_token = ERC20(_collateral_address);
         timelock_address = _timelock_address;
-        owner_address = _owner_address;
         custodian_address = _custodian_address;
         missing_decimals = uint(18).sub(collateral_token.decimals());
         
@@ -118,7 +117,7 @@ contract FraxLendingAMO is AccessControl {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == timelock_address || msg.sender == owner_address, "You are not the owner or the governance timelock");
+        require(msg.sender == timelock_address || msg.sender == owner, "You are not the owner or the governance timelock");
         _;
     }
 
@@ -215,7 +214,7 @@ contract FraxLendingAMO is AccessControl {
 
     // Give USDC profits back
     function giveCollatBack(uint256 amount) public onlyByOwnerOrGovernance {
-        collateral_token.transfer(address(pool), amount);
+        TransferHelper.safeTransfer(address(collateral_token), address(pool), amount);
     }
    
     // Burn unneeded or excess FRAX
@@ -344,20 +343,18 @@ contract FraxLendingAMO is AccessControl {
     /* ========== Custodian ========== */
 
     function withdrawRewards() public onlyCustodian {
-        FNX.transfer(custodian_address, FNX.balanceOf(address(this)));
+        TransferHelper.safeTransfer(address(FNX), custodian_address, FNX.balanceOf(address(this)));
     }
 
     /* ========== RESTRICTED GOVERNANCE FUNCTIONS ========== */
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
 
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
-    }
-
-    function setMiscRewardsCustodian(address _custodian_address) external onlyByOwnerOrGovernance {
+    function setCustodian(address _custodian_address) external onlyByOwnerOrGovernance {
+        require(_custodian_address != address(0), "Custodian address cannot be 0");        
         custodian_address = _custodian_address;
     }
 
@@ -388,7 +385,8 @@ contract FraxLendingAMO is AccessControl {
         // Can only be triggered by owner or governance, not custodian
         // Tokens are sent to the custodian, as a sort of safeguard
 
-        ERC20(tokenAddress).transfer(custodian_address, tokenAmount);
+        TransferHelper.safeTransfer(tokenAddress, custodian_address, tokenAmount);
+        
         emit Recovered(tokenAddress, tokenAmount);
     }
 

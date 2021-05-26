@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -200,7 +199,7 @@ contract FXS1559_AMO is AccessControl {
             min_fxs_out,
             FRAX_FXS_PATH,
             address(this),
-            2105300114 // A long time from now
+            2105300114 // Expiration: a long time from now
         );
         return (amounts[0], amounts[1]);
     }
@@ -235,6 +234,7 @@ contract FXS1559_AMO is AccessControl {
     /* ========== RESTRICTED GOVERNANCE FUNCTIONS ========== */
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
 

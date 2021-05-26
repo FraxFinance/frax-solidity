@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -27,10 +26,12 @@ import "../Frax/Frax.sol";
 import "../ERC20/ERC20.sol";
 import "../Frax/Pools/FraxPool.sol";
 import "../Oracle/UniswapPairOracle.sol";
+import '../Uniswap/TransferHelper.sol';
 import '../Misc_AMOs/FraxPoolInvestorForV2.sol';
 import '../Misc_AMOs/InvestorAMO_V2.sol';
 import '../Uniswap/UniswapV2Router02_Modified.sol';
 import "../Proxy/Initializable.sol";
+import "../Staking/Owned.sol";
 
 contract FXS1559_AMO_V2 is Initializable {
     using SafeMath for uint256;
@@ -226,7 +227,7 @@ contract FXS1559_AMO_V2 is Initializable {
             min_fxs_out,
             FRAX_FXS_PATH,
             address(this),
-            2105300114 // A long time from now
+            2105300114 // Expiration: a long time from now
         );
         return (amounts[0], amounts[1]);
     }
@@ -252,7 +253,7 @@ contract FXS1559_AMO_V2 is Initializable {
         burnFXS(amt_to_burn);
 
         // Give the rest to the yield distributor
-        FXS.transfer(yield_distributor_address, amt_to_yield_distributor);
+        TransferHelper.safeTransfer(address(FXS), yield_distributor_address, amt_to_yield_distributor);
     }
 
     // Burn unneeded or excess FRAX
@@ -270,6 +271,7 @@ contract FXS1559_AMO_V2 is Initializable {
     /* ========== RESTRICTED GOVERNANCE FUNCTIONS ========== */
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
 
@@ -325,7 +327,8 @@ contract FXS1559_AMO_V2 is Initializable {
         // Can only be triggered by owner or governance, not custodian
         // Tokens are sent to the custodian, as a sort of safeguard
 
-        ERC20(tokenAddress).transfer(custodian_address, tokenAmount);
+        TransferHelper.safeTransfer(tokenAddress, custodian_address, tokenAmount);
+
         emit Recovered(tokenAddress, tokenAmount);
     }
 

@@ -4,7 +4,6 @@ pragma experimental ABIEncoderV2;
 
 import "../ERC20/ERC20.sol";
 
-
 interface IStakingRewardsDualForMigrator {
 
     struct ILockedStake {

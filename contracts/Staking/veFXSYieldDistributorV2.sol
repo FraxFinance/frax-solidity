@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -29,6 +28,7 @@ pragma experimental ABIEncoderV2;
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
 import "../Curve/IveFXS.sol";
+import '../Uniswap/TransferHelper.sol';
 import "../ERC20/ERC20.sol";
 import "../ERC20/SafeERC20.sol";
 import "../Utils/ReentrancyGuard.sol";
@@ -197,7 +197,7 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
         yield0 = yields[msg.sender];
         if (yield0 > 0) {
             yields[msg.sender] = 0;
-            emittedToken.transfer(msg.sender, yield0);
+            TransferHelper.safeTransfer(address(emittedToken), msg.sender, yield0);
             emit YieldCollected(msg.sender, yield0, emitted_token_address);
         }
     }
@@ -251,7 +251,7 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
     // Added to support recovering LP Yield and other mistaken tokens from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Only the owner address can ever receive the recovery withdrawal
-        ERC20(tokenAddress).transfer(owner, tokenAmount);
+        TransferHelper.safeTransfer(tokenAddress, owner, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 

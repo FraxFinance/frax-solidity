@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -36,12 +35,13 @@ import "./aave/IStakedAave.sol";
 import "./aave/IAaveIncentivesControllerPartial.sol";
 import "./compound/ICompComptrollerPartial.sol";
 import "./compound/IcUSDC_Partial.sol";
+import "../Staking/Owned.sol";
 //import "../Proxy/Initializable.sol";
 
 // Lower APY: yearn, AAVE, Compound
 // Higher APY: KeeperDAO, BZX, Harvest
 
-contract InvestorAMO_V2 is AccessControl {
+contract InvestorAMO_V2 is AccessControl, Owned {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -66,7 +66,6 @@ contract InvestorAMO_V2 is AccessControl {
 
     address public collateral_address;
     address public pool_address;
-    address public owner_address;
     address public timelock_address;
     address public custodian_address;
     address public weth_address;
@@ -96,7 +95,7 @@ contract InvestorAMO_V2 is AccessControl {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == timelock_address || msg.sender == owner_address, "You are not the owner or the governance timelock");
+        require(msg.sender == timelock_address || msg.sender == owner, "You are not the owner or the governance timelock");
         _;
     }
 
@@ -112,10 +111,10 @@ contract InvestorAMO_V2 is AccessControl {
         address _fxs_contract_address,
         address _pool_address,
         address _collateral_address,
-        address _owner_address,
+        address _creator_address,
         address _custodian_address,
         address _timelock_address
-    ) {
+    ) Owned(_creator_address) {
         FRAX = FRAXStablecoin(_frax_contract_address);
         FXS = FRAXShares(_fxs_contract_address);
         pool_address = _pool_address;
@@ -123,7 +122,6 @@ contract InvestorAMO_V2 is AccessControl {
         collateral_address = _collateral_address;
         collateral_token = ERC20(_collateral_address);
         timelock_address = _timelock_address;
-        owner_address = _owner_address;
         custodian_address = _custodian_address;
         missing_decimals = uint(18).sub(collateral_token.decimals());
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -346,18 +344,16 @@ contract InvestorAMO_V2 is AccessControl {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
-    }
-
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
     }
 
     function setWethAddress(address _weth_address) external onlyByOwnerOrGovernance {
         weth_address = _weth_address;
     }
 
-    function setMiscRewardsCustodian(address _custodian_address) external onlyByOwnerOrGovernance {
+    function setCustodian(address _custodian_address) external onlyByOwnerOrGovernance {
+        require(_custodian_address != address(0), "Custodian address cannot be 0");        
         custodian_address = _custodian_address;
     }
 

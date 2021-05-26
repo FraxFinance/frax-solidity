@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 /// @title Permissionless pool actions
 /// @notice Contains pool methods that can be called by anyone

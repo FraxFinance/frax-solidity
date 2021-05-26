@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 import '../../ERC20/IERC20.sol';
 
 // Original at https://etherscan.io/address/0x9b3be0cc5dd26fd0254088d03d8206792715588b#code

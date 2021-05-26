@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -575,6 +574,7 @@ contract CurveAMO_V2 is AccessControl {
     /* ========== RESTRICTED GOVERNANCE FUNCTIONS ========== */
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
 
@@ -582,11 +582,13 @@ contract CurveAMO_V2 is AccessControl {
         owner_address = _owner_address;
     }
 
-    function setMiscRewardsCustodian(address _custodian_address) external onlyByOwnerOrGovernance {
+    function setCustodian(address _custodian_address) external onlyByOwnerOrGovernance {
+        require(_custodian_address != address(0), "Custodian address cannot be 0");        
         custodian_address = _custodian_address;
     }
 
     function setVoterContract(address _voter_contract_address) external onlyByOwnerOrGovernance {
+        require(_voter_contract_address != address(0), "Voter address cannot be 0");  
         voter_contract_address = _voter_contract_address;
     }
 

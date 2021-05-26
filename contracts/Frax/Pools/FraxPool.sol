@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -23,6 +22,8 @@ pragma experimental ABIEncoderV2;
 // Sam Sun: https://github.com/samczsun
 
 import "../../Math/SafeMath.sol";
+import '../../Uniswap/TransferHelper.sol';
+import "../../Staking/Owned.sol";
 import "../../FXS/FXS.sol";
 import "../../Frax/Frax.sol";
 import "../../ERC20/ERC20.sol";
@@ -30,14 +31,13 @@ import "../../Oracle/UniswapPairOracle.sol";
 import "../../Governance/AccessControl.sol";
 import "./FraxPoolLibrary.sol";
 
-contract FraxPool is AccessControl {
+contract FraxPool is AccessControl, Owned {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
 
     ERC20 private collateral_token;
     address private collateral_address;
-    address private owner_address;
 
     address private frax_contract_address;
     address private fxs_contract_address;
@@ -97,7 +97,7 @@ contract FraxPool is AccessControl {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == timelock_address || msg.sender == owner_address, "You are not the owner or the governance timelock");
+        require(msg.sender == timelock_address || msg.sender == owner, "You are not the owner or the governance timelock");
         _;
     }
 
@@ -120,14 +120,20 @@ contract FraxPool is AccessControl {
         address _creator_address,
         address _timelock_address,
         uint256 _pool_ceiling
-    ) public {
+    ) public Owned(_creator_address){
+        require(
+            (_frax_contract_address != address(0))
+            && (_fxs_contract_address != address(0))
+            && (_collateral_address != address(0))
+            && (_creator_address != address(0))
+            && (_timelock_address != address(0))
+        , "Zero address detected"); 
         FRAX = FRAXStablecoin(_frax_contract_address);
         FXS = FRAXShares(_fxs_contract_address);
         frax_contract_address = _frax_contract_address;
         fxs_contract_address = _fxs_contract_address;
         collateral_address = _collateral_address;
         timelock_address = _timelock_address;
-        owner_address = _creator_address;
         collateral_token = ERC20(_collateral_address);
         pool_ceiling = _pool_ceiling;
         missing_decimals = uint(18).sub(collateral_token.decimals());
@@ -200,7 +206,7 @@ contract FraxPool is AccessControl {
         frax_amount_d18 = (frax_amount_d18.mul(uint(1e6).sub(minting_fee))).div(1e6); //remove precision at the end
         require(FRAX_out_min <= frax_amount_d18, "Slippage limit reached");
 
-        collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
+        TransferHelper.safeTransferFrom(address(collateral_token), msg.sender, address(this), collateral_amount);
         FRAX.pool_mint(msg.sender, frax_amount_d18);
     }
 
@@ -246,7 +252,7 @@ contract FraxPool is AccessControl {
         require(fxs_needed <= fxs_amount, "Not enough FXS inputted");
 
         FXS.pool_burn_from(msg.sender, fxs_needed);
-        collateral_token.transferFrom(msg.sender, address(this), collateral_amount);
+        TransferHelper.safeTransferFrom(address(collateral_token), msg.sender, address(this), collateral_amount);
         FRAX.pool_mint(msg.sender, mint_amount);
     }
 
@@ -340,8 +346,8 @@ contract FraxPool is AccessControl {
         require((lastRedeemed[msg.sender].add(redemption_delay)) <= block.number, "Must wait for redemption_delay blocks before collecting redemption");
         bool sendFXS = false;
         bool sendCollateral = false;
-        uint FXSAmount;
-        uint CollateralAmount;
+        uint FXSAmount = 0;
+        uint CollateralAmount = 0;
 
         // Use Checks-Effects-Interactions pattern
         if(redeemFXSBalances[msg.sender] > 0){
@@ -360,11 +366,11 @@ contract FraxPool is AccessControl {
             sendCollateral = true;
         }
 
-        if(sendFXS == true){
-            FXS.transfer(msg.sender, FXSAmount);
+        if(sendFXS){
+            TransferHelper.safeTransfer(address(FXS), msg.sender, FXSAmount);
         }
-        if(sendCollateral == true){
-            collateral_token.transfer(msg.sender, CollateralAmount);
+        if(sendCollateral){
+            TransferHelper.safeTransfer(address(collateral_token), msg.sender, CollateralAmount);
         }
     }
 
@@ -394,7 +400,7 @@ contract FraxPool is AccessControl {
         uint256 fxs_paid_back = amount_to_recollat.mul(uint(1e6).add(bonus_rate).sub(recollat_fee)).div(fxs_price);
 
         require(FXS_out_min <= fxs_paid_back, "Slippage limit reached");
-        collateral_token.transferFrom(msg.sender, address(this), collateral_units_precision);
+        TransferHelper.safeTransferFrom(address(collateral_token), msg.sender, address(this), collateral_units_precision);
         FXS.pool_mint(msg.sender, fxs_paid_back);
         
     }
@@ -418,7 +424,7 @@ contract FraxPool is AccessControl {
         require(COLLATERAL_out_min <= collateral_precision, "Slippage limit reached");
         // Give the sender their desired collateral and burn the FXS
         FXS.pool_burn_from(msg.sender, FXS_amount);
-        collateral_token.transfer(msg.sender, collateral_precision);
+        TransferHelper.safeTransfer(address(collateral_token), msg.sender, collateral_precision);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -426,21 +432,29 @@ contract FraxPool is AccessControl {
     function toggleMinting() external {
         require(hasRole(MINT_PAUSER, msg.sender));
         mintPaused = !mintPaused;
+
+        emit MintingToggled(mintPaused);
     }
 
     function toggleRedeeming() external {
         require(hasRole(REDEEM_PAUSER, msg.sender));
         redeemPaused = !redeemPaused;
+
+        emit RedeemingToggled(redeemPaused);
     }
 
     function toggleRecollateralize() external {
         require(hasRole(RECOLLATERALIZE_PAUSER, msg.sender));
         recollateralizePaused = !recollateralizePaused;
+
+        emit RecollateralizeToggled(recollateralizePaused);
     }
     
     function toggleBuyBack() external {
         require(hasRole(BUYBACK_PAUSER, msg.sender));
         buyBackPaused = !buyBackPaused;
+
+        emit BuybackToggled(buyBackPaused);
     }
 
     function toggleCollateralPrice(uint256 _new_price) external {
@@ -452,6 +466,8 @@ contract FraxPool is AccessControl {
             pausedPrice = 0;
         }
         collateralPricePaused = !collateralPricePaused;
+
+        emit CollateralPriceToggled(collateralPricePaused);
     }
 
     // Combined into one function due to 24KiB contract memory limit
@@ -463,16 +479,24 @@ contract FraxPool is AccessControl {
         redemption_fee = new_redeem_fee;
         buyback_fee = new_buyback_fee;
         recollat_fee = new_recollat_fee;
+
+        emit PoolParametersSet(new_ceiling, new_bonus_rate, new_redemption_delay, new_mint_fee, new_redeem_fee, new_buyback_fee, new_recollat_fee);
     }
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
         timelock_address = new_timelock;
-    }
 
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
+        emit TimelockSet(new_timelock);
     }
 
     /* ========== EVENTS ========== */
+
+    event PoolParametersSet(uint256 new_ceiling, uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee);
+    event TimelockSet(address new_timelock);
+    event MintingToggled(bool toggled);
+    event RedeemingToggled(bool toggled);
+    event RecollateralizeToggled(bool toggled);
+    event BuybackToggled(bool toggled);
+    event CollateralPriceToggled(bool toggled);
 
 }
