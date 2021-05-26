@@ -1,0 +1,54 @@
+#MODE=production
+MODE=development
+
+# API Keys
+#===========================
+ETHERSCAN_API_KEY=''
+
+#Port
+#==========================
+PORT=3001
+
+# Hardhat
+#===========================
+ROPSTEN_HARDHAT_PHRASE=''
+
+#Misc
+#===========================
+FRAX_DEPLOYER_ADDRESS='0x234D953a9404Bf9DbC3b526271d440cD2870bCd2'
+INVESTOR_CUSTODIAN_ADDRESS='0x5180db0237291A6449DdA9ed33aD90a38787621c'
+STAKING_OWNER_ADDRESS='0xfF5B4BCbf765FE363269114e1c765229a29eDeFD'
+TIMELOCK_ADDRESS='0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA'
+FRAX_UTILITY_CONTRACTOR='0x36A87d1E3200225f881488E4AEedF25303FebcAe'
+
+# API Keys
+#===========================
+ETHERSCAN_API_KEY=''
+BSCSCAN_API_KEY=''
+COINGECKO_API_KEY=''
+
+#Networks
+#===========================
+# Mainnet
+MNEMONIC_PHRASE=''
+
+# Ropsten
+#MNEMONIC_PHRASE=''
+
+# Rinkeby
+#MNEMONIC_PHRASE=''
+
+# BSC
+BSC_MNEMONIC_PHRASE=''
+
+#INFURA
+#==========================
+INFURA_PROJECT_ID=''
+
+#ANKR (BSC)
+#==========================
+ANKR_STRING=''
+
+# BSC
+#========================
+BSC_NETWORK_ENDPOINT='https://bsc-dataseed1.binance.org:443'
