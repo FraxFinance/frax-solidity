@@ -28,7 +28,7 @@ pragma solidity >=0.6.11;
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
 import "../Curve/IveFXS.sol";
-import '../Uniswap/TransferHelper.sol';
+import "../Uniswap/TransferHelper.sol";
 import "../ERC20/ERC20.sol";
 import "../ERC20/SafeERC20.sol";
 import "../Utils/ReentrancyGuard.sol";
@@ -75,16 +75,18 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
     // Admin booleans for emergencies
     bool public yieldCollectionPaused = false; // For emergencies
 
-
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(
+            msg.sender == owner || msg.sender == timelock_address,
+            "You are not the owner or the governance timelock"
+        );
         _;
     }
 
     modifier notYieldCollectionPaused() {
-        require(yieldCollectionPaused == false,"Yield collection is paused");
+        require(yieldCollectionPaused == false, "Yield collection is paused");
         _;
     }
 
@@ -115,7 +117,10 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
     /* ========== VIEWS ========== */
 
     function fractionParticipating() external view returns (uint256) {
-        return totalVeFXSParticipating.mul(PRICE_PRECISION).div(totalVeFXSSupplyStored);
+        return
+            totalVeFXSParticipating.mul(PRICE_PRECISION).div(
+                totalVeFXSSupplyStored
+            );
     }
 
     function lastTimeYieldApplicable() public view returns (uint256) {
@@ -191,24 +196,25 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
         _checkpointUser(msg.sender);
     }
 
-    function getYield() external nonReentrant notYieldCollectionPaused checkpointUser(msg.sender) returns (uint256 yield0) {
+    function getYield()
+        external
+        nonReentrant
+        notYieldCollectionPaused
+        checkpointUser(msg.sender)
+        returns (uint256 yield0)
+    {
         require(greylist[msg.sender] == false, "Address has been greylisted");
 
         yield0 = yields[msg.sender];
         if (yield0 > 0) {
             yields[msg.sender] = 0;
-            TransferHelper.safeTransfer(address(emittedToken), msg.sender, yield0);
+            TransferHelper.safeTransfer(
+                emitted_token_address,
+                msg.sender,
+                yield0
+            );
             emit YieldCollected(msg.sender, yield0, emitted_token_address);
         }
-    }
-
-    function renewIfApplicable() external {
-        if (block.timestamp > periodFinish) {
-            retroCatchUp();
-        }
-
-        // Update the total veFXS supply
-        totalVeFXSSupplyStored = veFXS.totalSupply();
     }
 
     // If the period expired, renew it
@@ -220,17 +226,24 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
         // This keeps the yield rate in the right range, preventing overflows due to
         // very high values of yieldRate in the earned and yieldPerToken functions;
         // Yield + leftover must be less than 2^256 / 10^18 to avoid overflow.
-        uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / yieldDuration; // Floor division to the nearest period
+        uint256 num_periods_elapsed =
+            uint256(block.timestamp.sub(periodFinish)) / yieldDuration; // Floor division to the nearest period
         uint256 balance0 = emittedToken.balanceOf(address(this));
-        require(yieldRate.mul(yieldDuration).mul(num_periods_elapsed + 1) <= balance0, "Not enough emittedToken available for yield distribution!");
+        require(
+            yieldRate.mul(yieldDuration).mul(num_periods_elapsed + 1) <=
+                balance0,
+            "Not enough emittedToken available for yield distribution!"
+        );
 
-        periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(yieldDuration));
+        periodFinish = periodFinish.add(
+            (num_periods_elapsed.add(1)).mul(yieldDuration)
+        );
 
         uint256 yield0 = yieldPerVeFXS();
         yieldPerVeFXSStored = yield0;
         lastUpdateTime = lastTimeYieldApplicable();
 
-        emit YieldPeriodRenewed(emitted_token_address);
+        emit YieldPeriodRenewed(emitted_token_address, yieldRate);
     }
 
     function sync() public {
@@ -249,14 +262,23 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // Added to support recovering LP Yield and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount)
+        external
+        onlyByOwnerOrGovernance
+    {
         // Only the owner address can ever receive the recovery withdrawal
         TransferHelper.safeTransfer(tokenAddress, owner, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
-    function setYieldDuration(uint256 _yieldDuration) external onlyByOwnerOrGovernance {
-        require(periodFinish == 0 || block.timestamp > periodFinish, "Previous yield period must be complete before changing the duration for the new period");
+    function setYieldDuration(uint256 _yieldDuration)
+        external
+        onlyByOwnerOrGovernance
+    {
+        require(
+            periodFinish == 0 || block.timestamp > periodFinish,
+            "Previous yield period must be complete before changing the duration for the new period"
+        );
         yieldDuration = _yieldDuration;
         emit YieldDurationUpdated(yieldDuration);
     }
@@ -268,15 +290,24 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
         emit DefaultInitialization();
     }
 
-    function greylistAddress(address _address) external onlyByOwnerOrGovernance {
+    function greylistAddress(address _address)
+        external
+        onlyByOwnerOrGovernance
+    {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function setPauses(bool _yieldCollectionPaused) external onlyByOwnerOrGovernance {
+    function setPauses(bool _yieldCollectionPaused)
+        external
+        onlyByOwnerOrGovernance
+    {
         yieldCollectionPaused = _yieldCollectionPaused;
     }
 
-    function setYieldRate(uint256 _new_rate0, bool sync_too) external onlyByOwnerOrGovernance {
+    function setYieldRate(uint256 _new_rate0, bool sync_too)
+        external
+        onlyByOwnerOrGovernance
+    {
         yieldRate = _new_rate0;
 
         if (sync_too) {
@@ -284,16 +315,23 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
         }
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address _new_timelock)
+        external
+        onlyByOwnerOrGovernance
+    {
         timelock_address = _new_timelock;
     }
 
     /* ========== EVENTS ========== */
 
-    event YieldCollected(address indexed user, uint256 yield, address token_address);
+    event YieldCollected(
+        address indexed user,
+        uint256 yield,
+        address token_address
+    );
     event YieldDurationUpdated(uint256 newDuration);
     event RecoveredERC20(address token, uint256 amount);
-    event YieldPeriodRenewed(address token);
+    event YieldPeriodRenewed(address token, uint256 yieldRate);
     event DefaultInitialization();
 
     /* ========== A CHICKEN ========== */

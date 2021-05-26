@@ -40,9 +40,8 @@ import "../Utils/ReentrancyGuard.sol";
 
 // Inheritance
 import "./Owned.sol";
-import "./Pausable.sol";
 
-contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
+contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -55,11 +54,9 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
     IUniswapV2Pair private stakingToken;
     
     // Constant for various precisions
-    uint256 private constant PRICE_PRECISION = 1e6;
-    uint256 private constant VEFXS_MULTIPLIER_PRECISION = 1e18;
+    uint256 private constant MULTIPLIER_PRECISION = 1e18;
 
     // Admin addresses
-    address public owner_address;
     address public timelock_address; // Governance timelock address
 
     // Time tracking
@@ -67,13 +64,14 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
     uint256 public lastUpdateTime;
 
     // Lock time and multiplier settings
-    uint256 public lock_max_multiplier = 3000000; // E6. 1x = 1000000
+    uint256 public lock_max_multiplier = uint256(3e18); // E18. 1x = e18
     uint256 public lock_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
     uint256 public lock_time_min = 86400; // 1 * 86400  (1 day)
 
     // veFXS related
-    uint256 public vefxs_per_frax_for_max_boost = uint256(5e17); // E18. 5e17 means 0.5 veFXS must be held by the staker per 1 FRAX
+    uint256 public vefxs_per_frax_for_max_boost = uint256(4e18); // E18. 4e18 means 4 veFXS must be held by the staker per 1 FRAX
     uint256 public vefxs_max_multiplier = uint256(25e17); // E18. 1x = 1e18
+    // mapping(address => uint256) private _vefxsMultiplierStoredOld;
     mapping(address => uint256) private _vefxsMultiplierStored;
 
     // Max reward per second
@@ -119,6 +117,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
     bool public stakesUnlocked = false; // Release locked stakes in case of system migration or emergency
     bool public withdrawalsPaused = false; // For emergencies
     bool public rewardsCollectionPaused = false; // For emergencies
+    bool public stakingPaused = false; // For emergencies
 
     /* ========== STRUCTS ========== */
     
@@ -133,12 +132,12 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(msg.sender == owner || msg.sender == timelock_address, "You are not the owner or the governance timelock");
         _;
     }
 
     modifier onlyByOwnerOrGovernanceOrMigrator() {
-        require(msg.sender == owner_address || msg.sender == timelock_address || valid_migrators[msg.sender] == true, "You are not the owner, governance timelock, or a migrator");
+        require(msg.sender == owner || msg.sender == timelock_address || valid_migrators[msg.sender] == true, "You are not the owner, governance timelock, or a migrator");
         _;
     }
 
@@ -146,6 +145,12 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
         require(migrationsOn == true, "Contract is not in migration");
         _;
     }
+
+    modifier notStakingPaused() {
+        require(stakingPaused == false, "Staking is paused");
+        _;
+    }
+
 
     modifier notWithdrawalsPaused() {
         require(withdrawalsPaused == false, "Withdrawals are paused");
@@ -173,7 +178,6 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
         address _timelock_address,
         address _veFXS_address
     ) Owned(_owner){
-        owner_address = _owner;
         rewardsToken0 = ERC20(_rewardsToken0);
         rewardsToken1 = ERC20(_rewardsToken1);
         stakingToken = IUniswapV2Pair(_stakingToken);
@@ -210,9 +214,9 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
 
     function lockMultiplier(uint256 secs) public view returns (uint256) {
         uint256 lock_multiplier =
-            uint256(PRICE_PRECISION).add(
+            uint256(MULTIPLIER_PRECISION).add(
                 secs
-                    .mul(lock_max_multiplier.sub(PRICE_PRECISION))
+                    .mul(lock_max_multiplier.sub(MULTIPLIER_PRECISION))
                     .div(lock_time_for_max_multiplier)
             );
         if (lock_multiplier > lock_max_multiplier) lock_multiplier = lock_max_multiplier;
@@ -257,7 +261,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
     }
 
     function minVeFXSForMaxBoost(address account) public view returns (uint256) {
-        return (userStakedFrax(account)).mul(vefxs_per_frax_for_max_boost).div(VEFXS_MULTIPLIER_PRECISION);
+        return (userStakedFrax(account)).mul(vefxs_per_frax_for_max_boost).div(MULTIPLIER_PRECISION);
     }
 
     function veFXSMultiplier(address account) public view returns (uint256) {
@@ -265,12 +269,12 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
         // of their locked LP tokens
         uint256 veFXS_needed_for_max_boost = minVeFXSForMaxBoost(account);
         if (veFXS_needed_for_max_boost > 0){ 
-            uint256 user_vefxs_fraction = (veFXS.balanceOf(account)).mul(VEFXS_MULTIPLIER_PRECISION).div(veFXS_needed_for_max_boost);
+            uint256 user_vefxs_fraction = (veFXS.balanceOf(account)).mul(MULTIPLIER_PRECISION).div(veFXS_needed_for_max_boost);
             
-            uint256 vefxs_multiplier = uint256(VEFXS_MULTIPLIER_PRECISION).add(
+            uint256 vefxs_multiplier = uint256(MULTIPLIER_PRECISION).add(
                 (user_vefxs_fraction)
-                    .mul(vefxs_max_multiplier.sub(VEFXS_MULTIPLIER_PRECISION))
-                    .div(VEFXS_MULTIPLIER_PRECISION)
+                    .mul(vefxs_max_multiplier.sub(MULTIPLIER_PRECISION))
+                    .div(MULTIPLIER_PRECISION)
             );
 
             // Cap the boost to the vefxs_max_multiplier
@@ -278,7 +282,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
 
             return vefxs_multiplier;        
         }
-        else return VEFXS_MULTIPLIER_PRECISION; // This will happen with the first stake, when user_staked_frax is 0
+        else return MULTIPLIER_PRECISION; // This will happen with the first stake, when user_staked_frax is 0
     }
 
     function calcCurCombinedWeight(address account) public view
@@ -291,24 +295,30 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
         // Get the old combined weight
         old_combined_weight = _combined_weights[account];
 
-        // Get the new veFXS multiplier
+        // Get the veFXS multipliers
         new_vefxs_multiplier = veFXSMultiplier(account);
+        uint256 midpoint_vefxs_multiplier = ((new_vefxs_multiplier).add(_vefxsMultiplierStored[account])).div(2); // Correction to prevent upper Riemann sum
 
         // Loop through the locked stakes, first by getting the liquidity * lock_multiplier portion
-        uint256 locked_tally = 0;
+        new_combined_weight = 0;
         for (uint256 i = 0; i < lockedStakes[account].length; i++) {
-            uint256 lock_multiplier = lockedStakes[account][i].lock_multiplier;
-            uint256 liquidity = lockedStakes[account][i].liquidity;
-            uint256 lock_boosted_portion = liquidity.mul(lock_multiplier).div(PRICE_PRECISION);
-            locked_tally = locked_tally.add(lock_boosted_portion);
-        }
+            LockedStake memory thisStake = lockedStakes[account][i];
+            uint256 lock_multiplier = thisStake.lock_multiplier;
 
-        // Now factor in the veFXS multiplier
-        new_combined_weight = locked_tally.mul(new_vefxs_multiplier).div(VEFXS_MULTIPLIER_PRECISION);
+            // If the lock period is over, drop the lock multiplier to 1x
+            if (thisStake.ending_timestamp <= block.timestamp){
+                lock_multiplier = MULTIPLIER_PRECISION;
+            }
+
+            uint256 liquidity = thisStake.liquidity;
+            uint256 extra_vefxs_boost = midpoint_vefxs_multiplier.sub(MULTIPLIER_PRECISION); // Multiplier - 1, because it is additive
+            uint256 combined_boosted_amount = liquidity.mul(lock_multiplier.add(extra_vefxs_boost)).div(MULTIPLIER_PRECISION);
+            new_combined_weight = new_combined_weight.add(combined_boosted_amount);
+        }
     }
 
     function rewardPerToken() public view returns (uint256, uint256) {
-        if (_total_liquidity_locked == 0) {
+        if (_total_liquidity_locked == 0 || _total_combined_weight == 0) {
             return (rewardPerTokenStored0, rewardPerTokenStored1);
         }
         else {
@@ -325,9 +335,12 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
 
     function earned(address account) public view returns (uint256, uint256) {
         (uint256 reward0, uint256 reward1) = rewardPerToken();
+        if (_combined_weights[account] == 0){
+            return (0, 0);
+        }
         return (
-            _combined_weights[account].mul(reward0.sub(userRewardPerTokenPaid0[account])).div(1e18).add(rewards0[account]),
-            _combined_weights[account].mul(reward1.sub(userRewardPerTokenPaid1[account])).div(1e18).add(rewards1[account])
+            (_combined_weights[account].mul(reward0.sub(userRewardPerTokenPaid0[account]))).div(1e18).add(rewards0[account]),
+            (_combined_weights[account].mul(reward1.sub(userRewardPerTokenPaid1[account]))).div(1e18).add(rewards1[account])
         );
     }
 
@@ -366,7 +379,10 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
                 uint256 new_combined_weight
             ) = calcCurCombinedWeight(account);
 
-            // Optionally update the user's stored veFXS multiplier
+            // Calculate the earnings first
+            _syncEarned(account);
+
+            // Update the user's stored veFXS multipliers
             _vefxsMultiplierStored[account] = new_vefxs_multiplier;
 
             // Update the user's and the global combined weights
@@ -380,14 +396,17 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
                 _combined_weights[account] = old_combined_weight.sub(weight_diff);
             }
 
-            if (sync_too){
-                // Calculate the earnings
-                (uint256 earned0, uint256 earned1) = earned(account);
-                rewards0[account] = earned0;
-                rewards1[account] = earned1;
-                userRewardPerTokenPaid0[account] = rewardPerTokenStored0;
-                userRewardPerTokenPaid1[account] = rewardPerTokenStored1;
-            }
+        }
+    }
+
+    function _syncEarned(address account) internal {
+        if (account != address(0)) {
+            // Calculate the earnings
+            (uint256 earned0, uint256 earned1) = earned(account);
+            rewards0[account] = earned0;
+            rewards1[account] = earned1;
+            userRewardPerTokenPaid0[account] = rewardPerTokenStored0;
+            userRewardPerTokenPaid1[account] = rewardPerTokenStored1;
         }
     }
 
@@ -414,14 +433,13 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
     // If this were not internal, and source_address had an infinite approve, this could be exploitable
     // (pull funds from source_address and stake for an arbitrary staker_address)
     function _stakeLocked(address staker_address, address source_address, uint256 liquidity, uint256 secs) internal nonReentrant updateRewardAndBalance(staker_address, true) {
-        require((paused == false && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking is paused, or migration is happening");
+        require((!stakingPaused && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking is paused, or migration is happening");
         require(liquidity > 0, "Must stake more than zero");
         require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"You are trying to lock for too long");
 
         uint256 lock_multiplier = lockMultiplier(secs);
-        uint256 combined_weight_to_add = liquidity.mul(lock_multiplier).mul(_vefxsMultiplierStored[staker_address]).div(PRICE_PRECISION).div(VEFXS_MULTIPLIER_PRECISION);
         bytes32 kek_id = keccak256(abi.encodePacked(staker_address, block.timestamp, liquidity));
         lockedStakes[staker_address].push(LockedStake(
             kek_id,
@@ -434,15 +452,11 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
         // Pull the tokens from the source_address
         TransferHelper.safeTransferFrom(address(stakingToken), source_address, address(this), liquidity);
 
-        // Staking token liquidity and combined weight
+        // Update liquidities
         _total_liquidity_locked = _total_liquidity_locked.add(liquidity);
-        _total_combined_weight = _total_combined_weight.add(combined_weight_to_add);
-
-        // Staking token balance, combined weight, and veFXS multiplier
         _locked_liquidity[staker_address] = _locked_liquidity[staker_address].add(liquidity);
-        _combined_weights[staker_address] = _combined_weights[staker_address].add(combined_weight_to_add);
 
-        // Need to call again to make sure everything is correct
+        // Need to call to update the combined weights
         _updateRewardAndBalance(staker_address, false);
 
         emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
@@ -471,22 +485,15 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
 
         uint256 liquidity = thisStake.liquidity;
 
-        // updateRewardAndBalance() above should make this math correct and not leave a gap
-        uint256 combined_weight_to_sub = liquidity.mul(thisStake.lock_multiplier).mul(_vefxsMultiplierStored[staker_address]).div(PRICE_PRECISION).div(VEFXS_MULTIPLIER_PRECISION);
-
         if (liquidity > 0) {
-            // Staking token liquidity and combined weight
+            // Update liquidities
             _total_liquidity_locked = _total_liquidity_locked.sub(liquidity);
-            _total_combined_weight = _total_combined_weight.sub(combined_weight_to_sub);
-
-            // Staking token balance and combined weight
             _locked_liquidity[staker_address] = _locked_liquidity[staker_address].sub(liquidity);
-            _combined_weights[staker_address] = _combined_weights[staker_address].sub(combined_weight_to_sub);
 
             // Remove the stake from the array
             delete lockedStakes[staker_address][theArrayIndex];
 
-            // Need to call again to make sure everything is correct
+            // Need to call to update the combined weights
             _updateRewardAndBalance(staker_address, false);
 
             // Give the tokens to the destination_address
@@ -617,7 +624,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
             require(tokenAddress != address(stakingToken), "Cannot withdraw staking tokens unless migration is on"); // Only Governance / Timelock can trigger a migration
         }
         // Only the owner address can ever receive the recovery withdrawal
-        ERC20(tokenAddress).transfer(owner_address, tokenAmount);
+        ERC20(tokenAddress).transfer(owner, tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
 
@@ -673,6 +680,10 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
         migrationsOn = !migrationsOn;
     }
 
+    function toggleStaking() external onlyByOwnerOrGovernance {
+        stakingPaused = !stakingPaused;
+    }
+
     function toggleWithdrawals() external onlyByOwnerOrGovernance {
         withdrawalsPaused = !withdrawalsPaused;
     }
@@ -695,10 +706,6 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard, Pausable {
             rewardRate1 = 0;
         }
         token1_rewards_on = !token1_rewards_on;
-    }
-
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
     }
 
     function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
