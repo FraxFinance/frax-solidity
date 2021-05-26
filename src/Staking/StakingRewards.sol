@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ;
+pragma experimental ABIEncoderV2;
 
 // Modified from Synthetixio
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
@@ -367,7 +367,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     function notifyRewardAmount(uint256 reward) external override onlyRewardsDistribution updateReward(address(0)) {
         // Needed to make compiler happy
 
-        
+
         // if (block.timestamp >= periodFinish) {
         //     rewardRate = reward.mul(crBoostMultiplier()).div(rewardsDuration).div(PRICE_PRECISION);
         // } else {

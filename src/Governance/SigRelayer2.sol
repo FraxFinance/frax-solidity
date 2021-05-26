@@ -3,7 +3,7 @@
  */
 
 pragma solidity ^0.6.11;
-pragma experimental ;
+pragma experimental ABIEncoderV2;
 
 interface GasToken {
     function freeFromUpTo(address from, uint256 value) external returns (uint256 freed);

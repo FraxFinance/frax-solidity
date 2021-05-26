@@ -58,6 +58,9 @@ const config: HardhatUserConfig = {
       default: 0,
       mainnet: '0xaCa39B187352D9805DECEd6E73A3d72ABf86E7A0', // deployer
     },
+    stakingToken: {
+      default: 1, // for testing staking rewards dual v3
+    }
   },
   networks: {
     hardhat: {
