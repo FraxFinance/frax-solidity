@@ -1,35 +1,22 @@
-package-lock.json
+cache/
+artifacts/
 
-node_modules/*
-build/*
+coverage*
+typechain/
 
-.DS_STORE
-*/.DS_STORE
-*/*/.DS_STORE
+.vscode/*
+!.vscode/settings.json.default
+!.vscode/launch.json.default
+!.vscode/extensions.json.default
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# production
-/build
-
-# misc
-.DS_Store
+node_modules/
 .env
-..env.swp
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+.yalc
+yalc.lock
 
-# Pem files
-*.pem
+contractsInfo.json
+deployments/hardhat
+deployments/localhost
+
+.idea
