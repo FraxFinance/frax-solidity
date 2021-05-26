@@ -26,22 +26,23 @@ import "./ReserveTracker.sol";
 import "../Curve/IMetaImplementationUSD.sol";
 
 
-contract PIDController {
+contract PIDController is Owned {
     using SafeMath for uint256;
 
-    FRAXStablecoin public FRAX;
-    FRAXShares public FXS;
-    ReserveTracker public reserve_tracker;
-    IMetaImplementationUSD public frax_metapool;
+    // Instances
+    FRAXStablecoin private FRAX;
+    FRAXShares private FXS;
+    ReserveTracker private reserve_tracker;
+    IMetaImplementationUSD private frax_metapool;
 
-    address public frax_contract_address;
-    address public fxs_contract_address;
+    // FRAX and FXS addresses
+    address private frax_contract_address;
+    address private fxs_contract_address;
 
-    address public owner_address;
+    // Misc addresses
     address public timelock_address;
-
     address public reserve_tracker_address;
-    address public frax_metapool_address;
+    address private frax_metapool_address;
 
     // 6 decimals of precision
     uint256 public growth_ratio;
@@ -49,18 +50,22 @@ contract PIDController {
     uint256 public GR_top_band;
     uint256 public GR_bottom_band;
 
+    // Bands
     uint256 public FRAX_top_band;
     uint256 public FRAX_bottom_band;
 
+    // Time-related
     uint256 public internal_cooldown;
+    uint256 public last_update;
+    
+    // Booleans
     bool public is_active;
     bool public use_growth_ratio;
-
 
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner, controller, or the governance timelock");
+        require(msg.sender == owner || msg.sender == timelock_address, "You are not the owner or the governance timelock");
         _;
     }
 
@@ -72,10 +77,9 @@ contract PIDController {
         address _creator_address,
         address _timelock_address,
         address _reserve_tracker_address
-    ) {
+    ) Owned(_creator_address) {
         frax_contract_address = _frax_contract_address;
         fxs_contract_address = _fxs_contract_address;
-        owner_address = _creator_address;
         timelock_address = _timelock_address;
         reserve_tracker_address = _reserve_tracker_address;
         reserve_tracker = ReserveTracker(reserve_tracker_address);
@@ -89,19 +93,12 @@ contract PIDController {
         is_active = false;
     }
 
-    function setReserveTracker(address _reserve_tracker_address) external onlyByOwnerOrGovernance {
-        reserve_tracker_address = _reserve_tracker_address;
-        reserve_tracker = ReserveTracker(_reserve_tracker_address);
-    }
-
-    function setMetapool(address _metapool_address) external onlyByOwnerOrGovernance {
-        frax_metapool_address = _metapool_address;
-        frax_metapool = IMetaImplementationUSD(_metapool_address);
-    }
-
-    uint256 public last_update;
-    function setCollateralRatio() public {
-        require(block.timestamp - last_update >= internal_cooldown, "internal cooldown not passed");
+    
+    /* ========== PUBLIC MUTATIVE FUNCTIONS ========== */
+    
+    function refreshCollateralRatio() public {
+        uint256 time_elapsed = (block.timestamp).sub(last_update);
+        require(time_elapsed >= internal_cooldown, "internal cooldown not passed");
         uint256 fxs_reserves = reserve_tracker.getFXSReserves();
         uint256 fxs_price = reserve_tracker.getFXSPrice();
         
@@ -116,7 +113,6 @@ contract PIDController {
 
         uint256 last_collateral_ratio = FRAX.global_collateral_ratio();
         uint256 new_collateral_ratio = last_collateral_ratio;
-
 
         // First, check if the price is out of the band
         if(frax_price > FRAX_top_band){
@@ -167,12 +163,24 @@ contract PIDController {
         }
     }
 
+    /* ========== RESTRICTED FUNCTIONS ========== */
+
     function activate(bool _state) external onlyByOwnerOrGovernance {
         is_active = _state;
     }
 
     function useGrowthRatio(bool _use_growth_ratio) external onlyByOwnerOrGovernance {
         use_growth_ratio = _use_growth_ratio;
+    }
+
+    function setReserveTracker(address _reserve_tracker_address) external onlyByOwnerOrGovernance {
+        reserve_tracker_address = _reserve_tracker_address;
+        reserve_tracker = ReserveTracker(_reserve_tracker_address);
+    }
+
+    function setMetapool(address _metapool_address) external onlyByOwnerOrGovernance {
+        frax_metapool_address = _metapool_address;
+        frax_metapool = IMetaImplementationUSD(_metapool_address);
     }
 
     // As a percentage added/subtracted from the previous; e.g. top_band = 4000 = 0.4% -> will decollat if GR increases by 0.4% or more
@@ -194,11 +202,8 @@ contract PIDController {
         FRAX_bottom_band = _bottom_band;
     }
 
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
-    }
-
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
 

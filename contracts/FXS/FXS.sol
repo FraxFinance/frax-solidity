@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -26,10 +25,11 @@ import "../Common/Context.sol";
 import "../ERC20/ERC20Custom.sol";
 import "../ERC20/IERC20.sol";
 import "../Frax/Frax.sol";
+import "../Staking/Owned.sol";
 import "../Math/SafeMath.sol";
 import "../Governance/AccessControl.sol";
 
-contract FRAXShares is ERC20Custom, AccessControl {
+contract FRAXShares is ERC20Custom, AccessControl, Owned {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -40,9 +40,7 @@ contract FRAXShares is ERC20Custom, AccessControl {
     address public FRAXStablecoinAdd;
     
     uint256 public constant genesis_supply = 100000000e18; // 100M is printed upon genesis
-    uint256 public FXS_DAO_min; // Minimum FXS required to join DAO groups 
 
-    address public owner_address;
     address public oracle_address;
     address public timelock_address; // Governance timelock address
     FRAXStablecoin private FRAX;
@@ -69,7 +67,7 @@ contract FRAXShares is ERC20Custom, AccessControl {
     } 
     
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not an owner or the governance timelock");
+        require(msg.sender == owner || msg.sender == timelock_address, "You are not an owner or the governance timelock");
         _;
     }
 
@@ -79,43 +77,42 @@ contract FRAXShares is ERC20Custom, AccessControl {
         string memory _name,
         string memory _symbol, 
         address _oracle_address,
-        address _owner_address,
+        address _creator_address,
         address _timelock_address
-    ) public {
+    ) public Owned(_creator_address){
+        require((_oracle_address != address(0)) && (_timelock_address != address(0)), "Zero address detected"); 
         name = _name;
         symbol = _symbol;
-        owner_address = _owner_address;
         oracle_address = _oracle_address;
         timelock_address = _timelock_address;
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _mint(owner_address, genesis_supply);
+        _mint(_creator_address, genesis_supply);
 
         // Do a checkpoint for the owner
-        _writeCheckpoint(owner_address, 0, 0, uint96(genesis_supply));
+        _writeCheckpoint(_creator_address, 0, 0, uint96(genesis_supply));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     function setOracle(address new_oracle) external onlyByOwnerOrGovernance {
+        require(new_oracle != address(0), "Zero address detected");
+
         oracle_address = new_oracle;
     }
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
     
     function setFRAXAddress(address frax_contract_address) external onlyByOwnerOrGovernance {
+        require(frax_contract_address != address(0), "Zero address detected");
+
         FRAX = FRAXStablecoin(frax_contract_address);
+
+        emit FRAXAddressSet(frax_contract_address);
     }
     
-    function setFXSMinDAO(uint256 min_FXS) external onlyByOwnerOrGovernance {
-        FXS_DAO_min = min_FXS;
-    }
-
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
-    }
-
     function mint(address to, uint256 amount) public onlyPools {
         _mint(to, amount);
     }
@@ -285,12 +282,6 @@ contract FRAXShares is ERC20Custom, AccessControl {
         return a - b;
     }
 
-    function getChainId() internal view returns (uint) {
-        uint256 chainId;
-        assembly { chainId := chainid() }
-        return chainId;
-    }
-
     /* ========== EVENTS ========== */
     
     /// @notice An event thats emitted when a voters account's vote balance changes
@@ -302,4 +293,5 @@ contract FRAXShares is ERC20Custom, AccessControl {
     // Track FXS minted
     event FXSMinted(address indexed from, address indexed to, uint256 amount);
 
+    event FRAXAddressSet(address addr);
 }

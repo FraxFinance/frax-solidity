@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 /// @title Events emitted by a pool
 /// @notice Contains all events emitted by the pool

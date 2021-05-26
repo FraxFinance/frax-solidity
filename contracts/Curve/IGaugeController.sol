@@ -1,5 +1,4 @@
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 // https://github.com/swervefi/swerve/edit/master/packages/swerve-contracts/interfaces/IGaugeController.sol
 

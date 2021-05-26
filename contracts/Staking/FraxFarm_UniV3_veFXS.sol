@@ -34,6 +34,7 @@ import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
 import "../Curve/IveFXS.sol";
 import "../ERC20/ERC20.sol";
+import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
 import "../Uniswap_V3/IUniswapV3PositionsNFT.sol";
 import "../Utils/ReentrancyGuard.sol";
@@ -556,7 +557,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         reward0 = rewards0[rewardee];
         if (reward0 > 0) {
             rewards0[rewardee] = 0;
-            rewardsToken0.transfer(destination_address, reward0);
+            TransferHelper.safeTransfer(address(rewardsToken0), destination_address, reward0);
             emit RewardPaid(rewardee, reward0, address(rewardsToken0), destination_address);
         }
     }
@@ -645,7 +646,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         }
 
         // Only the owner address can ever receive the recovery withdrawal
-        ERC20(tokenAddress).transfer(owner, tokenAmount);
+        TransferHelper.safeTransfer(tokenAddress, owner, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 

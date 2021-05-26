@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.11;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -29,6 +28,7 @@ import "../ERC20/Variants/Comp.sol";
 import "../Oracle/UniswapPairOracle.sol";
 import "../Governance/AccessControl.sol";
 import "../Frax/Pools/FraxPool.sol";
+import '../Uniswap/TransferHelper.sol';
 import "./yearn/IyUSDC_V2_Partial.sol";
 import "./aave/IAAVELendingPool_Partial.sol";
 import "./aave/IAAVE_aUSDC_Partial.sol";
@@ -230,7 +230,7 @@ contract InvestorAMO_V2_non_proxy is AccessControl {
             borrowed_balance = 0;
         }
         paid_back_historical = paid_back_historical.add(amount);
-        collateral_token.transfer(address(pool), amount);
+        TransferHelper.safeTransfer(address(collateral_token), address(pool), amount);
     }
    
     function burnFXS(uint256 amount) public onlyByOwnerOrGovernance {
@@ -307,14 +307,15 @@ contract InvestorAMO_V2_non_proxy is AccessControl {
     /* ========== Custodian ========== */
 
     function withdrawRewards() public onlyCustodian {
-        COMP.transfer(custodian_address, COMP.balanceOf(address(this)));
-        stkAAVE.transfer(custodian_address, stkAAVE.balanceOf(address(this)));
-        AAVE.transfer(custodian_address, AAVE.balanceOf(address(this)));
+        TransferHelper.safeTransfer(address(COMP), custodian_address, COMP.balanceOf(address(this)));
+        TransferHelper.safeTransfer(address(stkAAVE), custodian_address, stkAAVE.balanceOf(address(this)));
+        TransferHelper.safeTransfer(address(AAVE), custodian_address, AAVE.balanceOf(address(this)));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
 
@@ -326,7 +327,8 @@ contract InvestorAMO_V2_non_proxy is AccessControl {
         weth_address = _weth_address;
     }
 
-    function setMiscRewardsCustodian(address _custodian_address) external onlyByOwnerOrGovernance {
+    function setCustodian(address _custodian_address) external onlyByOwnerOrGovernance {
+        require(_custodian_address != address(0), "Custodian address cannot be 0");        
         custodian_address = _custodian_address;
     }
 
@@ -353,7 +355,8 @@ contract InvestorAMO_V2_non_proxy is AccessControl {
         // Can only be triggered by owner or governance, not custodian
         // Tokens are sent to the custodian, as a sort of safeguard
 
-        ERC20(tokenAddress).transfer(custodian_address, tokenAmount);
+        TransferHelper.safeTransfer(tokenAddress, custodian_address, tokenAmount);
+
         emit Recovered(tokenAddress, tokenAmount);
     }
 

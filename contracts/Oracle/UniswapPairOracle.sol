@@ -7,13 +7,13 @@ import '../Math/FixedPoint.sol';
 
 import '../Uniswap/UniswapV2OracleLibrary.sol';
 import '../Uniswap/UniswapV2Library.sol';
+import "../Staking/Owned.sol";
 
 // Fixed window oracle that recomputes the average price for the entire period once every period
 // Note that the price average is only guaranteed to be over at least 1 period, but may be over a longer period
-contract UniswapPairOracle {
+contract UniswapPairOracle is Owned {
     using FixedPoint for *;
     
-    address owner_address;
     address timelock_address;
 
     uint public PERIOD = 3600; // 1 hour TWAP (time-weighted average price)
@@ -31,11 +31,11 @@ contract UniswapPairOracle {
     FixedPoint.uq112x112 public price1Average;
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not an owner or the governance timelock");
+        require(msg.sender == owner || msg.sender == timelock_address, "You are not an owner or the governance timelock");
         _;
     }
 
-    constructor(address factory, address tokenA, address tokenB, address _owner_address, address _timelock_address) public {
+    constructor(address factory, address tokenA, address tokenB, address _owner_address, address _timelock_address) public Owned(_owner_address) {
         IUniswapV2Pair _pair = IUniswapV2Pair(UniswapV2Library.pairFor(factory, tokenA, tokenB));
         pair = _pair;
         token0 = _pair.token0();
@@ -47,12 +47,7 @@ contract UniswapPairOracle {
         (reserve0, reserve1, blockTimestampLast) = _pair.getReserves();
         require(reserve0 != 0 && reserve1 != 0, 'UniswapPairOracle: NO_RESERVES'); // Ensure that there's liquidity in the pair
 
-        owner_address = _owner_address;
         timelock_address = _timelock_address;
-    }
-
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
     }
 
     function setTimelock(address _timelock_address) external onlyByOwnerOrGovernance {

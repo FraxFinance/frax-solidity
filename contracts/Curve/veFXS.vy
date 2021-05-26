@@ -104,6 +104,15 @@ event Supply:
     prevSupply: uint256
     supply: uint256
 
+event SmartWalletCheckerComitted:
+    future_smart_wallet_checker: address
+
+event SmartWalletCheckerApplied:
+    smart_wallet_checker: address
+
+event EmergencyUnlockToggled:
+    emergencyUnlockActive: bool
+
 
 WEEK: constant(uint256) = 7 * 86400  # all future times are rounded by week
 MAXTIME: constant(uint256) = 4 * 365 * 86400  # 4 years
@@ -202,6 +211,8 @@ def commit_smart_wallet_checker(addr: address):
     assert msg.sender == self.admin
     self.future_smart_wallet_checker = addr
 
+    log SmartWalletCheckerComitted(self.future_smart_wallet_checker)
+
 
 @external
 def apply_smart_wallet_checker():
@@ -211,6 +222,8 @@ def apply_smart_wallet_checker():
     assert msg.sender == self.admin
     self.smart_wallet_checker = self.future_smart_wallet_checker
 
+    log SmartWalletCheckerApplied(self.smart_wallet_checker)
+
 @external
 def toggleEmergencyUnlock():
     """
@@ -218,6 +231,8 @@ def toggleEmergencyUnlock():
     """
     assert msg.sender == self.admin  # dev: admin only
     self.emergencyUnlockActive = not (self.emergencyUnlockActive)
+
+    log EmergencyUnlockToggled(self.emergencyUnlockActive)
 
 @external
 def recoverERC20(token_addr: address, amount: uint256):
