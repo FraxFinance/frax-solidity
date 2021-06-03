@@ -10,7 +10,7 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================= StakingRewardsDualV3 =======================
+// ======================= StakingRewardsDualV4 =======================
 // ====================================================================
 // Includes veFXS boost logic
 // Unlocked deposits are removed to free up space
@@ -41,7 +41,7 @@ import "../Utils/ReentrancyGuard.sol";
 // Inheritance
 import "./Owned.sol";
 
-contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
+contract StakingRewardsDualV4 is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -271,18 +271,14 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
         if (veFXS_needed_for_max_boost > 0){ 
             uint256 user_vefxs_fraction = (veFXS.balanceOf(account)).mul(MULTIPLIER_PRECISION).div(veFXS_needed_for_max_boost);
             
-            uint256 vefxs_multiplier = uint256(MULTIPLIER_PRECISION).add(
-                (user_vefxs_fraction)
-                    .mul(vefxs_max_multiplier.sub(MULTIPLIER_PRECISION))
-                    .div(MULTIPLIER_PRECISION)
-            );
+            uint256 vefxs_multiplier = ((user_vefxs_fraction).mul(vefxs_max_multiplier)).div(MULTIPLIER_PRECISION);
 
             // Cap the boost to the vefxs_max_multiplier
             if (vefxs_multiplier > vefxs_max_multiplier) vefxs_multiplier = vefxs_max_multiplier;
 
             return vefxs_multiplier;        
         }
-        else return MULTIPLIER_PRECISION; // This will happen with the first stake, when user_staked_frax is 0
+        else return 0; // This will happen with the first stake, when user_staked_frax is 0
     }
 
     function calcCurCombinedWeight(address account) public view
@@ -312,8 +308,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
             }
 
             uint256 liquidity = thisStake.liquidity;
-            uint256 extra_vefxs_boost = midpoint_vefxs_multiplier.sub(MULTIPLIER_PRECISION); // Multiplier - 1, because it is additive
-            uint256 combined_boosted_amount = liquidity.mul(lock_multiplier.add(extra_vefxs_boost)).div(MULTIPLIER_PRECISION);
+            uint256 combined_boosted_amount = liquidity.mul(lock_multiplier.add(midpoint_vefxs_multiplier)).div(MULTIPLIER_PRECISION);
             new_combined_weight = new_combined_weight.add(combined_boosted_amount);
         }
     }

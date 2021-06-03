@@ -9,7 +9,7 @@ pragma solidity >=0.6.11;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================veFXSYieldDistributorV2=======================
+// ======================veFXSYieldDistributorV3=======================
 // ====================================================================
 // Distributes Frax protocol yield based on the claimer's veFXS balance
 
@@ -34,7 +34,7 @@ import "../ERC20/SafeERC20.sol";
 import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
 
-contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
+contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -65,7 +65,7 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
     mapping(address => uint256) public yields;
 
     // veFXS tracking
-    // uint256 public totalVeFXSParticipating = 0;
+    uint256 public totalVeFXSParticipating = 0;
     uint256 public totalVeFXSSupplyStored = 0;
     mapping(address => uint256) public userVeFXSCheckpointed;
 
@@ -74,6 +74,11 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
 
     // Admin booleans for emergencies
     bool public yieldCollectionPaused = false; // For emergencies
+
+    struct LockedBalance {
+        int128 amount;
+        uint256 end;
+    }
 
     /* ========== MODIFIERS ========== */
 
@@ -116,12 +121,27 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
 
     /* ========== VIEWS ========== */
 
-    // function fractionParticipating() external view returns (uint256) {
-    //     return
-    //         totalVeFXSParticipating.mul(PRICE_PRECISION).div(
-    //             totalVeFXSSupplyStored
-    //         );
-    // }
+    function fractionParticipating() external view returns (uint256) {
+        return
+            totalVeFXSParticipating.mul(PRICE_PRECISION).div(
+                totalVeFXSSupplyStored
+            );
+    }
+
+    // Only positions with locked veFXS can accrue yield. Otherwise, expired-locked veFXS
+    // is de-facto rewards for FXS.
+    function eligibleCurrentVeFXS(address account) public view returns (uint256) {
+        uint256 curr_vefxs_bal = veFXS.balanceOf(account);
+        IveFXS.LockedBalance memory curr_locked_bal_pack = veFXS.locked(account);
+        
+        // Only unexpired veFXS should be eligible
+        if (int256(curr_locked_bal_pack.amount) == int256(curr_vefxs_bal)) {
+            return 0;
+        }
+        else {
+            return curr_vefxs_bal;
+        }
+    }
 
     function lastTimeYieldApplicable() public view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
@@ -148,7 +168,7 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
 
         // Get the old and the new veFXS balances
         uint256 old_vefxs_balance = userVeFXSCheckpointed[account];
-        uint256 new_vefxs_balance = veFXS.balanceOf(account);
+        uint256 new_vefxs_balance = eligibleCurrentVeFXS(account);
 
         // Analogous to midpoint Riemann sum
         uint256 midpoint_vefxs_balance = ((new_vefxs_balance).add(old_vefxs_balance)).div(2); 
@@ -174,17 +194,21 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
         // Calculate the earnings first
         _syncEarned(account);
 
-        // Update the user's stored veFXS balance
-        userVeFXSCheckpointed[account] = veFXS.balanceOf(account);
+        // Get the old and the new veFXS balances
+        uint256 old_vefxs_balance = userVeFXSCheckpointed[account];
+        uint256 new_vefxs_balance = eligibleCurrentVeFXS(account);
 
-        // // Update the total amount participating
-        // if (new_vefxs_balance >= old_vefxs_balance) {
-        //     uint256 weight_diff = new_vefxs_balance.sub(old_vefxs_balance);
-        //     totalVeFXSParticipating = totalVeFXSParticipating.add(weight_diff);
-        // } else {
-        //     uint256 weight_diff = old_vefxs_balance.sub(new_vefxs_balance);
-        //     totalVeFXSParticipating = totalVeFXSParticipating.sub(weight_diff);
-        // }
+        // Update the user's stored veFXS balance
+        userVeFXSCheckpointed[account] = new_vefxs_balance;
+
+        // Update the total amount participating
+        if (new_vefxs_balance >= old_vefxs_balance) {
+            uint256 weight_diff = new_vefxs_balance.sub(old_vefxs_balance);
+            totalVeFXSParticipating = totalVeFXSParticipating.add(weight_diff);
+        } else {
+            uint256 weight_diff = old_vefxs_balance.sub(new_vefxs_balance);
+            totalVeFXSParticipating = totalVeFXSParticipating.sub(weight_diff);
+        }
     }
 
     function _syncEarned(address account) internal {

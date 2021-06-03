@@ -61,6 +61,8 @@ contract PIDController is Owned {
     // Booleans
     bool public is_active;
     bool public use_growth_ratio;
+    bool public collateral_ratio_paused;
+    bool public FIP_6;
 
     /* ========== MODIFIERS ========== */
 
@@ -97,6 +99,7 @@ contract PIDController is Owned {
     /* ========== PUBLIC MUTATIVE FUNCTIONS ========== */
     
     function refreshCollateralRatio() public {
+    	require(collateral_ratio_paused == false, "Collateral Ratio has been paused");
         uint256 time_elapsed = (block.timestamp).sub(last_update);
         require(time_elapsed >= internal_cooldown, "internal cooldown not passed");
         uint256 fxs_reserves = reserve_tracker.getFXSReserves();
@@ -113,6 +116,10 @@ contract PIDController is Owned {
 
         uint256 last_collateral_ratio = FRAX.global_collateral_ratio();
         uint256 new_collateral_ratio = last_collateral_ratio;
+
+        if(FIP_6){
+            require(frax_price > FRAX_top_band || frax_price < FRAX_bottom_band, "Use PIDController when FRAX is outside of peg");
+        }
 
         // First, check if the price is out of the band
         if(frax_price > FRAX_top_band){
@@ -205,6 +212,14 @@ contract PIDController is Owned {
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
         require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
+    }
+
+    function toggleCollateralRatio(bool _is_paused) external onlyByOwnerOrGovernance {
+    	collateral_ratio_paused = _is_paused;
+    }
+
+    function activateFIP6(bool _activate) external onlyByOwnerOrGovernance {
+        FIP_6 = _activate;
     }
 
 
