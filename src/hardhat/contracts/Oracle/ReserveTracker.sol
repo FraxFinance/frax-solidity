@@ -75,6 +75,7 @@ contract ReserveTracker is Owned {
     uint256[2] public old_twap;
     uint256 public frax_twap_price;
     uint256 public PERIOD = 3600; // 1-hour TWAP on deployment
+    bool public twap_paused;
 
     /* ========== MODIFIERS ========== */
 
@@ -139,6 +140,7 @@ contract ReserveTracker is Owned {
     /* ========== PUBLIC MUTATIVE FUNCTIONS ========== */
 
     function refreshFRAXCurveTWAP() public returns (uint256) {
+        require(twap_paused == false, "TWAP has been paused");
         uint256 time_elapsed = (block.timestamp).sub(last_timestamp);
         require(time_elapsed >= PERIOD, 'ReserveTracker: PERIOD_NOT_ELAPSED');
         uint256[2] memory new_twap = frax_metapool.get_price_cumulative_last();
@@ -150,6 +152,10 @@ contract ReserveTracker is Owned {
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
+
+    function toggleCurveTWAP(bool _state) external onlyByOwnerOrGovernance {
+        twap_paused = _state;
+    }
 
     function setCurveTWAPPeriod(uint _period) external onlyByOwnerOrGovernance {
         PERIOD = _period;
