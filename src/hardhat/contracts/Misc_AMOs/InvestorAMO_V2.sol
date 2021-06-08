@@ -36,6 +36,7 @@ import "./aave/IAaveIncentivesControllerPartial.sol";
 import "./compound/ICompComptrollerPartial.sol";
 import "./compound/IcUSDC_Partial.sol";
 import "../Staking/Owned.sol";
+import '../Uniswap/TransferHelper.sol';
 //import "../Proxy/Initializable.sol";
 
 // Lower APY: yearn, AAVE, Compound
@@ -249,7 +250,7 @@ contract InvestorAMO_V2 is AccessControl, Owned {
 
     function giveCollatBack(uint256 amount) public onlyByOwnerOrGovernance {
         // Give the collateral back
-        collateral_token.transfer(address(pool), amount); 
+        TransferHelper.safeTransfer(address(collateral_token), address(pool), amount);
 
         // Still paying back principal
         if (amount <= borrowed_balance) {

@@ -28,20 +28,8 @@ contract FXSOracleWrapper is Owned {
     constructor(
         address _creator_address,
         address _timelock_address
-    ) public Owned(_creator_address) {
+    ) Owned(_creator_address) {
         timelock_address = _timelock_address;
-    }
-
-    /* ========== RESTRICTED FUNCTIONS ========== */
-
-    function setChainlinkFXSOracle(address _chainlink_fxs_oracle) external onlyByOwnerOrGovernance {
-        chainlink_fxs_oracle = ChainlinkFXSUSDPriceConsumer(_chainlink_fxs_oracle);
-        chainlink_fxs_oracle_decimals = uint256(chainlink_fxs_oracle.getDecimals());
-    }
-
-    function setChainlinkETHOracle(address _chainlink_eth_oracle) external onlyByOwnerOrGovernance {
-        chainlink_eth_oracle = ChainlinkETHUSDPriceConsumer(_chainlink_eth_oracle);
-        chainlink_eth_oracle_decimals = uint256(chainlink_eth_oracle.getDecimals());
     }
 
     /* ========== VIEWS ========== */
@@ -66,4 +54,15 @@ contract FXSOracleWrapper is Owned {
         return getETHPrice().mul(PRICE_PRECISION).div(getFXSPrice());
     }
 
+    /* ========== RESTRICTED FUNCTIONS ========== */
+
+    function setChainlinkFXSOracle(address _chainlink_fxs_oracle) external onlyByOwnerOrGovernance {
+        chainlink_fxs_oracle = ChainlinkFXSUSDPriceConsumer(_chainlink_fxs_oracle);
+        chainlink_fxs_oracle_decimals = uint256(chainlink_fxs_oracle.getDecimals());
+    }
+
+    function setChainlinkETHOracle(address _chainlink_eth_oracle) external onlyByOwnerOrGovernance {
+        chainlink_eth_oracle = ChainlinkETHUSDPriceConsumer(_chainlink_eth_oracle);
+        chainlink_eth_oracle_decimals = uint256(chainlink_eth_oracle.getDecimals());
+    }
 }
