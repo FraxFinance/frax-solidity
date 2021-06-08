@@ -430,8 +430,9 @@ export const CONTRACT_ADDRESSES = {
       "yearn_yUSDC_V2": '0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9',
       "aave_aUSDC_Pool": '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
       "aave_aUSDC_Token": '0xBcca60bB61934080951369a648Fb03DF4F96263C',
+      'aave_incentives_controller': '0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5',
       "compound_cUSDC": '0x39AA39c021dfbaE8faC545936693aC917d5E7563',
-      "compound_Controller": '0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B',
+      "compound_controller": '0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B',
       "cream_crFRAX": '0xb092b4601850E23903A42EaCBc9D8A0EeC26A4d5',
       "fnx_FPT_FRAX": '0x39ad661bA8a7C9D3A7E4808fb9f9D5223E22F763',
       "fnx_FPT_B": '0x7E605Fb638983A448096D82fFD2958ba012F30Cd', // B = FNX
