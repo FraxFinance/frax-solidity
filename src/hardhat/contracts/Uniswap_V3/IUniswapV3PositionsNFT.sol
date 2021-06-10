@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.6.11;
+pragma abicoder v2;
 
 import '../ERC721/IERC721.sol';
 
 // Originally INonfungiblePositionManager
 interface IUniswapV3PositionsNFT is IERC721 {
     
+    struct CollectParams {
+        uint256 tokenId;
+        address recipient;
+        uint128 amount0Max;
+        uint128 amount1Max;
+    }
+
     /// @notice Returns the position information associated with a given token ID.
     /// @dev Throws if the token ID is not valid.
     /// @param tokenId The ID of the token that represents the position
@@ -38,4 +46,13 @@ interface IUniswapV3PositionsNFT is IERC721 {
             uint128 tokensOwed0, // [10]
             uint128 tokensOwed1 // [11]
         );
+
+    /// @notice Collects up to a maximum amount of fees owed to a specific position to the recipient
+    /// @param params tokenId The ID of the NFT for which tokens are being collected,
+    /// recipient The account that should receive the tokens,
+    /// amount0Max The maximum amount of token0 to collect,
+    /// amount1Max The maximum amount of token1 to collect
+    /// @return amount0 The amount of fees collected in token0
+    /// @return amount1 The amount of fees collected in token1
+    function collect(CollectParams calldata params) external payable returns (uint256 amount0, uint256 amount1);
 }

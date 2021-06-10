@@ -36,6 +36,8 @@ import "../Curve/IveFXS.sol";
 import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
+import "../Uniswap_V3/libraries/TickMath.sol";
+import "../Uniswap_V3/libraries/LiquidityAmounts.sol";
 import "../Uniswap_V3/IUniswapV3PositionsNFT.sol";
 import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
@@ -55,9 +57,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     address public timelock_address;
 
     // Constant for various precisions
-    uint256 private constant PRICE_PRECISION = 1e6;
-    uint256 private constant VEFXS_MULTIPLIER_PRECISION = 1e18;
-    // uint256 private constant VEFXS_PRICE_DECIMAL_DIFFERENCE = 1e12;
+    uint256 private constant MULTIPLIER_PRECISION = 1e18;
 
     // Reward and period related
     uint256 public periodFinish;
@@ -71,8 +71,9 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     uint256 public lock_time_min = 86400; // 1 * 86400  (1 day)
 
     // veFXS related
-    uint256 public vefxs_per_frax_for_max_boost = uint256(5e17); // E18. 5e17 means 0.5 veFXS must be held by the staker per 1 FRAX
-    uint256 public vefxs_max_multiplier = uint256(25e17); // E18. 1x = 1e18
+    uint256 public vefxs_per_frax_for_max_boost = uint256(4e18); // E18. 4e18 means 4 veFXS must be held by the staker per 1 FRAX
+    uint256 public vefxs_max_multiplier = uint256(2e18); // E18. 1x = 1e18
+    uint256 public overridden_frax_per_lp = 1e18;
     mapping(address => uint256) private _vefxsMultiplierStored;
 
     // Uniswap V3 related
@@ -92,6 +93,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     uint256 private _total_combined_weight = 0;
     mapping(address => uint256) private _locked_liquidity;
     mapping(address => uint256) private _combined_weights;
+    mapping(address => uint256[]) private lockedTokenIDs;
     mapping(address => LockedNFT[]) private lockedNFTs;
 
     // List of valid migrators (set by governance)
@@ -100,17 +102,18 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     // Stakers set which migrator(s) they want to use
     mapping(address => mapping(address => bool))
-        public staker_allowed_migrators;
+    public staker_allowed_migrators;
 
     // Greylists
     mapping(address => bool) public greylist;
 
-    // Admin booleans for emergencies and migrations
+    // Admin booleans for emergencies, migrations, and overrides
     bool public migrationsOn = false; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
     bool public stakesUnlocked = false; // Release locked stakes in case of system migration or emergency
-    bool public stakingPaused = false; // For emergencies
-    bool public withdrawalsPaused = false; // For emergencies
-    bool public rewardsCollectionPaused = false; // For emergencies
+    bool public stakingPaused = false;
+    bool public withdrawalsPaused = false;
+    bool public rewardsCollectionPaused = false;
+    bool public overrideFraxPerLP = false;
 
     // Struct for the stake
     struct LockedNFT {
@@ -204,8 +207,8 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     function lockMultiplier(uint256 secs) public view returns (uint256) {
         uint256 lock_multiplier =
-            uint256(PRICE_PRECISION).add(
-                secs.mul(lock_max_multiplier.sub(PRICE_PRECISION)).div(
+            uint256(MULTIPLIER_PRECISION).add(
+                secs.mul(lock_max_multiplier.sub(MULTIPLIER_PRECISION)).div(
                     lock_time_for_max_multiplier
                 )
             );
@@ -214,18 +217,15 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     function fraxPerLPToken() public view returns (uint256) {
-        // // Get the amount of FRAX 'inside' of the lp tokens
-        // uint256 frax_per_lp_token;
-        // {
-        //     uint256 total_frax_reserves;
-        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-        //     if (frax_is_token0) total_frax_reserves = reserve0;
-        //     else total_frax_reserves = reserve1;
+        if (overrideFraxPerLP){
+            return overridden_frax_per_lp;
+        }
+        else {
+            uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(uni_tick_lower);
+            uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(uni_tick_upper);
+            return LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, 1e18);
+        }
 
-        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
-        // }
-        // return frax_per_lp_token;
-        return 1e18;
     }
 
     function userStakedFrax(address account) public view returns (uint256) {
@@ -233,7 +233,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     function minVeFXSForMaxBoost(address account) public view returns (uint256) {
-        return (userStakedFrax(account)).mul(vefxs_per_frax_for_max_boost).div(VEFXS_MULTIPLIER_PRECISION);
+        return (userStakedFrax(account)).mul(vefxs_per_frax_for_max_boost).div(MULTIPLIER_PRECISION);
     }
 
     function veFXSMultiplier(address account) public view returns (uint256) {
@@ -241,20 +241,16 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         // of their locked LP tokens
         uint256 veFXS_needed_for_max_boost = minVeFXSForMaxBoost(account);
         if (veFXS_needed_for_max_boost > 0){ 
-            uint256 user_vefxs_fraction = (veFXS.balanceOf(account)).mul(VEFXS_MULTIPLIER_PRECISION).div(veFXS_needed_for_max_boost);
+            uint256 user_vefxs_fraction = (veFXS.balanceOf(account)).mul(MULTIPLIER_PRECISION).div(veFXS_needed_for_max_boost);
             
-            uint256 vefxs_multiplier = uint256(VEFXS_MULTIPLIER_PRECISION).add(
-                (user_vefxs_fraction)
-                    .mul(vefxs_max_multiplier.sub(VEFXS_MULTIPLIER_PRECISION))
-                    .div(VEFXS_MULTIPLIER_PRECISION)
-            );
+            uint256 vefxs_multiplier = ((user_vefxs_fraction).mul(vefxs_max_multiplier)).div(MULTIPLIER_PRECISION);
 
             // Cap the boost to the vefxs_max_multiplier
             if (vefxs_multiplier > vefxs_max_multiplier) vefxs_multiplier = vefxs_max_multiplier;
 
             return vefxs_multiplier;        
         }
-        else return VEFXS_MULTIPLIER_PRECISION; // This will happen with the first stake, when user_staked_frax is 0
+        else return 0; // This will happen with the first stake, when user_staked_frax is 0
     }
 
     function checkUniV3NFT(uint256 token_id, bool fail_if_false) public view returns (bool is_valid, uint256 liquidity) {
@@ -299,9 +295,14 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         return (is_valid, liquidity);
     }
 
-    // Return all of the
+    // Return all of the locked NFT positions
     function lockedNFTsOf(address account) external view returns (LockedNFT[] memory) {
         return lockedNFTs[account];
+    }
+
+    // Return all of the locked NFT token IDs
+    function lockedNFTIDsOf(address account) public view returns (uint256[] memory) {
+        return lockedTokenIDs[account];
     }
 
     function calcCurCombinedWeight(address account) public view
@@ -314,20 +315,26 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         // Get the old combined weight
         old_combined_weight = _combined_weights[account];
 
-        // Get the new veFXS multiplier
+        // Get the veFXS multipliers
+        // For the calculations, use the midpoint (analogous to midpoint Riemann sum)
         new_vefxs_multiplier = veFXSMultiplier(account);
+        uint256 midpoint_vefxs_multiplier = ((new_vefxs_multiplier).add(_vefxsMultiplierStored[account])).div(2); 
 
         // Loop through the locked stakes, first by getting the liquidity * lock_multiplier portion
-        uint256 locked_tally = 0;
+        new_combined_weight = 0;
         for (uint256 i = 0; i < lockedNFTs[account].length; i++) {
-            uint256 lock_multiplier = lockedNFTs[account][i].lock_multiplier;
-            uint256 liquidity = lockedNFTs[account][i].liquidity;
-            uint256 lock_boosted_portion = liquidity.mul(lock_multiplier).div(PRICE_PRECISION);
-            locked_tally = locked_tally.add(lock_boosted_portion);
-        }
+            LockedNFT memory thisStake = lockedNFTs[account][i];
+            uint256 lock_multiplier = thisStake.lock_multiplier;
 
-        // Now factor in the veFXS multiplier
-        new_combined_weight = locked_tally.mul(new_vefxs_multiplier).div(VEFXS_MULTIPLIER_PRECISION);
+            // If the lock period is over, drop the lock multiplier to 1x for the weight calculations
+            if (thisStake.ending_timestamp <= block.timestamp){
+                lock_multiplier = MULTIPLIER_PRECISION;
+            }
+
+            uint256 liquidity = thisStake.liquidity;
+            uint256 combined_boosted_amount = liquidity.mul(lock_multiplier.add(midpoint_vefxs_multiplier)).div(MULTIPLIER_PRECISION);
+            new_combined_weight = new_combined_weight.add(combined_boosted_amount);
+        }
     }
 
     function lastTimeRewardApplicable() public view returns (uint256) {
@@ -389,20 +396,23 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     function _updateRewardAndBalance(address account, bool sync_too) internal {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
-        if (sync_too) {
+        if (sync_too){
             sync();
         }
-
+        
         if (account != address(0)) {
             // To keep the math correct, the user's combined weight must be recomputed to account for their
             // ever-changing veFXS balance.
-            (
+            (   
                 uint256 old_combined_weight,
                 uint256 new_vefxs_multiplier,
                 uint256 new_combined_weight
             ) = calcCurCombinedWeight(account);
 
-            // Optionally update the user's stored veFXS multiplier
+            // Calculate the earnings first
+            _syncEarned(account);
+
+            // Update the user's stored veFXS multipliers
             _vefxsMultiplierStored[account] = new_vefxs_multiplier;
 
             // Update the user's and the global combined weights
@@ -416,12 +426,15 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
                 _combined_weights[account] = old_combined_weight.sub(weight_diff);
             }
 
-            if (sync_too) {
-                // Calculate the earnings
-                uint256 earned0 = earned(account);
-                rewards0[account] = earned0;
-                userRewardPerTokenPaid0[account] = rewardPerTokenStored0;
-            }
+        }
+    }
+
+    function _syncEarned(address account) internal {
+        if (account != address(0)) {
+            // Calculate the earnings
+            uint256 earned0 = earned(account);
+            rewards0[account] = earned0;
+            userRewardPerTokenPaid0[account] = rewardPerTokenStored0;
         }
     }
 
@@ -445,7 +458,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for migration)
     function stakeLocked(uint256 token_id, uint256 secs) external {
-        _stakeLocked(msg.sender, msg.sender, token_id, secs);
+        _stakeLocked(msg.sender, msg.sender, token_id, secs, block.timestamp);
     }
 
     // If this were not internal, and source_address had an infinite approve, this could be exploitable
@@ -454,7 +467,8 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         address staker_address,
         address source_address,
         uint256 token_id,
-        uint256 secs
+        uint256 secs,
+        uint256 start_timestamp
     ) internal nonReentrant updateRewardAndBalance(staker_address, true) {
         require((stakingPaused == false && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking is paused, or migration is happening");
         require(greylist[staker_address] == false, "Address has been greylisted");
@@ -462,16 +476,14 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         require(secs <= lock_time_for_max_multiplier,"You are trying to lock for too long");
         (, uint256 liquidity) = checkUniV3NFT(token_id, true); // Should throw if false
 
-        uint256 combined_weight_to_add;
         {
             uint256 lock_multiplier = lockMultiplier(secs);
-            combined_weight_to_add = liquidity.mul(lock_multiplier).mul(_vefxsMultiplierStored[staker_address]).div(PRICE_PRECISION).div(VEFXS_MULTIPLIER_PRECISION);
             lockedNFTs[staker_address].push(
                 LockedNFT(
                     token_id,
                     liquidity,
-                    block.timestamp,
-                    block.timestamp.add(secs),
+                    start_timestamp,
+                    start_timestamp.add(secs),
                     lock_multiplier
                 )
             );
@@ -480,13 +492,9 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         // Pull the tokens from the source_address
         stakingTokenNFT.safeTransferFrom(source_address, address(this), token_id);
 
-        // Staking token liquidity and combined weight
+        // Update liquidities
         _total_liquidity_locked = _total_liquidity_locked.add(liquidity);
-        _total_combined_weight = _total_combined_weight.add(combined_weight_to_add);
-
-        // Staking token balance, combined weight, and veFXS multiplier
         _locked_liquidity[staker_address] = _locked_liquidity[staker_address].add(liquidity);
-        _combined_weights[staker_address] = _combined_weights[staker_address].add(combined_weight_to_add);
 
         // Need to call again to make sure everything is correct
         _updateRewardAndBalance(staker_address, false);
@@ -521,17 +529,10 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
         uint256 theLiquidity = thisStake.liquidity;
 
-        // updateRewardAndBalance() above should make this math correct and not leave a gap
-        uint256 combined_weight_to_sub = theLiquidity.mul(thisStake.lock_multiplier).mul(_vefxsMultiplierStored[staker_address]).div(PRICE_PRECISION).div(VEFXS_MULTIPLIER_PRECISION);
-
         if (theLiquidity > 0) {
-            // Staking token liquidity and combined weight
+            // Update liquidities
             _total_liquidity_locked = _total_liquidity_locked.sub(theLiquidity);
-            _total_combined_weight = _total_combined_weight.sub(combined_weight_to_sub);
-
-            // Staking token balance and combined weight
             _locked_liquidity[staker_address] = _locked_liquidity[staker_address].sub(theLiquidity);
-            _combined_weights[staker_address] = _combined_weights[staker_address].sub(combined_weight_to_sub);
 
             // Remove the stake from the array
             delete lockedNFTs[staker_address][theArrayIndex];
@@ -553,12 +554,29 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     // No withdrawer == msg.sender check needed since this is only internally callable
     // This distinction is important for the migrator
+    // Also collects the LP fees
     function _getReward(address rewardee, address destination_address) internal nonReentrant notRewardsCollectionPaused updateRewardAndBalance(rewardee, true) returns (uint256 reward0) {
         reward0 = rewards0[rewardee];
         if (reward0 > 0) {
             rewards0[rewardee] = 0;
             TransferHelper.safeTransfer(address(rewardsToken0), destination_address, reward0);
-            emit RewardPaid(rewardee, reward0, address(rewardsToken0), destination_address);
+
+            // Collect liquidity fees too
+            uint256 accumulated_token0 = 0;
+            uint256 accumulated_token1 = 0;
+            for (uint256 i = 0; i < lockedTokenIDs[rewardee].length; i++) {
+                IUniswapV3PositionsNFT.CollectParams memory collect_params = IUniswapV3PositionsNFT.CollectParams(
+                    lockedTokenIDs[rewardee][i],
+                    destination_address,
+                    type(uint128).max,
+                    type(uint128).max
+                );
+                (uint256 tok0_amt, uint256 tok1_amt) = stakingTokenNFT.collect(collect_params);
+                accumulated_token0 = accumulated_token0.add(tok0_amt);
+                accumulated_token1 = accumulated_token0.add(tok1_amt);
+            }
+
+            emit RewardPaid(rewardee, reward0, accumulated_token0, accumulated_token1, address(rewardsToken0), destination_address);
         }
     }
 
@@ -603,9 +621,9 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can).
-    function migrator_stakeLocked_for(address staker_address, uint256 token_id, uint256 secs) external isMigrating {
+    function migrator_stakeLocked_for(address staker_address, uint256 token_id, uint256 secs, uint256 start_timestamp) external isMigrating {
         require(migratorApprovedForStaker(staker_address, msg.sender), "msg.sender is either an invalid migrator or the staker has not approved them");
-        _stakeLocked(staker_address, msg.sender, token_id, secs);
+        _stakeLocked(staker_address, msg.sender, token_id, secs, start_timestamp);
     }
 
     // Used for migrations
@@ -669,10 +687,9 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     function setMultipliers(uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_per_frax_for_max_boost) external onlyByOwnerOrGovernance {
-        require(_lock_max_multiplier >= uint256(1e6), "Multiplier must be greater than or equal to 1e6");
-        require(_vefxs_max_multiplier >= uint256(1e18), "Max veFXS multiplier must be greater than or equal to 1e18");
-        require(_vefxs_per_frax_for_max_boost >= 1000, "veFXS pct max must be greater than or equal to .001e6");
-        require(_vefxs_per_frax_for_max_boost <= 1000000, "veFXS pct max must be less then or equal to 1e6");
+        require(_lock_max_multiplier >= uint256(1e18), "Multiplier must be greater than or equal to 1e18");
+        require(_vefxs_max_multiplier >= 0, "Max veFXS multiplier must be greater than or equal to 0");
+        require(_vefxs_per_frax_for_max_boost > 0, "veFXS pct max must be greater than 0");
 
         lock_max_multiplier = _lock_max_multiplier;
         vefxs_max_multiplier = _vefxs_max_multiplier;
@@ -706,6 +723,14 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     function unlockStakes() external onlyByOwnerOrGovernance {
         stakesUnlocked = !stakesUnlocked;
+    }
+
+    function toggleOverrideFraxPerLP() external onlyByOwnerOrGovernance {
+        overrideFraxPerLP = !overrideFraxPerLP;
+    }
+
+    function setOverrideFraxPerLP(uint256 _overridden_frax_per_lp) external onlyByOwnerOrGovernance {
+        overridden_frax_per_lp = _overridden_frax_per_lp;
     }
 
     function toggleMigrations() external onlyByOwnerOrGovernance {
@@ -749,7 +774,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     event LockNFT(address indexed user, uint256 liquidity, uint256 token_id, uint256 secs, address source_address);
     event WithdrawLocked(address indexed user, uint256 liquidity, uint256 token_id, address destination_address);
-    event RewardPaid(address indexed user, uint256 reward, address token_address, address destination_address);
+    event RewardPaid(address indexed user, uint256 farm_reward, uint256 liq_tok0_reward, uint256 liq_tok1_reward, address token_address, address destination_address);
     event RewardsDurationUpdated(uint256 newDuration);
     event RecoveredERC20(address token, uint256 amount);
     event RecoveredERC721(address token, uint256 token_id);

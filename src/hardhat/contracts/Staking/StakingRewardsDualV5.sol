@@ -70,7 +70,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
 
     // veFXS related
     uint256 public vefxs_per_frax_for_max_boost = uint256(4e18); // E18. 4e18 means 4 veFXS must be held by the staker per 1 FRAX
-    uint256 public vefxs_max_multiplier = uint256(25e17); // E18. 1x = 1e18
+    uint256 public vefxs_max_multiplier = uint256(2e18); // E18. 1x = 1e18
     // mapping(address => uint256) private _vefxsMultiplierStoredOld;
     mapping(address => uint256) private _vefxsMultiplierStored;
 
@@ -423,12 +423,18 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for migration)
     function stakeLocked(uint256 liquidity, uint256 secs) public {
-        _stakeLocked(msg.sender, msg.sender, liquidity, secs);
+        _stakeLocked(msg.sender, msg.sender, liquidity, secs, block.timestamp);
     }
 
     // If this were not internal, and source_address had an infinite approve, this could be exploitable
     // (pull funds from source_address and stake for an arbitrary staker_address)
-    function _stakeLocked(address staker_address, address source_address, uint256 liquidity, uint256 secs) internal nonReentrant updateRewardAndBalance(staker_address, true) {
+    function _stakeLocked(
+        address staker_address, 
+        address source_address, 
+        uint256 liquidity, 
+        uint256 secs,
+        uint256 start_timestamp
+    ) internal nonReentrant updateRewardAndBalance(staker_address, true) {
         require((!stakingPaused && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking is paused, or migration is happening");
         require(liquidity > 0, "Must stake more than zero");
         require(greylist[staker_address] == false, "Address has been greylisted");
@@ -436,12 +442,12 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         require(secs <= lock_time_for_max_multiplier,"You are trying to lock for too long");
 
         uint256 lock_multiplier = lockMultiplier(secs);
-        bytes32 kek_id = keccak256(abi.encodePacked(staker_address, block.timestamp, liquidity));
+        bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity));
         lockedStakes[staker_address].push(LockedStake(
             kek_id,
-            block.timestamp,
+            start_timestamp,
             liquidity,
-            block.timestamp.add(secs),
+            start_timestamp.add(secs),
             lock_multiplier
         ));
 
@@ -582,9 +588,9 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
-    function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs) external isMigrating {
+    function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs, uint256 start_timestamp) external isMigrating {
         require(migratorApprovedForStaker(staker_address, msg.sender), "msg.sender is either an invalid migrator or the staker has not approved them");
-        _stakeLocked(staker_address, msg.sender, amount, secs);
+        _stakeLocked(staker_address, msg.sender, amount, secs, start_timestamp);
     }
 
     // Used for migrations
@@ -638,7 +644,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
 
     function setMultipliers(uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_per_frax_for_max_boost) external onlyByOwnerOrGovernance {
         require(_lock_max_multiplier >= uint256(1e6), "Multiplier must be greater than or equal to 1e6");
-        require(_vefxs_max_multiplier >= uint256(1e18), "Max veFXS multiplier must be greater than or equal to 1e18");
+        require(_vefxs_max_multiplier >= 0, "Max veFXS multiplier must be greater than or equal to 1e18");
         require(_vefxs_per_frax_for_max_boost > 0, "veFXS per FRAX must be greater than 0");
 
         lock_max_multiplier = _lock_max_multiplier;
