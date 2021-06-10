@@ -249,9 +249,6 @@ contract InvestorAMO_V2 is AccessControl, Owned {
     }
 
     function giveCollatBack(uint256 amount) public onlyByOwnerOrGovernance {
-        // Give the collateral back
-        TransferHelper.safeTransfer(address(collateral_token), address(pool), amount);
-
         // Still paying back principal
         if (amount <= borrowed_balance) {
             borrowed_balance = borrowed_balance.sub(amount);
@@ -262,6 +259,9 @@ contract InvestorAMO_V2 is AccessControl, Owned {
         }
         
         paid_back_historical = paid_back_historical.add(amount);
+
+        // Give the collateral back
+        TransferHelper.safeTransfer(address(collateral_token), address(pool), amount);
     }
    
     function burnFXS(uint256 amount) public onlyByOwnerOrGovernance {
