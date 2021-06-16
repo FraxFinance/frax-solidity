@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.11;
-pragma experimental ABIEncoderV2;
+pragma solidity >=0.6.11;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -10,7 +9,7 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ============================ CurveAMO_V3 ===========================
+// ============================ CurveAMO_V4 ===========================
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 
@@ -26,13 +25,15 @@ pragma experimental ABIEncoderV2;
 import "./IStableSwap3Pool.sol";
 import "./IMetaImplementationUSD.sol";
 import "../Misc_AMOs/yearn/IYearnVault.sol";
+import '../Uniswap/TransferHelper.sol';
 import "../ERC20/ERC20.sol";
 import "../Frax/Frax.sol";
 import "../FXS/FXS.sol";
 import "../Math/SafeMath.sol";
 import "../Proxy/Initializable.sol";
+import "../Staking/Owned_Proxy.sol";
 
-contract CurveAMO_V3 is AccessControl, Initializable {
+contract CurveAMO_V4 is AccessControl, Initializable, Owned_Proxy {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -50,14 +51,19 @@ contract CurveAMO_V3 is AccessControl, Initializable {
     address private fxs_contract_address;
     address private collateral_token_address;
     address private crv_address;
+    address private frax3crv_metapool_address;
+    address private crvFRAX_vault_address;
 
-    address public frax3crv_metapool_address;
-    address public crvFRAX_vault_address;
     address public timelock_address;
-    address public owner_address;
     address public custodian_address;
     address public pool_address;
     address public voter_contract_address; // FRAX3CRV and CRV will be sent here for veCRV voting, locked LP boosts, etc
+
+    // Number of decimals under 18, for collateral token
+    uint256 private missing_decimals;
+
+    // Precision related
+    uint256 private PRICE_PRECISION;
 
     // Tracks FRAX
     uint256 public minted_frax_historical;
@@ -76,18 +82,11 @@ contract CurveAMO_V3 is AccessControl, Initializable {
     // Minimum collateral ratio needed for new FRAX minting
     uint256 public min_cr;
 
-    // Number of decimals under 18, for collateral token
-    uint256 private missing_decimals;
-
-    // Precision related
-    uint256 private PRICE_PRECISION;
-
     // Min ratio of collat <-> 3crv conversions via add_liquidity / remove_liquidity; 1e6
     uint256 public liq_slippage_3crv;
 
     // Min ratio of (FRAX + 3CRV) <-> FRAX3CRV-f-2 metapool conversions via add_liquidity / remove_liquidity; 1e6
-    uint256 public add_liq_slippage_metapool;
-    uint256 public rem_liq_slippage_metapool;
+    uint256 public slippage_metapool;
 
     // Convergence window
     uint256 public convergence_window; // 1 cent
@@ -117,7 +116,8 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         address _three_pool_address,
         address _three_pool_token_address,
         address _pool_address
-    ) public payable initializer {
+    ) public initializer {
+        owner = _creator_address;
         FRAX = FRAXStablecoin(_frax_contract_address);
         fxs_contract_address = _fxs_contract_address;
         collateral_token_address = _collateral_address;
@@ -125,7 +125,6 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         crv_address = 0xD533a949740bb3306d119CC777fa900bA034cd52;
         missing_decimals = uint(18).sub(collateral_token.decimals());
         timelock_address = _timelock_address;
-        owner_address = _creator_address;
         custodian_address = _custodian_address;
         voter_contract_address = _custodian_address; // Default to the custodian
 
@@ -139,7 +138,7 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         pool = FraxPool(_pool_address);
 
         crvFRAX_vault_address = 0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139;
-        crvFRAX_vault = IYearnVault(0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139);
+        crvFRAX_vault = IYearnVault(crvFRAX_vault_address);
 
         // Other variable initializations
         minted_frax_historical = 0;
@@ -151,8 +150,7 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         min_cr = 850000;
         PRICE_PRECISION = 1e6;
         liq_slippage_3crv = 800000;
-        add_liq_slippage_metapool = 950000;
-        rem_liq_slippage_metapool = 950000;
+        slippage_metapool = 950000;
         convergence_window = 1e16;
         custom_floor = false;  
         set_discount = false;
@@ -162,7 +160,7 @@ contract CurveAMO_V3 is AccessControl, Initializable {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == timelock_address || msg.sender == owner_address, "Must be owner or timelock");
+        require(msg.sender == timelock_address || msg.sender == owner, "Must be owner or timelock");
         _;
     }
 
@@ -175,11 +173,6 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         require(msg.sender == custodian_address || msg.sender == voter_contract_address, "Must be rewards custodian or the voter contract");
         _;
     }
-
-    // modifier onlyVoter() {
-    //     require(msg.sender == voter_contract_address, "Must be voter contract");
-    //     _;
-    // }
 
     /* ========== VIEWS ========== */
 
@@ -221,21 +214,21 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         uint256 usdc_subtotal = usdc_in_contract.add(usdc_withdrawable);
 
         return [
-            frax_in_contract, // [0]
-            frax_withdrawable, // [1]
-            frax_withdrawable.add(frax_in_contract), // [2]
-            usdc_in_contract, // [3]
-            usdc_withdrawable, // [4]
-            usdc_subtotal, // [5]
-            usdc_subtotal + (frax_in_contract.add(frax_withdrawable)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals)), // [6] USDC Total
-            lp_owned, // [7]
-            frax3crv_supply, // [8]
-            _3pool_withdrawable, // [9]
-            lp_value_in_vault // [10]
+            frax_in_contract, // [0] Free FRAX in the contract
+            frax_withdrawable, // [1] FRAX withdrawable from the FRAX3CRV tokens
+            frax_withdrawable.add(frax_in_contract), // [2] FRAX withdrawable + free FRAX in the the contract
+            usdc_in_contract, // [3] Free USDC
+            usdc_withdrawable, // [4] USDC withdrawable from the FRAX3CRV tokens
+            usdc_subtotal, // [5] USDC subtotal assuming FRAX drops to the CR and all reserves are arbed
+            usdc_subtotal.add((frax_in_contract.add(frax_withdrawable)).mul(fraxDiscountRate()).div(1e6 * (10 ** missing_decimals))), // [6] USDC Total
+            lp_owned, // [7] FRAX3CRV free or in the vault
+            frax3crv_supply, // [8] Total supply of FRAX3CRV tokens
+            _3pool_withdrawable, // [9] 3pool withdrawable from the FRAX3CRV tokens
+            lp_value_in_vault // [10] FRAX3CRV in the vault
         ];
     }
 
-    function collatDollarBalance() public view returns (uint256) {
+    function collatDollarBalance() external view returns (uint256) {
         if(override_collat_balance){
             return override_collat_balance_amount;
         }
@@ -294,7 +287,6 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         else return 0;
     }
 
-
     // Amount of FRAX3CRV deposited in the vault contract
     function yvCurveFRAXBalance() public view returns (uint256){
         return crvFRAX_vault.balanceOf(address(this));
@@ -314,12 +306,9 @@ contract CurveAMO_V3 is AccessControl, Initializable {
     // The burn can be called separately later on
     function mintRedeemPart1(uint256 frax_amount) external onlyByOwnerOrGovernance {
         //require(allow_yearn || allow_aave || allow_compound, 'All strategies are currently off');
-        uint256 redemption_fee = pool.redemption_fee();
-        uint256 col_price_usd = pool.getCollateralPrice();
-        uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
-        uint256 redeem_amount_E6 = (frax_amount.mul(uint256(1e6).sub(redemption_fee))).div(1e6).div(10 ** missing_decimals);
-        uint256 expected_collat_amount = redeem_amount_E6.mul(global_collateral_ratio).div(1e6);
-        expected_collat_amount = expected_collat_amount.mul(1e6).div(col_price_usd);
+        uint256 redeem_amount_E6 = (frax_amount.mul(uint256(1e6).sub(pool.redemption_fee()))).div(1e6).div(10 ** missing_decimals);
+        uint256 expected_collat_amount = redeem_amount_E6.mul(FRAX.global_collateral_ratio()).div(1e6);
+        expected_collat_amount = expected_collat_amount.mul(1e6).div(pool.getCollateralPrice());
 
         require(collateralBalance().add(expected_collat_amount) <= collat_borrow_cap, "Borrow cap");
         borrowed_collat_historical = borrowed_collat_historical.add(expected_collat_amount);
@@ -338,25 +327,25 @@ contract CurveAMO_V3 is AccessControl, Initializable {
 
     // Give USDC profits back
     function giveCollatBack(uint256 amount) external onlyByOwnerOrGovernance {
-        collateral_token.transfer(address(pool), amount);
         returned_collat_historical = returned_collat_historical.add(amount);
+        TransferHelper.safeTransfer(address(collateral_token), address(pool), amount);
     }
    
     // Burn unneeded or excess FRAX
     function burnFRAX(uint256 frax_amount) public onlyByOwnerOrGovernance {
-        FRAX.burn(frax_amount);
         burned_frax_historical = burned_frax_historical.add(frax_amount);
+        FRAX.burn(frax_amount);
     }
    
-    function burnFXS(uint256 amount) public onlyByOwnerOrGovernance {
+    function burnFXS(uint256 amount) external onlyByOwnerOrGovernance {
         FRAXShares(fxs_contract_address).approve(address(this), amount);
         FRAXShares(fxs_contract_address).pool_burn_from(address(this), amount);
     }
 
     function metapoolDeposit(uint256 _frax_amount, uint256 _collateral_amount) external onlyByOwnerOrGovernance returns (uint256 metapool_LP_received) {
         // Mint the FRAX component
-        FRAX.pool_mint(address(this), _frax_amount);
         minted_frax_historical = minted_frax_historical.add(_frax_amount);
+        FRAX.pool_mint(address(this), _frax_amount);
         require(fraxBalance() <= max_frax_outstanding, "max_frax_outstanding reached");
 
         uint256 threeCRV_received = 0;
@@ -386,7 +375,7 @@ contract CurveAMO_V3 is AccessControl, Initializable {
 
         {
             // Add the FRAX and the collateral to the metapool
-            uint256 min_lp_out = (_frax_amount.add(threeCRV_received)).mul(add_liq_slippage_metapool).div(PRICE_PRECISION);
+            uint256 min_lp_out = (_frax_amount.add(threeCRV_received)).mul(slippage_metapool).div(PRICE_PRECISION);
             metapool_LP_received = frax3crv_metapool.add_liquidity([_frax_amount, threeCRV_received], min_lp_out);
         }
 
@@ -429,7 +418,7 @@ contract CurveAMO_V3 is AccessControl, Initializable {
 
     function metapoolWithdrawFrax(uint256 _metapool_lp_in, bool burn_the_frax) external onlyByOwnerOrGovernance returns (uint256 frax_received) {
         // Withdraw FRAX from the metapool
-        uint256 min_frax_out = _metapool_lp_in.mul(rem_liq_slippage_metapool).div(PRICE_PRECISION);
+        uint256 min_frax_out = _metapool_lp_in.mul(slippage_metapool).div(PRICE_PRECISION);
         frax_received = frax3crv_metapool.remove_liquidity_one_coin(_metapool_lp_in, 0, min_frax_out);
 
         // Optionally burn the FRAX
@@ -440,7 +429,7 @@ contract CurveAMO_V3 is AccessControl, Initializable {
 
     function metapoolWithdraw3pool(uint256 _metapool_lp_in) public onlyByOwnerOrGovernance {
         // Withdraw 3pool from the metapool
-        uint256 min_3pool_out = _metapool_lp_in.mul(rem_liq_slippage_metapool).div(PRICE_PRECISION);
+        uint256 min_3pool_out = _metapool_lp_in.mul(slippage_metapool).div(PRICE_PRECISION);
         frax3crv_metapool.remove_liquidity_one_coin(_metapool_lp_in, 1, min_3pool_out);
     }
 
@@ -459,7 +448,7 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         three_pool_to_collateral(three_pool_erc20.balanceOf(address(this)));
     }
 
-    // Deposit Metapool LP tokens into the Curve DAO for vault rewards, if any
+    // Deposit Metapool LP tokens into the yearn vault
     function depositToVault(uint256 _metapool_lp_in) external onlyByOwnerOrGovernance {
         // Approve the metapool LP tokens for the vault contract
         frax3crv_metapool.approve(address(crvFRAX_vault), _metapool_lp_in);
@@ -468,7 +457,7 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         crvFRAX_vault.deposit(_metapool_lp_in, address(this));
     }
 
-    // Withdraw Metapool LP from Curve DAO back to this contract
+    // Withdraw Metapool LP from the yearn vault back to this contract
     function withdrawFromVault(uint256 _metapool_lp_out) external onlyByOwnerOrGovernance {
         crvFRAX_vault.withdraw(_metapool_lp_out, address(this), 1);
     }
@@ -481,27 +470,26 @@ contract CurveAMO_V3 is AccessControl, Initializable {
 
     /* ========== Custodian / Voter========== */
 
-    // NOTE: The custodian_address or voter_contract_addresse can be set to the governance contract to be used as
+    // NOTE: The custodian_address or voter_contract_address can be set to the governance contract to be used as
     // a mega-voter or sorts. The CRV here can then be converted to veCRV and then used to vote
     function withdrawCRVRewards() external onlyCustodianOrVoter {
-        ERC20(crv_address).transfer(msg.sender, ERC20(crv_address).balanceOf(address(this)));
+        TransferHelper.safeTransfer(crv_address, msg.sender,  ERC20(crv_address).balanceOf(address(this)));
     }
 
     /* ========== RESTRICTED GOVERNANCE FUNCTIONS ========== */
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+        require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
 
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
-        owner_address = _owner_address;
-    }
-
-    function setMiscRewardsCustodian(address _custodian_address) external onlyByOwnerOrGovernance {
+    function setCustodian(address _custodian_address) external onlyByOwnerOrGovernance {
+        require(_custodian_address != address(0), "Custodian address cannot be 0");        
         custodian_address = _custodian_address;
     }
 
     function setVoterContract(address _voter_contract_address) external onlyByOwnerOrGovernance {
+        require(_voter_contract_address != address(0), "Voter address cannot be 0");  
         voter_contract_address = _voter_contract_address;
     }
 
@@ -510,12 +498,12 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         pool = FraxPool(_pool_address);
     }
 
-    function setThreePool(address _three_pool_address, address _three_pool_token_address) external onlyByOwnerOrGovernance {
-        three_pool_address = _three_pool_address;
-        three_pool = IStableSwap3Pool(_three_pool_address);
-        three_pool_token_address = _three_pool_token_address;
-        three_pool_erc20 = ERC20(_three_pool_token_address);
-    }
+    // function setThreePool(address _three_pool_address, address _three_pool_token_address) external onlyByOwnerOrGovernance {
+    //     three_pool_address = _three_pool_address;
+    //     three_pool = IStableSwap3Pool(_three_pool_address);
+    //     three_pool_token_address = _three_pool_token_address;
+    //     three_pool_erc20 = ERC20(_three_pool_token_address);
+    // }
 
     function setMetapool(address _metapool_address) external onlyByOwnerOrGovernance {
         frax3crv_metapool_address = _metapool_address;
@@ -560,15 +548,14 @@ contract CurveAMO_V3 is AccessControl, Initializable {
         discount_rate = _discount_rate;
     }
 
-    function setSlippages(uint256 _liq_slippage_3crv, uint256 _add_liq_slippage_metapool, uint256 _rem_liq_slippage_metapool) external onlyByOwnerOrGovernance {
+    function setSlippages(uint256 _liq_slippage_3crv, uint256 _slippage_metapool) external onlyByOwnerOrGovernance {
         liq_slippage_3crv = _liq_slippage_3crv;
-        add_liq_slippage_metapool = _add_liq_slippage_metapool;
-        rem_liq_slippage_metapool = _rem_liq_slippage_metapool;
+        slippage_metapool = _slippage_metapool;
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Can only be triggered by owner or governance, not custodian
         // Tokens are sent to the custodian, as a sort of safeguard
-        ERC20(tokenAddress).transfer(custodian_address, tokenAmount);
+        TransferHelper.safeTransfer(address(tokenAddress), custodian_address, tokenAmount);
     }
 }

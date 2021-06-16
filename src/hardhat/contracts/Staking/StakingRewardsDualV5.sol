@@ -302,7 +302,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
             LockedStake memory thisStake = lockedStakes[account][i];
             uint256 lock_multiplier = thisStake.lock_multiplier;
 
-            // If the lock period is over, drop the lock multiplier to 1x for the weight calculations
+            // If the lock period is over, drop the lock multiplier down to 1x for the weight calculations
             if (thisStake.ending_timestamp <= block.timestamp){
                 lock_multiplier = MULTIPLIER_PRECISION;
             }
@@ -422,7 +422,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     }
     
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function stakeLocked(uint256 liquidity, uint256 secs) public {
+    function stakeLocked(uint256 liquidity, uint256 secs) nonReentrant public {
         _stakeLocked(msg.sender, msg.sender, liquidity, secs, block.timestamp);
     }
 
@@ -434,7 +434,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         uint256 liquidity, 
         uint256 secs,
         uint256 start_timestamp
-    ) internal nonReentrant updateRewardAndBalance(staker_address, true) {
+    ) internal updateRewardAndBalance(staker_address, true) {
         require((!stakingPaused && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking is paused, or migration is happening");
         require(liquidity > 0, "Must stake more than zero");
         require(greylist[staker_address] == false, "Address has been greylisted");
@@ -465,13 +465,13 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     }
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function withdrawLocked(bytes32 kek_id) public {
+    function withdrawLocked(bytes32 kek_id) nonReentrant notWithdrawalsPaused public {
         _withdrawLocked(msg.sender, msg.sender, kek_id);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
     // functions like withdraw(), migrator_withdraw_unlocked() and migrator_withdraw_locked()
-    function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id) internal nonReentrant notWithdrawalsPaused {
+    function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id) internal  {
         // Collect rewards first and then update the balances
         _getReward(staker_address, destination_address);
 
@@ -511,13 +511,13 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     }
     
     // Two different getReward functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function getReward() external nonReentrant returns (uint256, uint256) {
+    function getReward() external nonReentrant notRewardsCollectionPaused returns (uint256, uint256) {
         return _getReward(msg.sender, msg.sender);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable
     // This distinction is important for the migrator
-    function _getReward(address rewardee, address destination_address) internal notRewardsCollectionPaused updateRewardAndBalance(rewardee, true) returns (uint256 reward0, uint256 reward1) {
+    function _getReward(address rewardee, address destination_address) internal updateRewardAndBalance(rewardee, true) returns (uint256 reward0, uint256 reward1) {
         reward0 = rewards0[rewardee];
         reward1 = rewards1[rewardee];
         if (reward0 > 0) {
