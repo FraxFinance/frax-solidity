@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity >=0.6.11;
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity >=0.8.0;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -35,6 +35,7 @@ import "../Staking/Owned_Proxy.sol";
 
 contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
     using SafeMath for uint256;
+    // Solidity ^8.0.0 automatically reverts on int256 underflows/overflows
 
     /* ========== STATE VARIABLES ========== */
 
@@ -46,17 +47,11 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
     FraxPool private pool;
     ERC20 private collateral_token;
 
-    address private three_pool_address;
-    address private three_pool_token_address;
     address private fxs_contract_address;
-    address private collateral_token_address;
-    address private crv_address;
     address private frax3crv_metapool_address;
-    address private stakedao_vault_address;
 
     address public timelock_address;
     address public custodian_address;
-    address public pool_address;
     address public voter_contract_address; // FRAX3CRV and CRV will be sent here for veCRV voting, locked LP boosts, etc
 
     // Number of decimals under 18, for collateral token
@@ -66,18 +61,18 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
     uint256 private PRICE_PRECISION;
 
     // Tracks FRAX
-    uint256 public minted_frax_historical;
-    uint256 public burned_frax_historical;
+    int256 public minted_frax_historical;
+    int256 public burned_frax_historical;
 
     // Max amount of FRAX outstanding the contract can mint from the FraxPool
-    uint256 public max_frax_outstanding;
+    int256 public max_frax_outstanding;
     
     // Tracks collateral
-    uint256 public borrowed_collat_historical;
-    uint256 public returned_collat_historical;
+    int256 public borrowed_collat_historical;
+    int256 public returned_collat_historical;
 
     // Max amount of collateral the contract can borrow from the FraxPool
-    uint256 public collat_borrow_cap;
+    int256 public collat_borrow_cap;
 
     // Minimum collateral ratio needed for new FRAX minting
     uint256 public min_cr;
@@ -113,16 +108,12 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
         address _custodian_address,
         address _timelock_address,
         address _frax3crv_metapool_address,
-        address _three_pool_address,
-        address _three_pool_token_address,
         address _pool_address
     ) public initializer {
         owner = _creator_address;
         FRAX = FRAXStablecoin(_frax_contract_address);
         fxs_contract_address = _fxs_contract_address;
-        collateral_token_address = _collateral_address;
         collateral_token = ERC20(_collateral_address);
-        crv_address = 0xD533a949740bb3306d119CC777fa900bA034cd52;
         missing_decimals = uint(18).sub(collateral_token.decimals());
         timelock_address = _timelock_address;
         custodian_address = _custodian_address;
@@ -130,24 +121,20 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
 
         frax3crv_metapool_address = _frax3crv_metapool_address;
         frax3crv_metapool = IMetaImplementationUSD(_frax3crv_metapool_address);
-        three_pool_address = _three_pool_address;
-        three_pool = IStableSwap3Pool(_three_pool_address);
-        three_pool_token_address = _three_pool_token_address;
-        three_pool_erc20 = ERC20(_three_pool_token_address);
-        pool_address = _pool_address;
+        three_pool = IStableSwap3Pool(0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7);
+        three_pool_erc20 = ERC20(0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490);
         pool = FraxPool(_pool_address);
 
-        stakedao_vault_address = 0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139;
-        stakedao_vault = IStakeDaoVault(stakedao_vault_address);
+        stakedao_vault = IStakeDaoVault(0x99780beAdd209cc3c7282536883Ef58f4ff4E52F);
 
         // Other variable initializations
         minted_frax_historical = 0;
         burned_frax_historical = 0;
-        max_frax_outstanding = uint256(2000000e18);
+        max_frax_outstanding = int256(2000000e18);
         borrowed_collat_historical = 0;
         returned_collat_historical = 0;
-        collat_borrow_cap = uint256(1000000e6);
-        min_cr = 830000;
+        collat_borrow_cap = int256(1000000e6);
+        min_cr = 820000;
         PRICE_PRECISION = 1e6;
         liq_slippage_3crv = 800000;
         slippage_metapool = 950000;
@@ -183,8 +170,8 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
         uint256 lp_owned = (frax3crv_metapool.balanceOf(address(this)));
 
         // Staked in the vault
-        uint256 lp_value_in_vault = usdValueInVault();
-        lp_owned = lp_owned.add(lp_value_in_vault);
+        uint256 lp_in_vault = FRAX3CRVInVault();
+        lp_owned = lp_owned.add(lp_in_vault);
 
         // ------------3pool Withdrawable------------
         // Uses iterate() to get metapool withdrawable amounts at FRAX floor price (global_collateral_ratio)
@@ -224,7 +211,7 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
             lp_owned, // [7] FRAX3CRV free or in the vault
             frax3crv_supply, // [8] Total supply of FRAX3CRV tokens
             _3pool_withdrawable, // [9] 3pool withdrawable from the FRAX3CRV tokens
-            lp_value_in_vault // [10] FRAX3CRV in the vault
+            lp_in_vault // [10] FRAX3CRV in the vault
         ];
     }
 
@@ -275,26 +262,29 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
         }
     }
 
-    // In FRAX
-    function fraxBalance() public view returns (uint256) {
-        if (minted_frax_historical >= burned_frax_historical) return minted_frax_historical.sub(burned_frax_historical);
-        else return 0;
+    // In FRAX, can be negative
+    function mintedBalance() public view returns (int256) {
+        return minted_frax_historical - burned_frax_historical;
     }
 
-    // In collateral
-    function collateralBalance() public view returns (uint256) {
-        if (borrowed_collat_historical >= returned_collat_historical) return borrowed_collat_historical.sub(returned_collat_historical);
-        else return 0;
+    // In collateral, can be negative
+    function borrowedCollatBalance() public view returns (int256) {
+        return borrowed_collat_historical - returned_collat_historical;
+    }
+
+    // In FRAX, can be negative
+    function totalInvested() public view returns (int256) {
+        return mintedBalance() + (borrowedCollatBalance() * int256((10 ** missing_decimals)));
     }
 
     // Amount of FRAX3CRV deposited in the vault contract
-    function vaultFRAXBalance() public view returns (uint256){
+    function sdFRAX3CRV_Balance() public view returns (uint256){
         return stakedao_vault.balanceOf(address(this));
     }
 
-    function usdValueInVault() public view returns (uint256){
-        uint256 vaultFRAXBal = vaultFRAXBalance();
-        return vaultFRAXBal.mul(stakedao_vault.getPricePerFullShare()).div(1e18);
+    function FRAX3CRVInVault() public view returns (uint256){
+        uint256 sdBal = sdFRAX3CRV_Balance();
+        return sdBal.mul(stakedao_vault.getPricePerFullShare()).div(1e18);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -310,8 +300,8 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
         uint256 expected_collat_amount = redeem_amount_E6.mul(FRAX.global_collateral_ratio()).div(1e6);
         expected_collat_amount = expected_collat_amount.mul(1e6).div(pool.getCollateralPrice());
 
-        require(collateralBalance().add(expected_collat_amount) <= collat_borrow_cap, "Borrow cap");
-        borrowed_collat_historical = borrowed_collat_historical.add(expected_collat_amount);
+        require((borrowedCollatBalance() + int256(expected_collat_amount)) <= collat_borrow_cap, "Borrow cap");
+        borrowed_collat_historical = borrowed_collat_historical + int256(expected_collat_amount);
 
         // Mint the frax 
         FRAX.pool_mint(address(this), frax_amount);
@@ -327,14 +317,14 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
 
     // Give USDC profits back
     function giveCollatBack(uint256 amount) external onlyByOwnerOrGovernance {
-        returned_collat_historical = returned_collat_historical.add(amount);
-        TransferHelper.safeTransfer(address(collateral_token), address(pool), amount);
+        returned_collat_historical = returned_collat_historical + int256(amount);
+        TransferHelper.safeTransfer(address(collateral_token), address(pool), uint256(amount));
     }
    
     // Burn unneeded or excess FRAX
     function burnFRAX(uint256 frax_amount) public onlyByOwnerOrGovernance {
-        burned_frax_historical = burned_frax_historical.add(frax_amount);
-        FRAX.burn(frax_amount);
+        burned_frax_historical = burned_frax_historical + int256(frax_amount);
+        FRAX.burn(uint256(frax_amount));
     }
    
     function burnFXS(uint256 amount) external onlyByOwnerOrGovernance {
@@ -344,9 +334,9 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
 
     function metapoolDeposit(uint256 _frax_amount, uint256 _collateral_amount) external onlyByOwnerOrGovernance returns (uint256 metapool_LP_received) {
         // Mint the FRAX component
-        minted_frax_historical = minted_frax_historical.add(_frax_amount);
+        minted_frax_historical = minted_frax_historical + int256(_frax_amount);
         FRAX.pool_mint(address(this), _frax_amount);
-        require(fraxBalance() <= max_frax_outstanding, "max_frax_outstanding reached");
+        require(mintedBalance() <= max_frax_outstanding, "max_frax_outstanding reached");
 
         uint256 threeCRV_received = 0;
         if (_collateral_amount > 0) {
@@ -465,9 +455,10 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
     /* ========== Custodian / Voter========== */
 
     // NOTE: The custodian_address or voter_contract_address can be set to the governance contract to be used as
-    // a mega-voter or sorts. The CRV here can then be converted to veCRV and then used to vote
-    function withdrawRewards() external onlyCustodianOrVoter {
-        TransferHelper.safeTransfer(crv_address, msg.sender,  ERC20(crv_address).balanceOf(address(this)));
+    // a mega-voter or sorts.
+    // Rewards is in an increasing getPricePerFullShare() over time here, not a token
+    function withdrawRewards(uint256 frax3crv_amt) external onlyCustodianOrVoter {
+        TransferHelper.safeTransfer(frax3crv_metapool_address, msg.sender, frax3crv_amt);
     }
 
     /* ========== RESTRICTED GOVERNANCE FUNCTIONS ========== */
@@ -488,7 +479,6 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
     }
 
     function setPool(address _pool_address) external onlyByOwnerOrGovernance {
-        pool_address = _pool_address;
         pool = FraxPool(_pool_address);
     }
 
@@ -498,15 +488,14 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
     }
 
     function setVault(address _stakedao_vault_address) external onlyByOwnerOrGovernance {
-        stakedao_vault_address = _stakedao_vault_address;
         stakedao_vault = IStakeDaoVault(_stakedao_vault_address);
     }
 
-    function setCollatBorrowCap(uint256 _collat_borrow_cap) external onlyByOwnerOrGovernance {
+    function setCollatBorrowCap(int256 _collat_borrow_cap) external onlyByOwnerOrGovernance {
         collat_borrow_cap = _collat_borrow_cap;
     }
 
-    function setMaxFraxOutstanding(uint256 _max_frax_outstanding) external onlyByOwnerOrGovernance {
+    function setMaxFraxOutstanding(int256 _max_frax_outstanding) external onlyByOwnerOrGovernance {
         max_frax_outstanding = _max_frax_outstanding;
     }
 

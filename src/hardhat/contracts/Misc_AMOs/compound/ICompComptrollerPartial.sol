@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.6.11;
 
 // Original at https://etherscan.io/address/0xbe7616B06f71e363A310Aa8CE8aD99654401ead7#code
