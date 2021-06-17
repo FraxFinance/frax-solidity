@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: NONE
+// SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.6.11;
 
 // https://etherscan.io/address/0xfd31c7d00ca47653c6ce64af53c1571f9c36566a#code
