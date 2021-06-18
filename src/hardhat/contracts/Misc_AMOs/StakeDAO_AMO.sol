@@ -170,8 +170,8 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
         uint256 lp_owned = (frax3crv_metapool.balanceOf(address(this)));
 
         // Staked in the vault
-        uint256 lp_in_vault = FRAX3CRVInVault();
-        lp_owned = lp_owned.add(lp_in_vault);
+        uint256 lp_value_in_vault = FRAX3CRVInVault();
+        lp_owned = lp_owned.add(lp_value_in_vault);
 
         // ------------3pool Withdrawable------------
         // Uses iterate() to get metapool withdrawable amounts at FRAX floor price (global_collateral_ratio)
@@ -211,7 +211,7 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
             lp_owned, // [7] FRAX3CRV free or in the vault
             frax3crv_supply, // [8] Total supply of FRAX3CRV tokens
             _3pool_withdrawable, // [9] 3pool withdrawable from the FRAX3CRV tokens
-            lp_in_vault // [10] FRAX3CRV in the vault
+            lp_value_in_vault // [10] FRAX3CRV in the vault
         ];
     }
 
@@ -227,21 +227,26 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
     function iterate() public view returns (uint256, uint256, uint256) {
         uint256 frax_balance = FRAX.balanceOf(frax3crv_metapool_address);
         uint256 crv3_balance = three_pool_erc20.balanceOf(frax3crv_metapool_address);
+        uint256 total_balance = frax_balance.add(crv3_balance);
 
         uint256 floor_price_frax = uint(1e18).mul(fraxFloor()).div(1e6);
         
         uint256 crv3_received;
         uint256 dollar_value; // 3crv is usually slightly above $1 due to collecting 3pool swap fees
-        uint256 virtual_price = three_pool.get_virtual_price();
         for(uint i = 0; i < 256; i++){
             crv3_received = frax3crv_metapool.get_dy(0, 1, 1e18, [frax_balance, crv3_balance]);
-            dollar_value = crv3_received.mul(1e18).div(virtual_price);
-            if(dollar_value <= floor_price_frax.add(convergence_window)){
+            dollar_value = crv3_received.mul(1e18).div(three_pool.get_virtual_price());
+            if(dollar_value <= floor_price_frax.add(convergence_window) && dollar_value >= floor_price_frax.sub(convergence_window)){
                 return (frax_balance, crv3_balance, i);
+            } else if (dollar_value <= floor_price_frax.add(convergence_window)){
+                uint256 crv3_to_swap = total_balance.div(2 ** i);
+                frax_balance = frax_balance.sub(frax3crv_metapool.get_dy(1, 0, crv3_to_swap, [frax_balance, crv3_balance]));
+                crv3_balance = crv3_balance.add(crv3_to_swap);
+            } else if (dollar_value >= floor_price_frax.sub(convergence_window)){
+                uint256 frax_to_swap = total_balance.div(2 ** i);
+                crv3_balance = crv3_balance.sub(frax3crv_metapool.get_dy(0, 1, frax_to_swap, [frax_balance, crv3_balance]));
+                frax_balance = frax_balance.add(frax_to_swap);
             }
-            uint256 frax_to_swap = frax_balance.div(10);
-            crv3_balance = crv3_balance.sub(frax3crv_metapool.get_dy(0, 1, frax_to_swap, [frax_balance, crv3_balance]));
-            frax_balance = frax_balance.add(frax_to_swap);
         }
         revert("No hypothetical point"); // in 256 rounds
     }
@@ -437,6 +442,8 @@ contract StakeDAO_AMO is AccessControl, Initializable, Owned_Proxy {
         metapoolWithdraw3pool(_metapool_lp_in);
         three_pool_to_collateral(three_pool_erc20.balanceOf(address(this)));
     }
+
+    /* ========== StakeDAO: Deposit / Withdrawal ========== */
 
     // Deposit Metapool LP tokens into the vault
     function depositToVault(uint256 _metapool_lp_in) external onlyByOwnerOrGovernance {
