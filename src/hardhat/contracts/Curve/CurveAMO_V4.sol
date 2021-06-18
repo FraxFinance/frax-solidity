@@ -240,21 +240,26 @@ contract CurveAMO_V4 is AccessControl, Initializable, Owned_Proxy {
     function iterate() public view returns (uint256, uint256, uint256) {
         uint256 frax_balance = FRAX.balanceOf(frax3crv_metapool_address);
         uint256 crv3_balance = three_pool_erc20.balanceOf(frax3crv_metapool_address);
+        uint256 total_balance = frax_balance.add(crv3_balance);
 
         uint256 floor_price_frax = uint(1e18).mul(fraxFloor()).div(1e6);
         
         uint256 crv3_received;
         uint256 dollar_value; // 3crv is usually slightly above $1 due to collecting 3pool swap fees
-        uint256 virtual_price = three_pool.get_virtual_price();
         for(uint i = 0; i < 256; i++){
             crv3_received = frax3crv_metapool.get_dy(0, 1, 1e18, [frax_balance, crv3_balance]);
-            dollar_value = crv3_received.mul(1e18).div(virtual_price);
-            if(dollar_value <= floor_price_frax.add(convergence_window)){
+            dollar_value = crv3_received.mul(1e18).div(three_pool.get_virtual_price());
+            if(dollar_value <= floor_price_frax.add(convergence_window) && dollar_value >= floor_price_frax.sub(convergence_window)){
                 return (frax_balance, crv3_balance, i);
+            } else if (dollar_value <= floor_price_frax.add(convergence_window)){
+                uint256 crv3_to_swap = total_balance.div(2 ** i);
+                frax_balance = frax_balance.sub(frax3crv_metapool.get_dy(1, 0, crv3_to_swap, [frax_balance, crv3_balance]));
+                crv3_balance = crv3_balance.add(crv3_to_swap);
+            } else if (dollar_value >= floor_price_frax.sub(convergence_window)){
+                uint256 frax_to_swap = total_balance.div(2 ** i);
+                crv3_balance = crv3_balance.sub(frax3crv_metapool.get_dy(0, 1, frax_to_swap, [frax_balance, crv3_balance]));
+                frax_balance = frax_balance.add(frax_to_swap);
             }
-            uint256 frax_to_swap = frax_balance.div(10);
-            crv3_balance = crv3_balance.sub(frax3crv_metapool.get_dy(0, 1, frax_to_swap, [frax_balance, crv3_balance]));
-            frax_balance = frax_balance.add(frax_to_swap);
         }
         revert("No hypothetical point"); // in 256 rounds
     }
@@ -515,15 +520,9 @@ contract CurveAMO_V4 is AccessControl, Initializable, Owned_Proxy {
         crvFRAX_vault = IYearnVault(_crvFRAX_vault_address);
     }
 
-    function setCollatBorrowCap(uint256 _collat_borrow_cap) external onlyByOwnerOrGovernance {
-        collat_borrow_cap = _collat_borrow_cap;
-    }
-
-    function setMaxFraxOutstanding(uint256 _max_frax_outstanding) external onlyByOwnerOrGovernance {
+    function setSafetyParams(uint256 _max_frax_outstanding, uint256 _collat_borrow_cap, uint256 _min_cr) external onlyByOwnerOrGovernance {
         max_frax_outstanding = _max_frax_outstanding;
-    }
-
-    function setMinimumCollateralRatio(uint256 _min_cr) external onlyByOwnerOrGovernance {
+        collat_borrow_cap = _collat_borrow_cap;
         min_cr = _min_cr;
     }
 
