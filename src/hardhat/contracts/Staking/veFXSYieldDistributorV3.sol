@@ -12,6 +12,7 @@ pragma solidity >=0.6.11;
 // ======================veFXSYieldDistributorV3=======================
 // ====================================================================
 // Distributes Frax protocol yield based on the claimer's veFXS balance
+// V3: Yield will now not accrue for unlocked veFXS
 
 // Frax Finance: https://github.com/FraxFinance
 
@@ -45,7 +46,7 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
     ERC20 public emittedToken;
 
     // Addresses
-    address emitted_token_address;
+    address public emitted_token_address;
 
     // Admin addresses
     address public timelock_address;
@@ -67,6 +68,7 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
     // veFXS tracking
     uint256 public totalVeFXSParticipating = 0;
     uint256 public totalVeFXSSupplyStored = 0;
+    mapping(address => bool) public userIsInitialized;
     mapping(address => uint256) public userVeFXSCheckpointed;
 
     // Greylists
@@ -83,10 +85,7 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(
-            msg.sender == owner || msg.sender == timelock_address,
-            "You are not the owner or the governance timelock"
-        );
+        require( msg.sender == owner || msg.sender == timelock_address, "You are not the owner or the governance timelock");
         _;
     }
 
@@ -122,10 +121,7 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
     /* ========== VIEWS ========== */
 
     function fractionParticipating() external view returns (uint256) {
-        return
-            totalVeFXSParticipating.mul(PRICE_PRECISION).div(
-                totalVeFXSSupplyStored
-            );
+        return totalVeFXSParticipating.mul(PRICE_PRECISION).div(totalVeFXSSupplyStored);
     }
 
     // Only positions with locked veFXS can accrue yield. Otherwise, expired-locked veFXS
@@ -164,6 +160,9 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
     }
 
     function earned(address account) public view returns (uint256) {
+        // Uninitialized users should not earn anything yet
+        if (!userIsInitialized[account]) return 0;
+
         uint256 yield0 = yieldPerVeFXS();
 
         // Get the old and the new veFXS balances
@@ -209,6 +208,9 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
             uint256 weight_diff = old_vefxs_balance.sub(new_vefxs_balance);
             totalVeFXSParticipating = totalVeFXSParticipating.sub(weight_diff);
         }
+
+        // Mark the user as initialized
+        if (!userIsInitialized[account]) userIsInitialized[account] = true;
     }
 
     function _syncEarned(address account) internal {
@@ -224,13 +226,7 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
         _checkpointUser(msg.sender);
     }
 
-    function getYield()
-        external
-        nonReentrant
-        notYieldCollectionPaused
-        checkpointUser(msg.sender)
-        returns (uint256 yield0)
-    {
+    function getYield() external nonReentrant notYieldCollectionPaused checkpointUser(msg.sender) returns (uint256 yield0) {
         require(greylist[msg.sender] == false, "Address has been greylisted");
 
         yield0 = yields[msg.sender];
@@ -254,8 +250,7 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
         // This keeps the yield rate in the right range, preventing overflows due to
         // very high values of yieldRate in the earned and yieldPerToken functions;
         // Yield + leftover must be less than 2^256 / 10^18 to avoid overflow.
-        uint256 num_periods_elapsed =
-            uint256(block.timestamp.sub(periodFinish)) / yieldDuration; // Floor division to the nearest period
+        uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / yieldDuration; // Floor division to the nearest period
         uint256 balance0 = emittedToken.balanceOf(address(this));
         require(
             yieldRate.mul(yieldDuration).mul(num_periods_elapsed + 1) <=
@@ -290,23 +285,14 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // Added to support recovering LP Yield and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount)
-        external
-        onlyByOwnerOrGovernance
-    {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Only the owner address can ever receive the recovery withdrawal
         TransferHelper.safeTransfer(tokenAddress, owner, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
-    function setYieldDuration(uint256 _yieldDuration)
-        external
-        onlyByOwnerOrGovernance
-    {
-        require(
-            periodFinish == 0 || block.timestamp > periodFinish,
-            "Previous yield period must be complete before changing the duration for the new period"
-        );
+    function setYieldDuration(uint256 _yieldDuration) external onlyByOwnerOrGovernance {
+        require( periodFinish == 0 || block.timestamp > periodFinish, "Previous yield period must be complete before changing the duration for the new period");
         yieldDuration = _yieldDuration;
         emit YieldDurationUpdated(yieldDuration);
     }
@@ -318,24 +304,15 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
         emit DefaultInitialization();
     }
 
-    function greylistAddress(address _address)
-        external
-        onlyByOwnerOrGovernance
-    {
+    function greylistAddress(address _address) external onlyByOwnerOrGovernance {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function setPauses(bool _yieldCollectionPaused)
-        external
-        onlyByOwnerOrGovernance
-    {
+    function setPauses(bool _yieldCollectionPaused) external onlyByOwnerOrGovernance {
         yieldCollectionPaused = _yieldCollectionPaused;
     }
 
-    function setYieldRate(uint256 _new_rate0, bool sync_too)
-        external
-        onlyByOwnerOrGovernance
-    {
+    function setYieldRate(uint256 _new_rate0, bool sync_too) external onlyByOwnerOrGovernance {
         yieldRate = _new_rate0;
 
         if (sync_too) {
@@ -343,20 +320,13 @@ contract veFXSYieldDistributorV3 is Owned, ReentrancyGuard {
         }
     }
 
-    function setTimelock(address _new_timelock)
-        external
-        onlyByOwnerOrGovernance
-    {
+    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
         timelock_address = _new_timelock;
     }
 
     /* ========== EVENTS ========== */
 
-    event YieldCollected(
-        address indexed user,
-        uint256 yield,
-        address token_address
-    );
+    event YieldCollected(address indexed user, uint256 yield, address token_address);
     event YieldDurationUpdated(uint256 newDuration);
     event RecoveredERC20(address token, uint256 amount);
     event YieldPeriodRenewed(address token, uint256 yieldRate);

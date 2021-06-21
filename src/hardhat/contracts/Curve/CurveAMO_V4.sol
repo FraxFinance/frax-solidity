@@ -89,7 +89,7 @@ contract CurveAMO_V4 is AccessControl, Initializable, Owned_Proxy {
     uint256 public slippage_metapool;
 
     // Convergence window
-    uint256 public convergence_window; // 1 cent
+    uint256 public convergence_window; // 0.1 cent
 
     // Default will use global_collateral_ratio()
     bool public custom_floor;    
@@ -151,7 +151,7 @@ contract CurveAMO_V4 is AccessControl, Initializable, Owned_Proxy {
         PRICE_PRECISION = 1e6;
         liq_slippage_3crv = 800000;
         slippage_metapool = 950000;
-        convergence_window = 1e16;
+        convergence_window = 1e15;
         custom_floor = false;  
         set_discount = false;
         override_collat_balance = false;
@@ -192,7 +192,7 @@ contract CurveAMO_V4 is AccessControl, Initializable, Owned_Proxy {
 
         uint256 frax_withdrawable;
         uint256 _3pool_withdrawable;
-        (frax_withdrawable, _3pool_withdrawable, ) = iterate();
+        (frax_withdrawable, _3pool_withdrawable, ,) = iterate();
         if (frax3crv_supply > 0) {
             _3pool_withdrawable = _3pool_withdrawable.mul(lp_owned).div(frax3crv_supply);
             frax_withdrawable = frax_withdrawable.mul(lp_owned).div(frax3crv_supply);
@@ -237,7 +237,7 @@ contract CurveAMO_V4 is AccessControl, Initializable, Owned_Proxy {
 
     // Returns hypothetical reserves of metapool if the FRAX price went to the CR,
     // assuming no removal of liquidity from the metapool.
-    function iterate() public view returns (uint256, uint256, uint256) {
+    function iterate() public view returns (uint256, uint256, uint256, uint256) {
         uint256 frax_balance = FRAX.balanceOf(frax3crv_metapool_address);
         uint256 crv3_balance = three_pool_erc20.balanceOf(frax3crv_metapool_address);
         uint256 total_balance = frax_balance.add(crv3_balance);
@@ -250,7 +250,12 @@ contract CurveAMO_V4 is AccessControl, Initializable, Owned_Proxy {
             crv3_received = frax3crv_metapool.get_dy(0, 1, 1e18, [frax_balance, crv3_balance]);
             dollar_value = crv3_received.mul(1e18).div(three_pool.get_virtual_price());
             if(dollar_value <= floor_price_frax.add(convergence_window) && dollar_value >= floor_price_frax.sub(convergence_window)){
-                return (frax_balance, crv3_balance, i);
+                uint256 factor = uint256(1e6).mul(total_balance).div(frax_balance.add(crv3_balance)); //1e6 precision
+
+                //normalize back to initial balances, since this estimation method adds in extra tokens
+                frax_balance = frax_balance.mul(factor).div(1e6);
+                crv3_balance = crv3_balance.mul(factor).div(1e6);
+                return (frax_balance, crv3_balance, i, factor);
             } else if (dollar_value <= floor_price_frax.add(convergence_window)){
                 uint256 crv3_to_swap = total_balance.div(2 ** i);
                 frax_balance = frax_balance.sub(frax3crv_metapool.get_dy(1, 0, crv3_to_swap, [frax_balance, crv3_balance]));
