@@ -126,7 +126,7 @@ contract OHM_AMO is Initializable, Owned_Proxy {
         sOHM = IsOlympus(0x31932E6e45012476ba3A3A4953cbA62AeE77Fbbe);
         stakingHelper = IStakingHelper(0xC8C436271f9A6F10a5B80c8b8eD7D0E8f37a612d);
         olympusStaking = IOlympusStaking(0xFd31c7d00Ca47653c6Ce64Af53c1571f9C36566a);
-        bondDepository = IOlympusBondDepository(0x13E8484a86327f5882d1340ed0D7643a29548536);
+        bondDepository = IOlympusBondDepository(0x8510c8c2B6891E04864fa196693D44E6B6ec2514);
 
         // Uniswap
         UNISWAP_ROUTER_ADDRESS = payable(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
@@ -234,7 +234,21 @@ contract OHM_AMO is Initializable, Owned_Proxy {
     }
 
     /* ========== Olympus: Bonding ========== */
-    // TODO
+
+    function bondFRAX(uint256 frax_amount) public onlyByOwnerOrGovernance {
+        FRAX.approve(address(bondDepository), frax_amount);
+        uint256 max_bond_price = bondDepository.bondPrice();
+        bondDepository.deposit(frax_amount, max_bond_price, address(this));
+    }
+
+    function redeemBondedFRAX(bool stake) public onlyByOwnerOrGovernance {
+        bondDepository.redeem(address(this), stake);
+    }
+
+    function bondInfo() public view returns (uint256 pendingPayout, uint256 percentVested) {
+        pendingPayout = bondDepository.pendingPayoutFor(address(this));
+        percentVested = bondDepository.percentVestedFor(address(this));
+    }
 
     /* ========== Olympus: Staking ========== */
 
