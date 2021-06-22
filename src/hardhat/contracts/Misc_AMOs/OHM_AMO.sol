@@ -167,7 +167,7 @@ contract OHM_AMO is Initializable, Owned_Proxy {
         allocations[4] = sum_tally; // Total Staked
     }
 
-    function showRewards() external view returns (uint256) {
+    function showSOHMRewards() external view returns (uint256) {
         return sOHM.balanceOf(address(this));
     }
 
