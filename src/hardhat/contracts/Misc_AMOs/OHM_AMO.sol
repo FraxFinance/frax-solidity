@@ -61,7 +61,7 @@ contract OHM_AMO is Initializable, Owned_Proxy {
 
     // Uniswap related
     IUniswapV2Router02 private UniRouterV2;
-    UniswapV2Pair private SLP_FRAX_DAI_Pair;
+    UniswapV2Pair private UNI_OHM_FRAX_PAIR;
     address payable public UNISWAP_ROUTER_ADDRESS;
 
     // OHM related
@@ -123,7 +123,7 @@ contract OHM_AMO is Initializable, Owned_Proxy {
         // Assignments (must be done in initializer, so assignment gets stored in proxy address's storage instead of implementation address's storage)
         // Olympus
         OHM = IOlympusERC20Token(0x383518188C0C6d7730D91b2c03a03C837814a899);
-        sOHM = IsOlympus(0x31932E6e45012476ba3A3A4953cbA62AeE77Fbbe);
+        sOHM = IsOlympus(0x04F2694C8fcee23e8Fd0dfEA1d4f5Bb8c352111F);
         stakingHelper = IStakingHelper(0xC8C436271f9A6F10a5B80c8b8eD7D0E8f37a612d);
         olympusStaking = IOlympusStaking(0xFd31c7d00Ca47653c6Ce64Af53c1571f9C36566a);
         bondDepository = IOlympusBondDepository(0x8510c8c2B6891E04864fa196693D44E6B6ec2514);
@@ -131,7 +131,7 @@ contract OHM_AMO is Initializable, Owned_Proxy {
         // Uniswap
         UNISWAP_ROUTER_ADDRESS = payable(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         UniRouterV2 = IUniswapV2Router02(UNISWAP_ROUTER_ADDRESS);
-        SLP_FRAX_DAI_Pair = UniswapV2Pair(0x34d7d7Aaf50AD4944B70B320aCB24C95fa2def7c);
+        UNI_OHM_FRAX_PAIR = UniswapV2Pair(0x2dcE0dDa1C2f98e0F171DE8333c3c6Fe1BbF4877);
 
         PRICE_PRECISION = 1e6;
         missing_decimals_collat = 12;
@@ -147,34 +147,36 @@ contract OHM_AMO is Initializable, Owned_Proxy {
 
     /* ========== VIEWS ========== */
 
-    function showAllocations() public view returns (uint256[4] memory allocations) {
+    function showAllocations() public view returns (uint256[5] memory allocations) {
         // All numbers given are in FRAX unless otherwise stated
         // Call once to save gas
-        uint256 ohm_to_frax = spotPriceOHM().mul(10 ** missing_decimals_ohm).div(PRICE_PRECISION);
+        (uint256 spot_price_ohm_raw, ) = spotPriceOHM();
 
         allocations[0] = FRAX.balanceOf(address(this)); // Unallocated FRAX
-        allocations[1] = OHM.balanceOf(address(this)).mul(ohm_to_frax); // OHM
-        allocations[2] = sOHM.balanceOf(address(this)).mul(ohm_to_frax); // sOHM
+        allocations[1] = OHM.balanceOf(address(this)).mul(spot_price_ohm_raw); // OHM
+        allocations[2] = sOHM.balanceOf(address(this)).mul(spot_price_ohm_raw); // sOHM
+        allocations[3] = (bondDepository.pendingPayoutFor(address(this))).mul(spot_price_ohm_raw); // Claimable OHM from bonding
     
         uint256 sum_tally = 0;
-        for (uint i = 0; i < 3; i++){ 
+        for (uint i = 0; i < 4; i++){ 
             if (allocations[i] > 0){
                 sum_tally = sum_tally.add(allocations[i]);
             }
         }
 
-        allocations[3] = sum_tally; // Total Staked
+        allocations[4] = sum_tally; // Total Staked
     }
 
     function showRewards() external view returns (uint256) {
         return sOHM.balanceOf(address(this));
     }
 
-    function spotPriceOHM() public view returns (uint256 frax_per_ohm) {
-        (uint256 reserve0, uint256 reserve1, ) = (SLP_FRAX_DAI_Pair.getReserves());
+    function spotPriceOHM() public view returns (uint256 frax_per_ohm_raw, uint256 frax_per_ohm) {
+        (uint256 reserve0, uint256 reserve1, ) = (UNI_OHM_FRAX_PAIR.getReserves());
 
-        // 1e9 comes from Dai's 18 decimals and OHM's 9 decimals, a 1e9 difference.
-        frax_per_ohm = reserve1.mul(PRICE_PRECISION).div(reserve0).div(1e9);
+        // OHM = token0, FRAX = token1
+        frax_per_ohm_raw = reserve1.div(reserve0);
+        frax_per_ohm = reserve1.mul(PRICE_PRECISION).div(reserve0.mul(10 ** missing_decimals_ohm));
     }
 
     // In FRAX, can be negative
@@ -184,7 +186,7 @@ contract OHM_AMO is Initializable, Owned_Proxy {
 
     // In FRAX, can be negative
     function accumulatedProfit() public view returns (int256) {
-        return int256(showAllocations()[3]) - mintedBalance();
+        return int256(showAllocations()[4]) - mintedBalance();
     }
 
     /* ========== PUBLIC FUNCTIONS ========== */
@@ -197,7 +199,7 @@ contract OHM_AMO is Initializable, Owned_Proxy {
             return override_collat_balance_amount;
         }
         else {
-            return (showAllocations()[3]);
+            return (showAllocations()[4]);
         }
         
     }
@@ -237,8 +239,7 @@ contract OHM_AMO is Initializable, Owned_Proxy {
 
     function bondFRAX(uint256 frax_amount) public onlyByOwnerOrGovernance {
         FRAX.approve(address(bondDepository), frax_amount);
-        uint256 max_bond_price = bondDepository.bondPrice();
-        bondDepository.deposit(frax_amount, max_bond_price, address(this));
+        bondDepository.deposit(frax_amount, bondDepository.bondPrice(), address(this));
     }
 
     function redeemBondedFRAX(bool stake) public onlyByOwnerOrGovernance {
@@ -253,15 +254,43 @@ contract OHM_AMO is Initializable, Owned_Proxy {
     /* ========== Olympus: Staking ========== */
 
     // OHM -> sOHM. E9
-    function stakeOHM(uint256 ohm_amount) public onlyByOwnerOrGovernance {
+    // Calls stake and claim together
+    function stakeOHM_WithHelper(uint256 ohm_amount) public onlyByOwnerOrGovernance {
         OHM.approve(address(stakingHelper), ohm_amount);
         stakingHelper.stake(ohm_amount);
     }
 
+    // OHM -> sOHM. E9
+    // Stake only, no claim
+    function stakeOHM_NoHelper(uint256 ohm_amount) public onlyByOwnerOrGovernance {
+        OHM.approve(address(olympusStaking), ohm_amount);
+        olympusStaking.stake(ohm_amount, address(this));
+    }
+
+    // Claim the OHM
+    function claimOHM() public onlyByOwnerOrGovernance {
+        olympusStaking.claim(address(this));
+    }
+
     // sOHM -> OHM. E9
+    // The contract is set up with a warmup period, where user has to stake for some number of epochs before they can 
+    // get the sOHM. If they unstake before then they only get the deposit.
+    // They earn during warmup period though just can't get rewards before it.
     function unstakeOHM(uint256 sohm_amount, bool rebase) public onlyByOwnerOrGovernance {
         sOHM.approve(address(olympusStaking), sohm_amount);
         olympusStaking.unstake(sohm_amount, rebase);
+    }
+
+    // Forfeit takes back the OHM before the warmup is over
+    function forfeitOHM() public onlyByOwnerOrGovernance {
+        olympusStaking.forfeit();
+    }
+
+    // toggleDepositLock() prevents new stakes from being added to the address
+    // Anyone can stake for you and it delays the warmup so if someone were to do so maliciously 
+    // you'd just toggle that until warmup is done.
+    function toggleDepositLock() public onlyByOwnerOrGovernance {
+        olympusStaking.toggleDepositLock();
     }
 
     /* ========== Swaps ========== */
