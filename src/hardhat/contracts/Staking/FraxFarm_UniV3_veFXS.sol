@@ -33,6 +33,7 @@ pragma experimental ABIEncoderV2;
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
 import "../Curve/IveFXS.sol";
+import "../Curve/IGaugeController.sol";
 import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
@@ -50,7 +51,8 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     // Instances
     IveFXS private veFXS;
-    ERC20 public rewardsToken0;
+    ERC20 private rewardsToken0;
+    IGaugeController private gauge_controller;
     IUniswapV3PositionsNFT private stakingTokenNFT; // UniV3 uses an NFT
 
     // Admin addresses
@@ -60,9 +62,10 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     uint256 private constant MULTIPLIER_PRECISION = 1e18;
 
     // Reward and period related
-    uint256 public periodFinish;
-    uint256 public lastUpdateTime;
-    uint256 public rewardRate0;
+    uint256 private periodFinish;
+    uint256 private lastUpdateTime;
+    uint256 public inflation_rate; // E18, across the entire protocol. Will be multiplied by the gauge relative rate
+    uint256 public reward_rate_manual;
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     // Lock time and multiplier settings
@@ -83,8 +86,8 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     address public uni_token1;
 
     // Rewards tracking
-    uint256 public rewardPerTokenStored0 = 0;
-    mapping(address => uint256) public userRewardPerTokenPaid0;
+    uint256 private rewardPerTokenStored0 = 0;
+    mapping(address => uint256) private userRewardPerTokenPaid0;
     mapping(address => uint256) public rewards0;
 
     // Balance, stake, and weight tracking
@@ -95,15 +98,14 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     mapping(address => LockedNFT[]) private lockedNFTs;
 
     // List of valid migrators (set by governance)
-    mapping(address => bool) public valid_migrators;
-    address[] public valid_migrators_array;
+    mapping(address => bool) private valid_migrators;
+    address[] private valid_migrators_array;
 
     // Stakers set which migrator(s) they want to use
-    mapping(address => mapping(address => bool))
-    public staker_allowed_migrators;
+    mapping(address => mapping(address => bool)) private staker_allowed_migrators;
 
     // Greylists
-    mapping(address => bool) public greylist;
+    mapping(address => bool) private greylist;
 
     // Admin booleans for emergencies, migrations, and overrides
     bool public migrationsOn = false; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
@@ -168,13 +170,17 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     ) Owned(_owner) {
         rewardsToken0 = ERC20(_rewardsToken0);
         stakingTokenNFT = IUniswapV3PositionsNFT(_stakingTokenNFT);
+        gauge_controller = IGaugeController(0x0000000000000000000000000000000000000000);
 
         veFXS = IveFXS(_veFXS_address);
         lastUpdateTime = block.timestamp;
         timelock_address = _timelock_address;
 
         // 1 FXS a day
-        rewardRate0 = (uint256(365e18)).div(365 * 86400);
+        reward_rate_manual = (uint256(365e18)).div(365 * 86400);
+
+        // 10 FXS a day
+        inflation_rate = (uint256(3650e18)).div(365 * 86400);
 
         // Set the UniV3 addresses
         uni_token0 = _uni_token0;
@@ -349,7 +355,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
                 rewardPerTokenStored0.add(
                     lastTimeRewardApplicable()
                         .sub(lastUpdateTime)
-                        .mul(rewardRate0)
+                        .mul(rewardRate0())
                         .mul(1e18)
                         .div(_total_combined_weight)
                 )
@@ -358,17 +364,26 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     function earned(address account) public view returns (uint256) {
-        uint256 reward0 = rewardPerToken();
+        uint256 earned_reward_0 = rewardPerToken();
         return (
             _combined_weights[account]
-                .mul(reward0.sub(userRewardPerTokenPaid0[account]))
+                .mul(earned_reward_0.sub(userRewardPerTokenPaid0[account]))
                 .div(1e18)
                 .add(rewards0[account])
         );
     }
 
+    function rewardRate0() public view returns (uint256) {
+        if (address(gauge_controller) != address(0)) {
+            return (inflation_rate).mul(gauge_controller.gauge_relative_weight(address(this), block.timestamp)).div(1e18);
+        }
+        else {
+            return reward_rate_manual;
+        }
+    }
+
     function getRewardForDuration() external view returns (uint256) {
-        return (rewardRate0.mul(rewardsDuration));
+        return (rewardRate0().mul(rewardsDuration));
     }
 
     function migratorApprovedForStaker(address staker_address, address migrator_address) public view returns (bool) {
@@ -560,11 +575,11 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     // No withdrawer == msg.sender check needed since this is only internally callable
     // This distinction is important for the migrator
     // Also collects the LP fees
-    function _getReward(address rewardee, address destination_address) internal updateRewardAndBalance(rewardee, true) returns (uint256 reward0) {
-        reward0 = rewards0[rewardee];
-        if (reward0 > 0) {
+    function _getReward(address rewardee, address destination_address) internal updateRewardAndBalance(rewardee, true) returns (uint256 reward_0) {
+        reward_0 = rewards0[rewardee];
+        if (reward_0 > 0) {
             rewards0[rewardee] = 0;
-            TransferHelper.safeTransfer(address(rewardsToken0), destination_address, reward0);
+            TransferHelper.safeTransfer(address(rewardsToken0), destination_address, reward_0);
 
             // Collect liquidity fees too
             uint256 accumulated_token0 = 0;
@@ -587,7 +602,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
                 }
             }
 
-            emit RewardPaid(rewardee, reward0, accumulated_token0, accumulated_token1, address(rewardsToken0), destination_address);
+            emit RewardPaid(rewardee, reward_0, accumulated_token0, accumulated_token1, address(rewardsToken0), destination_address);
         }
     }
 
@@ -608,12 +623,12 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
         uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / rewardsDuration; // Floor division to the nearest period
         uint256 balance0 = rewardsToken0.balanceOf(address(this));
-        require(rewardRate0.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance0, "Not enough FXS available for rewards!");
+        require(rewardRate0().mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance0, "Not enough FXS available for rewards!");
 
         periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(rewardsDuration));
 
-        uint256 reward0 = rewardPerToken();
-        rewardPerTokenStored0 = reward0;
+        uint256 reward_per_token_0 = rewardPerToken();
+        rewardPerTokenStored0 = reward_per_token_0;
         lastUpdateTime = lastTimeRewardApplicable();
 
         emit RewardsPeriodRenewed(address(stakingTokenNFT));
@@ -623,8 +638,8 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         if (block.timestamp > periodFinish) {
             retroCatchUp();
         } else {
-            uint256 reward0 = rewardPerToken();
-            rewardPerTokenStored0 = reward0;
+            uint256 reward_per_token_0 = rewardPerToken();
+            rewardPerTokenStored0 = reward_per_token_0;
             lastUpdateTime = lastTimeRewardApplicable();
         }
     }
@@ -761,17 +776,22 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         uni_required_fee = _uni_required_fee;
     }
 
-    function setRewardRate(uint256 _new_rate0, bool sync_too) external onlyByOwnerOrGovernance {
-        rewardRate0 = _new_rate0;
+    function setInflationAndManualRewardRate(uint256 _inflation_rate, uint256 _reward_rate_manual, bool sync_too) external onlyByOwnerOrGovernance {
+        inflation_rate = _inflation_rate;
+        reward_rate_manual = _reward_rate_manual;
 
         if (sync_too) {
             sync();
         }
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance
-    {
+    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
         timelock_address = _new_timelock;
+    }
+
+    // Set to address(0) to fall back to the reward_rate_manual
+    function setGaugeController(address _gauge_controller_address) external onlyByOwnerOrGovernance {
+        gauge_controller = IGaugeController(_gauge_controller_address);
     }
 
     /* ========== EVENTS ========== */

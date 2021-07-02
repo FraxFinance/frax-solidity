@@ -9,7 +9,7 @@ pragma solidity >=0.6.11;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ============================== OHM_AMO =============================
+// ============================ OHM_AMO_V2 ============================
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 
@@ -44,7 +44,7 @@ import "../Staking/Owned_Proxy.sol";
 // 3) Collect OHM rewards and send to custodian
 // 4) Sell OHM for FRAX
 
-contract OHM_AMO is Initializable, Owned_Proxy {
+contract OHM_AMO_V2 is Initializable, Owned_Proxy {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -142,7 +142,8 @@ contract OHM_AMO is Initializable, Owned_Proxy {
         minted_sum_historical = 0;
         burned_sum_historical = 0;
 
-        override_collat_balance = false;
+        override_collat_balance = true;
+        override_collat_balance_amount = uint(1e18);
     }
 
     /* ========== VIEWS ========== */
@@ -199,7 +200,7 @@ contract OHM_AMO is Initializable, Owned_Proxy {
             return override_collat_balance_amount;
         }
         else {
-            return (showAllocations()[4]);
+            return (showAllocations()[4]).mul(FRAX.global_collateral_ratio()).div(PRICE_PRECISION);
         }
         
     }

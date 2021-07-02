@@ -11,7 +11,7 @@ export const printAllocations = (key: string, allocations: number[]) => {
     allocations.forEach((val, idx) => {
         const the_alloc = INVESTOR_ALLOCATIONS[key][idx];
         if (the_alloc){  
-            console.log(`${the_alloc.title}: `, chalk.yellow(`${new BigNumber(val).div(the_alloc.big_base)} ${the_alloc.symbol}`));
+            console.log(`${the_alloc.title}: `, chalk.yellow(`${new BigNumber(val).div(the_alloc.big_base).toPrecision(9)} ${the_alloc.symbol}`));
         };
     })
     console.log(chalk.bold.blue(`-------------------`));
@@ -24,7 +24,7 @@ export const printRewards = (key: string, rewards: number[]) => {
     rewards.forEach((val, idx) => {
         const the_reward = INVESTOR_REWARDS[key][idx];
         if (the_reward){  
-            console.log(`${the_reward.title}: `, chalk.yellow(`${new BigNumber(val).div(the_reward.big_base)} ${the_reward.symbol}`));
+            console.log(`${the_reward.title}: `, chalk.yellow(`${new BigNumber(val).div(the_reward.big_base).toPrecision(9)} ${the_reward.symbol}`));
         };
     })
     console.log(chalk.bold.blue(`-------------------`));
@@ -33,7 +33,7 @@ export const printRewards = (key: string, rewards: number[]) => {
 
 export const getTokenPriceFromCoinGecko = async (ticker: string): Promise<number> => {
     // Don't forget the ?x_cg_pro_api_key=YOUR_API_KEY here
-    const resp: Response = await fetch(`https://pro-api.coingecko.com/api/v3/coins/${ticker}?x_cg_pro_api_key=${process.env.COINGECKO_API_KEY}&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`, {
+    const resp: Response = await fetch(`https://api.coingecko.com/api/v3/coins/${ticker}?tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`, {
         method: 'GET',
     });
     const coingecko_response = resp.ok ? await resp.json() : null;
@@ -70,6 +70,15 @@ export const printCalcCurCombinedWeight = async (contract: any, addr: any) => {
         old_combined_weight: (new BigNumber(pack[0])).div(BIG18).toNumber(),
         new_vefxs_multiplier: (new BigNumber(pack[1])).div(BIG18).toNumber(),
         new_combined_weight: (new BigNumber(pack[2])).div(BIG18).toNumber(),
+    }
+    console.log(`CalcCurCombinedWeight [${addr}]: `, converted_pack);
+}
+
+export const printCalcCurCombinedWeightNoVeFXS = async (contract: any, addr: any) => {
+    const pack = await contract.calcCurCombinedWeight(addr);
+    const converted_pack = {
+        old_combined_weight: (new BigNumber(pack[0])).div(BIG18).toNumber(),
+        new_combined_weight: (new BigNumber(pack[1])).div(BIG18).toNumber(),
     }
     console.log(`CalcCurCombinedWeight [${addr}]: `, converted_pack);
 }
