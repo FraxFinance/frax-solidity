@@ -622,16 +622,16 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         }
 
         // Only the reward managers can take back their reward tokens
-        if (msg.sender != owner && isRewardToken && rewardManagers[tokenAddress] == msg.sender){
+        if (msg.sender != owner && msg.sender != timelock_address && isRewardToken && rewardManagers[tokenAddress] == msg.sender){
             ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
             emit Recovered(msg.sender, tokenAddress, tokenAmount);
             return;
         }
 
         // Other tokens, like airdrops or accidental deposits, can be withdrawn by the owner
-        else if (!isRewardToken && msg.sender == owner){
-            ERC20(tokenAddress).transfer(owner, tokenAmount);
-            emit Recovered(owner, tokenAddress, tokenAmount);
+        else if (!isRewardToken && (msg.sender == owner || msg.sender == timelock_address)){
+            ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
+            emit Recovered(msg.sender, tokenAddress, tokenAmount);
             return;
         }
 
