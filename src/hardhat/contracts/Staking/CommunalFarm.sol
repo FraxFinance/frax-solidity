@@ -428,7 +428,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         require(secs <= lock_time_for_max_multiplier,"You are trying to lock for too long");
 
         uint256 lock_multiplier = lockMultiplier(secs);
-        bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity));
+        bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity, _locked_liquidity[staker_address]));
         lockedStakes[staker_address].push(LockedStake(
             kek_id,
             start_timestamp,
@@ -608,14 +608,37 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
-        // Admin cannot withdraw the staking token from the contract unless currently migrating
-        if(!migrationsOn){
-            require(tokenAddress != address(stakingToken), "Cannot withdraw staking tokens unless migration is on"); // Only Governance / Timelock can trigger a migration
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTokenManagers(tokenAddress) {
+        // Cannot rug the staking / LP tokens
+        require(tokenAddress != address(stakingToken), "Cannot rug staking / LP tokens");
+
+        // Check if the desired token is a reward token
+        bool isRewardToken = false;
+        for (uint256 i = 0; i < rewardTokens.length; i++){ 
+            if (rewardTokens[i] == tokenAddress) {
+                isRewardToken = true;
+                break;
+            }
         }
-        // Only the owner address can ever receive the recovery withdrawal
-        ERC20(tokenAddress).transfer(owner, tokenAmount);
-        emit Recovered(tokenAddress, tokenAmount);
+
+        // Only the reward managers can take back their reward tokens
+        if (msg.sender != owner && isRewardToken && rewardManagers[tokenAddress] == msg.sender){
+            ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
+            emit Recovered(msg.sender, tokenAddress, tokenAmount);
+            return;
+        }
+
+        // Other tokens, like airdrops or accidental deposits, can be withdrawn by the owner
+        else if (!isRewardToken && msg.sender == owner){
+            ERC20(tokenAddress).transfer(owner, tokenAmount);
+            emit Recovered(owner, tokenAddress, tokenAmount);
+            return;
+        }
+
+        // If none of the above conditions are true
+        else {
+            revert("No valid tokens to recover");
+        }
     }
 
     function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernance {
@@ -698,7 +721,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     event WithdrawLocked(address indexed user, uint256 amount, bytes32 kek_id, address destination_address);
     event RewardPaid(address indexed user, uint256 reward, address token_address, address destination_address);
     event RewardsDurationUpdated(uint256 newDuration);
-    event Recovered(address token, uint256 amount);
+    event Recovered(address destination_address, address token, uint256 amount);
     event RewardsPeriodRenewed(address token);
     event DefaultInitialization();
     event LockedStakeMaxMultiplierUpdated(uint256 multiplier);

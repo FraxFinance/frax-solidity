@@ -451,7 +451,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         require(secs <= lock_time_for_max_multiplier,"You are trying to lock for too long");
 
         uint256 lock_multiplier = lockMultiplier(secs);
-        bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity));
+        bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity, _locked_liquidity[staker_address]));
         lockedStakes[staker_address].push(LockedStake(
             kek_id,
             start_timestamp,
