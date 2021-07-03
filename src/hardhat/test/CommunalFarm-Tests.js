@@ -126,6 +126,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 	let INVESTOR_CUSTODIAN_ADDRESS;
 	let MIGRATOR_ADDRESS;
 
+	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
 	const ADDRESS_WITH_LP_TOKENS = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
 	const ADDRESS_WITH_FXS = '0x8a97a178408d7027355a7ef144fdf13277cea776';
 	const ADDRESS_WITH_TRIBE = '0xA06Ad2e0339375124D255F1fAb201964eF707E18';
@@ -357,7 +358,21 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		catch (err) {}
 
 		console.log("------------------------------------------------");
-		console.log("Seed the staking contract with FXS ");
+		console.log("Give the staking contract some FRAX, to be recovered later");
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [ADDRESS_WITH_FRAX]
+		});
+
+		await fraxInstance.transfer(communalFarmInstance_Saddle_D4.address, new BigNumber("1e18"), { from: ADDRESS_WITH_FRAX });
+
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [ADDRESS_WITH_FRAX]
+		});
+
+		console.log("------------------------------------------------");
+		console.log("Seed the staking contract with FXS");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
 			params: [ADDRESS_WITH_FXS]
@@ -681,9 +696,12 @@ contract('CommunalFarm-Tests', async (accounts) => {
 	});
 
 	it("Communal / Token Manager Tests", async () => {
-
 		const staking_reward_symbols = await communalFarmInstance_Saddle_D4.getRewardSymbols.call();
 		const staking_reward_tokens_addresses = await communalFarmInstance_Saddle_D4.getAllRewardTokens.call();
+		const test_recovery_amount = new BigNumber("1e18");
+
+		// Try recovering a non-reward token as the owner
+		await communalFarmInstance_Saddle_D4.recoverERC20(fraxInstance.address, test_recovery_amount, { from: STAKING_OWNER });
 		
 		for (let j = 0; j < staking_reward_symbols.length; j++){
 			const token_manager_address = await communalFarmInstance_Saddle_D4.rewardManagers.call(staking_reward_tokens_addresses[j]);
@@ -710,6 +728,9 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			// Set the reward rate with the correct manager
 			await communalFarmInstance_Saddle_D4.setRewardRate(staking_reward_tokens_addresses[j], 0, true, { from: token_manager_address });
 
+			// Try recovering reward tokens as the reward manager
+			await communalFarmInstance_Saddle_D4.recoverERC20(staking_reward_tokens_addresses[j], test_recovery_amount, { from: token_manager_address });
+
 			// Change the token manager
 			await communalFarmInstance_Saddle_D4.changeTokenManager(staking_reward_tokens_addresses[j], COLLATERAL_FRAX_AND_FXS_OWNER, { from: token_manager_address });
 	
@@ -717,9 +738,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 				method: "hardhat_stopImpersonatingAccount",
 				params: [token_manager_address]
 			});
-
 		}
-
 	});
 
 	it("Migration Staking / Withdrawal Tests", async () => {
@@ -782,8 +801,6 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("accounts[1] staked lockedLiquidityOf:", (new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
 		console.log("accounts[1] staked combinedWeightOf:", (new BigNumber(await communalFarmInstance_Saddle_D4.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
 		console.log("");
-
-
 	});
 
 	it("Fail Tests ", async () => {
@@ -815,11 +832,23 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			"Invalid migrator address"
 		);
 
-		console.log("---------TRY TO DO EMERGENCY WITHDRAWALS WHILE NOT IN MIGRATION---------");
+		console.log("---------TRY TO ERC20 RECOVER WHILE NOT AN OWNER [SHOULD FAIL]---------");
+		await expectRevert(
+			communalFarmInstance_Saddle_D4.recoverERC20(pair_instance_Saddle_D4.address, test_amount_1, { from: INVESTOR_CUSTODIAN_ADDRESS }),
+			"You are not the owner, governance timelock, or the correct token manager"
+		);
+
+		console.log("---------TRY TO ERC20 RECOVER LP TOKENS [SHOULD FAIL]---------");
 		await expectRevert(
 			communalFarmInstance_Saddle_D4.recoverERC20(pair_instance_Saddle_D4.address, test_amount_1, { from: STAKING_OWNER }),
-			"Cannot withdraw staking tokens unless migration is on"
-		);	
+			"Cannot rug staking / LP tokens"
+		);
+
+		console.log("---------TRY TO ERC20 RECOVER A REWARD TOKEN AS THE OWNER [SHOULD FAIL]---------");
+		await expectRevert(
+			communalFarmInstance_Saddle_D4.recoverERC20(tribe_instance.address, test_amount_1, { from: STAKING_OWNER }),
+			"No valid tokens to recover"
+		);
 
 		console.log(chalk.blue("=============TEST TRYING TO MIGRATE NOT AS A MIGRATOR [SHOULD FAIL]============="));
 
@@ -868,4 +897,5 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		);
 
 	});
+
 });
