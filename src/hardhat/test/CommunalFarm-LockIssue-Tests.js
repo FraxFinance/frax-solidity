@@ -77,13 +77,30 @@ contract('CommunalFarm-Tests lock multiplier issue', async (accounts) => {
     console.log('user 1 bal: ', (await rewardsToken.balanceOf(user1)).toString())
     console.log('user 2 bal: ', (await rewardsToken.balanceOf(user2)).toString())
 
+    assert.equal((await rewardsToken.balanceOf(user1)).toString(), (await rewardsToken.balanceOf(user2)).toString(), 'rewards should be the same')
+  })
+
+  it('1 user staking and locking, withdraw after period is over', async() => {
+    const baseLiquidity = new BigNumber(100e18)
+    const lockTimeMin = await communalFarm.lock_time_min()
+    const lockTime = (new BigNumber(lockTimeMin)).times(new BigNumber(2))
+
+    // user 1 stakes and locks
+    await stakingToken.approve(communalFarm.address, baseLiquidity, { from: user1 })
+    await communalFarm.stakeLocked(baseLiquidity, lockTime, { from: user1 })
+    const locks1 = await communalFarm.lockedStakesOf(user1)
+    //console.log(locks1)
+    const kek1 = locks1[0][0]
+
+    // fast-forward 1 day, both users get rewards
+    await fastForward(86400)
+    await communalFarm.getReward({ from: user1 })
+
     // fast-forward reward duration, both users withdraw
     //await fastForward(lockTime.plus(rewardsDuration))
-    await fastForward(604800)
+    await fastForward(604800 + 1)
     await communalFarm.withdrawLocked(kek1, { from: user1 })
-    await communalFarm.withdrawLocked(kek2, { from: user2 })
 
     console.log('user 1 bal: ', (await rewardsToken.balanceOf(user1)).toString())
-    console.log('user 2 bal: ', (await rewardsToken.balanceOf(user2)).toString())
   })
 })
