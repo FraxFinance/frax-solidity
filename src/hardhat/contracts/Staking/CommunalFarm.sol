@@ -55,9 +55,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     // Constant for various precisions
     uint256 private constant MULTIPLIER_PRECISION = 1e18;
 
-    // Admin addresses
-    address public timelock_address; // Governance timelock address
-
     // Time tracking
     uint256 public periodFinish;
     uint256 public lastUpdateTime;
@@ -91,19 +88,11 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     // Stake tracking
     mapping(address => LockedStake[]) private lockedStakes;
 
-    // List of valid migrators (set by governance)
-    mapping(address => bool) public valid_migrators;
-    address[] public valid_migrators_array;
-
-    // Stakers set which migrator(s) they want to use
-    mapping(address => mapping(address => bool)) public staker_allowed_migrators;
-
     // Greylisting of bad addresses
     mapping(address => bool) public greylist;
 
     // Administrative booleans
-    bool public migrationsOn = false; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
-    bool public stakesUnlocked = false; // Release locked stakes in case of system migration or emergency
+    bool public stakesUnlocked = false; // Release locked stakes in case of emergency
     bool public withdrawalsPaused = false; // For emergencies
     bool public rewardsCollectionPaused = false; // For emergencies
     bool public stakingPaused = false; // For emergencies
@@ -120,23 +109,13 @@ contract CommunalFarm is Owned, ReentrancyGuard {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner || msg.sender == timelock_address, "You are not the owner or the governance timelock");
-        _;
-    }
-
-    modifier onlyByOwnerOrGovernanceOrMigrator() {
-        require(msg.sender == owner || msg.sender == timelock_address || valid_migrators[msg.sender] == true, "You are not the owner, governance timelock, or a migrator");
+    modifier onlyByOwner() {
+        require(msg.sender == owner, "You are not the owner");
         _;
     }
 
     modifier onlyTokenManagers(address reward_token_address) {
-        require(msg.sender == owner || msg.sender == timelock_address || isTokenManagerFor(msg.sender, reward_token_address), "You are not the owner, governance timelock, or the correct token manager");
-        _;
-    }
-
-    modifier isMigrating() {
-        require(migrationsOn == true, "Contract is not in migration");
+        require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "You are not the owner or the correct token manager");
         _;
     }
 
@@ -168,8 +147,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         string[] memory _rewardSymbols,
         address[] memory _rewardTokens,
         address[] memory _rewardManagers,
-        uint256[] memory _rewardRates,
-        address _timelock_address
+        uint256[] memory _rewardRates
     ) Owned(_owner){
         stakingToken = ISaddleD4_LP(_stakingToken);
 
@@ -178,7 +156,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         rewardSymbols = _rewardSymbols;
 
         lastUpdateTime = block.timestamp;
-        timelock_address = _timelock_address;
 
         for (uint256 i = 0; i < _rewardTokens.length; i++){ 
             // For fast token address -> token ID lookups later
@@ -192,7 +169,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         }
 
         // Other booleans
-        migrationsOn = false;
         stakesUnlocked = false;
     }
 
@@ -324,18 +300,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         }
     }
 
-    // See if a staker has approved a given migrator
-    function migratorApprovedForStaker(address staker_address, address migrator_address) public view returns (bool) {
-        // Migrator is not a valid one
-        if (valid_migrators[migrator_address] == false) return false;
-
-        // Staker has to have approved this particular migrator
-        if (staker_allowed_migrators[staker_address][migrator_address] == true) return true;
-
-        // Otherwise, return false
-        return false;
-    }
-
     // See if the caller_addr is a manager for the reward token 
     function isTokenManagerFor(address caller_addr, address reward_token_addr) public view returns (bool){
         if (caller_addr == owner) return true; // Contract owner
@@ -392,22 +356,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         }
     }
 
-    // Staker can allow a migrator 
-    function stakerAllowMigrator(address migrator_address) public {
-        require(staker_allowed_migrators[msg.sender][migrator_address] == false, "Address already exists");
-        require(valid_migrators[migrator_address], "Invalid migrator address");
-        staker_allowed_migrators[msg.sender][migrator_address] = true; 
-    }
-
-    // Staker can disallow a previously-allowed migrator  
-    function stakerDisallowMigrator(address migrator_address) public {
-        require(staker_allowed_migrators[msg.sender][migrator_address] == true, "Address doesn't exist already");
-
-        // Delete from the mapping
-        delete staker_allowed_migrators[msg.sender][migrator_address];
-    }
-    
-    // Two different stake functions are needed because of delegateCall and msg.sender issues (important for migration)
+    // Two different stake functions are needed because of delegateCall and msg.sender issues
     function stakeLocked(uint256 liquidity, uint256 secs) nonReentrant public {
         _stakeLocked(msg.sender, msg.sender, liquidity, secs, block.timestamp);
     }
@@ -421,7 +370,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) {
-        require((!stakingPaused && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking is paused, or migration is happening");
+        require(!stakingPaused, "Staking is paused");
         require(liquidity > 0, "Must stake more than zero");
         require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
@@ -450,13 +399,13 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
     }
 
-    // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
+    // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues
     function withdrawLocked(bytes32 kek_id) nonReentrant notWithdrawalsPaused public {
         _withdrawLocked(msg.sender, msg.sender, kek_id);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
-    // functions like withdraw(), migrator_withdraw_unlocked() and migrator_withdraw_locked()
+    // functions like withdraw()
     function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id) internal  {
         // Collect rewards first and then update the balances
         _getReward(staker_address, destination_address);
@@ -472,7 +421,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
             }
         }
         require(thisStake.kek_id == kek_id, "Stake not found");
-        require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true || valid_migrators[msg.sender] == true, "Stake is still locked!");
+        require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true, "Stake is still locked!");
 
         uint256 liquidity = thisStake.liquidity;
 
@@ -496,13 +445,12 @@ contract CommunalFarm is Owned, ReentrancyGuard {
 
     }
     
-    // Two different getReward functions are needed because of delegateCall and msg.sender issues (important for migration)
+    // Two different getReward functions are needed because of delegateCall and msg.sender issues
     function getReward() external nonReentrant notRewardsCollectionPaused returns (uint256[] memory) {
         return _getReward(msg.sender, msg.sender);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable
-    // This distinction is important for the migrator
     function _getReward(address rewardee, address destination_address) internal updateRewardAndBalance(rewardee, true) returns (uint256[] memory rewards_before) {
         // Update the rewards array and distribute rewards
         rewards_before = new uint256[](rewardTokens.length);
@@ -572,41 +520,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
-    function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs, uint256 start_timestamp) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "msg.sender is either an invalid migrator or the staker has not approved them");
-        _stakeLocked(staker_address, msg.sender, amount, secs, start_timestamp);
-    }
-
-    // Used for migrations
-    function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "msg.sender is either an invalid migrator or the staker has not approved them");
-        _withdrawLocked(staker_address, msg.sender, kek_id);
-    }
-
-    // Adds supported migrator address 
-    function addMigrator(address migrator_address) public onlyByOwnerOrGovernance {
-        require(valid_migrators[migrator_address] == false, "address already exists");
-        valid_migrators[migrator_address] = true; 
-        valid_migrators_array.push(migrator_address);
-    }
-
-    // Remove a migrator address
-    function removeMigrator(address migrator_address) public onlyByOwnerOrGovernance {
-        require(valid_migrators[migrator_address] == true, "address doesn't exist already");
-        
-        // Delete from the mapping
-        delete valid_migrators[migrator_address];
-
-        // 'Delete' from the array by setting the address to 0x0
-        for (uint256 i = 0; i < valid_migrators_array.length; i++){ 
-            if (valid_migrators_array[i] == migrator_address) {
-                valid_migrators_array[i] = address(0); // This will leave a null in the array and keep the indices the same
-                break;
-            }
-        }
-    }
-
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTokenManagers(tokenAddress) {
         // Cannot rug the staking / LP tokens
@@ -622,14 +535,14 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         }
 
         // Only the reward managers can take back their reward tokens
-        if (msg.sender != owner && msg.sender != timelock_address && isRewardToken && rewardManagers[tokenAddress] == msg.sender){
+        if (msg.sender != owner && isRewardToken && rewardManagers[tokenAddress] == msg.sender){
             ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
             emit Recovered(msg.sender, tokenAddress, tokenAmount);
             return;
         }
 
         // Other tokens, like airdrops or accidental deposits, can be withdrawn by the owner
-        else if (!isRewardToken && (msg.sender == owner || msg.sender == timelock_address)){
+        else if (!isRewardToken && (msg.sender == owner)){
             ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
             emit Recovered(msg.sender, tokenAddress, tokenAmount);
             return;
@@ -641,7 +554,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         }
     }
 
-    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernance {
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwner {
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
             "Previous rewards period must be complete before changing the duration for the new period"
@@ -650,13 +563,13 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         emit RewardsDurationUpdated(rewardsDuration);
     }
 
-    function setMultipliers(uint256 _lock_max_multiplier) external onlyByOwnerOrGovernance {
+    function setMultipliers(uint256 _lock_max_multiplier) external onlyByOwner {
         require(_lock_max_multiplier >= uint256(1e18), "Multiplier must be greater than or equal to 1e18");
         lock_max_multiplier = _lock_max_multiplier;
         emit LockedStakeMaxMultiplierUpdated(lock_max_multiplier);
     }
 
-    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnerOrGovernance {
+    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwner {
         require(_lock_time_for_max_multiplier >= 1, "Multiplier Max Time must be greater than or equal to 1");
         require(_lock_time_min >= 1, "Multiplier Min Time must be greater than or equal to 1");
 
@@ -667,33 +580,29 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         emit LockedStakeMinTime(_lock_time_min);
     }
 
-    function initializeDefault() external onlyByOwnerOrGovernance {
+    function initializeDefault() external onlyByOwner {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
         emit DefaultInitialization();
     }
 
-    function greylistAddress(address _address) external onlyByOwnerOrGovernance {
+    function greylistAddress(address _address) external onlyByOwner {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function unlockStakes() external onlyByOwnerOrGovernance {
+    function unlockStakes() external onlyByOwner {
         stakesUnlocked = !stakesUnlocked;
     }
 
-    function toggleMigrations() external onlyByOwnerOrGovernance {
-        migrationsOn = !migrationsOn;
-    }
-
-    function toggleStaking() external onlyByOwnerOrGovernance {
+    function toggleStaking() external onlyByOwner {
         stakingPaused = !stakingPaused;
     }
 
-    function toggleWithdrawals() external onlyByOwnerOrGovernance {
+    function toggleWithdrawals() external onlyByOwner {
         withdrawalsPaused = !withdrawalsPaused;
     }
 
-    function toggleRewardsCollection() external onlyByOwnerOrGovernance {
+    function toggleRewardsCollection() external onlyByOwner {
         rewardsCollectionPaused = !rewardsCollectionPaused;
     }
 
@@ -709,10 +618,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     // The owner or the reward token managers can change managers
     function changeTokenManager(address reward_token_address, address new_manager_address) external onlyTokenManagers(reward_token_address) {
         rewardManagers[reward_token_address] = new_manager_address;
-    }
-
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
-        timelock_address = _new_timelock;
     }
 
     /* ========== EVENTS ========== */

@@ -11,9 +11,10 @@ contract FraxFarm_UniV3_veFXS_FRAX_USDC is FraxFarm_UniV3_veFXS {
         address _stakingTokenNFT,
         address _timelock_address,
         address _veFXS_address,
+        address _gauge_controller_address,
         address _uni_token0,
         address _uni_token1
     ) 
-    FraxFarm_UniV3_veFXS(_owner, _rewardsToken0, _stakingTokenNFT, _timelock_address, _veFXS_address, _uni_token0, _uni_token1)
+    FraxFarm_UniV3_veFXS(_owner, _rewardsToken0, _stakingTokenNFT, _timelock_address, _veFXS_address, _gauge_controller_address, _uni_token0, _uni_token1)
     {}
 }

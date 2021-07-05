@@ -11,9 +11,8 @@ contract CommunalFarm_SaddleD4 is CommunalFarm {
         string[] memory _rewardSymbols,
         address[] memory _rewardTokens,
         address[] memory _rewardManagers,
-        uint256[] memory _rewardRates,
-        address _timelock_address
+        uint256[] memory _rewardRates
     ) 
-    CommunalFarm(_owner, _stakingToken, _rewardSymbols, _rewardTokens, _rewardManagers, _rewardRates, _timelock_address)
+    CommunalFarm(_owner, _stakingToken, _rewardSymbols, _rewardTokens, _rewardManagers, _rewardRates)
     {}
 }
