@@ -555,6 +555,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwner {
+        require(_rewardsDuration >= 86400, "Rewards duration must be at least one day");
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
             "Previous rewards period must be complete before changing the duration for the new period"
