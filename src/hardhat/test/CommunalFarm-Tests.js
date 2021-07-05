@@ -447,9 +447,6 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		await communalFarmInstance_Saddle_D4.initializeDefault({ from: STAKING_OWNER });
 		// await stakingInstanceDual_FXS_WETH_Sushi.initializeDefault({ from: STAKING_OWNER });
 
-		// Add a migrator address
-		await communalFarmInstance_Saddle_D4.addMigrator(MIGRATOR_ADDRESS, { from: STAKING_OWNER });
-
 	});
 
 	it('Locked stakes', async () => {
@@ -700,9 +697,12 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		const staking_reward_tokens_addresses = await communalFarmInstance_Saddle_D4.getAllRewardTokens.call();
 		const test_recovery_amount = new BigNumber("1e18");
 
-		// Try recovering a non-reward token as the owner
+		console.log("Try recovering a non-reward token as the owner");
 		await communalFarmInstance_Saddle_D4.recoverERC20(fraxInstance.address, test_recovery_amount, { from: STAKING_OWNER });
-		
+
+		console.log("Set a reward rate as the owner");
+		await communalFarmInstance_Saddle_D4.setRewardRate(staking_reward_tokens_addresses[3], 1000, true, { from: STAKING_OWNER });
+
 		for (let j = 0; j < staking_reward_symbols.length; j++){
 			const token_manager_address = await communalFarmInstance_Saddle_D4.rewardManagers.call(staking_reward_tokens_addresses[j]);
 			console.log(chalk.yellow(`---------------------------`));
@@ -711,13 +711,13 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			console.log("Try to set the reward rate with the wrong manager [SHOULD FAIL]");
 			await expectRevert(
 				communalFarmInstance_Saddle_D4.setRewardRate(staking_reward_tokens_addresses[0], 0, true, { from: accounts[9] }),
-				"You are not the owner, governance timelock, or the correct token manager"
+				"You are not the owner or the correct token manager"
 			);
 
 			console.log("Try to change the token manager with the wrong account [SHOULD FAIL]");
 			await expectRevert(
 				communalFarmInstance_Saddle_D4.changeTokenManager(staking_reward_tokens_addresses[0], COLLATERAL_FRAX_AND_FXS_OWNER, { from: accounts[9] }),
-				"You are not the owner, governance timelock, or the correct token manager"
+				"You are not the owner or the correct token manager"
 			);
 
 			await hre.network.provider.request({
@@ -725,13 +725,13 @@ contract('CommunalFarm-Tests', async (accounts) => {
 				params: [token_manager_address]
 			});
 	
-			// Set the reward rate with the correct manager
+			console.log("Set the reward rate with the correct manager");
 			await communalFarmInstance_Saddle_D4.setRewardRate(staking_reward_tokens_addresses[j], 0, true, { from: token_manager_address });
 
-			// Try recovering reward tokens as the reward manager
+			console.log("Try recovering reward tokens as the reward manager");
 			await communalFarmInstance_Saddle_D4.recoverERC20(staking_reward_tokens_addresses[j], test_recovery_amount, { from: token_manager_address });
 
-			// Change the token manager
+			console.log("Change the token manager");
 			await communalFarmInstance_Saddle_D4.changeTokenManager(staking_reward_tokens_addresses[j], COLLATERAL_FRAX_AND_FXS_OWNER, { from: token_manager_address });
 	
 			await hre.network.provider.request({
@@ -741,101 +741,15 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		}
 	});
 
-	it("Migration Staking / Withdrawal Tests", async () => {
-
-		// Advance 1 day
-		await time.increase((1 * 86400) + 1);
-		await time.advanceBlock();
-
-		// Refresh oracle
-		try{
-			await oracle_instance_FXS_WETH.update();
-		}
-		catch (err) {}
-
-		// Untoggle the stake unlocking
-		await communalFarmInstance_Saddle_D4.unlockStakes({ from: STAKING_OWNER });
-
-		// Stake normally again for next part
-		// Need to approve first so the staking can use transfer
-		const stake_amt_unlocked = new BigNumber("5e18");
-		const stake_amt_locked = new BigNumber("5e18");
-
-		// Allow the migrator function to migrate for you
-		await communalFarmInstance_Saddle_D4.stakerAllowMigrator(MIGRATOR_ADDRESS, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		
-		// Print the balance
-		console.log("accounts[1] ERC20 balanceOf UniV2 FRAX/IQ LP:", (new BigNumber(await pair_instance_Saddle_D4.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-		
-		// Stake Locked
-		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, stake_amt_locked, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await communalFarmInstance_Saddle_D4.stakeLocked(stake_amt_locked, 7 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 6 months
-
-		// Show the stake structs
-		const locked_stake_structs = await communalFarmInstance_Saddle_D4.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		console.log("LOCKED STAKES [1]: ", locked_stake_structs);
-
-		// Turn on migrations
-		await communalFarmInstance_Saddle_D4.toggleMigrations({ from: STAKING_OWNER });
-
-		// Print balances before
-		console.log("accounts[1] staked lockedLiquidityOf <BEFORE>:", (new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-		console.log("accounts[1] staked combinedWeightOf <BEFORE>:", (new BigNumber(await communalFarmInstance_Saddle_D4.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-
-		// Have the migrator withdraw locked tokens
-		const withdraw_locked_amt = new BigNumber ("5e18");
-		await communalFarmInstance_Saddle_D4.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[2].kek_id, { from: MIGRATOR_ADDRESS });		
-		console.log(`Migrator (accounts[10]) withdrew ${withdraw_locked_amt.div(BIG18)} (E18) locked LP tokens from accounts[1]`);
-		console.log("Migrator (accounts[10]) ERC20 balanceOf:", (new BigNumber(await pair_instance_Saddle_D4.balanceOf(MIGRATOR_ADDRESS))).div(BIG18).toNumber());
-		console.log("accounts[1] staked lockedLiquidityOf:", (new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-		console.log("accounts[1] staked combinedWeightOf:", (new BigNumber(await communalFarmInstance_Saddle_D4.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-		console.log("");
-
-		// Proxy locked stake for someone else as the migrator
-		const proxy_stake_lock_amt = new BigNumber ("5e18");
-		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, proxy_stake_lock_amt, { from: MIGRATOR_ADDRESS });
-		let block_time_current_0 = (await time.latest()).toNumber();
-		await communalFarmInstance_Saddle_D4.migrator_stakeLocked_for(COLLATERAL_FRAX_AND_FXS_OWNER, proxy_stake_lock_amt, 28 * 86400, block_time_current_0, { from: MIGRATOR_ADDRESS });		
-		console.log(`accounts[1] lock staked ${proxy_stake_lock_amt.div(BIG18)} (E18) LP tokens for account[8]`);
-		console.log("Migrator (accounts[10]) ERC20 balanceOf:", (new BigNumber(await pair_instance_Saddle_D4.balanceOf(MIGRATOR_ADDRESS))).div(BIG18).toNumber());
-		console.log("accounts[1] staked lockedLiquidityOf:", (new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-		console.log("accounts[1] staked combinedWeightOf:", (new BigNumber(await communalFarmInstance_Saddle_D4.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-		console.log("");
-	});
-
 	it("Fail Tests ", async () => {
 
 		const test_amount_1 = new BigNumber ("1e18");
 		const locked_stake_structs = await communalFarmInstance_Saddle_D4.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		
-		console.log(chalk.blue("=============TEST NOT IN MIGRATION [SHOULD FAIL]============="));
-
-		// Turn off migrations
-		await communalFarmInstance_Saddle_D4.toggleMigrations({ from: STAKING_OWNER });
-
-		console.log("---------TRY TO migrator_withdraw_locked WHILE NOT IN MIGRATION---------");
-		await expectRevert(
-			communalFarmInstance_Saddle_D4.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[2].kek_id, { from: MIGRATOR_ADDRESS }),
-			"Contract is not in migration"
-		);
-
-		console.log("---------TRY TO migrator_stakeLocked_for WHILE NOT IN MIGRATION---------");
-		let block_time_current_1 = (await time.latest()).toNumber();
-		await expectRevert(
-			communalFarmInstance_Saddle_D4.migrator_stakeLocked_for(COLLATERAL_FRAX_AND_FXS_OWNER, test_amount_1, 28 * 86400, block_time_current_1, { from: MIGRATOR_ADDRESS }),
-			"Contract is not in migration"
-		);
-
-		console.log("---------TRY TO ALLOW A WRONG MIGRATOR---------");
-		await expectRevert(
-			communalFarmInstance_Saddle_D4.stakerAllowMigrator(INVESTOR_CUSTODIAN_ADDRESS, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-			"Invalid migrator address"
-		);
 
 		console.log("---------TRY TO ERC20 RECOVER WHILE NOT AN OWNER [SHOULD FAIL]---------");
 		await expectRevert(
 			communalFarmInstance_Saddle_D4.recoverERC20(pair_instance_Saddle_D4.address, test_amount_1, { from: INVESTOR_CUSTODIAN_ADDRESS }),
-			"You are not the owner, governance timelock, or the correct token manager"
+			"You are not the owner or the correct token manager"
 		);
 
 		console.log("---------TRY TO ERC20 RECOVER LP TOKENS [SHOULD FAIL]---------");
@@ -849,53 +763,6 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			communalFarmInstance_Saddle_D4.recoverERC20(tribe_instance.address, test_amount_1, { from: STAKING_OWNER }),
 			"No valid tokens to recover"
 		);
-
-		console.log(chalk.blue("=============TEST TRYING TO MIGRATE NOT AS A MIGRATOR [SHOULD FAIL]============="));
-
-		// Turn on migrations
-		await communalFarmInstance_Saddle_D4.toggleMigrations({ from: STAKING_OWNER });
-
-		console.log("---------TRY TO STAKE LOCKED NORMALLY DURING A MIGRATION---------");
-		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, test_amount_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await expectRevert(
-			communalFarmInstance_Saddle_D4.stakeLocked(test_amount_1, 28 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-			"Staking is paused, or migration is happening"
-		);		
-
-		console.log("---------TRY TO migrator_withdraw_locked NOT AS THE MIGRATOR---------");
-		await expectRevert(
-			communalFarmInstance_Saddle_D4.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[2].kek_id, { from: INVESTOR_CUSTODIAN_ADDRESS }),
-			"msg.sender is either an invalid migrator or the staker has not approved them"
-		);
-
-		console.log("---------TRY TO migrator_stakeLocked_for NOT AS THE MIGRATOR---------");
-		let block_time_current_2 = (await time.latest()).toNumber();
-		await expectRevert(
-			communalFarmInstance_Saddle_D4.migrator_stakeLocked_for(COLLATERAL_FRAX_AND_FXS_OWNER, test_amount_1, 28 * 86400, block_time_current_2, { from: INVESTOR_CUSTODIAN_ADDRESS }),
-			"msg.sender is either an invalid migrator or the staker has not approved them"
-		);
-
-		console.log("---------TRY TO migrator_withdraw_locked AS A NOW NON-APPROVED MIGRATOR ---------");
-		// Staker disallows MIGRATOR_ADDRESS
-		await communalFarmInstance_Saddle_D4.stakerDisallowMigrator(MIGRATOR_ADDRESS, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
-		
-		await expectRevert(
-			communalFarmInstance_Saddle_D4.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[2].kek_id, { from: MIGRATOR_ADDRESS }),
-			"msg.sender is either an invalid migrator or the staker has not approved them"
-		);
-
-		console.log("---------TRY TO migrator_withdraw_unlocked AS A NOW INVALID MIGRATOR ---------");
-		// Staker re-allows MIGRATOR_ADDRESS
-		await communalFarmInstance_Saddle_D4.stakerAllowMigrator(MIGRATOR_ADDRESS, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
-
-		// But governance disallows it
-		await communalFarmInstance_Saddle_D4.removeMigrator(MIGRATOR_ADDRESS, { from: STAKING_OWNER });
-
-		await expectRevert(
-			communalFarmInstance_Saddle_D4.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[2].kek_id, { from: MIGRATOR_ADDRESS }),
-			"msg.sender is either an invalid migrator or the staker has not approved them"
-		);
-
 	});
 
 });

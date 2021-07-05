@@ -33,7 +33,7 @@ pragma experimental ABIEncoderV2;
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
 import "../Curve/IveFXS.sol";
-import "../Curve/IGaugeController.sol";
+import "../Curve/IFraxGaugeController.sol";
 import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
@@ -64,7 +64,6 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     // Reward and period related
     uint256 private periodFinish;
     uint256 private lastUpdateTime;
-    uint256 public inflation_rate; // E18, across the entire protocol. Will be multiplied by the gauge relative rate
     uint256 public reward_rate_manual;
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
@@ -89,6 +88,8 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     uint256 private rewardPerTokenStored0 = 0;
     mapping(address => uint256) private userRewardPerTokenPaid0;
     mapping(address => uint256) public rewards0;
+    uint256 private last_gauge_relative_weight;
+    uint256 private last_gauge_time_total;
 
     // Balance, stake, and weight tracking
     uint256 private _total_liquidity_locked = 0;
@@ -132,11 +133,6 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         _;
     }
 
-    modifier onlyByOwnerOrGovernanceOrMigrator() {
-        require(msg.sender == owner || msg.sender == timelock_address || valid_migrators[msg.sender] == true, "You are not the owner, governance timelock, or a migrator");
-        _;
-    }
-
     modifier isMigrating() {
         require(migrationsOn == true, "Contract is not in migration");
         _;
@@ -165,22 +161,20 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         address _stakingTokenNFT,
         address _timelock_address,
         address _veFXS_address,
+        address _gauge_controller_address,
         address _uni_token0,
         address _uni_token1
     ) Owned(_owner) {
         rewardsToken0 = ERC20(_rewardsToken0);
         stakingTokenNFT = IUniswapV3PositionsNFT(_stakingTokenNFT);
-        gauge_controller = IGaugeController(0x0000000000000000000000000000000000000000);
+        gauge_controller = IGaugeController(_gauge_controller_address);
 
         veFXS = IveFXS(_veFXS_address);
         lastUpdateTime = block.timestamp;
         timelock_address = _timelock_address;
 
         // 1 FXS a day
-        reward_rate_manual = (uint256(365e18)).div(365 * 86400);
-
-        // 10 FXS a day
-        inflation_rate = (uint256(3650e18)).div(365 * 86400);
+        reward_rate_manual = 0;
 
         // Set the UniV3 addresses
         uni_token0 = _uni_token0;
@@ -373,17 +367,17 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         );
     }
 
-    function rewardRate0() public view returns (uint256) {
+    function rewardRate0() public view returns (uint256 rwd_rate) {
         if (address(gauge_controller) != address(0)) {
-            return (inflation_rate).mul(gauge_controller.gauge_relative_weight(address(this), block.timestamp)).div(1e18);
+            rwd_rate = (gauge_controller.global_emission_rate()).mul(last_gauge_relative_weight).div(1e18);
         }
         else {
-            return reward_rate_manual;
+            rwd_rate = reward_rate_manual;
         }
     }
 
     function getRewardForDuration() external view returns (uint256) {
-        return (rewardRate0().mul(rewardsDuration));
+        return rewardRate0().mul(rewardsDuration);
     }
 
     function migratorApprovedForStaker(address staker_address, address migrator_address) public view returns (bool) {
@@ -606,12 +600,6 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         }
     }
 
-    function renewIfApplicable() external {
-        if (block.timestamp > periodFinish) {
-            retroCatchUp();
-        }
-    }
-
     // If the period expired, renew it
     function retroCatchUp() internal {
         // Failsafe check
@@ -634,7 +622,19 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         emit RewardsPeriodRenewed(address(stakingTokenNFT));
     }
 
+    function sync_gauge_weight(bool force_update) public {
+        if (force_update || (block.timestamp > last_gauge_time_total)){
+            // Update the gauge_relative_weight
+            last_gauge_relative_weight = gauge_controller.gauge_relative_weight_write(address(this), block.timestamp);
+            last_gauge_time_total = gauge_controller.time_total();
+        }
+
+    }
+
     function sync() public {
+        // Sync the gauge weight, if applicable
+        sync_gauge_weight(true);
+
         if (block.timestamp > periodFinish) {
             retroCatchUp();
         } else {
@@ -741,6 +741,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     function initializeDefault() external onlyByOwnerOrGovernance {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
+        sync_gauge_weight(true);
         emit DefaultInitialization();
     }
 
@@ -776,8 +777,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         uni_required_fee = _uni_required_fee;
     }
 
-    function setInflationAndManualRewardRate(uint256 _inflation_rate, uint256 _reward_rate_manual, bool sync_too) external onlyByOwnerOrGovernance {
-        inflation_rate = _inflation_rate;
+    function setManualRewardRate(uint256 _reward_rate_manual, bool sync_too) external onlyByOwnerOrGovernance {
         reward_rate_manual = _reward_rate_manual;
 
         if (sync_too) {
