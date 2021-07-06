@@ -61,7 +61,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
 
     // Lock time and multiplier settings
     uint256 public lock_max_multiplier = uint256(3e18); // E18. 1x = e18
-    uint256 public lock_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
+    uint256 public lock_time_for_max_multiplier = 1 * 365 * 86400; // 1 year
     uint256 public lock_time_min = 86400; // 1 * 86400  (1 day)
 
     // Reward addresses, rates, and managers
@@ -78,6 +78,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     uint256[] public rewardsPerTokenStored;
     mapping(address => mapping(uint256 => uint256)) public userRewardsPerTokenPaid; // staker addr -> token id -> paid amount
     mapping(address => mapping(uint256 => uint256)) public rewards; // staker addr -> token id -> reward amount
+    mapping(address => uint256) private lastRewardClaimTime; // staker addr -> timestamp
 
     // Balance tracking
     uint256 private _total_liquidity_locked = 0;
@@ -205,16 +206,27 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         // Get the old combined weight
         old_combined_weight = _combined_weights[account];
 
-
         // Loop through the locked stakes, first by getting the liquidity * lock_multiplier portion
         new_combined_weight = 0;
         for (uint256 i = 0; i < lockedStakes[account].length; i++) {
             LockedStake memory thisStake = lockedStakes[account][i];
             uint256 lock_multiplier = thisStake.lock_multiplier;
 
-            // If the lock period is over, drop the lock multiplier down to 1x for the weight calculations
-            if (thisStake.ending_timestamp <= block.timestamp){
-                lock_multiplier = MULTIPLIER_PRECISION;
+            // If the lock is expired
+            if (thisStake.ending_timestamp <= block.timestamp) {
+                // If the lock expired in the time since the last claim, the weight needs to be proportionately averaged this time
+                if (lastRewardClaimTime[account] < thisStake.ending_timestamp){
+                    uint256 time_before_expiry = (thisStake.ending_timestamp).sub(lastRewardClaimTime[account]);
+                    uint256 time_after_expiry = (block.timestamp).sub(thisStake.ending_timestamp);
+
+                    // Get the weighted-average lock_multiplier
+                    uint256 numerator = ((lock_multiplier).mul(time_before_expiry)).add(((MULTIPLIER_PRECISION).mul(time_after_expiry)));
+                    lock_multiplier = numerator.div(time_before_expiry.add(time_after_expiry));
+                }
+                // Otherwise, it needs to just be 1x
+                else {
+                    lock_multiplier = MULTIPLIER_PRECISION;
+                }
             }
 
             uint256 liquidity = thisStake.liquidity;
@@ -272,6 +284,8 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     // Amount of reward tokens an account has earned / accrued
+    // Note: In the edge-case of one of the account's stake expiring since the last claim, this will
+    // return a slightly inflated number
     function earned(address account) public view returns (uint256[] memory new_earned) {
         uint256[] memory reward_arr = rewardsPerToken();
         new_earned = new uint256[](rewardTokens.length);
@@ -396,6 +410,9 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         // Need to call to update the combined weights
         _updateRewardAndBalance(staker_address, false);
 
+        // Needed for edge case if the staker only claims once, and after the lock expired
+        if (lastRewardClaimTime[staker_address] == 0) lastRewardClaimTime[staker_address] = block.timestamp;
+
         emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
     }
 
@@ -461,6 +478,8 @@ contract CommunalFarm is Owned, ReentrancyGuard {
             ERC20(rewardTokens[i]).transfer(destination_address, rewards_before[i]);
             emit RewardPaid(rewardee, rewards_before[i], rewardTokens[i], destination_address);
         }
+
+        lastRewardClaimTime[rewardee] = block.timestamp;
     }
 
     function renewIfApplicable() external {
