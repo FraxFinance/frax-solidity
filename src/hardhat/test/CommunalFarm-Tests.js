@@ -450,10 +450,10 @@ contract('CommunalFarm-Tests', async (accounts) => {
 	});
 
 	it('Locked stakes', async () => {
-		console.log("====================================================================");
+		console.log(chalk.yellow("===================================================================="));
 		console.log("TRY TESTS WITH LOCKED STAKES.");
 
-		console.log("====================================================================");
+		console.log(chalk.yellow("===================================================================="));
 
 		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, COLLATERAL_FRAX_AND_FXS_OWNER);
 		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, accounts[9]);
@@ -478,10 +478,10 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		// Stake Locked
 		// account[1]
 		await communalFarmInstance_Saddle_D4.stakeLocked(uni_pool_locked_1, 7 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 15 days
-		await communalFarmInstance_Saddle_D4.stakeLocked(new BigNumber ("25e17"), 548 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 270 days
+		await communalFarmInstance_Saddle_D4.stakeLocked(new BigNumber ("25e17"), 365 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 270 days
 		
 		// account[9]
-		await communalFarmInstance_Saddle_D4.stakeLocked(uni_pool_locked_9, 28 * 86400, { from: accounts[9] }); // 6 months
+		await communalFarmInstance_Saddle_D4.stakeLocked(uni_pool_locked_9, 28 * 86400, { from: accounts[9] });
 		await time.advanceBlock();
 
 		// Show the stake structs
@@ -517,9 +517,8 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("_total_liquidity_locked GLOBAL: ", _total_liquidity_locked_0.toString());
 		console.log("_total_combined_weight GLOBAL: ", _total_combined_weight_0.toString());
 
+		console.log(chalk.yellow("===================================================================="));
 		console.log("WAIT 7 DAYS");
-
-		console.log("====================================================================");
 
 		// Advance 7 days
 		await time.increase((7 * 86400) + 1);
@@ -583,7 +582,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("[9] COLLECT REWARDS");
 		await communalFarmInstance_Saddle_D4.getReward({ from: accounts[9] });
 
-		console.log("====================================================================");
+		console.log(chalk.yellow("===================================================================="));
 		console.log("ADVANCING 28 DAYS");
 		
 		// Advance 28 days
@@ -658,6 +657,56 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("_total_liquidity_locked GLOBAL: ", _total_liquidity_locked_2.toString());
 		console.log("_total_combined_weight GLOBAL: ", _total_combined_weight_2.toString());
 
+
+		console.log(chalk.yellow("===================================================================="));
+		console.log("PREPARING LOCK EXPIRY BOUNDARY ISSUE CHECK");
+
+		const uni_pool_lock_boundary_check_amount = new BigNumber("1e18");
+
+		// Get starting FXS balances
+		const starting_bal_fxs_1 =  new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const starting_bal_fxs_9 = new BigNumber(await fxsInstance.balanceOf(accounts[9])).div(BIG18).toNumber();
+		
+		// Approve
+		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, uni_pool_lock_boundary_check_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, uni_pool_lock_boundary_check_amount, { from: accounts[9] });
+		
+		// Stake Locked
+		// account[1]
+		await communalFarmInstance_Saddle_D4.stakeLocked(uni_pool_lock_boundary_check_amount, 10 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// account[9]
+		await communalFarmInstance_Saddle_D4.stakeLocked(uni_pool_lock_boundary_check_amount, 10 * 86400, { from: accounts[9] });
+
+
+		console.log(chalk.yellow("===================================================================="));
+		console.log("account[1] claims right before expiry");
+
+		// Advance 9 days and 12 hrs
+		await time.increase((9.5 * 86400));
+		await time.advanceBlock();
+
+		// Account 1 claims. Account 9 does not
+		await communalFarmInstance_Saddle_D4.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		console.log(chalk.yellow("===================================================================="));
+		console.log("Advance 60 days and have both accounts claim");
+
+		// Advance 2 weeks
+		await time.increase((60 * 86400));
+		await time.advanceBlock();
+
+		// Both accounts claim
+		await communalFarmInstance_Saddle_D4.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await communalFarmInstance_Saddle_D4.getReward({ from: accounts[9] });
+
+		// Fetch the new balances
+		const ending_bal_fxs_1 =  new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const ending_bal_fxs_9 = new BigNumber(await fxsInstance.balanceOf(accounts[9])).div(BIG18).toNumber();
+
+		// Print the balance changes. Should be close to the same
+		console.log("account[1] FXS difference: ", ending_bal_fxs_1 - starting_bal_fxs_1);
+		console.log("account[9] FXS difference: ", ending_bal_fxs_9 - starting_bal_fxs_9);
 	});
 
 	it("Blocks a greylisted address which tries to stake; SHOULD FAIL", async () => {
