@@ -238,7 +238,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl, Owned {
     function addPool(address pool_address) public onlyByOwnerGovernanceOrController {
         require(pool_address != address(0), "Zero address detected");
 
-        require(frax_pools[pool_address] == false, "address already exists");
+        require(frax_pools[pool_address] == false, "Address already exists");
         frax_pools[pool_address] = true; 
         frax_pools_array.push(pool_address);
 
@@ -249,7 +249,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl, Owned {
     function removePool(address pool_address) public onlyByOwnerGovernanceOrController {
         require(pool_address != address(0), "Zero address detected");
 
-        require(frax_pools[pool_address] == true, "address doesn't exist already");
+        require(frax_pools[pool_address] == true, "Address nonexistant");
         
         // Delete from the mapping
         delete frax_pools[pool_address];

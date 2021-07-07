@@ -20,7 +20,7 @@ contract FraxBridge is AccessControl, Owned {
     modifier onlyByOwnerOrGovernance() {
         require(
             msg.sender == timelock_address || msg.sender == owner,
-            "You are not the owner or the governance timelock"
+            "Not owner or timelock"
         );
         _;
     }

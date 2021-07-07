@@ -83,7 +83,7 @@ contract FraxPoolInvestorForV2 is AccessControl, Owned {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == timelock_address || msg.sender == owner, "You are not the owner or the governance timelock");
+        require(msg.sender == timelock_address || msg.sender == owner, "Not owner or timelock");
         _;
     }
 

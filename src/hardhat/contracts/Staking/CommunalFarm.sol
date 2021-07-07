@@ -81,8 +81,8 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     mapping(address => uint256) private lastRewardClaimTime; // staker addr -> timestamp
 
     // Balance tracking
-    uint256 private _total_liquidity_locked = 0;
-    uint256 private _total_combined_weight = 0;
+    uint256 private _total_liquidity_locked;
+    uint256 private _total_combined_weight;
     mapping(address => uint256) private _locked_liquidity;
     mapping(address => uint256) private _combined_weights;
 
@@ -93,10 +93,10 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     mapping(address => bool) public greylist;
 
     // Administrative booleans
-    bool public stakesUnlocked = false; // Release locked stakes in case of emergency
-    bool public withdrawalsPaused = false; // For emergencies
-    bool public rewardsCollectionPaused = false; // For emergencies
-    bool public stakingPaused = false; // For emergencies
+    bool public stakesUnlocked; // Release locked stakes in case of emergency
+    bool public withdrawalsPaused; // For emergencies
+    bool public rewardsCollectionPaused; // For emergencies
+    bool public stakingPaused; // For emergencies
 
     /* ========== STRUCTS ========== */
     
@@ -122,16 +122,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
 
     modifier notStakingPaused() {
         require(stakingPaused == false, "Staking is paused");
-        _;
-    }
-
-    modifier notWithdrawalsPaused() {
-        require(withdrawalsPaused == false, "Withdrawals are paused");
-        _;
-    }
-
-    modifier notRewardsCollectionPaused() {
-        require(rewardsCollectionPaused == false, "Rewards collection is paused");
         _;
     }
 
@@ -181,7 +171,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     // Locked liquidity for a given account
-    function lockedLiquidityOf(address account) public view returns (uint256) {
+    function lockedLiquidityOf(address account) external view returns (uint256) {
         return _locked_liquidity[account];
     }
 
@@ -263,7 +253,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     // Last time the reward was applicable
-    function lastTimeRewardApplicable() public view returns (uint256) {
+    function lastTimeRewardApplicable() internal view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
@@ -388,7 +378,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         require(liquidity > 0, "Must stake more than zero");
         require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
-        require(secs <= lock_time_for_max_multiplier,"You are trying to lock for too long");
+        require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
 
         uint256 lock_multiplier = lockMultiplier(secs);
         bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity, _locked_liquidity[staker_address]));
@@ -417,7 +407,8 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues
-    function withdrawLocked(bytes32 kek_id) nonReentrant notWithdrawalsPaused public {
+    function withdrawLocked(bytes32 kek_id) nonReentrant public {
+        require(withdrawalsPaused == false, "Withdrawals paused");
         _withdrawLocked(msg.sender, msg.sender, kek_id);
     }
 
@@ -463,7 +454,8 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
     
     // Two different getReward functions are needed because of delegateCall and msg.sender issues
-    function getReward() external nonReentrant notRewardsCollectionPaused returns (uint256[] memory) {
+    function getReward() external nonReentrant returns (uint256[] memory) {
+        require(rewardsCollectionPaused == false,"Rewards collection paused");
         return _getReward(msg.sender, msg.sender);
     }
 
@@ -577,7 +569,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         require(_rewardsDuration >= 86400, "Rewards duration must be at least one day");
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
-            "Previous rewards period must be complete before changing the duration for the new period"
+            "Reward period incomplete"
         );
         rewardsDuration = _rewardsDuration;
         emit RewardsDurationUpdated(rewardsDuration);
@@ -590,8 +582,8 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwner {
-        require(_lock_time_for_max_multiplier >= 1, "Multiplier Max Time must be greater than or equal to 1");
-        require(_lock_time_min >= 1, "Multiplier Min Time must be greater than or equal to 1");
+        require(_lock_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
+        require(_lock_time_min >= 1, "Mul min time must be >= 1");
 
         lock_time_for_max_multiplier = _lock_time_for_max_multiplier;
         lock_time_min = _lock_time_min;

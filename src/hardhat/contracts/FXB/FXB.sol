@@ -66,7 +66,7 @@ contract FraxBond is ERC20Custom, AccessControl {
     }
 
     modifier onlyByOwnerOrTimelock() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(msg.sender == owner_address || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
@@ -109,14 +109,14 @@ contract FraxBond is ERC20Custom, AccessControl {
 
     // Adds an issuer
     function addIssuer(address issuer_address) external onlyByOwnerControllerOrGovernance {
-        require(bond_issuers[issuer_address] == false, "address already exists");
+        require(bond_issuers[issuer_address] == false, "Address already exists");
         bond_issuers[issuer_address] = true; 
         bond_issuers_array.push(issuer_address);
     }
 
     // Removes an issuer 
     function removeIssuer(address issuer_address) external onlyByOwnerControllerOrGovernance {
-        require(bond_issuers[issuer_address] == true, "address doesn't exist already");
+        require(bond_issuers[issuer_address] == true, "Address nonexistant");
         
         // Delete from the mapping
         delete bond_issuers[issuer_address];

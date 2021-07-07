@@ -156,11 +156,11 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         return rewards[account];
     }
 
-    function lastTimeRewardApplicable() public override view returns (uint256) {
+    function lastTimeRewardApplicable() internal view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
-    function rewardPerToken() public override view returns (uint256) {
+    function rewardPerToken() internal view returns (uint256) {
         if (_staking_token_supply == 0) {
             return rewardPerTokenStored;
         }
@@ -321,7 +321,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
         uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / rewardsDuration; // Floor division to the nearest period
         uint balance = rewardsToken.balanceOf(address(this));
-        require(rewardRate.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance, "Not enough FXS available for rewards!");
+        require(rewardRate.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance, "Not enough FXS available");
 
         // uint256 old_lastUpdateTime = lastUpdateTime;
         // uint256 new_lastUpdateTime = block.timestamp;
@@ -373,7 +373,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernance {
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
-            "Previous rewards period must be complete before changing the duration for the new period"
+            "Reward period incomplete"
         );
         rewardsDuration = _rewardsDuration;
         emit RewardsDurationUpdated(rewardsDuration);
@@ -391,8 +391,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier, uint256 _locked_stake_min_time) external onlyByOwnerOrGovernance {
-        require(_locked_stake_time_for_max_multiplier >= 1, "Multiplier Max Time must be greater than or equal to 1");
-        require(_locked_stake_min_time >= 1, "Multiplier Min Time must be greater than or equal to 1");
+        require(_locked_stake_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
+        require(_locked_stake_min_time >= 1, "Mul min time must be >= 1");
         
         locked_stake_time_for_max_multiplier = _locked_stake_time_for_max_multiplier;
 
@@ -445,7 +445,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(msg.sender == owner_address || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 

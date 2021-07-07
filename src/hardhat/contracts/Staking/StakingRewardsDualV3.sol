@@ -25,7 +25,7 @@ pragma experimental ABIEncoderV2;
 // Sam Kazemian: https://github.com/samkazemian
 // Sam Sun: https://github.com/samczsun
 
-// Modified originally from Synthetixio
+// Modified originally from Synthetix.io
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 
 import "../Math/Math.sol";
@@ -82,16 +82,16 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     // Reward tracking
-    uint256 public rewardPerTokenStored0 = 0;
+    uint256 private rewardPerTokenStored0;
     uint256 public rewardPerTokenStored1 = 0;
     mapping(address => uint256) public userRewardPerTokenPaid0;
     mapping(address => uint256) public userRewardPerTokenPaid1;
-    mapping(address => uint256) public rewards0;
+    mapping(address => uint256) private rewards0;
     mapping(address => uint256) public rewards1;
 
     // Balance tracking
-    uint256 private _total_liquidity_locked = 0;
-    uint256 private _total_combined_weight = 0;
+    uint256 private _total_liquidity_locked;
+    uint256 private _total_combined_weight;
     mapping(address => uint256) private _locked_liquidity;
     mapping(address => uint256) private _combined_weights;
 
@@ -113,11 +113,11 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
 
     // Administrative booleans
     bool public token1_rewards_on = true;
-    bool public migrationsOn = false; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
-    bool public stakesUnlocked = false; // Release locked stakes in case of system migration or emergency
-    bool public withdrawalsPaused = false; // For emergencies
-    bool public rewardsCollectionPaused = false; // For emergencies
-    bool public stakingPaused = false; // For emergencies
+    bool public migrationsOn; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
+    bool public stakesUnlocked; // Release locked stakes in case of system migration or emergency
+    bool public withdrawalsPaused; // For emergencies
+    bool public rewardsCollectionPaused; // For emergencies
+    bool public stakingPaused; // For emergencies
 
     /* ========== STRUCTS ========== */
     
@@ -132,7 +132,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
@@ -142,7 +142,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
     }
 
     modifier isMigrating() {
-        require(migrationsOn == true, "Contract is not in migration");
+        require(migrationsOn == true, "Not in migration");
         _;
     }
 
@@ -151,14 +151,8 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
         _;
     }
 
-
-    modifier notWithdrawalsPaused() {
-        require(withdrawalsPaused == false, "Withdrawals are paused");
-        _;
-    }
-
     modifier notRewardsCollectionPaused() {
-        require(rewardsCollectionPaused == false, "Rewards collection is paused");
+        require(rewardsCollectionPaused == false, "Rewards collection paused");
         _;
     }
 
@@ -224,7 +218,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
     }
 
     // Total locked liquidity tokens
-    function lockedLiquidityOf(address account) public view returns (uint256) {
+    function lockedLiquidityOf(address account) external view returns (uint256) {
         return _locked_liquidity[account];
     }
 
@@ -238,7 +232,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
         return lockedStakes[account];
     }
 
-    function lastTimeRewardApplicable() public view returns (uint256) {
+    function lastTimeRewardApplicable() internal view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
@@ -412,15 +406,14 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
     }
 
     // Staker can allow a migrator 
-    function stakerAllowMigrator(address migrator_address) public {
-        require(staker_allowed_migrators[msg.sender][migrator_address] == false, "Address already exists");
+    function stakerAllowMigrator(address migrator_address) external {
         require(valid_migrators[migrator_address], "Invalid migrator address");
         staker_allowed_migrators[msg.sender][migrator_address] = true; 
     }
 
     // Staker can disallow a previously-allowed migrator  
-    function stakerDisallowMigrator(address migrator_address) public {
-        require(staker_allowed_migrators[msg.sender][migrator_address] == true, "Address doesn't exist already");
+    function stakerDisallowMigrator(address migrator_address) external {
+        require(staker_allowed_migrators[msg.sender][migrator_address] == true, "Address nonexistant");
 
         // Delete from the mapping
         delete staker_allowed_migrators[msg.sender][migrator_address];
@@ -434,11 +427,11 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
     // If this were not internal, and source_address had an infinite approve, this could be exploitable
     // (pull funds from source_address and stake for an arbitrary staker_address)
     function _stakeLocked(address staker_address, address source_address, uint256 liquidity, uint256 secs) internal nonReentrant updateRewardAndBalance(staker_address, true) {
-        require((!stakingPaused && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking is paused, or migration is happening");
+        require((!stakingPaused && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking paused or in migration");
         require(liquidity > 0, "Must stake more than zero");
         require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
-        require(secs <= lock_time_for_max_multiplier,"You are trying to lock for too long");
+        require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
 
         uint256 lock_multiplier = lockMultiplier(secs);
         bytes32 kek_id = keccak256(abi.encodePacked(staker_address, block.timestamp, liquidity));
@@ -470,7 +463,8 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
     // functions like withdraw(), migrator_withdraw_unlocked() and migrator_withdraw_locked()
-    function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id) internal nonReentrant notWithdrawalsPaused updateRewardAndBalance(staker_address, true) {
+    function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id) internal nonReentrant updateRewardAndBalance(staker_address, true) {
+        require(withdrawalsPaused == false, "Withdrawals paused");
         LockedStake memory thisStake;
         thisStake.liquidity = 0;
         uint theArrayIndex;
@@ -549,7 +543,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
         uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / rewardsDuration; // Floor division to the nearest period
         uint balance0 = rewardsToken0.balanceOf(address(this));
         uint balance1 = rewardsToken1.balanceOf(address(this));
-        require(rewardRate0.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance0, "Not enough FXS available for rewards!");
+        require(rewardRate0.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance0, "Not enough FXS available");
         
         if (token1_rewards_on){
             require(rewardRate1.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance1, "Not enough token1 available for rewards!");
@@ -585,26 +579,26 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
     function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "msg.sender is either an invalid migrator or the staker has not approved them");
+        require(migratorApprovedForStaker(staker_address, msg.sender), "Sender invalid or unapproved");
         _stakeLocked(staker_address, msg.sender, amount, secs);
     }
 
     // Used for migrations
     function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "msg.sender is either an invalid migrator or the staker has not approved them");
+        require(migratorApprovedForStaker(staker_address, msg.sender), "Sender invalid or unapproved");
         _withdrawLocked(staker_address, msg.sender, kek_id);
     }
 
     // Adds supported migrator address 
-    function addMigrator(address migrator_address) public onlyByOwnerOrGovernance {
-        require(valid_migrators[migrator_address] == false, "address already exists");
+    function addMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+        require(valid_migrators[migrator_address] == false, "Address already exists");
         valid_migrators[migrator_address] = true; 
         valid_migrators_array.push(migrator_address);
     }
 
     // Remove a migrator address
-    function removeMigrator(address migrator_address) public onlyByOwnerOrGovernance {
-        require(valid_migrators[migrator_address] == true, "address doesn't exist already");
+    function removeMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+        require(valid_migrators[migrator_address] == true, "Address nonexistant");
         
         // Delete from the mapping
         delete valid_migrators[migrator_address];
@@ -622,7 +616,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Admin cannot withdraw the staking token from the contract unless currently migrating
         if(!migrationsOn){
-            require(tokenAddress != address(stakingToken), "Cannot withdraw staking tokens unless migration is on"); // Only Governance / Timelock can trigger a migration
+            require(tokenAddress != address(stakingToken), "Not in migration"); // Only Governance / Timelock can trigger a migration
         }
         // Only the owner address can ever receive the recovery withdrawal
         ERC20(tokenAddress).transfer(owner, tokenAmount);
@@ -632,7 +626,7 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
     function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernance {
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
-            "Previous rewards period must be complete before changing the duration for the new period"
+            "Reward period incomplete"
         );
         rewardsDuration = _rewardsDuration;
         emit RewardsDurationUpdated(rewardsDuration);
@@ -653,8 +647,8 @@ contract StakingRewardsDualV3 is Owned, ReentrancyGuard {
     }
 
     function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnerOrGovernance {
-        require(_lock_time_for_max_multiplier >= 1, "Multiplier Max Time must be greater than or equal to 1");
-        require(_lock_time_min >= 1, "Multiplier Min Time must be greater than or equal to 1");
+        require(_lock_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
+        require(_lock_time_min >= 1, "Mul min time must be >= 1");
 
         lock_time_for_max_multiplier = _lock_time_for_max_multiplier;
         lock_time_min = _lock_time_min;

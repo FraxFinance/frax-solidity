@@ -22,7 +22,7 @@ pragma experimental ABIEncoderV2;
 // Sam Kazemian: https://github.com/samkazemian
 // Sam Sun: https://github.com/samczsun
 
-// Modified originally from Synthetixio
+// Modified originally from Synthetix.io
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 
 import "../Math/Math.sol";
@@ -63,7 +63,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     uint256 public lastUpdateTime;
-    uint256 public rewardPerTokenStored0 = 0;
+    uint256 private rewardPerTokenStored0;
     uint256 public rewardPerTokenStored1 = 0;
     uint256 public pool_weight0; // This staking pool's percentage of the total FXS being distributed by all pools, 6 decimals of precision
     uint256 public pool_weight1; // This staking pool's percentage of the total TOKEN 2 being distributed by all pools, 6 decimals of precision
@@ -80,7 +80,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
 
     mapping(address => uint256) public userRewardPerTokenPaid0;
     mapping(address => uint256) public userRewardPerTokenPaid1;
-    mapping(address => uint256) public rewards0;
+    mapping(address => uint256) private rewards0;
     mapping(address => uint256) public rewards1;
 
     uint256 private _staking_token_supply = 0;
@@ -102,10 +102,10 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
 
     bool public token1_rewards_on = false;
 
-    bool public migrationsOn = false; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
-    bool public stakesUnlocked = false; // Release locked stakes in case of system migration or emergency
-    bool public withdrawalsPaused = false; // For emergencies
-    bool public rewardsCollectionPaused = false; // For emergencies
+    bool public migrationsOn; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
+    bool public stakesUnlocked; // Release locked stakes in case of system migration or emergency
+    bool public withdrawalsPaused; // For emergencies
+    bool public rewardsCollectionPaused; // For emergencies
 
     struct LockedStake {
         bytes32 kek_id;
@@ -118,7 +118,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(msg.sender == owner_address || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
@@ -128,17 +128,17 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     }
 
     modifier isMigrating() {
-        require(migrationsOn == true, "Contract is not in migration");
+        require(migrationsOn == true, "Not in migration");
         _;
     }
 
     modifier notWithdrawalsPaused() {
-        require(withdrawalsPaused == false, "Withdrawals are paused");
+        require(withdrawalsPaused == false, "Withdrawals paused");
         _;
     }
 
     modifier notRewardsCollectionPaused() {
-        require(rewardsCollectionPaused == false, "Rewards collection is paused");
+        require(rewardsCollectionPaused == false, "Rewards collection paused");
         _;
     }
     
@@ -247,11 +247,11 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
         return (rewards0[account], rewards1[account]);
     }
 
-    function lastTimeRewardApplicable() public override view returns (uint256) {
+    function lastTimeRewardApplicable() internal view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
-    function rewardPerToken() public override view returns (uint256, uint256) {
+    function rewardPerToken() internal view returns (uint256, uint256) {
         if (_staking_token_supply == 0) {
             return (rewardPerTokenStored0, rewardPerTokenStored1);
         }
@@ -299,15 +299,14 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     // Staker can allow a migrator 
-    function stakerAllowMigrator(address migrator_address) public {
-        require(staker_allowed_migrators[msg.sender][migrator_address] == false, "Address already exists");
+    function stakerAllowMigrator(address migrator_address) external {
         require(valid_migrators[migrator_address], "Invalid migrator address");
         staker_allowed_migrators[msg.sender][migrator_address] = true; 
     }
 
     // Staker can disallow a previously-allowed migrator  
-    function stakerDisallowMigrator(address migrator_address) public {
-        require(staker_allowed_migrators[msg.sender][migrator_address] == true, "Address doesn't exist already");
+    function stakerDisallowMigrator(address migrator_address) external {
+        require(staker_allowed_migrators[msg.sender][migrator_address] == true, "Address nonexistant");
         
         // Redundant
         // require(valid_migrators[migrator_address], "Invalid migrator address");
@@ -324,7 +323,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     // If this were not internal, and source_address had an infinite approve, this could be exploitable
     // (pull funds from source_address and stake for an arbitrary staker_address)
     function _stake(address staker_address, address source_address, uint256 amount) internal nonReentrant updateReward(staker_address) {
-        require((paused == false && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking is paused, or migration is happening");
+        require((paused == false && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking paused or in migration");
         require(amount > 0, "Cannot stake 0");
         require(greylist[staker_address] == false, "address has been greylisted");
 
@@ -350,7 +349,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     // If this were not internal, and source_address had an infinite approve, this could be exploitable
     // (pull funds from source_address and stake for an arbitrary staker_address)
     function _stakeLocked(address staker_address, address source_address, uint256 amount, uint256 secs) internal nonReentrant updateReward(staker_address) {
-        require((paused == false && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking is paused, or migration is happening");
+        require((paused == false && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking paused or in migration");
         require(amount > 0, "Cannot stake 0");
         require(secs > 0, "Cannot wait for a negative number");
         require(greylist[staker_address] == false, "address has been greylisted");
@@ -489,7 +488,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
         uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / rewardsDuration; // Floor division to the nearest period
         uint balance0 = rewardsToken0.balanceOf(address(this));
         uint balance1 = rewardsToken1.balanceOf(address(this));
-        require(rewardRate0.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance0, "Not enough FXS available for rewards!");
+        require(rewardRate0.mul(rewardsDuration).mul(crBoostMultiplier()).mul(num_periods_elapsed + 1).div(PRICE_PRECISION) <= balance0, "Not enough FXS available");
         
         if (token1_rewards_on){
             require(rewardRate1.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance1, "Not enough token1 available for rewards!");
@@ -525,38 +524,38 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can)
     function migrator_stake_for(address staker_address, uint256 amount) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "msg.sender is either an invalid migrator or the staker has not approved them");
+        require(migratorApprovedForStaker(staker_address, msg.sender), "Sender invalid or unapproved");
         _stake(staker_address, msg.sender, amount);
     }
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
     function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "msg.sender is either an invalid migrator or the staker has not approved them");
+        require(migratorApprovedForStaker(staker_address, msg.sender), "Sender invalid or unapproved");
         _stakeLocked(staker_address, msg.sender, amount, secs);
     }
 
     // Used for migrations
     function migrator_withdraw_unlocked(address staker_address) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "msg.sender is either an invalid migrator or the staker has not approved them");
+        require(migratorApprovedForStaker(staker_address, msg.sender), "Sender invalid or unapproved");
         _withdraw(staker_address, msg.sender, _unlocked_balances[staker_address]);
     }
 
     // Used for migrations
     function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "msg.sender is either an invalid migrator or the staker has not approved them");
+        require(migratorApprovedForStaker(staker_address, msg.sender), "Sender invalid or unapproved");
         _withdrawLocked(staker_address, msg.sender, kek_id);
     }
 
     // Adds supported migrator address 
-    function addMigrator(address migrator_address) public onlyByOwnerOrGovernance {
-        require(valid_migrators[migrator_address] == false, "address already exists");
+    function addMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+        require(valid_migrators[migrator_address] == false, "Address already exists");
         valid_migrators[migrator_address] = true; 
         valid_migrators_array.push(migrator_address);
     }
 
     // Remove a migrator address
-    function removeMigrator(address migrator_address) public onlyByOwnerOrGovernance {
-        require(valid_migrators[migrator_address] == true, "address doesn't exist already");
+    function removeMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+        require(valid_migrators[migrator_address] == true, "Address nonexistant");
         
         // Delete from the mapping
         delete valid_migrators[migrator_address];
@@ -574,7 +573,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
         // Admin cannot withdraw the staking token from the contract unless currently migrating
         if(!migrationsOn){
-            require(tokenAddress != address(stakingToken), "Cannot withdraw staking tokens unless migration is on"); // Only Governance / Timelock can trigger a migration
+            require(tokenAddress != address(stakingToken), "Not in migration"); // Only Governance / Timelock can trigger a migration
         }
         // Only the owner address can ever receive the recovery withdrawal
         ERC20(tokenAddress).transfer(owner_address, tokenAmount);
@@ -584,7 +583,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernance {
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
-            "Previous rewards period must be complete before changing the duration for the new period"
+            "Reward period incomplete"
         );
         rewardsDuration = _rewardsDuration;
         emit RewardsDurationUpdated(rewardsDuration);
@@ -602,8 +601,8 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
     }
 
     function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier, uint256 _locked_stake_min_time) external onlyByOwnerOrGovernance {
-        require(_locked_stake_time_for_max_multiplier >= 1, "Multiplier Max Time must be greater than or equal to 1");
-        require(_locked_stake_min_time >= 1, "Multiplier Min Time must be greater than or equal to 1");
+        require(_locked_stake_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
+        require(_locked_stake_min_time >= 1, "Mul min time must be >= 1");
         
         locked_stake_time_for_max_multiplier = _locked_stake_time_for_max_multiplier;
 

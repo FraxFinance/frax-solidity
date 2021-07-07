@@ -101,7 +101,7 @@ contract FraxBondIssuer is AccessControl {
     }
 
     modifier onlyByOwnerOrTimelock() {
-        require(msg.sender == owner_address || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(msg.sender == owner_address || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 

@@ -10,10 +10,13 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================= StakingRewardsDualV5 =======================
+// ===================== StakingRewardsMultiGauge =====================
 // ====================================================================
-// Includes veFXS boost logic
-// Unlocked deposits are removed to free up space
+// veFXS-enabled
+// Multiple tokens with different reward rates can be emitted
+// Multiple teams can set the reward rates for their token(s)
+// Those teams can also use a gauge, or an external function with 
+// Apes together strong
 
 // Frax Finance: https://github.com/FraxFinance
 
@@ -21,27 +24,31 @@ pragma experimental ABIEncoderV2;
 // Travis Moore: https://github.com/FortisFortuna
 
 // Reviewer(s) / Contributor(s)
-// Jason Huan: https://github.com/jasonhuan
+// Jason Huan: https://github.com/jasonhuan 
 // Sam Kazemian: https://github.com/samkazemian
-// Sam Sun: https://github.com/samczsun
+// Saddle Team: https://github.com/saddle-finance
+// Fei Team: https://github.com/fei-protocol
+// Alchemix Team: https://github.com/alchemix-finance
+// Liquity Team: https://github.com/liquity
 
-// Modified originally from Synthetix.io
+// Modified from the Synthetix.io original
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
-import "../Curve/IveFXS.sol";
 import "../ERC20/ERC20.sol";
-import '../Uniswap/TransferHelper.sol';
+import "../Curve/IveFXS.sol";
 import "../ERC20/SafeERC20.sol";
-import "../Frax/Frax.sol";
-import "../Uniswap/Interfaces/IUniswapV2Pair.sol";
+import '../Uniswap/TransferHelper.sol';
+// import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
+import '../Misc_AMOs/mstable/IFeederPool.sol';
+import "../Curve/IFraxGaugeController.sol";
 import "../Utils/ReentrancyGuard.sol";
 
 // Inheritance
 import "./Owned.sol";
 
-contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
+contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -49,16 +56,13 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
 
     // Instances
     IveFXS private veFXS;
-    ERC20 private rewardsToken0;
-    ERC20 private rewardsToken1;
-    IUniswapV2Pair private stakingToken;
+    IFeederPool private stakingToken;
+
+    // FRAX
+    address private constant frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
     
     // Constant for various precisions
     uint256 private constant MULTIPLIER_PRECISION = 1e18;
-
-    // Admin addresses
-    address public timelock_address; // Governance timelock address
-    address public controller_address; // Gauge controller
 
     // Time tracking
     uint256 public periodFinish;
@@ -74,20 +78,24 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     uint256 public vefxs_max_multiplier = uint256(2e18); // E18. 1x = 1e18
     mapping(address => uint256) private _vefxsMultiplierStored;
 
-    // Max reward per second
-    uint256 public rewardRate0;
-    uint256 public rewardRate1;
-
+    // Reward addresses, gauge addresses, reward rates, and reward managers
+    mapping(address => address) public rewardManagers; // token addr -> manager addr
+    address[] public rewardTokens;
+    address[] public gaugeControllers;
+    uint256[] public rewardRatesManual;
+    string[] public rewardSymbols;
+    mapping(address => uint256) public rewardTokenAddrToIdx; // token addr -> token index
+    
     // Reward period
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     // Reward tracking
-    uint256 private rewardPerTokenStored0;
-    uint256 public rewardPerTokenStored1 = 0;
-    mapping(address => uint256) public userRewardPerTokenPaid0;
-    mapping(address => uint256) public userRewardPerTokenPaid1;
-    mapping(address => uint256) private rewards0;
-    mapping(address => uint256) public rewards1;
+    uint256[] public rewardsPerTokenStored;
+    mapping(address => mapping(uint256 => uint256)) public userRewardsPerTokenPaid; // staker addr -> token id -> paid amount
+    mapping(address => mapping(uint256 => uint256)) public rewards; // staker addr -> token id -> reward amount
+    mapping(address => uint256) private lastRewardClaimTime; // staker addr -> timestamp
+    uint256[] private last_gauge_relative_weights;
+    uint256[] private last_gauge_time_totals;
 
     // Balance tracking
     uint256 private _total_liquidity_locked;
@@ -95,26 +103,17 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     mapping(address => uint256) private _locked_liquidity;
     mapping(address => uint256) private _combined_weights;
 
-    // Uniswap related
-    bool frax_is_token0;
+    // // Uniswap V2 ONLY
+    // bool frax_is_token0;
 
     // Stake tracking
     mapping(address => LockedStake[]) private lockedStakes;
-
-    // List of valid migrators (set by governance)
-    mapping(address => bool) public valid_migrators;
-    address[] public valid_migrators_array;
-
-    // Stakers set which migrator(s) they want to use
-    mapping(address => mapping(address => bool)) public staker_allowed_migrators;
 
     // Greylisting of bad addresses
     mapping(address => bool) public greylist;
 
     // Administrative booleans
-    bool public token1_rewards_on = true;
-    bool public migrationsOn; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
-    bool public stakesUnlocked; // Release locked stakes in case of system migration or emergency
+    bool public stakesUnlocked; // Release locked stakes in case of emergency
     bool public withdrawalsPaused; // For emergencies
     bool public rewardsCollectionPaused; // For emergencies
     bool public stakingPaused; // For emergencies
@@ -131,23 +130,13 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
+    modifier onlyByOwner() {
+        require(msg.sender == owner, "You are not the owner");
         _;
     }
 
-    modifier onlyByOwnerOrGovernanceOrMigrator() {
-        require(msg.sender == owner || msg.sender == timelock_address || valid_migrators[msg.sender] == true, "You are not the owner, governance timelock, or a migrator");
-        _;
-    }
-
-    modifier onlyByOwnerOrGovernanceOrController() {
-        require(msg.sender == owner || msg.sender == timelock_address || msg.sender == controller_address, "You are not the owner, governance timelock, or controller");
-        _;
-    }
-
-    modifier isMigrating() {
-        require(migrationsOn == true, "Not in migration");
+    modifier onlyTokenManagers(address reward_token_address) {
+        require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "You are not the owner or the correct token manager");
         _;
     }
 
@@ -165,34 +154,43 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
 
     constructor(
         address _owner,
-        address _rewardsToken0,
-        address _rewardsToken1,
         address _stakingToken,
-        address _frax_address,
-        address _timelock_address,
-        address _veFXS_address
+        address _veFXS_address,
+        string[] memory _rewardSymbols,
+        address[] memory _gaugeControllers,
+        address[] memory _rewardTokens,
+        address[] memory _rewardManagers,
+        uint256[] memory _rewardRatesManual
     ) Owned(_owner){
-        rewardsToken0 = ERC20(_rewardsToken0);
-        rewardsToken1 = ERC20(_rewardsToken1);
-        stakingToken = IUniswapV2Pair(_stakingToken);
+        stakingToken = IFeederPool(_stakingToken);
         veFXS = IveFXS(_veFXS_address);
 
+        rewardTokens = _rewardTokens;
+        gaugeControllers = _gaugeControllers;
+        rewardRatesManual = _rewardRatesManual;
+        rewardSymbols = _rewardSymbols;
+
         lastUpdateTime = block.timestamp;
-        timelock_address = _timelock_address;
 
-        // 10 FXS a day
-        rewardRate0 = (uint256(3650e18)).div(365 * 86400); 
+        for (uint256 i = 0; i < _rewardTokens.length; i++){ 
+            // For fast token address -> token ID lookups later
+            rewardTokenAddrToIdx[_rewardTokens[i]] = i;
 
-        // 1 token1 a day
-        rewardRate1 = (uint256(365e18)).div(365 * 86400); 
+            // Initialize the stored rewards
+            rewardsPerTokenStored.push(0);
 
-        // Uniswap related. Need to know which token frax is (0 or 1)
-        address token0 = stakingToken.token0();
-        if (token0 == _frax_address) frax_is_token0 = true;
-        else frax_is_token0 = false;
-        
+            // Initialize the reward managers
+            rewardManagers[_rewardTokens[i]] = _rewardManagers[i];
+
+        }
+
+        // // Uniswap V2 ONLY
+        // // Uniswap related. Need to know which token frax is (0 or 1)
+        // address token0 = stakingToken.token0();
+        // if (token0 == frax_address) frax_is_token0 = true;
+        // else frax_is_token0 = false;
+
         // Other booleans
-        migrationsOn = false;
         stakesUnlocked = false;
     }
 
@@ -209,7 +207,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     }
 
     // Total 'balance' used for calculating the percent of the pool the account owns
-    // Takes into account the locked stake time multiplier and veFXS multiplier
+    // Takes into account the locked stake time multiplier
     function totalCombinedWeight() external view returns (uint256) {
         return _total_combined_weight;
     }
@@ -219,37 +217,30 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         return _combined_weights[account];
     }
 
-    // All the locked stakes for a given account
-    function lockedStakesOf(address account) external view returns (LockedStake[] memory) {
-        return lockedStakes[account];
-    }
-
-    function lockMultiplier(uint256 secs) public view returns (uint256) {
-        uint256 lock_multiplier =
-            uint256(MULTIPLIER_PRECISION).add(
-                secs
-                    .mul(lock_max_multiplier.sub(MULTIPLIER_PRECISION))
-                    .div(lock_time_for_max_multiplier)
-            );
-        if (lock_multiplier > lock_max_multiplier) lock_multiplier = lock_max_multiplier;
-        return lock_multiplier;
-    }
-
-    function lastTimeRewardApplicable() internal view returns (uint256) {
-        return Math.min(block.timestamp, periodFinish);
-    }
-
     function fraxPerLPToken() public view returns (uint256) {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
+
+        // Uniswap V2
+        // ============================================
+        // {
+        //     uint256 total_frax_reserves;
+        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+        //     if (frax_is_token0) total_frax_reserves = reserve0;
+        //     else total_frax_reserves = reserve1;
+
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        // }
+
+        // mStable
+        // ============================================
         {
             uint256 total_frax_reserves;
-            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-            if (frax_is_token0) total_frax_reserves = reserve0;
-            else total_frax_reserves = reserve1;
-
+            (, IFeederPool.BassetData[] memory vaultData) = (stakingToken.getBasset(frax_address));
+            total_frax_reserves = uint256(vaultData[0].vaultBalance);
             frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
         }
+
         return frax_per_lp_token;
     }
 
@@ -278,6 +269,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         else return 0; // This will happen with the first stake, when user_staked_frax is 0
     }
 
+    // Calculated the combined weight for an account
     function calcCurCombinedWeight(address account) public view
         returns (
             uint256 old_combined_weight,
@@ -299,9 +291,21 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
             LockedStake memory thisStake = lockedStakes[account][i];
             uint256 lock_multiplier = thisStake.lock_multiplier;
 
-            // If the lock period is over, drop the lock multiplier down to 1x for the weight calculations
-            if (thisStake.ending_timestamp <= block.timestamp){
-                lock_multiplier = MULTIPLIER_PRECISION;
+            // If the lock is expired
+            if (thisStake.ending_timestamp <= block.timestamp) {
+                // If the lock expired in the time since the last claim, the weight needs to be proportionately averaged this time
+                if (lastRewardClaimTime[account] < thisStake.ending_timestamp){
+                    uint256 time_before_expiry = (thisStake.ending_timestamp).sub(lastRewardClaimTime[account]);
+                    uint256 time_after_expiry = (block.timestamp).sub(thisStake.ending_timestamp);
+
+                    // Get the weighted-average lock_multiplier
+                    uint256 numerator = ((lock_multiplier).mul(time_before_expiry)).add(((MULTIPLIER_PRECISION).mul(time_after_expiry)));
+                    lock_multiplier = numerator.div(time_before_expiry.add(time_after_expiry));
+                }
+                // Otherwise, it needs to just be 1x
+                else {
+                    lock_multiplier = MULTIPLIER_PRECISION;
+                }
             }
 
             uint256 liquidity = thisStake.liquidity;
@@ -310,49 +314,100 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         }
     }
 
-    function rewardPerToken() public view returns (uint256, uint256) {
-        if (_total_liquidity_locked == 0 || _total_combined_weight == 0) {
-            return (rewardPerTokenStored0, rewardPerTokenStored1);
+    // All the locked stakes for a given account
+    function lockedStakesOf(address account) external view returns (LockedStake[] memory) {
+        return lockedStakes[account];
+    }
+
+    // All the locked stakes for a given account
+    function getRewardSymbols() external view returns (string[] memory) {
+        return rewardSymbols;
+    }
+
+    // All the reward tokens
+    function getAllRewardTokens() external view returns (address[] memory) {
+        return rewardTokens;
+    }
+    
+    // Multiplier amount, given the length of the lock
+    function lockMultiplier(uint256 secs) public view returns (uint256) {
+        uint256 lock_multiplier =
+            uint256(MULTIPLIER_PRECISION).add(
+                secs
+                    .mul(lock_max_multiplier.sub(MULTIPLIER_PRECISION))
+                    .div(lock_time_for_max_multiplier)
+            );
+        if (lock_multiplier > lock_max_multiplier) lock_multiplier = lock_max_multiplier;
+        return lock_multiplier;
+    }
+
+    // Last time the reward was applicable
+    function lastTimeRewardApplicable() internal view returns (uint256) {
+        return Math.min(block.timestamp, periodFinish);
+    }
+
+    function rewardRates(uint256 token_idx) public view returns (uint256 rwd_rate) {
+        address gauge_controller_address = gaugeControllers[token_idx];
+        if (gauge_controller_address != address(0)) {
+            rwd_rate = (IFraxGaugeController(gauge_controller_address).global_emission_rate()).mul(last_gauge_relative_weights[token_idx]).div(1e18);
         }
         else {
-            return (
-                rewardPerTokenStored0.add(
-                    lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate0).mul(1e18).div(_total_combined_weight)
-                ),
-                rewardPerTokenStored1.add(
-                    lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRate1).mul(1e18).div(_total_combined_weight)
-                )
-            );
+            rwd_rate = rewardRatesManual[token_idx];
         }
     }
 
-    function earned(address account) public view returns (uint256, uint256) {
-        (uint256 reward0, uint256 reward1) = rewardPerToken();
+    // Amount of reward tokens per LP token
+    function rewardsPerToken() public view returns (uint256[] memory newRewardsPerTokenStored) {
+        if (_total_liquidity_locked == 0 || _total_combined_weight == 0) {
+            return rewardsPerTokenStored;
+        }
+        else {
+            newRewardsPerTokenStored = new uint256[](rewardTokens.length);
+            for (uint256 i = 0; i < rewardsPerTokenStored.length; i++){ 
+                newRewardsPerTokenStored[i] = rewardsPerTokenStored[i].add(
+                    lastTimeRewardApplicable().sub(lastUpdateTime).mul(rewardRates(i)).mul(1e18).div(_total_combined_weight)
+                );
+            }
+            return newRewardsPerTokenStored;
+        }
+    }
+
+    // Amount of reward tokens an account has earned / accrued
+    // Note: In the edge-case of one of the account's stake expiring since the last claim, this will
+    // return a slightly inflated number
+    function earned(address account) public view returns (uint256[] memory new_earned) {
+        uint256[] memory reward_arr = rewardsPerToken();
+        new_earned = new uint256[](rewardTokens.length);
+
         if (_combined_weights[account] == 0){
-            return (0, 0);
+            for (uint256 i = 0; i < rewardTokens.length; i++){ 
+                new_earned[i] = 0;
+            }
         }
-        return (
-            (_combined_weights[account].mul(reward0.sub(userRewardPerTokenPaid0[account]))).div(1e18).add(rewards0[account]),
-            (_combined_weights[account].mul(reward1.sub(userRewardPerTokenPaid1[account]))).div(1e18).add(rewards1[account])
-        );
+        else {
+            for (uint256 i = 0; i < rewardTokens.length; i++){ 
+                new_earned[i] = (_combined_weights[account])
+                    .mul(reward_arr[i].sub(userRewardsPerTokenPaid[account][i]))
+                    .div(1e18)
+                    .add(rewards[account][i]);
+            }
+        }
     }
 
-    function getRewardForDuration() external view returns (uint256, uint256) {
-        return (
-            rewardRate0.mul(rewardsDuration),
-            rewardRate1.mul(rewardsDuration)
-        );
+    // Total reward tokens emitted in the given period
+    function getRewardForDuration() external view returns (uint256[] memory rewards_per_duration_arr) {
+        rewards_per_duration_arr = new uint256[](rewardRatesManual.length);
+
+        for (uint256 i = 0; i < rewardRatesManual.length; i++){ 
+            rewards_per_duration_arr[i] = rewardRates(i).mul(rewardsDuration);
+        }
     }
 
-    function migratorApprovedForStaker(address staker_address, address migrator_address) public view returns (bool) {
-        // Migrator is not a valid one
-        if (valid_migrators[migrator_address] == false) return false;
-
-        // Staker has to have approved this particular migrator
-        if (staker_allowed_migrators[staker_address][migrator_address] == true) return true;
-
-        // Otherwise, return false
-        return false;
+    // See if the caller_addr is a manager for the reward token 
+    function isTokenManagerFor(address caller_addr, address reward_token_addr) public view returns (bool){
+        if (caller_addr == owner) return true; // Contract owner
+        else if (rewardManagers[reward_token_addr] == caller_addr) return true; // Reward manager
+        return false; 
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -395,29 +450,21 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     function _syncEarned(address account) internal {
         if (account != address(0)) {
             // Calculate the earnings
-            (uint256 earned0, uint256 earned1) = earned(account);
-            rewards0[account] = earned0;
-            rewards1[account] = earned1;
-            userRewardPerTokenPaid0[account] = rewardPerTokenStored0;
-            userRewardPerTokenPaid1[account] = rewardPerTokenStored1;
+            uint256[] memory earned_arr = earned(account);
+
+            // Update the rewards array
+            for (uint256 i = 0; i < earned_arr.length; i++){ 
+                rewards[account][i] = earned_arr[i];
+            }
+
+            // Update the rewards paid array
+            for (uint256 i = 0; i < earned_arr.length; i++){ 
+                userRewardsPerTokenPaid[account][i] = rewardsPerTokenStored[i];
+            }
         }
     }
 
-    // Staker can allow a migrator 
-    function stakerAllowMigrator(address migrator_address) external {
-        require(valid_migrators[migrator_address], "Invalid migrator address");
-        staker_allowed_migrators[msg.sender][migrator_address] = true; 
-    }
-
-    // Staker can disallow a previously-allowed migrator  
-    function stakerDisallowMigrator(address migrator_address) external {
-        require(staker_allowed_migrators[msg.sender][migrator_address] == true, "Address nonexistant");
-
-        // Delete from the mapping
-        delete staker_allowed_migrators[msg.sender][migrator_address];
-    }
-    
-    // Two different stake functions are needed because of delegateCall and msg.sender issues (important for migration)
+    // Two different stake functions are needed because of delegateCall and msg.sender issues
     function stakeLocked(uint256 liquidity, uint256 secs) nonReentrant public {
         _stakeLocked(msg.sender, msg.sender, liquidity, secs, block.timestamp);
     }
@@ -431,7 +478,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) {
-        require((!stakingPaused && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking paused or in migration");
+        require(!stakingPaused, "Staking is paused");
         require(liquidity > 0, "Must stake more than zero");
         require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
@@ -457,17 +504,20 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         // Need to call to update the combined weights
         _updateRewardAndBalance(staker_address, false);
 
+        // Needed for edge case if the staker only claims once, and after the lock expired
+        if (lastRewardClaimTime[staker_address] == 0) lastRewardClaimTime[staker_address] = block.timestamp;
+
         emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
     }
 
-    // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
+    // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues
     function withdrawLocked(bytes32 kek_id) nonReentrant public {
         require(withdrawalsPaused == false, "Withdrawals paused");
         _withdrawLocked(msg.sender, msg.sender, kek_id);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
-    // functions like withdraw(), migrator_withdraw_unlocked() and migrator_withdraw_locked()
+    // functions like withdraw()
     function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id) internal  {
         // Collect rewards first and then update the balances
         _getReward(staker_address, destination_address);
@@ -475,7 +525,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         LockedStake memory thisStake;
         thisStake.liquidity = 0;
         uint theArrayIndex;
-        for (uint i = 0; i < lockedStakes[staker_address].length; i++){ 
+        for (uint256 i = 0; i < lockedStakes[staker_address].length; i++){ 
             if (kek_id == lockedStakes[staker_address][i].kek_id){
                 thisStake = lockedStakes[staker_address][i];
                 theArrayIndex = i;
@@ -483,7 +533,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
             }
         }
         require(thisStake.kek_id == kek_id, "Stake not found");
-        require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true || valid_migrators[msg.sender] == true, "Stake is still locked!");
+        require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true, "Stake is still locked!");
 
         uint256 liquidity = thisStake.liquidity;
 
@@ -507,30 +557,25 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
 
     }
     
-    // Two different getReward functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function getReward() external nonReentrant returns (uint256, uint256) {
+    // Two different getReward functions are needed because of delegateCall and msg.sender issues
+    function getReward() external nonReentrant returns (uint256[] memory) {
         require(rewardsCollectionPaused == false,"Rewards collection paused");
         return _getReward(msg.sender, msg.sender);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable
-    // This distinction is important for the migrator
-    function _getReward(address rewardee, address destination_address) internal updateRewardAndBalance(rewardee, true) returns (uint256 reward0, uint256 reward1) {
-        reward0 = rewards0[rewardee];
-        reward1 = rewards1[rewardee];
-        if (reward0 > 0) {
-            rewards0[rewardee] = 0;
-            rewardsToken0.transfer(destination_address, reward0);
-            emit RewardPaid(rewardee, reward0, address(rewardsToken0), destination_address);
-        }
-        // if (token1_rewards_on){
-            if (reward1 > 0) {
-                rewards1[rewardee] = 0;
-                rewardsToken1.transfer(destination_address, reward1);
-                emit RewardPaid(rewardee, reward1, address(rewardsToken1), destination_address);
-            }
-        // }
+    function _getReward(address rewardee, address destination_address) internal updateRewardAndBalance(rewardee, true) returns (uint256[] memory rewards_before) {
+        // Update the rewards array and distribute rewards
+        rewards_before = new uint256[](rewardTokens.length);
 
+        for (uint256 i = 0; i < rewardTokens.length; i++){ 
+            rewards_before[i] = rewards[rewardee][i];
+            rewards[rewardee][i] = 0;
+            ERC20(rewardTokens[i]).transfer(destination_address, rewards_before[i]);
+            emit RewardPaid(rewardee, rewards_before[i], rewardTokens[i], destination_address);
+        }
+
+        lastRewardClaimTime[rewardee] = block.timestamp;
     }
 
     function renewIfApplicable() external {
@@ -549,12 +594,10 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         // very high values of rewardRate in the earned and rewardsPerToken functions;
         // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
         uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / rewardsDuration; // Floor division to the nearest period
-        uint balance0 = rewardsToken0.balanceOf(address(this));
-        uint balance1 = rewardsToken1.balanceOf(address(this));
-        require(rewardRate0.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance0, "Not enough FXS available");
         
-        if (token1_rewards_on){
-            require(rewardRate1.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance1, "Not enough token1 available for rewards!");
+        // Make sure there are enough tokens to renew the reward period
+        for (uint256 i = 0; i < rewardTokens.length; i++){ 
+            require(rewardRates(i).mul(rewardsDuration).mul(num_periods_elapsed + 1) <= ERC20(rewardTokens[i]).balanceOf(address(this)), string(abi.encodePacked("Not enough reward tokens available: ", rewardTokens[i])) );
         }
         
         // uint256 old_lastUpdateTime = lastUpdateTime;
@@ -563,75 +606,85 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         // lastUpdateTime = periodFinish;
         periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(rewardsDuration));
 
-        (uint256 reward0, uint256 reward1) = rewardPerToken();
-        rewardPerTokenStored0 = reward0;
-        rewardPerTokenStored1 = reward1;
-        lastUpdateTime = lastTimeRewardApplicable();
+        _updateStoredRewardsAndTime();
 
         emit RewardsPeriodRenewed(address(stakingToken));
     }
 
+    function _updateStoredRewardsAndTime() internal {
+        // Get the rewards
+        uint256[] memory rewards_per_token = rewardsPerToken();
+
+        // Update the rewardsPerTokenStored
+        for (uint256 i = 0; i < rewardsPerTokenStored.length; i++){ 
+            rewardsPerTokenStored[i] = rewards_per_token[i];
+        }
+
+        // Update the last stored time
+        lastUpdateTime = lastTimeRewardApplicable();
+    }
+
+    function sync_gauge_weights(bool force_update) public {
+        // Loop through the gauge controllers
+        for (uint256 i = 0; i < gaugeControllers.length; i++){ 
+            address gauge_controller_address = gaugeControllers[i];
+            if (gauge_controller_address != address(0)) {
+                if (force_update || (block.timestamp > last_gauge_time_totals[i])){
+                    // Update the gauge_relative_weight
+                    last_gauge_relative_weights[i] = IFraxGaugeController(gauge_controller_address).gauge_relative_weight_write(address(this), block.timestamp);
+                    last_gauge_time_totals[i] = IFraxGaugeController(gauge_controller_address).time_total();
+                }
+            }
+        }
+    }
+
     function sync() public {
+        // Sync the gauge weight, if applicable
+        sync_gauge_weights(false);
+
         if (block.timestamp > periodFinish) {
             retroCatchUp();
         }
         else {
-            (uint256 reward0, uint256 reward1) = rewardPerToken();
-            rewardPerTokenStored0 = reward0;
-            rewardPerTokenStored1 = reward1;
-            lastUpdateTime = lastTimeRewardApplicable();
+            _updateStoredRewardsAndTime();
         }
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
-    function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs, uint256 start_timestamp) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "Sender invalid or unapproved");
-        _stakeLocked(staker_address, msg.sender, amount, secs, start_timestamp);
-    }
-
-    // Used for migrations
-    function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "Sender invalid or unapproved");
-        _withdrawLocked(staker_address, msg.sender, kek_id);
-    }
-
-    // Adds supported migrator address 
-    function addMigrator(address migrator_address) external onlyByOwnerOrGovernance {
-        require(valid_migrators[migrator_address] == false, "Address already exists");
-        valid_migrators[migrator_address] = true; 
-        valid_migrators_array.push(migrator_address);
-    }
-
-    // Remove a migrator address
-    function removeMigrator(address migrator_address) external onlyByOwnerOrGovernance {
-        require(valid_migrators[migrator_address] == true, "Address nonexistant");
-        
-        // Delete from the mapping
-        delete valid_migrators[migrator_address];
-
-        // 'Delete' from the array by setting the address to 0x0
-        for (uint i = 0; i < valid_migrators_array.length; i++){ 
-            if (valid_migrators_array[i] == migrator_address) {
-                valid_migrators_array[i] = address(0); // This will leave a null in the array and keep the indices the same
+    // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTokenManagers(tokenAddress) {
+        // Check if the desired token is a reward token
+        bool isRewardToken = false;
+        for (uint256 i = 0; i < rewardTokens.length; i++){ 
+            if (rewardTokens[i] == tokenAddress) {
+                isRewardToken = true;
                 break;
             }
         }
-    }
 
-    // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
-        // Admin cannot withdraw the staking token from the contract unless currently migrating
-        if(!migrationsOn){
-            require(tokenAddress != address(stakingToken), "Not in migration"); // Only Governance / Timelock can trigger a migration
+        // Only the reward managers can take back their reward tokens
+        if (msg.sender != owner && isRewardToken && rewardManagers[tokenAddress] == msg.sender){
+            ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
+            emit Recovered(msg.sender, tokenAddress, tokenAmount);
+            return;
         }
-        // Only the owner address can ever receive the recovery withdrawal
-        ERC20(tokenAddress).transfer(owner, tokenAmount);
-        emit Recovered(tokenAddress, tokenAmount);
+
+        // Other tokens, like the staking token, airdrops, or accidental deposits, can be withdrawn by the owner
+        else if (!isRewardToken && (msg.sender == owner)){
+            ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
+            emit Recovered(msg.sender, tokenAddress, tokenAmount);
+            return;
+        }
+
+        // If none of the above conditions are true
+        else {
+            revert("No valid tokens to recover");
+        }
     }
 
-    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernanceOrController {
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwner {
+        require(_rewardsDuration >= 86400, "Rewards duration must be at least one day");
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
             "Reward period incomplete"
@@ -640,7 +693,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         emit RewardsDurationUpdated(rewardsDuration);
     }
 
-    function setMultipliers(uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_per_frax_for_max_boost) external onlyByOwnerOrGovernance {
+    function setMultipliers(uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_per_frax_for_max_boost) external onlyByOwner {
         require(_lock_max_multiplier >= MULTIPLIER_PRECISION, "Mult must be >= MULTIPLIER_PRECISION");
         require(_vefxs_max_multiplier >= 0, "veFXS mul must be >= 0");
         require(_vefxs_per_frax_for_max_boost > 0, "veFXS pct max must be >= 0");
@@ -654,7 +707,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         emit veFXSPerFraxForMaxBoostUpdated(vefxs_per_frax_for_max_boost);
     }
 
-    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnerOrGovernance {
+    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwner {
         require(_lock_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
         require(_lock_time_min >= 1, "Mul min time must be >= 1");
 
@@ -665,58 +718,54 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         emit LockedStakeMinTime(_lock_time_min);
     }
 
-    function initializeDefault() external onlyByOwnerOrGovernance {
+    function initializeDefault() external onlyByOwner {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
+        sync_gauge_weights(true);
         emit DefaultInitialization();
     }
 
-    function greylistAddress(address _address) external onlyByOwnerOrGovernance {
+    function greylistAddress(address _address) external onlyByOwner {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function unlockStakes() external onlyByOwnerOrGovernance {
+    function unlockStakes() external onlyByOwner {
         stakesUnlocked = !stakesUnlocked;
     }
 
-    function toggleMigrations() external onlyByOwnerOrGovernance {
-        migrationsOn = !migrationsOn;
-    }
-
-    function toggleStaking() external onlyByOwnerOrGovernance {
+    function toggleStaking() external onlyByOwner {
         stakingPaused = !stakingPaused;
     }
 
-    function toggleWithdrawals() external onlyByOwnerOrGovernance {
+    function toggleWithdrawals() external onlyByOwner {
         withdrawalsPaused = !withdrawalsPaused;
     }
 
-    function toggleRewardsCollection() external onlyByOwnerOrGovernance {
+    function toggleRewardsCollection() external onlyByOwner {
         rewardsCollectionPaused = !rewardsCollectionPaused;
     }
 
-    function setRewardRates(uint256 _new_rate0, uint256 _new_rate1, bool sync_too) external onlyByOwnerOrGovernanceOrController {
-        rewardRate0 = _new_rate0;
-        rewardRate1 = _new_rate1;
-
+    // The owner or the reward token managers can set reward rates 
+    function setRewardRate(address reward_token_address, uint256 new_rate, bool sync_too) external onlyTokenManagers(reward_token_address) {
+        rewardRatesManual[rewardTokenAddrToIdx[reward_token_address]] = new_rate;
+        
         if (sync_too){
             sync();
         }
     }
 
-    function toggleToken1Rewards() external onlyByOwnerOrGovernance {
-        if (token1_rewards_on) {
-            rewardRate1 = 0;
+    // The owner or the reward token managers can set reward rates 
+    function setGaugeController(address reward_token_address, address _gauge_controller_address, bool sync_too) external onlyTokenManagers(reward_token_address) {
+        gaugeControllers[rewardTokenAddrToIdx[reward_token_address]] = _gauge_controller_address;
+        
+        if (sync_too){
+            sync();
         }
-        token1_rewards_on = !token1_rewards_on;
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
-        timelock_address = _new_timelock;
-    }
-
-    function setController(address _controller_address) external onlyByOwnerOrGovernance {
-        controller_address = _controller_address;
+    // The owner or the reward token managers can change managers
+    function changeTokenManager(address reward_token_address, address new_manager_address) external onlyTokenManagers(reward_token_address) {
+        rewardManagers[reward_token_address] = new_manager_address;
     }
 
     /* ========== EVENTS ========== */
@@ -725,7 +774,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     event WithdrawLocked(address indexed user, uint256 amount, bytes32 kek_id, address destination_address);
     event RewardPaid(address indexed user, uint256 reward, address token_address, address destination_address);
     event RewardsDurationUpdated(uint256 newDuration);
-    event Recovered(address token, uint256 amount);
+    event Recovered(address destination_address, address token, uint256 amount);
     event RewardsPeriodRenewed(address token);
     event DefaultInitialization();
     event LockedStakeMaxMultiplierUpdated(uint256 multiplier);
