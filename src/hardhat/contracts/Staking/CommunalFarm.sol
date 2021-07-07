@@ -68,16 +68,16 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     mapping(address => address) public rewardManagers; // token addr -> manager addr
     address[] public rewardTokens;
     uint256[] public rewardRates;
-    string[] private rewardSymbols;
+    string[] public rewardSymbols;
     mapping(address => uint256) public rewardTokenAddrToIdx; // token addr -> token index
     
     // Reward period
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     // Reward tracking
-    uint256[] public rewardsPerTokenStored;
-    mapping(address => mapping(uint256 => uint256)) public userRewardsPerTokenPaid; // staker addr -> token id -> paid amount
-    mapping(address => mapping(uint256 => uint256)) public rewards; // staker addr -> token id -> reward amount
+    uint256[] private rewardsPerTokenStored;
+    mapping(address => mapping(uint256 => uint256)) private userRewardsPerTokenPaid; // staker addr -> token id -> paid amount
+    mapping(address => mapping(uint256 => uint256)) private rewards; // staker addr -> token id -> reward amount
     mapping(address => uint256) private lastRewardClaimTime; // staker addr -> timestamp
 
     // Balance tracking
@@ -472,12 +472,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         }
 
         lastRewardClaimTime[rewardee] = block.timestamp;
-    }
-
-    function renewIfApplicable() external {
-        if (block.timestamp > periodFinish) {
-            retroCatchUp();
-        }
     }
 
     // If the period expired, renew it

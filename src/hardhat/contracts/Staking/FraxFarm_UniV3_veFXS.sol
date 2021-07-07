@@ -414,17 +414,6 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         return rewardRate0().mul(rewardsDuration);
     }
 
-    function migratorApprovedForStaker(address staker_address, address migrator_address) public view returns (bool) {
-        // Migrator is not a valid one
-        if (valid_migrators[migrator_address] == false) return false;
-
-        // Staker has to have approved this particular migrator
-        if (staker_allowed_migrators[staker_address][migrator_address] == true) return true;
-
-        // Otherwise, return false
-        return false;
-    }
-
     // Needed to indicate that this contract is ERC721 compatible
     function onERC721Received(
         address,
@@ -489,11 +478,6 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
 
     // Staker can disallow a previously-allowed migrator
     function stakerDisallowMigrator(address migrator_address) external {
-        require(staker_allowed_migrators[msg.sender][migrator_address] == true,"Address nonexistant");
-
-        // Redundant
-        // require(valid_migrators[migrator_address], "Invalid migrator address");
-
         // Delete from the mapping
         delete staker_allowed_migrators[msg.sender][migrator_address];
     }
@@ -680,41 +664,29 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
+    
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can).
     function migrator_stakeLocked_for(address staker_address, uint256 token_id, uint256 secs, uint256 start_timestamp) external isMigrating {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "Sender invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
         _stakeLocked(staker_address, msg.sender, token_id, secs, start_timestamp);
     }
 
     // Used for migrations
-    function migrator_withdraw_locked(address staker_address, uint256 token_id) external isMigrating
-    {
-        require(migratorApprovedForStaker(staker_address, msg.sender), "Sender invalid or unapproved");
+    function migrator_withdraw_locked(address staker_address, uint256 token_id) external isMigrating {
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
         _withdrawLocked(staker_address, msg.sender, token_id);
     }
 
     // Adds supported migrator address
     function addMigrator(address migrator_address) external onlyByOwnerOrGovernance {
-        require(valid_migrators[migrator_address] == false, "Address already exists");
         valid_migrators[migrator_address] = true;
-        valid_migrators_array.push(migrator_address);
     }
 
     // Remove a migrator address
     function removeMigrator(address migrator_address) external onlyByOwnerOrGovernance {
-        require(valid_migrators[migrator_address] == true, "Address nonexistant");
-
         // Delete from the mapping
         delete valid_migrators[migrator_address];
-
-        // 'Delete' from the array by setting the address to 0x0
-        for (uint256 i = 0; i < valid_migrators_array.length; i++) {
-            if (valid_migrators_array[i] == migrator_address) {
-                valid_migrators_array[i] = address(0); // This will leave a null in the array and keep the indices the same
-                break;
-            }
-        }
     }
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
@@ -786,10 +758,6 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         migrationsOn = !migrationsOn;
     }
 
-    function toggleBypassEmissionFactor() external onlyByOwnerOrGovernance {
-        bypassEmissionFactor = !bypassEmissionFactor;
-    }
-
     function setPauses(
         bool _stakingPaused,
         bool _withdrawalsPaused,
@@ -808,9 +776,10 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         }
     }
 
-    function setTWAPDuration(uint32 _new_twap_duration) external onlyByOwnerOrGovernance {
+    function setTWAPAndEmissionFactorBypass(uint32 _new_twap_duration, bool _bypassEmissionFactor) external onlyByOwnerOrGovernance {
         require(_new_twap_duration <= 3600, "TWAP too long"); // One hour for now. Depends on how many increaseObservationCardinalityNext / observation slots you have
         twap_duration = _new_twap_duration;
+        bypassEmissionFactor = _bypassEmissionFactor;
     }
 
     function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {

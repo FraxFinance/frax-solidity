@@ -90,9 +90,9 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     // Reward tracking
-    uint256[] public rewardsPerTokenStored;
-    mapping(address => mapping(uint256 => uint256)) public userRewardsPerTokenPaid; // staker addr -> token id -> paid amount
-    mapping(address => mapping(uint256 => uint256)) public rewards; // staker addr -> token id -> reward amount
+    uint256[] private rewardsPerTokenStored;
+    mapping(address => mapping(uint256 => uint256)) private userRewardsPerTokenPaid; // staker addr -> token id -> paid amount
+    mapping(address => mapping(uint256 => uint256)) private rewards; // staker addr -> token id -> reward amount
     mapping(address => uint256) private lastRewardClaimTime; // staker addr -> timestamp
     uint256[] private last_gauge_relative_weights;
     uint256[] private last_gauge_time_totals;
@@ -576,12 +576,6 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         }
 
         lastRewardClaimTime[rewardee] = block.timestamp;
-    }
-
-    function renewIfApplicable() external {
-        if (block.timestamp > periodFinish) {
-            retroCatchUp();
-        }
     }
 
     // If the period expired, renew it

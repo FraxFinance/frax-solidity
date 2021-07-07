@@ -548,7 +548,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("---- LOCKED [9]: ", locked_balance_00_9.toString());
 
 		// Make sure there is a valid period for the contract and sync it
-		await communalFarmInstance_Saddle_D4.renewIfApplicable({ from: STAKING_OWNER });
+		await communalFarmInstance_Saddle_D4.sync({ from: STAKING_OWNER });
 
 		const staking_reward_symbols = await communalFarmInstance_Saddle_D4.getRewardSymbols.call();
 		console.log("staking_reward_symbols: ", staking_reward_symbols);
@@ -613,7 +613,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("---- LOCKED [9]: ", locked_balance_01_9.toString());
 
 		// Make sure there is a valid period for the contract and sync it
-		await communalFarmInstance_Saddle_D4.renewIfApplicable({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await communalFarmInstance_Saddle_D4.sync({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		const staking_earned_week5_1_arr = await communalFarmInstance_Saddle_D4.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER);
 		const staking_earned_week5_9_arr = await communalFarmInstance_Saddle_D4.earned.call(accounts[9]);

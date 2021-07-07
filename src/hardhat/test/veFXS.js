@@ -117,7 +117,7 @@ contract('veFXS Tests', async (accounts) => {
 	console.log("All accounts", accounts);
 
 	// Constants
-	let ORIGINAL_FRAX_DEPLOYER_ADDRESS;
+	let ORIGINAL_FRAX_ONE_ADDRESS;
 	let COLLATERAL_FRAX_AND_FXS_OWNER;
 	let ORACLE_ADDRESS;
 	let POOL_CREATOR;
@@ -233,11 +233,11 @@ contract('veFXS Tests', async (accounts) => {
 
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
-			params: [process.env.FRAX_DEPLOYER_ADDRESS]}
+			params: [process.env.FRAX_ONE_ADDRESS]}
 		);
 
 		// Constants
-		ORIGINAL_FRAX_DEPLOYER_ADDRESS = process.env.FRAX_DEPLOYER_ADDRESS;
+		ORIGINAL_FRAX_ONE_ADDRESS = process.env.FRAX_ONE_ADDRESS;
 		DEPLOYER_ADDRESS = accounts[0];
 		COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
 		ORACLE_ADDRESS = accounts[2];
@@ -313,9 +313,7 @@ contract('veFXS Tests', async (accounts) => {
 		pair_instance_FXS_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FXS/WETH"]);
 		//pair_instance_FXS_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FXS/USDC"]);
 
-		// Get instances of the Sushi pairs
-		pair_instance_FRAX_FXS_Sushi = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Sushi FRAX/FXS"]);
-		pair_instance_FXS_WETH_Sushi = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Sushi FXS/WETH"]);
+		
 
 		// Get the pair order results
 		isToken0Frax_FRAX_WETH = await oracle_instance_FRAX_WETH.token0();
@@ -335,30 +333,30 @@ contract('veFXS Tests', async (accounts) => {
 
 		// console.log("=========================Proxy Deployments=========================");
 
-		// console.log(chalk.yellow('========== veFXS =========='));
-		// const veFXS_Implementation = await hre.ethers.getContractFactory("veFXS");
-		const veFXS_Implementation = await hre.ethers.ContractFactory.fromSolidity(veFXS);
-		console.log(veFXS_Implementation)
-		const proxy_obj = await hre.upgrades.deployProxy(veFXS_Implementation, [
-			fxsInstance.address, 
-			"veFXS",
-			"veFXS",
-			"veFXS_1.0.0"
-		]);
-		const proxy_instance = await proxy_obj.deployed();
-		console.log("veFXS proxy deployed at: ", proxy_instance.address);
+		// // console.log(chalk.yellow('========== veFXS =========='));
+		// // const veFXS_Implementation = await hre.ethers.getContractFactory("veFXS");
+		// const veFXS_Implementation = await hre.ethers.ContractFactory.fromSolidity(veFXS);
+		// console.log(veFXS_Implementation)
+		// const proxy_obj = await hre.upgrades.deployProxy(veFXS_Implementation, [
+		// 	fxsInstance.address, 
+		// 	"veFXS",
+		// 	"veFXS",
+		// 	"veFXS_1.0.0"
+		// ]);
+		// const proxy_instance = await proxy_obj.deployed();
+		// console.log("veFXS proxy deployed at: ", proxy_instance.address);
 
-		// Get out of ethers and back to web3. It gives a signer-related error
-		veFXS_instance = await veFXS.at(proxy_instance.address);
+		// // Get out of ethers and back to web3. It gives a signer-related error
+		// veFXS_instance = await veFXS.at(proxy_instance.address);
 
 		// If truffle-fixture is used
-		// veFXS_instance = await veFXS.deployed();
+		veFXS_instance = await veFXS.deployed();
 	});
 	
 	afterEach(async() => {
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
-			params: [process.env.FRAX_DEPLOYER_ADDRESS]}
+			params: [process.env.FRAX_ONE_ADDRESS]}
 		);
 	})
 
@@ -367,11 +365,11 @@ contract('veFXS Tests', async (accounts) => {
 	it('Check up on the oracles and make sure the prices are set', async () => {
 
 		// await Promise.all([
-		// 	oracle_instance_FRAX_USDC.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_DEPLOYER_ADDRESS }),
-		// 	oracle_instance_FRAX_FXS.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_DEPLOYER_ADDRESS }),
-		// 	oracle_instance_FXS_USDC.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_DEPLOYER_ADDRESS }),
-		// 	oracle_instance_FXS_WETH.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_DEPLOYER_ADDRESS }),
-		// 	oracle_instance_FRAX_WETH.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_DEPLOYER_ADDRESS }),
+		// 	oracle_instance_FRAX_USDC.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_ONE_ADDRESS }),
+		// 	oracle_instance_FRAX_FXS.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_ONE_ADDRESS }),
+		// 	oracle_instance_FXS_USDC.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_ONE_ADDRESS }),
+		// 	oracle_instance_FXS_WETH.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_ONE_ADDRESS }),
+		// 	oracle_instance_FRAX_WETH.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_ONE_ADDRESS }),
 		// ])
 
 
@@ -533,11 +531,11 @@ contract('veFXS Tests', async (accounts) => {
 		console.log(chalk.blue("==================PRICES=================="));
 
 		// await Promise.all([
-		// 	oracle_instance_FRAX_USDC.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_DEPLOYER_ADDRESS }),
-		// 	oracle_instance_FRAX_FXS.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_DEPLOYER_ADDRESS }),
-		// 	oracle_instance_FXS_USDC.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_DEPLOYER_ADDRESS }),
-		// 	oracle_instance_FXS_WETH.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_DEPLOYER_ADDRESS }),
-		// 	oracle_instance_FRAX_WETH.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_DEPLOYER_ADDRESS }),
+		// 	oracle_instance_FRAX_USDC.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_ONE_ADDRESS }),
+		// 	oracle_instance_FRAX_FXS.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_ONE_ADDRESS }),
+		// 	oracle_instance_FXS_USDC.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_ONE_ADDRESS }),
+		// 	oracle_instance_FXS_WETH.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_ONE_ADDRESS }),
+		// 	oracle_instance_FRAX_WETH.setAllowStaleConsults(true, { from: ORIGINAL_FRAX_ONE_ADDRESS }),
 		// ])
 
 		// // Print the new prices
@@ -584,6 +582,7 @@ contract('veFXS Tests', async (accounts) => {
 		console.log(`Advance ${LOOP_MAX_4_YR} blocks and ${deposit_quick_days_4_yr} days, checkpointing each time`);
 		
 		for (let j = 0; j <= LOOP_MAX_4_YR; j++){
+			console.log("Loop #: ", j);
 			const FXS_supply_mid = new BigNumber(await veFXS_instance.totalFXSSupply()).div(BIG18).toNumber();
 			const veFXS_balance_mid = new BigNumber(await veFXS_instance.balanceOf(STAKING_OWNER)).div(BIG18).toNumber();
 			veFXS_table_4_years.push([j, FXS_supply_mid, veFXS_balance_mid]);
@@ -620,16 +619,17 @@ contract('veFXS Tests', async (accounts) => {
 		const INTERVAL_AMOUNT_30_DAYS = 1 * 86400
 		
 
-		let block_time_current_30_days = (await time.latest()).toNumber();
-		const deposit_quick_timestamp_30_days = block_time_current_30_days + ((deposit_quick_days_30_days * 86400) + 1);
+		let block_time_current_30_days_0 = (await time.latest()).toNumber();
+		const deposit_quick_timestamp_30_days_0 = block_time_current_30_days_0 + ((deposit_quick_days_30_days * 86400) + 1);
 		await fxsInstance.approve(veFXS_instance.address, deposit_amount_quick_e18_30_days, { from: STAKING_OWNER });
-		await veFXS_instance.create_lock(deposit_amount_quick_e18_30_days, deposit_quick_timestamp_30_days, { from: STAKING_OWNER });
+		await veFXS_instance.create_lock(deposit_amount_quick_e18_30_days, deposit_quick_timestamp_30_days_0, { from: STAKING_OWNER });
 
 		// await veFXS_instance.checkpoint();
 
 		console.log(`Advance ${LOOP_MAX_30_DAYS} blocks and ${deposit_quick_days_30_days} days, checkpointing each time`);
 		
 		for (let j = 0; j <= LOOP_MAX_30_DAYS; j++){
+			console.log("Loop #: ", j);
 			const FXS_supply_mid = new BigNumber(await veFXS_instance.totalFXSSupply()).div(BIG18).toNumber();
 			const veFXS_balance_mid = new BigNumber(await veFXS_instance.balanceOf(STAKING_OWNER)).div(BIG18).toNumber();
 			veFXS_table_30_day.push([j, FXS_supply_mid, veFXS_balance_mid]);
@@ -650,16 +650,17 @@ contract('veFXS Tests', async (accounts) => {
 		// Withdraw
 		await veFXS_instance.withdraw({ from: STAKING_OWNER });
 
-		let block_time_current_30_days = (await time.latest()).toNumber();
-		const deposit_quick_timestamp_30_days = block_time_current_30_days + ((deposit_quick_days_30_days * 86400) + 1);
+		let block_time_current_30_days_1 = (await time.latest()).toNumber();
+		const deposit_quick_timestamp_30_days_1 = block_time_current_30_days_1 + ((deposit_quick_days_30_days * 86400) + 1);
 		await fxsInstance.approve(veFXS_instance.address, deposit_amount_quick_e18_30_days, { from: STAKING_OWNER });
-		await veFXS_instance.create_lock(deposit_amount_quick_e18_30_days, deposit_quick_timestamp_30_days, { from: STAKING_OWNER });
+		await veFXS_instance.create_lock(deposit_amount_quick_e18_30_days, deposit_quick_timestamp_30_days_1, { from: STAKING_OWNER });
 
 		// await veFXS_instance.checkpoint();
 
 		console.log(`Advance ${LOOP_MAX_30_DAYS} blocks and ${deposit_quick_days_30_days} days, checkpointing each time`);
 		
 		for (let j = 0; j <= LOOP_MAX_30_DAYS; j++){
+			console.log("Loop #: ", j);
 			const FXS_supply_mid = new BigNumber(await veFXS_instance.totalFXSSupply()).div(BIG18).toNumber();
 			const veFXS_balance_mid = new BigNumber(await veFXS_instance.balanceOf(STAKING_OWNER)).div(BIG18).toNumber();
 			veFXS_table_30_day.push([j, FXS_supply_mid, veFXS_balance_mid]);

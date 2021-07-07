@@ -348,12 +348,6 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
         }
     }
 
-    function renewIfApplicable() external {
-        if (block.timestamp > periodFinish) {
-            retroCatchUp();
-        }
-    }
-
     // If the period expired, renew it
     function retroCatchUp() internal {
         // Failsafe check
