@@ -80,7 +80,7 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
     modifier onlyByOwnerOrGovernance() {
         require(
             msg.sender == owner || msg.sender == timelock_address,
-            "You are not the owner or the governance timelock"
+            "Not owner or timelock"
         );
         _;
     }

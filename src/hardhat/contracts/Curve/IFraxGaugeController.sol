@@ -2,7 +2,7 @@ pragma solidity >=0.6.11;
 
 // https://github.com/swervefi/swerve/edit/master/packages/swerve-contracts/interfaces/IGaugeController.sol
 
-interface IGaugeController {
+interface IFraxGaugeController {
     struct Point {
         uint256 bias;
         uint256 slope;

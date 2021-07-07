@@ -80,7 +80,7 @@ contract ReserveTracker is Owned {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnerOrGovernance() {
-        require(msg.sender == owner || msg.sender == timelock_address, "You are not the owner or the governance timelock");
+        require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
@@ -196,14 +196,14 @@ contract ReserveTracker is Owned {
 
     // Adds collateral addresses supported, such as tether and busd, must be ERC20 
     function addFXSPair(address pair_address) public onlyByOwnerOrGovernance {
-        require(fxs_pairs[pair_address] == false, "address already exists");
+        require(fxs_pairs[pair_address] == false, "Address already exists");
         fxs_pairs[pair_address] = true; 
         fxs_pairs_array.push(pair_address);
     }
 
     // Remove a pool 
     function removeFXSPair(address pair_address) public onlyByOwnerOrGovernance {
-        require(fxs_pairs[pair_address] == true, "address doesn't exist already");
+        require(fxs_pairs[pair_address] == true, "Address nonexistant");
         
         // Delete from the mapping
         delete fxs_pairs[pair_address];

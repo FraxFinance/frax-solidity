@@ -87,7 +87,7 @@ contract FraxBondIssuerOld is AccessControl {
     // /* ========== MODIFIERS ========== */
 
     // modifier onlyByOwnerOrGovernance() {
-    //     require(msg.sender == timelock_address || msg.sender == owner_address, "You are not the owner or the governance timelock");
+    //     require(msg.sender == timelock_address || msg.sender == owner_address, "Not owner or timelock");
     //     _;
     // }
 

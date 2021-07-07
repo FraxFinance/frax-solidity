@@ -41,7 +41,6 @@ const ISaddleD4_LP = artifacts.require("Misc_AMOs/saddle/ISaddleD4_LP");
 const WETH = artifacts.require("ERC20/WETH");
 const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
 
-
 // Collateral Pools
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 
@@ -72,8 +71,9 @@ const StakingRewardsDual_FXS_WETH_Sushi = artifacts.require("Staking/Variants/St
 // const StakingRewardsDual_FRAX3CRV = artifacts.require("Staking/Variants/StakingRewardsDual_FRAX3CRV.sol");
 const StakingRewardsDualV2_FRAX3CRV_V2 = artifacts.require("Staking/Variants/StakingRewardsDualV2_FRAX3CRV_V2.sol");
 const StakingRewardsDualV5_FRAX_OHM = artifacts.require("Staking/Variants/StakingRewardsDualV5_FRAX_OHM");
+const StakingRewardsDualV5_FRAX_OHM = artifacts.require("Staking/Variants/StakingRewardsDualV5_FRAX_OHM");
 const CommunalFarm_SaddleD4 = artifacts.require("Staking/Variants/CommunalFarm_SaddleD4");
-const FraxFarm_UniV3_veFXS_FRAX_USDC = artifacts.require("Staking/Variants/FraxFarm_UniV3_veFXS_FRAX_USDC");
+const StakingRewardsMultiGauge_FRAX_MTA = artifacts.require("Staking/Variants/StakingRewardsMultiGauge_FRAX_MTA");
 
 // Rewards token related
 const SushiToken = artifacts.require("ERC20/Variants/SushiToken");
@@ -111,7 +111,7 @@ let totalSupplyFXS;
 let globalCollateralRatio;
 let globalCollateralValue;
 
-contract('CommunalFarm-Tests', async (accounts) => {
+contract('StakingRewardsMultiGauge-Tests', async (accounts) => {
 	CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
 
 	// Constants
@@ -129,9 +129,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
 	const ADDRESS_WITH_LP_TOKENS = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
 	const ADDRESS_WITH_FXS = '0x8a97a178408d7027355a7ef144fdf13277cea776';
-	const ADDRESS_WITH_TRIBE = '0xA06Ad2e0339375124D255F1fAb201964eF707E18';
-	const ADDRESS_WITH_ALCX = '0x000000000000000000000000000000000000dEaD';
-	const ADDRESS_WITH_LQTY = '0xF6323aD07c30D696D3e572cb4648814F1188372D';
+	const ADDRESS_WITH_MTA = '0x69ef38d5a4ffb93579698b457622e8eb42cc4258';
 
 	// Initialize core contract instances
 	let fraxInstance;
@@ -145,7 +143,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 	let col_instance_USDC;
 	let sushi_instance;
 	let iq_instance;
-	let tribe_instance;
+	let mta_instance;
 	let alcx_instance;
 	let lqty_instance;
 	let mockFRAX3CRVInstance;
@@ -221,8 +219,9 @@ contract('CommunalFarm-Tests', async (accounts) => {
 	// let stakingInstanceDual_FRAX3CRV;
 	// let stakingInstanceDualV2_FRAX3CRV_V2;
 	// let stakingInstanceDualV5_FRAX_OHM;
-	let communalFarmInstance_Saddle_D4; 
+	// let communalFarmInstance_Saddle_D4; 
 	// let fraxFarmInstance_FRAX_USDC;
+	let stakingInstanceMultiGauge_FRAX_MTA;
 
 	// Initialize veFXS instance
 	let veFXS_instance;
@@ -258,15 +257,13 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
 		sushi_instance = await SushiToken.deployed(); 
 		iq_instance = await IQToken.deployed();
-		tribe_instance = await ERC20.at("0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B");
-		alcx_instance = await ERC20.at("0xdBdb4d16EdA451D0503b854CF79D55697F90c8DF");
-		lqty_instance = await ERC20.at("0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D");
+		mta_instance = await ERC20.at("0xa3BeD4E1c75D00fa6f4E5E6922DB7261B5E9AcD2");
 
 		// Fill the Uniswap Router Instance
-		routerInstance = await UniswapV2Router02.deployed(); 
+		// routerInstance = await UniswapV2Router02.deployed(); 
 
 		// Fill the Timelock instance
-		timelockInstance = await Timelock.deployed(); 
+		// timelockInstance = await Timelock.deployed(); 
 
 		// Fill oracle instances
 		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.deployed();
@@ -279,34 +276,35 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.deployed();
 		
 		// Initialize ETH-USD Chainlink Oracle too
-		oracle_chainlink_ETH_USD = await ChainlinkETHUSDPriceConsumer.deployed();
+		// oracle_chainlink_ETH_USD = await ChainlinkETHUSDPriceConsumer.deployed();
 
 		// Initialize the governance contract
-		governanceInstance = await GovernorAlpha.deployed();
+		// governanceInstance = await GovernorAlpha.deployed();
 
 		// Initialize pool instances
 		pool_instance_USDC = await Pool_USDC.deployed();
 		
 		// Initialize the Uniswap Factory Instance
-		uniswapFactoryInstance = await UniswapV2Factory.deployed(); 
+		// uniswapFactoryInstance = await UniswapV2Factory.deployed(); 
 
 		// Initialize the Uniswap Libraries
 		// uniswapLibraryInstance = await UniswapV2OracleLibrary.deployed(); 
 		// uniswapOracleLibraryInstance = await UniswapV2Library.deployed(); 
 
 		// Fill the Uniswap V3 Instances
-		uniswapV3PositionsNFTInstance = await IUniswapV3PositionsNFT.deployed(); 
+		// uniswapV3PositionsNFTInstance = await IUniswapV3PositionsNFT.deployed(); 
 
 		// Initialize the swap to price contract
 		// swapToPriceInstance = await SwapToPrice.deployed(); 
 
 		// Get instances of the Uniswap pairs
-		pair_instance_FRAX_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/WETH"]);
-		pair_instance_FRAX_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/USDC"]);
-		pair_instance_FXS_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/FXS"]);
-		pair_instance_FRAX_IQ = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/IQ"]);
-		pair_instance_Saddle_D4 = await ISaddleD4_LP.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Saddle alUSD/FEI/FRAX/LUSD"]);
+		// pair_instance_FRAX_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/WETH"]);
+		// pair_instance_FRAX_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/USDC"]);
+		// pair_instance_FXS_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/FXS"]);
+		// pair_instance_FRAX_IQ = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/IQ"]);
+		// pair_instance_Saddle_D4 = await ISaddleD4_LP.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Saddle alUSD/FEI/FRAX/LUSD"]);
 		// pair_instance_FXS_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FXS/USDC"]);
+		pair_instance_FRAX_mUSD = await ISaddleD4_LP.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["mStable FRAX/mUSD"]);
 
 		// Get the mock CRVDAO Instance
 		mockCRVDAOInstance = await CRV_DAO_ERC20_Mock.deployed();
@@ -326,16 +324,17 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		isToken0Fxs_FXS_USDC = fxsInstance.address == isToken0Fxs_FXS_USDC;
 
 		// Fill the staking rewards instances
-		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
-		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.deployed();
+		// stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
+		// stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.deployed();
 		// stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.deployed();
 		// stakingInstanceDual_FRAX_FXS_Sushi = await StakingRewardsDual_FRAX_FXS_Sushi.deployed();
 		// stakingInstanceDual_FXS_WETH_Sushi = await StakingRewardsDual_FXS_WETH_Sushi.deployed();
 		// stakingInstanceDual_FRAX3CRV = await StakingRewardsDual_FRAX3CRV.deployed();
 		// stakingInstanceDualV2_FRAX3CRV_V2 = await StakingRewardsDualV2_FRAX3CRV_V2.deployed();
 		// stakingInstanceDualV5_FRAX_OHM = await StakingRewardsDualV5_FRAX_OHM.deployed();
-		communalFarmInstance_Saddle_D4 = await CommunalFarm_SaddleD4.deployed();
+		// communalFarmInstance_Saddle_D4 = await CommunalFarm_SaddleD4.deployed();
 		// fraxFarmInstance_FRAX_USDC = await FraxFarm_UniV3_veFXS_FRAX_USDC.deployed();
+		stakingInstanceMultiGauge_FRAX_MTA = await StakingRewardsMultiGauge_FRAX_MTA.deployed();
 
 		// veFXS_instance = await veFXS.deployed();
 	});
@@ -364,7 +363,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FRAX]
 		});
 
-		await fraxInstance.transfer(communalFarmInstance_Saddle_D4.address, new BigNumber("1e18"), { from: ADDRESS_WITH_FRAX });
+		await fraxInstance.transfer(stakingInstanceMultiGauge_FRAX_MTA.address, new BigNumber("1e18"), { from: ADDRESS_WITH_FRAX });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -378,7 +377,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FXS]
 		});
 
-		await fxsInstance.transfer(communalFarmInstance_Saddle_D4.address, new BigNumber("10000e18"), { from: ADDRESS_WITH_FXS });
+		await fxsInstance.transfer(stakingInstanceMultiGauge_FRAX_MTA.address, new BigNumber("10000e18"), { from: ADDRESS_WITH_FXS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -386,45 +385,17 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		});
 
 		console.log("------------------------------------------------");
-		console.log("Seed the staking contract with TRIBE");
+		console.log("Seed the staking contract with MTA");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_TRIBE]
+			params: [ADDRESS_WITH_MTA]
 		});
 
-		await tribe_instance.transfer(communalFarmInstance_Saddle_D4.address, new BigNumber("10000e18"), { from: ADDRESS_WITH_TRIBE });
+		await mta_instance.transfer(stakingInstanceMultiGauge_FRAX_MTA.address, new BigNumber("10000e18"), { from: ADDRESS_WITH_MTA });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_TRIBE]
-		});
-
-		console.log("------------------------------------------------");
-		console.log("Seed the staking contract with ALCX");
-		await hre.network.provider.request({
-			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_ALCX]
-		});
-
-		await alcx_instance.transfer(communalFarmInstance_Saddle_D4.address, new BigNumber("10000e18"), { from: ADDRESS_WITH_ALCX });
-
-		await hre.network.provider.request({
-			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_ALCX]
-		});
-
-		console.log("------------------------------------------------");
-		console.log("Seed the staking contract with LQTY");
-		await hre.network.provider.request({
-			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_LQTY]
-		});
-
-		await lqty_instance.transfer(communalFarmInstance_Saddle_D4.address, new BigNumber("10000e18"), { from: ADDRESS_WITH_LQTY });
-
-		await hre.network.provider.request({
-			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_LQTY]
+			params: [ADDRESS_WITH_MTA]
 		});
 
 		console.log("------------------------------------------------");
@@ -434,8 +405,8 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_LP_TOKENS]
 		});
 
-		await pair_instance_Saddle_D4.transfer(accounts[1], new BigNumber("30e18"), { from: ADDRESS_WITH_LP_TOKENS });
-		await pair_instance_Saddle_D4.transfer(accounts[9], new BigNumber("30e18"), { from: ADDRESS_WITH_LP_TOKENS });
+		await pair_instance_FRAX_mUSD.transfer(accounts[1], new BigNumber("30e18"), { from: ADDRESS_WITH_LP_TOKENS });
+		await pair_instance_FRAX_mUSD.transfer(accounts[9], new BigNumber("30e18"), { from: ADDRESS_WITH_LP_TOKENS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -444,7 +415,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 
 		
 		console.log("Initializing Staking Contracts");
-		await communalFarmInstance_Saddle_D4.initializeDefault({ from: STAKING_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.initializeDefault({ from: STAKING_OWNER });
 		// await stakingInstanceDual_FXS_WETH_Sushi.initializeDefault({ from: STAKING_OWNER });
 
 	});
@@ -455,8 +426,8 @@ contract('CommunalFarm-Tests', async (accounts) => {
 
 		console.log(chalk.yellow("===================================================================="));
 
-		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, COLLATERAL_FRAX_AND_FXS_OWNER);
-		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, accounts[9]);
+		await utilities.printCalcCurCombinedWeightNoVeFXS(stakingInstanceMultiGauge_FRAX_MTA, COLLATERAL_FRAX_AND_FXS_OWNER);
+		await utilities.printCalcCurCombinedWeightNoVeFXS(stakingInstanceMultiGauge_FRAX_MTA, accounts[9]);
 
 		// Print FXS and veFXS balances
 		console.log("accounts[1] FXS balance:", new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
@@ -466,8 +437,8 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		const uni_pool_locked_1 = new BigNumber("75e17");
 		const uni_pool_locked_1_sum = new BigNumber ("10e18");
 		const uni_pool_locked_9 = new BigNumber("25e17");
-		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, uni_pool_locked_1_sum, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, uni_pool_locked_9, { from: accounts[9] });
+		await pair_instance_FRAX_mUSD.approve(stakingInstanceMultiGauge_FRAX_MTA.address, uni_pool_locked_1_sum, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await pair_instance_FRAX_mUSD.approve(stakingInstanceMultiGauge_FRAX_MTA.address, uni_pool_locked_9, { from: accounts[9] });
 		
 		// // Note the FRAX amounts before
 		// const frax_before_1_locked = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
@@ -477,26 +448,26 @@ contract('CommunalFarm-Tests', async (accounts) => {
 
 		// Stake Locked
 		// account[1]
-		await communalFarmInstance_Saddle_D4.stakeLocked(uni_pool_locked_1, 7 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 15 days
-		await communalFarmInstance_Saddle_D4.stakeLocked(new BigNumber ("25e17"), 365 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 270 days
+		await stakingInstanceMultiGauge_FRAX_MTA.stakeLocked(uni_pool_locked_1, 7 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 15 days
+		await stakingInstanceMultiGauge_FRAX_MTA.stakeLocked(new BigNumber ("25e17"), 365 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 270 days
 		
 		// account[9]
-		await communalFarmInstance_Saddle_D4.stakeLocked(uni_pool_locked_9, 28 * 86400, { from: accounts[9] });
+		await stakingInstanceMultiGauge_FRAX_MTA.stakeLocked(uni_pool_locked_9, 28 * 86400, { from: accounts[9] });
 		await time.advanceBlock();
 
 		// Show the stake structs
-		const locked_stake_structs_1_0 = await communalFarmInstance_Saddle_D4.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		const locked_stake_structs_9_0 = await communalFarmInstance_Saddle_D4.lockedStakesOf.call(accounts[9]);
+		const locked_stake_structs_1_0 = await stakingInstanceMultiGauge_FRAX_MTA.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+		const locked_stake_structs_9_0 = await stakingInstanceMultiGauge_FRAX_MTA.lockedStakesOf.call(accounts[9]);
 		console.log("LOCKED STAKES [1]: ", locked_stake_structs_1_0);
 		console.log("LOCKED STAKES [9]: ", locked_stake_structs_9_0);
 
 		// Note the UNI POOL and FXS amount after staking
-		const regular_balance_1 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const boosted_balance_1 = new BigNumber(await communalFarmInstance_Saddle_D4.combinedWeightOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const locked_balance_1 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const regular_balance_9 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(accounts[9])).div(BIG18);
-		const boosted_balance_9 = new BigNumber(await communalFarmInstance_Saddle_D4.combinedWeightOf.call(accounts[9])).div(BIG18);
-		const locked_balance_9 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(accounts[9])).div(BIG18);
+		const regular_balance_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const boosted_balance_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.combinedWeightOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const locked_balance_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const regular_balance_9 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(accounts[9])).div(BIG18);
+		const boosted_balance_9 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.combinedWeightOf.call(accounts[9])).div(BIG18);
+		const locked_balance_9 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(accounts[9])).div(BIG18);
 		console.log("LOCKED LIQUIDITY [1]: ", regular_balance_1.toString());
 		console.log("COMBINED WEIGHT [1]: ", boosted_balance_1.toString());
 		console.log("---- LOCKED [1]: ", locked_balance_1.toString());
@@ -505,15 +476,15 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("---- LOCKED [9]: ", locked_balance_9.toString());
 
 		console.log("TRY AN EARLY WITHDRAWAL (SHOULD FAIL)");
-		await expectRevert.unspecified(communalFarmInstance_Saddle_D4.withdrawLocked(locked_stake_structs_1_0[0].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
-		await expectRevert.unspecified(communalFarmInstance_Saddle_D4.withdrawLocked(locked_stake_structs_9_0[0].kek_id, { from: accounts[9] }));
+		await expectRevert.unspecified(stakingInstanceMultiGauge_FRAX_MTA.withdrawLocked(locked_stake_structs_1_0[0].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
+		await expectRevert.unspecified(stakingInstanceMultiGauge_FRAX_MTA.withdrawLocked(locked_stake_structs_9_0[0].kek_id, { from: accounts[9] }));
 		await time.advanceBlock();
 
-		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, COLLATERAL_FRAX_AND_FXS_OWNER);
-		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, accounts[9]);
+		await utilities.printCalcCurCombinedWeightNoVeFXS(stakingInstanceMultiGauge_FRAX_MTA, COLLATERAL_FRAX_AND_FXS_OWNER);
+		await utilities.printCalcCurCombinedWeightNoVeFXS(stakingInstanceMultiGauge_FRAX_MTA, accounts[9]);
 
-		const _total_liquidity_locked_0 = new BigNumber(await communalFarmInstance_Saddle_D4.totalLiquidityLocked.call()).div(BIG18);
-		const _total_combined_weight_0 = new BigNumber(await communalFarmInstance_Saddle_D4.totalCombinedWeight.call()).div(BIG18);
+		const _total_liquidity_locked_0 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.totalLiquidityLocked.call()).div(BIG18);
+		const _total_combined_weight_0 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.totalCombinedWeight.call()).div(BIG18);
 		console.log("_total_liquidity_locked GLOBAL: ", _total_liquidity_locked_0.toString());
 		console.log("_total_combined_weight GLOBAL: ", _total_combined_weight_0.toString());
 
@@ -530,16 +501,16 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		}
 		catch (err) {}
 
-		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, COLLATERAL_FRAX_AND_FXS_OWNER);
-		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, accounts[9]);
+		await utilities.printCalcCurCombinedWeightNoVeFXS(stakingInstanceMultiGauge_FRAX_MTA, COLLATERAL_FRAX_AND_FXS_OWNER);
+		await utilities.printCalcCurCombinedWeightNoVeFXS(stakingInstanceMultiGauge_FRAX_MTA, accounts[9]);
 
 		// Note the UNI POOL and FXS amount after staking
-		const regular_balance_00_1 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const boosted_balance_00_1 = new BigNumber(await communalFarmInstance_Saddle_D4.combinedWeightOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const locked_balance_00_1 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const regular_balance_00_9 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(accounts[9])).div(BIG18);
-		const boosted_balance_00_9 = new BigNumber(await communalFarmInstance_Saddle_D4.combinedWeightOf.call(accounts[9])).div(BIG18);
-		const locked_balance_00_9 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(accounts[9])).div(BIG18);
+		const regular_balance_00_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const boosted_balance_00_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.combinedWeightOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const locked_balance_00_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const regular_balance_00_9 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(accounts[9])).div(BIG18);
+		const boosted_balance_00_9 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.combinedWeightOf.call(accounts[9])).div(BIG18);
+		const locked_balance_00_9 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(accounts[9])).div(BIG18);
 		console.log("LOCKED LIQUIDITY [1]: ", regular_balance_00_1.toString());
 		console.log("COMBINED WEIGHT [1]: ", boosted_balance_00_1.toString());
 		console.log("---- LOCKED [1]: ", locked_balance_00_1.toString());
@@ -548,14 +519,14 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("---- LOCKED [9]: ", locked_balance_00_9.toString());
 
 		// Make sure there is a valid period for the contract and sync it
-		await communalFarmInstance_Saddle_D4.renewIfApplicable({ from: STAKING_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.renewIfApplicable({ from: STAKING_OWNER });
 
-		const staking_reward_symbols = await communalFarmInstance_Saddle_D4.getRewardSymbols.call();
+		const staking_reward_symbols = await stakingInstanceMultiGauge_FRAX_MTA.getRewardSymbols.call();
 		console.log("staking_reward_symbols: ", staking_reward_symbols);
 
-		const staking_earned_1_arr = await communalFarmInstance_Saddle_D4.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		const staking_earned_9_arr = await communalFarmInstance_Saddle_D4.earned.call(accounts[9]);
-		const duration_reward_1_arr = await communalFarmInstance_Saddle_D4.getRewardForDuration.call();
+		const staking_earned_1_arr = await stakingInstanceMultiGauge_FRAX_MTA.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+		const staking_earned_9_arr = await stakingInstanceMultiGauge_FRAX_MTA.earned.call(accounts[9]);
+		const duration_reward_1_arr = await stakingInstanceMultiGauge_FRAX_MTA.getRewardForDuration.call();
 
 		let reward_week_1 = [];
 		for (let j = 0; j < staking_reward_symbols.length; j++){
@@ -575,12 +546,12 @@ contract('CommunalFarm-Tests', async (accounts) => {
 
 		console.log("TRY WITHDRAWING AGAIN");
 		console.log("[1] SHOULD SUCCEED, [9] SHOULD FAIL");
-		await communalFarmInstance_Saddle_D4.withdrawLocked(locked_stake_structs_1_0[0].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await expectRevert.unspecified(communalFarmInstance_Saddle_D4.withdrawLocked(locked_stake_structs_9_0[0].kek_id, { from: accounts[9] }));
+		await stakingInstanceMultiGauge_FRAX_MTA.withdrawLocked(locked_stake_structs_1_0[0].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await expectRevert.unspecified(stakingInstanceMultiGauge_FRAX_MTA.withdrawLocked(locked_stake_structs_9_0[0].kek_id, { from: accounts[9] }));
 
 		// Since withdrawLocked does getReward, accounts[9] should collect now as well
 		console.log("[9] COLLECT REWARDS");
-		await communalFarmInstance_Saddle_D4.getReward({ from: accounts[9] });
+		await stakingInstanceMultiGauge_FRAX_MTA.getReward({ from: accounts[9] });
 
 		console.log(chalk.yellow("===================================================================="));
 		console.log("ADVANCING 28 DAYS");
@@ -595,16 +566,16 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		}
 		catch (err) {}
 
-		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, COLLATERAL_FRAX_AND_FXS_OWNER);
-		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, accounts[9]);
+		await utilities.printCalcCurCombinedWeightNoVeFXS(stakingInstanceMultiGauge_FRAX_MTA, COLLATERAL_FRAX_AND_FXS_OWNER);
+		await utilities.printCalcCurCombinedWeightNoVeFXS(stakingInstanceMultiGauge_FRAX_MTA, accounts[9]);
 
 		// Note the UNI POOL and FXS amount after staking
-		const regular_balance_01_1 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const boosted_balance_01_1 = new BigNumber(await communalFarmInstance_Saddle_D4.combinedWeightOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const locked_balance_01_1 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const regular_balance_01_9 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(accounts[9])).div(BIG18);
-		const boosted_balance_01_9 = new BigNumber(await communalFarmInstance_Saddle_D4.combinedWeightOf.call(accounts[9])).div(BIG18);
-		const locked_balance_01_9 = new BigNumber(await communalFarmInstance_Saddle_D4.lockedLiquidityOf.call(accounts[9])).div(BIG18);
+		const regular_balance_01_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const boosted_balance_01_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.combinedWeightOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const locked_balance_01_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const regular_balance_01_9 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(accounts[9])).div(BIG18);
+		const boosted_balance_01_9 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.combinedWeightOf.call(accounts[9])).div(BIG18);
+		const locked_balance_01_9 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.lockedLiquidityOf.call(accounts[9])).div(BIG18);
 		console.log("LOCKED LIQUIDITY [1]: ", regular_balance_01_1.toString());
 		console.log("COMBINED WEIGHT [1]: ", boosted_balance_01_1.toString());
 		console.log("---- LOCKED [1]: ", locked_balance_01_1.toString());
@@ -613,11 +584,11 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("---- LOCKED [9]: ", locked_balance_01_9.toString());
 
 		// Make sure there is a valid period for the contract and sync it
-		await communalFarmInstance_Saddle_D4.renewIfApplicable({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.renewIfApplicable({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		const staking_earned_week5_1_arr = await communalFarmInstance_Saddle_D4.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		const staking_earned_week5_9_arr = await communalFarmInstance_Saddle_D4.earned.call(accounts[9]);
-		const duration_reward_week5_arr = await communalFarmInstance_Saddle_D4.getRewardForDuration.call();
+		const staking_earned_week5_1_arr = await stakingInstanceMultiGauge_FRAX_MTA.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+		const staking_earned_week5_9_arr = await stakingInstanceMultiGauge_FRAX_MTA.earned.call(accounts[9]);
+		const duration_reward_week5_arr = await stakingInstanceMultiGauge_FRAX_MTA.getRewardForDuration.call();
 
 		let reward_week_5 = [];
 		for (let j = 0; j < staking_reward_symbols.length; j++){
@@ -636,24 +607,24 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		}
 
 		// Account 9 withdraws and claims its locked stake
-		await communalFarmInstance_Saddle_D4.withdrawLocked(locked_stake_structs_9_0[0].kek_id, { from: accounts[9] });
-		await communalFarmInstance_Saddle_D4.getReward({ from: accounts[9] });
-		await expectRevert.unspecified(communalFarmInstance_Saddle_D4.withdrawLocked(locked_stake_structs_1_0[1].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
+		await stakingInstanceMultiGauge_FRAX_MTA.withdrawLocked(locked_stake_structs_9_0[0].kek_id, { from: accounts[9] });
+		await stakingInstanceMultiGauge_FRAX_MTA.getReward({ from: accounts[9] });
+		await expectRevert.unspecified(stakingInstanceMultiGauge_FRAX_MTA.withdrawLocked(locked_stake_structs_1_0[1].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
 
-		const _total_liquidity_locked_1 = new BigNumber(await communalFarmInstance_Saddle_D4.totalLiquidityLocked.call()).div(BIG18);
-		const _total_combined_weight_1 = new BigNumber(await communalFarmInstance_Saddle_D4.totalCombinedWeight.call()).div(BIG18);
+		const _total_liquidity_locked_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.totalLiquidityLocked.call()).div(BIG18);
+		const _total_combined_weight_1 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.totalCombinedWeight.call()).div(BIG18);
 		console.log("_total_liquidity_locked GLOBAL: ", _total_liquidity_locked_1.toString());
 		console.log("_total_combined_weight GLOBAL: ", _total_combined_weight_1.toString());
 
 		console.log("UNLOCKING ALL STAKES");
-		await communalFarmInstance_Saddle_D4.unlockStakes({ from: STAKING_OWNER });
-		await communalFarmInstance_Saddle_D4.withdrawLocked(locked_stake_structs_1_0[1].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.unlockStakes({ from: STAKING_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.withdrawLocked(locked_stake_structs_1_0[1].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, COLLATERAL_FRAX_AND_FXS_OWNER);
-		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, accounts[9]);
+		await utilities.printCalcCurCombinedWeightNoVeFXS(stakingInstanceMultiGauge_FRAX_MTA, COLLATERAL_FRAX_AND_FXS_OWNER);
+		await utilities.printCalcCurCombinedWeightNoVeFXS(stakingInstanceMultiGauge_FRAX_MTA, accounts[9]);
 
-		const _total_liquidity_locked_2 = new BigNumber(await communalFarmInstance_Saddle_D4.totalLiquidityLocked.call()).div(BIG18);
-		const _total_combined_weight_2 = new BigNumber(await communalFarmInstance_Saddle_D4.totalCombinedWeight.call()).div(BIG18);
+		const _total_liquidity_locked_2 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.totalLiquidityLocked.call()).div(BIG18);
+		const _total_combined_weight_2 = new BigNumber(await stakingInstanceMultiGauge_FRAX_MTA.totalCombinedWeight.call()).div(BIG18);
 		console.log("_total_liquidity_locked GLOBAL: ", _total_liquidity_locked_2.toString());
 		console.log("_total_combined_weight GLOBAL: ", _total_combined_weight_2.toString());
 
@@ -668,15 +639,15 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		const starting_bal_fxs_9 = new BigNumber(await fxsInstance.balanceOf(accounts[9])).div(BIG18).toNumber();
 		
 		// Approve
-		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, uni_pool_lock_boundary_check_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, uni_pool_lock_boundary_check_amount, { from: accounts[9] });
+		await pair_instance_FRAX_mUSD.approve(stakingInstanceMultiGauge_FRAX_MTA.address, uni_pool_lock_boundary_check_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await pair_instance_FRAX_mUSD.approve(stakingInstanceMultiGauge_FRAX_MTA.address, uni_pool_lock_boundary_check_amount, { from: accounts[9] });
 		
 		// Stake Locked
 		// account[1]
-		await communalFarmInstance_Saddle_D4.stakeLocked(uni_pool_lock_boundary_check_amount, 10 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.stakeLocked(uni_pool_lock_boundary_check_amount, 10 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// account[9]
-		await communalFarmInstance_Saddle_D4.stakeLocked(uni_pool_lock_boundary_check_amount, 10 * 86400, { from: accounts[9] });
+		await stakingInstanceMultiGauge_FRAX_MTA.stakeLocked(uni_pool_lock_boundary_check_amount, 10 * 86400, { from: accounts[9] });
 
 
 		console.log(chalk.yellow("===================================================================="));
@@ -687,7 +658,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		await time.advanceBlock();
 
 		// Account 1 claims. Account 9 does not
-		await communalFarmInstance_Saddle_D4.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		console.log(chalk.yellow("===================================================================="));
 		console.log("Advance 60 days and have both accounts claim");
@@ -697,8 +668,8 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		await time.advanceBlock();
 
 		// Both accounts claim
-		await communalFarmInstance_Saddle_D4.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await communalFarmInstance_Saddle_D4.getReward({ from: accounts[9] });
+		await stakingInstanceMultiGauge_FRAX_MTA.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.getReward({ from: accounts[9] });
 
 		// Fetch the new balances
 		const ending_bal_fxs_1 =  new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
@@ -711,24 +682,24 @@ contract('CommunalFarm-Tests', async (accounts) => {
 
 	it("Blocks a greylisted address which tries to stake; SHOULD FAIL", async () => {
 		console.log("greylistAddress(accounts[9])");
-		await communalFarmInstance_Saddle_D4.greylistAddress(accounts[9], { from: STAKING_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.greylistAddress(accounts[9], { from: STAKING_OWNER });
 		console.log("");
 		console.log("this should fail");
-		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, new BigNumber("1e18"), { from: accounts[9] });
+		await pair_instance_FRAX_mUSD.approve(stakingInstanceMultiGauge_FRAX_MTA.address, new BigNumber("1e18"), { from: accounts[9] });
 		
 		await expectRevert(
-			communalFarmInstance_Saddle_D4.stakeLocked(new BigNumber("1e18"), 7 * 86400, { from: accounts[9] }),
+			stakingInstanceMultiGauge_FRAX_MTA.stakeLocked(new BigNumber("1e18"), 7 * 86400, { from: accounts[9] }),
 			"Address has been greylisted"
 		);
 	});
 
 	it("Ungreylists a greylisted address which tries to stake; SHOULD SUCCEED", async () => {
 		console.log("greylistAddress(accounts[9])");
-		await communalFarmInstance_Saddle_D4.greylistAddress(accounts[9], { from: STAKING_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.greylistAddress(accounts[9], { from: STAKING_OWNER });
 		// console.log("");
 		// console.log("this should succeed");
-		// await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, new BigNumber("1e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await communalFarmInstance_Saddle_D4.stakeLocked(new BigNumber("1e18"), 1 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await pair_instance_FRAX_mUSD.approve(stakingInstanceMultiGauge_FRAX_MTA.address, new BigNumber("1e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await stakingInstanceMultiGauge_FRAX_MTA.stakeLocked(new BigNumber("1e18"), 1 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	
 		// // Wait 2 days
 		// for (let j = 0; j < 2; j++){
@@ -737,35 +708,35 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		// }
 
 		// // Claim back the NFT and collect the rewards
-		// await communalFarmInstance_Saddle_D4.withdrawLocked(TOKEN_ID_1_ALT_GOOD, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await communalFarmInstance_Saddle_D4.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await stakingInstanceMultiGauge_FRAX_MTA.withdrawLocked(TOKEN_ID_1_ALT_GOOD, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await stakingInstanceMultiGauge_FRAX_MTA.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	});
 
 	it("Communal / Token Manager Tests", async () => {
-		const staking_reward_symbols = await communalFarmInstance_Saddle_D4.getRewardSymbols.call();
-		const staking_reward_tokens_addresses = await communalFarmInstance_Saddle_D4.getAllRewardTokens.call();
+		const staking_reward_symbols = await stakingInstanceMultiGauge_FRAX_MTA.getRewardSymbols.call();
+		const staking_reward_tokens_addresses = await stakingInstanceMultiGauge_FRAX_MTA.getAllRewardTokens.call();
 		const test_recovery_amount = new BigNumber("1e18");
 
 		console.log("Try recovering a non-reward token as the owner");
-		await communalFarmInstance_Saddle_D4.recoverERC20(fraxInstance.address, test_recovery_amount, { from: STAKING_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.recoverERC20(fraxInstance.address, test_recovery_amount, { from: STAKING_OWNER });
 
 		console.log("Set a reward rate as the owner");
-		await communalFarmInstance_Saddle_D4.setRewardRate(staking_reward_tokens_addresses[3], 1000, true, { from: STAKING_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.setRewardRate(staking_reward_tokens_addresses[3], 1000, true, { from: STAKING_OWNER });
 
 		for (let j = 0; j < staking_reward_symbols.length; j++){
-			const token_manager_address = await communalFarmInstance_Saddle_D4.rewardManagers.call(staking_reward_tokens_addresses[j]);
+			const token_manager_address = await stakingInstanceMultiGauge_FRAX_MTA.rewardManagers.call(staking_reward_tokens_addresses[j]);
 			console.log(chalk.yellow(`---------------------------`));
 			console.log(`[${staking_reward_symbols[j]} Manager]: ${token_manager_address}`);
 
 			console.log("Try to set the reward rate with the wrong manager [SHOULD FAIL]");
 			await expectRevert(
-				communalFarmInstance_Saddle_D4.setRewardRate(staking_reward_tokens_addresses[0], 0, true, { from: accounts[9] }),
+				stakingInstanceMultiGauge_FRAX_MTA.setRewardRate(staking_reward_tokens_addresses[0], 0, true, { from: accounts[9] }),
 				"You are not the owner or the correct token manager"
 			);
 
 			console.log("Try to change the token manager with the wrong account [SHOULD FAIL]");
 			await expectRevert(
-				communalFarmInstance_Saddle_D4.changeTokenManager(staking_reward_tokens_addresses[0], COLLATERAL_FRAX_AND_FXS_OWNER, { from: accounts[9] }),
+				stakingInstanceMultiGauge_FRAX_MTA.changeTokenManager(staking_reward_tokens_addresses[0], COLLATERAL_FRAX_AND_FXS_OWNER, { from: accounts[9] }),
 				"You are not the owner or the correct token manager"
 			);
 
@@ -775,13 +746,13 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			});
 	
 			console.log("Set the reward rate with the correct manager");
-			await communalFarmInstance_Saddle_D4.setRewardRate(staking_reward_tokens_addresses[j], 0, true, { from: token_manager_address });
+			await stakingInstanceMultiGauge_FRAX_MTA.setRewardRate(staking_reward_tokens_addresses[j], 0, true, { from: token_manager_address });
 
 			console.log("Try recovering reward tokens as the reward manager");
-			await communalFarmInstance_Saddle_D4.recoverERC20(staking_reward_tokens_addresses[j], test_recovery_amount, { from: token_manager_address });
+			await stakingInstanceMultiGauge_FRAX_MTA.recoverERC20(staking_reward_tokens_addresses[j], test_recovery_amount, { from: token_manager_address });
 
 			console.log("Change the token manager");
-			await communalFarmInstance_Saddle_D4.changeTokenManager(staking_reward_tokens_addresses[j], COLLATERAL_FRAX_AND_FXS_OWNER, { from: token_manager_address });
+			await stakingInstanceMultiGauge_FRAX_MTA.changeTokenManager(staking_reward_tokens_addresses[j], COLLATERAL_FRAX_AND_FXS_OWNER, { from: token_manager_address });
 	
 			await hre.network.provider.request({
 				method: "hardhat_stopImpersonatingAccount",
@@ -793,23 +764,23 @@ contract('CommunalFarm-Tests', async (accounts) => {
 	it("Fail Tests ", async () => {
 
 		const test_amount_1 = new BigNumber ("1e18");
-		const locked_stake_structs = await communalFarmInstance_Saddle_D4.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+		const locked_stake_structs = await stakingInstanceMultiGauge_FRAX_MTA.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
 
 		console.log("---------TRY TO ERC20 RECOVER WHILE NOT AN OWNER [SHOULD FAIL]---------");
 		await expectRevert(
-			communalFarmInstance_Saddle_D4.recoverERC20(pair_instance_Saddle_D4.address, test_amount_1, { from: INVESTOR_CUSTODIAN_ADDRESS }),
+			stakingInstanceMultiGauge_FRAX_MTA.recoverERC20(pair_instance_FRAX_mUSD.address, test_amount_1, { from: INVESTOR_CUSTODIAN_ADDRESS }),
 			"You are not the owner or the correct token manager"
 		);
 
 		console.log("---------TRY TO ERC20 RECOVER LP TOKENS [SHOULD FAIL]---------");
 		await expectRevert(
-			communalFarmInstance_Saddle_D4.recoverERC20(pair_instance_Saddle_D4.address, test_amount_1, { from: STAKING_OWNER }),
+			stakingInstanceMultiGauge_FRAX_MTA.recoverERC20(pair_instance_FRAX_mUSD.address, test_amount_1, { from: STAKING_OWNER }),
 			"Cannot rug staking / LP tokens"
 		);
 
 		console.log("---------TRY TO ERC20 RECOVER A REWARD TOKEN AS THE OWNER [SHOULD FAIL]---------");
 		await expectRevert(
-			communalFarmInstance_Saddle_D4.recoverERC20(tribe_instance.address, test_amount_1, { from: STAKING_OWNER }),
+			stakingInstanceMultiGauge_FRAX_MTA.recoverERC20(mta_instance.address, test_amount_1, { from: STAKING_OWNER }),
 			"No valid tokens to recover"
 		);
 	});

@@ -134,9 +134,6 @@ interface IERC20 {
 
 interface IStakingRewards {
     // Views
-    function lastTimeRewardApplicable() external view returns (uint256);
-
-    function rewardPerToken() external view returns (uint256);
 
     function earned(address account) external view returns (uint256);
 
@@ -496,11 +493,11 @@ contract FRAX3CRV_Curve_FXS_Distributor is IStakingRewards, RewardsDistributionR
         return _balances[account];
     }
 
-    function lastTimeRewardApplicable() public view returns (uint256) {
+    function lastTimeRewardApplicable() internal view returns (uint256) {
         return Math.min(block.timestamp, periodFinish);
     }
 
-    function rewardPerToken() public view returns (uint256) {
+    function rewardPerToken() internal view returns (uint256) {
         if (_totalSupply == 0) {
             return rewardPerTokenStored;
         }
@@ -580,7 +577,7 @@ contract FRAX3CRV_Curve_FXS_Distributor is IStakingRewards, RewardsDistributionR
     function setRewardsDuration(uint256 _rewardsDuration) external onlyOwner {
         require(
             block.timestamp > periodFinish,
-            "Previous rewards period must be complete before changing the duration for the new period"
+            "Reward period incomplete"
         );
         rewardsDuration = _rewardsDuration;
         emit RewardsDurationUpdated(rewardsDuration);

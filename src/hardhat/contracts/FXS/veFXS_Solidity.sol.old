@@ -790,7 +790,7 @@ contract veFXS_Solidity is ReentrancyGuard{
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyAdmin {
         // Admin cannot withdraw the staking token from the contract unless currently migrating
         // if(!migrationsOn){
-        //     require(tokenAddress != address(FXS), "Cannot withdraw staking tokens unless migration is on"); // Only Governance / Timelock can trigger a migration
+        //     require(tokenAddress != address(FXS), "Not in migration"); // Only Governance / Timelock can trigger a migration
         // }
         // Only the owner address can ever receive the recovery withdrawal
         ERC20(tokenAddress).transfer(admin, tokenAmount);

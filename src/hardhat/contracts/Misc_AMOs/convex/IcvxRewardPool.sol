@@ -882,11 +882,11 @@ interface IcvxRewardPool {
 //         _;
 //     }
 
-//     function lastTimeRewardApplicable() public view returns (uint256) {
+//     function lastTimeRewardApplicable() internal view returns (uint256) {
 //         return MathUtil.min(block.timestamp, periodFinish);
 //     }
 
-//     function rewardPerToken() public view returns (uint256) {
+//     function rewardPerToken() internal view returns (uint256) {
 //         uint256 supply = totalSupply();
 //         if (supply == 0) {
 //             return rewardPerTokenStored;
