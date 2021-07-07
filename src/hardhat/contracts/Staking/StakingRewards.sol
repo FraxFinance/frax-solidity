@@ -304,12 +304,6 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         getReward();
     }
 */
-    function renewIfApplicable() external {
-        if (block.timestamp > periodFinish) {
-            retroCatchUp();
-        }
-    }
-
     // If the period expired, renew it
     function retroCatchUp() internal {
         // Failsafe check

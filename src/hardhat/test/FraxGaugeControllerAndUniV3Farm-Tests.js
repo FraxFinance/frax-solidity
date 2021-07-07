@@ -616,7 +616,7 @@ contract('FraxGaugeControllerAndUniV3Farm-Tests', async (accounts) => {
 
 		const duration_reward_1 = await fraxFarmInstance_FRAX_USDC.getRewardForDuration.call();
 		const duration_reward_1_fxs = new BigNumber(duration_reward_1).div(BIG18);
-		console.log("Expected yearly reward [FXS]: ", duration_reward_1_fxs.multipliedBy(52.1429).toString());
+		console.log("Expected yearly reward (with emission factor) [FXS]: ", duration_reward_1_fxs.multipliedBy(52.1429).multipliedBy(emission_factor_week_1).toString());
 
 		console.log("TRY WITHDRAWING AGAIN");
 		console.log("[1] SHOULD SUCCEED (WITH THE TOKEN_ID_1), [9] SHOULD FAIL");
@@ -695,7 +695,7 @@ contract('FraxGaugeControllerAndUniV3Farm-Tests', async (accounts) => {
 
 		const duration_reward_3 = await fraxFarmInstance_FRAX_USDC.getRewardForDuration.call();
 		const duration_reward_3_fxs = new BigNumber(duration_reward_3).div(BIG18);
-		console.log("Expected yearly reward [FXS]: ", duration_reward_3_fxs.multipliedBy(52.1429).toString());
+		console.log("Expected yearly reward (with emission factor) [FXS]: ", duration_reward_3_fxs.multipliedBy(52.1429).multipliedBy(emission_factor_week_5).toString());
 
 		// Account 9 withdraws and claims its locked stake
 		await fraxFarmInstance_FRAX_USDC.withdrawLocked(TOKEN_ID_9, { from: accounts[9] });
@@ -896,14 +896,14 @@ contract('FraxGaugeControllerAndUniV3Farm-Tests', async (accounts) => {
 		console.log("---------TRY TO migrator_withdraw_locked NOT AS THE MIGRATOR---------");
 		await expectRevert(
 			fraxFarmInstance_FRAX_USDC.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, TOKEN_ID_1, { from: INVESTOR_CUSTODIAN_ADDRESS }),
-			"Sender invalid or unapproved"
+			"Migrator invalid or unapproved"
 		);
 
 		console.log("---------TRY TO migrator_stakeLocked_for NOT AS THE MIGRATOR---------");
 		let block_time_current_2 = (await time.latest()).toNumber();
 		await expectRevert(
 			fraxFarmInstance_FRAX_USDC.migrator_stakeLocked_for(COLLATERAL_FRAX_AND_FXS_OWNER, TOKEN_ID_1, 28 * 86400, block_time_current_2, { from: INVESTOR_CUSTODIAN_ADDRESS }),
-			"Sender invalid or unapproved"
+			"Migrator invalid or unapproved"
 		);
 
 		console.log("---------TRY TO migrator_withdraw_unlocked AS A NOW NON-APPROVED MIGRATOR ---------");
@@ -912,19 +912,19 @@ contract('FraxGaugeControllerAndUniV3Farm-Tests', async (accounts) => {
 		
 		await expectRevert(
 			fraxFarmInstance_FRAX_USDC.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, TOKEN_ID_1, { from: MIGRATOR_ADDRESS }),
-			"Sender invalid or unapproved"
+			"Migrator invalid or unapproved"
 		);
 
 		console.log("---------TRY TO migrator_withdraw_unlocked AS A NOW INVALID MIGRATOR ---------");
 		// Staker re-allows MIGRATOR_ADDRESS
 		await fraxFarmInstance_FRAX_USDC.stakerAllowMigrator(MIGRATOR_ADDRESS, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
 
-		// But governance disallows it
+		// But governance now disallows it
 		await fraxFarmInstance_FRAX_USDC.removeMigrator(MIGRATOR_ADDRESS, { from: STAKING_OWNER });
 
 		await expectRevert(
 			fraxFarmInstance_FRAX_USDC.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, TOKEN_ID_1, { from: MIGRATOR_ADDRESS }),
-			"Sender invalid or unapproved"
+			"Migrator invalid or unapproved"
 		);
 
 	});

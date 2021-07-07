@@ -519,7 +519,7 @@ contract('StakingRewardsMultiGauge-Tests', async (accounts) => {
 		console.log("---- LOCKED [9]: ", locked_balance_00_9.toString());
 
 		// Make sure there is a valid period for the contract and sync it
-		await stakingInstanceMultiGauge_FRAX_MTA.renewIfApplicable({ from: STAKING_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.sync({ from: STAKING_OWNER });
 
 		const staking_reward_symbols = await stakingInstanceMultiGauge_FRAX_MTA.getRewardSymbols.call();
 		console.log("staking_reward_symbols: ", staking_reward_symbols);
@@ -584,7 +584,7 @@ contract('StakingRewardsMultiGauge-Tests', async (accounts) => {
 		console.log("---- LOCKED [9]: ", locked_balance_01_9.toString());
 
 		// Make sure there is a valid period for the contract and sync it
-		await stakingInstanceMultiGauge_FRAX_MTA.renewIfApplicable({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await stakingInstanceMultiGauge_FRAX_MTA.sync({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		const staking_earned_week5_1_arr = await stakingInstanceMultiGauge_FRAX_MTA.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER);
 		const staking_earned_week5_9_arr = await stakingInstanceMultiGauge_FRAX_MTA.earned.call(accounts[9]);
