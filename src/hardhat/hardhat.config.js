@@ -29,58 +29,6 @@ task("accounts", "Prints the list of accounts", async () => {
  */
 module.exports = {
     defaultNetwork: "hardhat",
-    networks: {
-		hardhat: {
-			forking: {
-				url: `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-				// url: `https://apis.ankr.com/${process.env.ANKR_STRING}`
-				// url: 'https://bsc-dataseed.binance.org/'
-			},
-			accounts: {
-				mnemonic: process.env.ROPSTEN_HARDHAT_PHRASE
-			},
-		},
-		mainnet: {
-			url:`https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-			accounts: {
-				mnemonic: process.env.MNEMONIC_PHRASE
-			},
-			chainId: 1,
-			gas: "auto",
-			gasPrice: 40000000000,
-			gasMultiplier: 1.2
-		},
-		bsc_mainnet: {
-			url: `https://bsc-dataseed.binance.org/`,
-			accounts: {
-				mnemonic: process.env.BSC_MNEMONIC_PHRASE
-			},
-			chainId: 56,
-			gas: "auto",
-			gasPrice: 15000000000,
-			gasMultiplier: 1.2
-		},
-		ropsten: {
-			url:`https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-			accounts: {
-				mnemonic: process.env.MNEMONIC_PHRASE
-			},
-			chainId: 3,
-			gas: "auto",     
-			gasPrice: "auto", 
-			gasMultiplier: 1.2
-		},
-		rinkeby: {
-			url:`https://rinkeby.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-			accounts: {
-				mnemonic: process.env.MNEMONIC_PHRASE
-			},
-			chainId: 4,
-			gas: "auto",
-			gasPrice: "auto",
-			gasMultiplier: 1.2
-		}
-    },
 	solidity: {
 		compilers: [
 			{
@@ -145,8 +93,8 @@ module.exports = {
 	},
 
 	contractSizer: {
-		alphaSort: true,
-		runOnCompile: true,
+		alphaSort: false,
+		runOnCompile: false,
 		disambiguatePaths: false,
 	},
     vyper: {
