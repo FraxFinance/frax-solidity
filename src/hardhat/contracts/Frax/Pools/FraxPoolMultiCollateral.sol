@@ -20,6 +20,8 @@ pragma solidity >=0.6.11;
 
 // Primary Author(s)
 // Travis Moore: https://github.com/FortisFortuna
+
+// Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
 
