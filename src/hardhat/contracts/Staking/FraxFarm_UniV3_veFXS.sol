@@ -25,6 +25,8 @@ pragma experimental ABIEncoderV2;
 // Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
+// github.com/denett
+// Sam Sun: https://github.com/samczsun
 
 // Originally inspired by Synthetixio, but heavily modified by the Frax team
 // (Locked, veFXS, and UniV3 portions are new)
@@ -88,6 +90,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     address public uni_token0;
     address public uni_token1;
     uint32 public twap_duration = 300; // 5 minutes
+    bool public frax_is_token0 = false;
 
     // Rewards tracking
     uint256 private rewardPerTokenStored0;
@@ -160,7 +163,10 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         address _veFXS_address,
         address _gauge_controller_address,
         address _uni_token0,
-        address _uni_token1
+        address _uni_token1,
+        int24 _uni_tick_lower,
+        int24 _uni_tick_upper,
+        int24 _uni_ideal_tick
     ) Owned(_owner) {
         rewardsToken0 = ERC20(_rewardsToken0);
         stakingTokenNFT = IUniswapV3PositionsNFT(_stakingTokenNFT);
@@ -175,12 +181,18 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         uni_token0 = _uni_token0;
         uni_token1 = _uni_token1;
 
-        // Tick and Liquidity related
-        uni_tick_lower = -276380;
-        uni_tick_upper = -276270;
+        // Check where FRAX is
+        if (_uni_token0 == 0x853d955aCEf822Db058eb8505911ED77F175b99e) frax_is_token0 = true;
 
-        // Closest tick to 1 is -276325, giving $0.99990265 to $1.0000026
-        ideal_tick = -276325;
+        // Tick and Liquidity related
+        uni_tick_lower = _uni_tick_lower;
+        uni_tick_upper = _uni_tick_upper;
+
+        // Closest tick to 1
+        ideal_tick = _uni_ideal_tick;
+
+        // Manual reward rate
+        reward_rate_manual = (uint256(365e17)).div(365 * 86400); // 0.1 FXS per day
     }
 
     /* ========== VIEWS ========== */
@@ -226,12 +238,18 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
             if (this_liq > 0){
                 uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(thisNFT.tick_lower);
                 uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(thisNFT.tick_upper);
-                frax_tally = frax_tally.add(LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, uint128(thisNFT.liquidity)));
+                if (frax_is_token0){
+                    frax_tally = frax_tally.add(LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, uint128(thisNFT.liquidity)));
+                }
+                else {
+                    frax_tally = frax_tally.add(LiquidityAmounts.getAmount1ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, uint128(thisNFT.liquidity)));
+                }
             }
         }
 
         // In order to avoid excessive gas calculations and the input tokens ratios. 50% FRAX is assumed
         // If this were Uni V2, it would be akin to reserve0 & reserve1 math
+        // There may be a more accurate way to calculate the above...
         return frax_tally.div(2); 
     }
 
@@ -241,6 +259,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         // If the bypass is turned on, return 1x
         if (bypassEmissionFactor) return MULTIPLIER_PRECISION;
 
+        // From https://github.com/charmfinance/alpha-vaults-contracts/blob/main/contracts/AlphaStrategy.sol
         uint32[] memory secondsAgo = new uint32[](2);
         secondsAgo[0] = uint32(twap_duration);
         secondsAgo[1] = 0;
@@ -496,7 +515,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) {
-        require((stakingPaused == false && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking paused or in migration");
+        require(stakingPaused == false || valid_migrators[msg.sender] == true, "Staking paused or in migration");
         require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
@@ -643,7 +662,7 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     }
 
     function sync_gauge_weight(bool force_update) public {
-        if (force_update || (block.timestamp > last_gauge_time_total)){
+        if (address(gauge_controller) != address(0) && (force_update || (block.timestamp > last_gauge_time_total))){
             // Update the gauge_relative_weight
             last_gauge_relative_weight = gauge_controller.gauge_relative_weight_write(address(this), block.timestamp);
             last_gauge_time_total = gauge_controller.time_total();
@@ -742,7 +761,9 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
     function initializeDefault() external onlyByOwnerOrGovernance {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
-        sync_gauge_weight(true);
+        if (address(gauge_controller) != address(0)){
+            sync_gauge_weight(true);
+        }
         emit DefaultInitialization();
     }
 
@@ -776,10 +797,13 @@ contract FraxFarm_UniV3_veFXS is Owned, ReentrancyGuard {
         }
     }
 
-    function setTWAPAndEmissionFactorBypass(uint32 _new_twap_duration, bool _bypassEmissionFactor) external onlyByOwnerOrGovernance {
+    function setTWAP(uint32 _new_twap_duration) external onlyByOwnerOrGovernance {
         require(_new_twap_duration <= 3600, "TWAP too long"); // One hour for now. Depends on how many increaseObservationCardinalityNext / observation slots you have
         twap_duration = _new_twap_duration;
-        bypassEmissionFactor = _bypassEmissionFactor;
+    }
+
+    function toggleEmissionFactorBypass() external onlyByOwnerOrGovernance {
+        bypassEmissionFactor = !bypassEmissionFactor;
     }
 
     function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {

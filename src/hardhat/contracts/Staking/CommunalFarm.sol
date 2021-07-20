@@ -239,6 +239,11 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     function getAllRewardTokens() external view returns (address[] memory) {
         return rewardTokens;
     }
+
+    // All the reward rates
+    function getAllRewardRates() external view returns (uint256[] memory) {
+        return rewardRates;
+    }
     
     // Multiplier amount, given the length of the lock
     function lockMultiplier(uint256 secs) public view returns (uint256) {
@@ -540,7 +545,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         }
 
         // Only the reward managers can take back their reward tokens
-        if (msg.sender != owner && isRewardToken && rewardManagers[tokenAddress] == msg.sender){
+        if (isRewardToken && rewardManagers[tokenAddress] == msg.sender){
             ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
             emit Recovered(msg.sender, tokenAddress, tokenAmount);
             return;

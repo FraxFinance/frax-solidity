@@ -417,7 +417,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) {
-        require((!stakingPaused && migrationsOn == false) || valid_migrators[msg.sender] == true, "Staking paused or in migration");
+        require(!stakingPaused || valid_migrators[msg.sender] == true, "Staking paused or in migration");
         require(liquidity > 0, "Must stake more than zero");
         require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
