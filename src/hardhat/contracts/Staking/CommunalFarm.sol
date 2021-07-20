@@ -239,6 +239,11 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     function getAllRewardTokens() external view returns (address[] memory) {
         return rewardTokens;
     }
+
+    // All the reward rates
+    function getAllRewardRates() external view returns (uint256[] memory) {
+        return rewardRates;
+    }
     
     // Multiplier amount, given the length of the lock
     function lockMultiplier(uint256 secs) public view returns (uint256) {

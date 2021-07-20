@@ -41,7 +41,7 @@ contract MicroVeFXSStaker is Owned {
 
     // Instances
     IveFXS private veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
-    ERC20 public FXS = ERC20(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
+    ERC20 private FXS = ERC20(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
 
     /* ========== MODIFIERS ========== */
 

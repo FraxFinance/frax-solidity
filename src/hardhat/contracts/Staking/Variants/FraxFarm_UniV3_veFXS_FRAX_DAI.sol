@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "../FraxFarm_UniV3_veFXS.sol";
 
-contract FraxFarm_UniV3_veFXS_FRAX_USDC is FraxFarm_UniV3_veFXS {
+contract FraxFarm_UniV3_veFXS_FRAX_DAI is FraxFarm_UniV3_veFXS {
     constructor(
         address _owner,
         address _rewardsToken0,

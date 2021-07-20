@@ -181,7 +181,6 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
             // Initialize the reward managers
             rewardManagers[_rewardTokens[i]] = _rewardManagers[i];
-
         }
 
         // // Uniswap V2 ONLY
@@ -658,7 +657,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         }
 
         // Only the reward managers can take back their reward tokens
-        if (msg.sender != owner && isRewardToken && rewardManagers[tokenAddress] == msg.sender){
+        if (isRewardToken && rewardManagers[tokenAddress] == msg.sender){
             ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
             emit Recovered(msg.sender, tokenAddress, tokenAmount);
             return;
