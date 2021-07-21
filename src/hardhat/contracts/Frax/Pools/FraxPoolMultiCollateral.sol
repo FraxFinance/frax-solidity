@@ -24,8 +24,9 @@ pragma solidity >=0.6.11;
 // Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
+// github.com/denett
 
-// Reviewer(s) / Contributor(s)
+// TODO: Remove oracle code and do different fees per collateral
 
 import "../../Math/SafeMath.sol";
 import '../../Uniswap/TransferHelper.sol';
@@ -33,7 +34,6 @@ import "../../Staking/Owned.sol";
 import "../../FXS/FXS.sol";
 import "../../Frax/Frax.sol";
 import "../../ERC20/ERC20.sol";
-import "../../Oracle/AggregatorV3Interface.sol";
 import "../../Governance/AccessControl.sol";
 
 contract FraxPoolMultiCollateral is AccessControl, Owned {
@@ -52,10 +52,9 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     address[] public collateral_addresses;
     string[] public collateral_symbols;
     address[] public collateral_oracle_addresses; // Chainlink: https://docs.chain.link/docs/ethereum-addresses/
-    uint256[] public oracle_types; // 0 = No Oracle, 1 = Chainlink x / USD, 2 = Chainlink x / ETH
     uint256[] public missing_decimals; // Number of decimals needed to get to E18. collateral index -> missing_decimals
     uint256[] public pool_ceilings; // Total across all collaterals. Accounts for missing_decimals
-    uint256[] public pausedPrice; // Stores price of the collateral, if price is paused
+    uint256[] public collateral_prices; // Stores price of the collateral, if price is paused
     mapping(address => uint256) public collateralAddrToIdx; // collateral addr -> collateral index
     mapping(address => bool) public enabled_pools; // collateral address -> is it enabled
     
@@ -68,10 +67,10 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     uint256 public redemption_delay = 2; // Number of blocks to wait before being able to collectRedemption()
 
     // Fees and rates
-    uint256 public minting_fee;
-    uint256 public redemption_fee;
-    uint256 public buyback_fee;
-    uint256 public recollat_fee;
+    uint256[] public minting_fee;
+    uint256[] public redemption_fee;
+    uint256[] public buyback_fee;
+    uint256[] public recollat_fee;
     uint256 public bonus_rate; // Bonus rate on FXS minted during recollateralizeFrax(); 6 decimals of precision, set to 0.75% on genesis
 
     // Constants for various precisions
@@ -82,7 +81,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     bytes32 private constant REDEEM_PAUSER = keccak256("REDEEM_PAUSER");
     bytes32 private constant BUYBACK_PAUSER = keccak256("BUYBACK_PAUSER");
     bytes32 private constant RECOLLATERALIZE_PAUSER = keccak256("RECOLLATERALIZE_PAUSER");
-    bytes32 private constant COLLATERAL_PRICE_PAUSER = keccak256("COLLATERAL_PRICE_PAUSER");
+    bytes32 private constant COLLATERAL_PRICE_SETTER = keccak256("COLLATERAL_PRICE_SETTER");
     bytes32 private constant POOL_TOGGLER = keccak256("POOL_TOGGLER");
     
     // AccessControl state variables
@@ -90,7 +89,6 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     bool[] public redeemPaused; // Collateral-specific
     bool[] public recollateralizePaused; // Collateral-specific
     bool[] public buyBackPaused; // Collateral-specific
-    mapping(uint256 => bool) public collateralPricePaused; // collateral index -> is the price paused
 
     /* ========== MODIFIERS ========== */
 
@@ -112,9 +110,8 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         address _frax_contract_address,
         address _fxs_contract_address,
         address[] memory _collateral_addresses,
-        address[] memory _collateral_oracle_addresses,
-        uint256[] memory _oracle_types,
-        uint256[] memory _pool_ceilings
+        uint256[] memory _pool_ceilings,
+        uint256[] memory _initial_fees
     ) Owned(_pool_manager_address){
         // Core
         FRAX = FRAXStablecoin(_frax_contract_address);
@@ -125,8 +122,6 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
 
         // Fill collateral info
         collateral_addresses = _collateral_addresses;
-        collateral_oracle_addresses = _collateral_oracle_addresses;
-        oracle_types = _oracle_types;
         for (uint256 i = 0; i < _collateral_addresses.length; i++){ 
             // For fast collateral address -> collateral idx lookups later
             collateralAddrToIdx[_collateral_addresses[i]] = i;
@@ -144,7 +139,13 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
             unclaimedPoolCollateral.push(0);
 
             // Initialize paused prices to $1 as a backup
-            pausedPrice.push(PRICE_PRECISION);
+            collateral_prices.push(PRICE_PRECISION);
+
+            // Handle the fees
+            minting_fee.push(_initial_fees[0]);
+            redemption_fee.push(_initial_fees[1]);
+            buyback_fee.push(_initial_fees[2]);
+            recollat_fee.push(_initial_fees[3]);
 
             // Handle the pauses
             mintPaused.push(false);
@@ -164,7 +165,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         grantRole(REDEEM_PAUSER, _pool_manager_address);
         grantRole(RECOLLATERALIZE_PAUSER, _pool_manager_address);
         grantRole(BUYBACK_PAUSER, _pool_manager_address);
-        grantRole(COLLATERAL_PRICE_PAUSER, _pool_manager_address);
+        grantRole(COLLATERAL_PRICE_SETTER, _pool_manager_address);
         grantRole(POOL_TOGGLER, _pool_manager_address);
         
         // Timelock
@@ -172,7 +173,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         grantRole(REDEEM_PAUSER, timelock_address);
         grantRole(RECOLLATERALIZE_PAUSER, timelock_address);
         grantRole(BUYBACK_PAUSER, timelock_address);
-        grantRole(COLLATERAL_PRICE_PAUSER, timelock_address);
+        grantRole(COLLATERAL_PRICE_SETTER, timelock_address);
         grantRole(POOL_TOGGLER, timelock_address);
     }
 
@@ -185,12 +186,15 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         bool is_enabled;
         uint256 missing_decs;
         uint256 price;
-        uint256 price_dec_multiplier;
         uint256 pool_ceiling;
         bool mint_paused;
         bool redeem_paused;
         bool recollat_paused;
         bool buyback_paused;
+        uint256 minting_fee;
+        uint256 redemption_fee;
+        uint256 buyback_fee;
+        uint256 recollat_fee;
     }
 
     /* ========== VIEWS ========== */
@@ -198,20 +202,23 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     // Helpful for UIs
     function collateral_information(address collat_address) external view returns (CollateralInformation memory return_data){
         uint256 idx = collateralAddrToIdx[collat_address];
-        (uint256 collat_usd_price, uint256 col_price_dec_multiplier) = getCollateralPrice(idx);
+        
         return_data = CollateralInformation(
             idx,
             collateral_symbols[idx],
             collat_address,
             enabled_pools[collat_address],
             missing_decimals[idx],
-            collat_usd_price,
-            col_price_dec_multiplier,
+            collateral_prices[idx],
             pool_ceilings[idx],
             mintPaused[idx],
             redeemPaused[idx],
             recollateralizePaused[idx],
-            buyBackPaused[idx]
+            buyBackPaused[idx],
+            minting_fee[idx],
+            redemption_fee[idx],
+            buyback_fee[idx],
+            recollat_fee[idx]
         );
     }
 
@@ -226,41 +233,8 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     }
 
     // Returns the price of a collateral.
-    function getCollateralPrice(uint256 col_idx) public view returns (uint256 price, uint256 dec_multiplier){
-        if (collateralPricePaused[col_idx] || collateral_oracle_addresses[col_idx] == address(0)){
-            price = pausedPrice[col_idx];
-            dec_multiplier = PRICE_PRECISION;
-        }
-        else {
-            // Chainlink first price
-            // Chainlink X / Y
-            AggregatorV3Interface priceFeed0 = AggregatorV3Interface(collateral_oracle_addresses[col_idx]);
-            (, int256 i256_price0, , ,) = priceFeed0.latestRoundData();
-            uint256 price0 = uint256(i256_price0); // How many Y per X
-            uint256 decimals0 = priceFeed0.decimals();
-
-            if (oracle_types[col_idx] == 1){
-                // Chainlink X / USD
-                price = price0; // How many USD per X
-                dec_multiplier = 10 ** decimals0;
-            }
-            else if (oracle_types[col_idx] == 2){
-                // Chainlink ETH / USD
-                AggregatorV3Interface priceFeedEth = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-                (, int256 i256_priceEth, , ,) = priceFeedEth.latestRoundData();
-                uint256 priceEth = uint256(i256_priceEth); // How many USD per ETH
-
-                // Chainlink X / ETH
-                price = priceEth.mul(price0).div(10 ** decimals0);
-                dec_multiplier = uint256(1e8);
-            }
-        }
-    }
-
-    // Returns the price of a collateral.
     function getFRAXInCollateral(uint256 col_idx, uint256 frax_amount) public view returns (uint256 col_amt){
-        (uint256 collat_usd_price, uint256 col_price_dec_multiplier) = getCollateralPrice(col_idx);
-        col_amt = frax_amount.mul(col_price_dec_multiplier).div(10 ** missing_decimals[col_idx]).div(collat_usd_price);
+        col_amt = frax_amount.mul(PRICE_PRECISION).div(10 ** missing_decimals[col_idx]).div(collateral_prices[col_idx]);
     }
 
     // Used by some functions.
@@ -274,17 +248,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         for (uint256 i = 0; i < collateral_addresses.length; i++){ 
             ERC20 collat_token = ERC20(collateral_addresses[i]);
             if (enabled_pools[collateral_addresses[i]]){
-                if (collateralPricePaused[i]){
-                    balance_tally = balance_tally.add((collat_token.balanceOf(address(this)).sub(unclaimedPoolCollateral[i])).mul(10 ** missing_decimals[i]).mul(pausedPrice[i]).div(PRICE_PRECISION));
-                } else {
-                    (uint256 collat_usd_price, uint256 col_price_dec_multiplier) = getCollateralPrice(i);
-                    balance_tally = balance_tally.add(
-                        (collat_token.balanceOf(address(this)).sub(unclaimedPoolCollateral[i]))
-                            .mul(10 ** missing_decimals[i])
-                            .mul(collat_usd_price)
-                            .div(col_price_dec_multiplier)
-                    );  
-                }
+                balance_tally = balance_tally.add((collat_token.balanceOf(address(this)).sub(unclaimedPoolCollateral[i])).mul(10 ** missing_decimals[i]).mul(collateral_prices[i]).div(PRICE_PRECISION));
             }
         }
     }
@@ -333,7 +297,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         }
 
         // Subtract the minting fee
-        total_frax_mint = (frax_amt.mul(PRICE_PRECISION.sub(minting_fee))).div(PRICE_PRECISION);
+        total_frax_mint = (frax_amt.mul(PRICE_PRECISION.sub(minting_fee[col_idx]))).div(PRICE_PRECISION);
 
         // Checks
         require((frax_out_min <= total_frax_mint), "FRAX slippage");
@@ -358,16 +322,14 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     ) {
         require(redeemPaused[col_idx] == false, "Redeeming is paused");
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
-        uint256 frax_after_fee = (frax_amount.mul(PRICE_PRECISION.sub(redemption_fee))).div(PRICE_PRECISION);
-        (uint256 collat_usd_price, uint256 col_price_dec_multiplier) = getCollateralPrice(col_idx);
+        uint256 frax_after_fee = (frax_amount.mul(PRICE_PRECISION.sub(redemption_fee[col_idx]))).div(PRICE_PRECISION);
 
         // Assumes $1 FRAX in all cases
         if(global_collateral_ratio >= PRICE_PRECISION) { 
             // 1-to-1 or overcollateralized
             collat_out = frax_after_fee
-                            .mul(collat_usd_price)
-                            .div(col_price_dec_multiplier)
-                            .div(10 ** missing_decimals[col_idx]); // In its natural decimals()
+                            .mul(collateral_prices[col_idx])
+                            .div(10 ** (6 + missing_decimals[col_idx])); // PRICE_PRECISION + missing decimals
             fxs_out = 0;
         } else if (global_collateral_ratio == 0) { 
             // Algorithmic
@@ -379,10 +341,8 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
             // Fractional
             collat_out = frax_after_fee
                             .mul(global_collateral_ratio)
-                            .mul(collat_usd_price)
-                            .div(PRICE_PRECISION)
-                            .div(col_price_dec_multiplier)
-                            .div(10 ** missing_decimals[col_idx]); // In its natural decimals()
+                            .mul(collateral_prices[col_idx])
+                            .div(10 ** (12 + missing_decimals[col_idx])); // PRICE_PRECISION ^2 + missing decimals
             fxs_out = frax_after_fee
                             .mul(PRICE_PRECISION.sub(global_collateral_ratio))
                             .div(FRAX.fxs_price()); // PRICE_PRECISIONS CANCEL OUT
@@ -443,7 +403,6 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     function buyBackFxs(uint256 col_idx, uint256 fxs_amount, uint256 col_out_min) external collateralEnabled(col_idx) returns (uint256 col_out) {
         require(buyBackPaused[col_idx] == false, "Buyback is paused");
         uint256 fxs_price = FRAX.fxs_price();
-        (uint256 collat_usd_price, uint256 col_price_dec_multiplier) = getCollateralPrice(col_idx);
         uint256 available_excess_collat_dv = availableExcessCollatDV();
 
         // If the total collateral value is higher than the amount required at the current collateral ratio then buy back up to the possible FXS with the desired collateral
@@ -454,11 +413,11 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         require(fxs_dollar_value_d18 <= available_excess_collat_dv, "Not enough excess collat");
 
         // Get the equivalent amount of collateral based on the market value of FXS provided 
-        uint256 collateral_equivalent_d18 = fxs_dollar_value_d18.mul(col_price_dec_multiplier).div(collat_usd_price);
+        uint256 collateral_equivalent_d18 = fxs_dollar_value_d18.mul(PRICE_PRECISION).div(collateral_prices[col_idx]);
         col_out = collateral_equivalent_d18.div(10 ** missing_decimals[col_idx]); // In its natural decimals()
 
         // Subtract the buyback fee
-        col_out = (col_out.mul(PRICE_PRECISION.sub(buyback_fee))).div(PRICE_PRECISION);
+        col_out = (col_out.mul(PRICE_PRECISION.sub(buyback_fee[col_idx]))).div(PRICE_PRECISION);
 
         // Check for slippage
         require(col_out >= col_out_min, "Collateral slippage");
@@ -476,16 +435,13 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         require(recollateralizePaused[col_idx] == false, "Recollat is paused");
         uint256 collateral_amount_d18 = collateral_amount * (10 ** missing_decimals[col_idx]);
         uint256 fxs_price = FRAX.fxs_price();
-        uint256 frax_total_supply = FRAX.totalSupply();
-        uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
-        uint256 global_collat_value = FRAX.globalCollateralValue();
         uint256 collateral_units;
         uint256 amount_to_recollat;
         {
-            (uint256 collat_usd_price, uint256 col_price_dec_multiplier) = getCollateralPrice(col_idx);
-            uint256 collat_value_attempted = collateral_amount_d18.mul(collat_usd_price).div(col_price_dec_multiplier);
-            uint256 effective_collateral_ratio = global_collat_value.mul(PRICE_PRECISION).div(frax_total_supply); //returns it in 1e6
-            uint256 recollat_possible = (global_collateral_ratio.mul(frax_total_supply).sub(frax_total_supply.mul(effective_collateral_ratio))).div(PRICE_PRECISION);
+            uint256 frax_total_supply = FRAX.totalSupply();
+            uint256 collat_value_attempted = collateral_amount_d18.mul(collateral_prices[col_idx]).div(PRICE_PRECISION);
+            uint256 effective_collateral_ratio = FRAX.globalCollateralValue().mul(PRICE_PRECISION).div(frax_total_supply); //returns it in 1e6
+            uint256 recollat_possible = (FRAX.global_collateral_ratio().mul(frax_total_supply).sub(frax_total_supply.mul(effective_collateral_ratio))).div(PRICE_PRECISION);
 
             if(collat_value_attempted <= recollat_possible){
                 amount_to_recollat = collat_value_attempted;
@@ -493,14 +449,17 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
                 amount_to_recollat = recollat_possible;
             }
 
-            collateral_units = amount_to_recollat.mul(col_price_dec_multiplier).div(collat_usd_price);
+            collateral_units = amount_to_recollat.mul(PRICE_PRECISION).div(collateral_prices[col_idx]);
         }
 
         collateral_units_precision = collateral_units.div(10 ** missing_decimals[col_idx]); // In its natural decimals()
-        fxs_paid_back = amount_to_recollat.mul(PRICE_PRECISION.add(bonus_rate).sub(recollat_fee)).div(fxs_price);
+        fxs_paid_back = amount_to_recollat.mul(PRICE_PRECISION.add(bonus_rate).sub(recollat_fee[col_idx])).div(fxs_price);
 
         // Check slippage
         require(fxs_out_min <= fxs_paid_back, "FXS slippage");
+
+        // Check pool ceiling
+        require(freeCollatBalance(col_idx).add(collateral_units_precision) <= pool_ceilings[col_idx], "Pool ceiling");
 
         // Take in the collateral and pay out the FXS
         TransferHelper.safeTransferFrom(collateral_addresses[col_idx], msg.sender, address(this), collateral_units_precision);
@@ -537,17 +496,11 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         emit BuybackToggled(col_idx, buyBackPaused[col_idx]);
     }
 
-    function toggleCollateralPrice(uint256 col_idx, uint256 _new_price) external {
-        require(hasRole(COLLATERAL_PRICE_PAUSER, msg.sender));
-        // If pausing, set paused price; else if unpausing, clear pausedPrice
-        if(collateralPricePaused[col_idx] == false){
-            pausedPrice[col_idx] = _new_price;
-        } else {
-            pausedPrice[col_idx] = uint256(1e6);
-        }
-        collateralPricePaused[col_idx] = !collateralPricePaused[col_idx];
+    function setCollateralPrice(uint256 col_idx, uint256 _new_price) external {
+        require(hasRole(COLLATERAL_PRICE_SETTER, msg.sender));
+        collateral_prices[col_idx] = _new_price;
 
-        emit CollateralPriceToggled(col_idx, collateralPricePaused[col_idx], _new_price);
+        emit CollateralPriceSet(col_idx, _new_price);
     }
 
     function togglePool(uint256 col_idx) external {
@@ -564,24 +517,19 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         emit PoolCeilingSet(col_idx, new_ceiling);
     }
 
-    function setPoolOracle(uint256 col_idx, address oracle_address, uint256 oracle_type) external onlyByOwnerOrGovernance {
-        collateral_oracle_addresses[col_idx] = oracle_address;
-        // 0 = Chainlink x / USD, 1 = Chainlink x / ETH, 2 = UniswapV3 x / ETH
-        oracle_types[col_idx] = oracle_type;
+    function setFees(uint256 col_idx, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee) external onlyByOwnerOrGovernance {
+        minting_fee[col_idx] = new_mint_fee;
+        redemption_fee[col_idx] = new_redeem_fee;
+        buyback_fee[col_idx] = new_buyback_fee;
+        recollat_fee[col_idx] = new_recollat_fee;
 
-        emit PoolOracleSet(col_idx, oracle_address, oracle_type);
+        emit FeesSet(col_idx, new_mint_fee, new_redeem_fee, new_buyback_fee, new_recollat_fee);
     }
 
-    // Combined into one function due to contract memory limit size concerns
-    function setPoolParameters(uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee) external onlyByOwnerOrGovernance {
+    function setPoolParameters(uint256 new_bonus_rate, uint256 new_redemption_delay) external onlyByOwnerOrGovernance {
         bonus_rate = new_bonus_rate;
         redemption_delay = new_redemption_delay;
-        minting_fee = new_mint_fee;
-        redemption_fee = new_redeem_fee;
-        buyback_fee = new_buyback_fee;
-        recollat_fee = new_recollat_fee;
-
-        emit PoolParametersSet(new_bonus_rate, new_redemption_delay, new_mint_fee, new_redeem_fee, new_buyback_fee, new_recollat_fee);
+        emit PoolParametersSet(new_bonus_rate, new_redemption_delay);
     }
 
     function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
@@ -592,13 +540,13 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
 
     /* ========== EVENTS ========== */
     event PoolToggled(uint256 col_idx, bool new_state);
-    event PoolOracleSet(uint256 col_idx, address oracle_address, uint256 oracle_type);
     event PoolCeilingSet(uint256 col_idx, uint256 new_ceiling);
-    event PoolParametersSet(uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee);
+    event FeesSet(uint256 col_idx, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee);
+    event PoolParametersSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
     event TimelockSet(address new_timelock);
     event MintingToggled(uint256 col_idx, bool toggled);
     event RedeemingToggled(uint256 col_idx, bool toggled);
     event RecollateralizeToggled(uint256 col_idx, bool toggled);
     event BuybackToggled(uint256 col_idx, bool toggled);
-    event CollateralPriceToggled(uint256 col_idx, bool toggled, uint256 new_price);
+    event CollateralPriceSet(uint256 col_idx, uint256 new_price);
 }
