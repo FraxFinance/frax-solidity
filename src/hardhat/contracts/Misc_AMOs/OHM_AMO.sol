@@ -218,7 +218,7 @@ contract OHM_AMO is Initializable, Owned_Proxy {
 
         // Make sure the FRAX minting wouldn't push the CR down too much
         // This is also a sanity check for the int256 math
-        uint256 current_collateral_E18 = (FRAX.globalCollateralValue()).mul(10 ** missing_decimals_collat);
+        uint256 current_collateral_E18 = FRAX.globalCollateralValue();
         uint256 cur_frax_supply = FRAX.totalSupply();
         uint256 new_frax_supply = cur_frax_supply.add(frax_amount);
         uint256 new_cr = (current_collateral_E18.mul(PRICE_PRECISION)).div(new_frax_supply);
@@ -363,8 +363,8 @@ contract OHM_AMO is Initializable, Owned_Proxy {
         override_collat_balance_amount = _balance;
     }
 
-    function setMintCap(int256 _mint_cap) external onlyByOwnerOrGovernance {
-        mint_cap = _mint_cap;
+    function setMintCap(uint256 _mint_cap) external onlyByOwnerOrGovernance {
+        mint_cap = int256(_mint_cap);
     }
 
     function setMinimumCollateralRatio(uint256 _min_cr) external onlyByOwnerOrGovernance {

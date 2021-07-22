@@ -223,18 +223,18 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     }
 
     // Helpful for UIs
-    function allCollateralAddresses() external view returns (address[] memory the_addresses){
-        the_addresses = collateral_addresses;
+    function allCollateralAddresses() external view returns (address[] memory){
+        return collateral_addresses;
     }
 
     // Helpful for UIs
-    function allCollateralSymbols() external view returns (string[] memory the_symbols){
-        the_symbols = collateral_symbols;
+    function allCollateralSymbols() external view returns (string[] memory){
+        return collateral_symbols;
     }
 
-    // Returns the price of a collateral.
-    function getFRAXInCollateral(uint256 col_idx, uint256 frax_amount) public view returns (uint256 col_amt){
-        col_amt = frax_amount.mul(PRICE_PRECISION).div(10 ** missing_decimals[col_idx]).div(collateral_prices[col_idx]);
+    // Returns the FRAX value in collateral tokens
+    function getFRAXInCollateral(uint256 col_idx, uint256 frax_amount) public view returns (uint256){
+        return frax_amount.mul(PRICE_PRECISION).div(10 ** missing_decimals[col_idx]).div(collateral_prices[col_idx]);
     }
 
     // Used by some functions.

@@ -248,7 +248,6 @@ contract FRAXStablecoin is ERC20Custom, AccessControl, Owned {
     // Remove a pool 
     function removePool(address pool_address) public onlyByOwnerGovernanceOrController {
         require(pool_address != address(0), "Zero address detected");
-
         require(frax_pools[pool_address] == true, "Address nonexistant");
         
         // Delete from the mapping
