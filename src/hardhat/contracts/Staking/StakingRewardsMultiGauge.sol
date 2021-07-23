@@ -31,7 +31,7 @@ pragma experimental ABIEncoderV2;
 // Alchemix Team: https://github.com/alchemix-finance
 // Liquity Team: https://github.com/liquity
 
-// Modified from the Synthetix.io original
+// Originally inspired by Synthetix.io, but heavily modified by the Frax team
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 
 import "../Math/Math.sol";

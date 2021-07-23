@@ -232,7 +232,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         return collateral_symbols;
     }
 
-    // Returns the price of a collateral.
+    // Returns the FRAX value in collateral tokens
     function getFRAXInCollateral(uint256 col_idx, uint256 frax_amount) public view returns (uint256){
         return frax_amount.mul(PRICE_PRECISION).div(10 ** missing_decimals[col_idx]).div(collateral_prices[col_idx]);
     }
