@@ -9,7 +9,7 @@ pragma solidity >=0.6.11;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ====================== RariFuseLendingAMO ======================
+// ======================== RariFuseLendingAMO ========================
 // ====================================================================
 // Frax Finance: https://github.com/FraxFinance
 
@@ -93,8 +93,13 @@ contract RariFuseLendingAMO is Owned {
         _;
     }
 
-    modifier onlyCustodian() {
-        require(msg.sender == custodian_address, "You are not the rewards custodian");
+    modifier onlyByOwnerOrGovernanceOrCustodian() {
+        require(msg.sender == timelock_address || msg.sender == owner || msg.sender == custodian_address, "Not owner, timelock, or custodian");
+        _;
+    }
+
+    modifier validPool(address pool_address) {
+        require(fuse_pools[pool_address], "Invalid pool");
         _;
     }
 
@@ -115,6 +120,18 @@ contract RariFuseLendingAMO is Owned {
         allocations[1] = sum_fuse_pool_tally;
 
         allocations[2] = allocations[0].add(allocations[1]); // Total FRAX value
+    }
+
+    // Needed for the Frax contract to function 
+    function collatDollarBalance() external view returns (uint256) {
+        // Needs to mimic the FraxPool value and return in E18
+        // Override is here in case of a brick on Rari's side
+        if(override_collat_balance){
+            return override_collat_balance_amount;
+        }
+        else {
+            return (showAllocations()[2]).mul(FRAX.global_collateral_ratio()).div(PRICE_PRECISION);
+        }
     }
 
     // Helpful for UIs
@@ -151,22 +168,57 @@ contract RariFuseLendingAMO is Owned {
     function accumulatedProfit() public view returns (int256) {
         return int256(showAllocations()[2]) - mintedBalance();
     }
-
+    
     /* ========== PUBLIC FUNCTIONS ========== */
 
-    // Needed for the Frax contract to function 
-    function collatDollarBalance() external view returns (uint256) {
-        // Needs to mimic the FraxPool value and return in E18
-        // Override is here in case of a brick on Rari's side
-        if(override_collat_balance){
-            return override_collat_balance_amount;
-        }
-        else {
-            return (showAllocations()[2]).mul(FRAX.global_collateral_ratio()).div(PRICE_PRECISION);
+    // N/A
+
+    /* ========== RESTRICTED FUNCTIONS, BUT CUSTODIAN CAN CALL ========== */
+
+    // Burn unneeded or excess FRAX
+    function burnFRAX(int256 frax_amount) public onlyByOwnerOrGovernanceOrCustodian {
+        require(frax_amount > 0, "frax_amount must be positive");
+        FRAX.burn(uint256(frax_amount));
+        burned_sum_historical = burned_sum_historical + frax_amount;
+    }
+
+    /* ---------------------------------------------------- */
+    /* ----------------------- Rari ----------------------- */
+    /* ---------------------------------------------------- */
+
+    // IComptroller_address can vary
+    function enterMarkets(address comptroller_address, address pool_address) validPool(pool_address) public onlyByOwnerOrGovernanceOrCustodian {
+        address[] memory cTokens = new address[](1);
+        cTokens[0] = pool_address;
+        IComptroller(comptroller_address).enterMarkets(cTokens);
+    }
+
+    // E18
+    function lendToPool(address pool_address, uint256 mint_amount) validPool(pool_address) public onlyByOwnerOrGovernanceOrCustodian {
+        uint256 pool_idx = poolAddrToIdx(pool_address);
+        FRAX.approve(pool_address, mint_amount);
+        ICErc20Delegator(fuse_pools_array[pool_idx]).mint(mint_amount);
+    }
+
+    // E18
+    function redeemFromPool(address pool_address, uint256 redeem_amount) validPool(pool_address) public onlyByOwnerOrGovernanceOrCustodian {
+        uint256 pool_idx = poolAddrToIdx(pool_address);
+        ICErc20Delegator(fuse_pools_array[pool_idx]).redeemUnderlying(redeem_amount);
+    }
+
+    // Auto compounds interest
+    function accrueInterest() public onlyByOwnerOrGovernanceOrCustodian {
+        for (uint i = 0; i < fuse_pools_array.length; i++){ 
+            // Make sure the pool is enabled first
+            address pool_address = fuse_pools_array[i];
+            if (fuse_pools[pool_address]){
+                ICErc20Delegator(fuse_pools_array[i]).accrueInterest();
+            }
         }
     }
 
-    /* ========== RESTRICTED FUNCTIONS ========== */
+    /* ========== OWNER / GOVERNANCE FUNCTIONS ONLY ========== */
+    // Only owner or timelock can call, to limit risk 
 
     // This contract is essentially marked as a 'pool' so it can call OnlyPools functions like pool_mint and pool_burn_from
     // on the main FRAX contract
@@ -192,37 +244,6 @@ contract RariFuseLendingAMO is Owned {
         FRAX.pool_mint(address(this), frax_amount);
     }
 
-    // Burn unneeded or excess FRAX
-    function burnFRAX(int256 frax_amount) public onlyByOwnerOrGovernance {
-        require(frax_amount > 0, "frax_amount must be positive");
-        FRAX.burn(uint256(frax_amount));
-        burned_sum_historical = burned_sum_historical + frax_amount;
-    }
-
-    /* ==================== Rari ==================== */
-
-    // IComptroller_address can vary
-    function enterMarkets(address comptroller_address, address pool_address) public onlyByOwnerOrGovernance {
-        address[] memory cTokens = new address[](1);
-        cTokens[0] = pool_address;
-        IComptroller(comptroller_address).enterMarkets(cTokens);
-    }
-
-    // E18
-    function lendToPool(address pool_address, uint256 mint_amount) public onlyByOwnerOrGovernance {
-        uint256 pool_idx = poolAddrToIdx(pool_address);
-        FRAX.approve(pool_address, mint_amount);
-        ICErc20Delegator(fuse_pools_array[pool_idx]).mint(mint_amount);
-    }
-
-    // E18
-    function redeemFromPool(address pool_address, uint256 redeem_amount) public onlyByOwnerOrGovernance {
-        uint256 pool_idx = poolAddrToIdx(pool_address);
-        ICErc20Delegator(fuse_pools_array[pool_idx]).redeemUnderlying(redeem_amount);
-    }
-
-    /* ========== RESTRICTED GOVERNANCE FUNCTIONS ========== */
-
     // Adds fuse pools 
     function addFusePool(address pool_address) public onlyByOwnerOrGovernance {
         require(pool_address != address(0), "Zero address detected");
@@ -234,7 +255,7 @@ contract RariFuseLendingAMO is Owned {
         emit FusePoolAdded(pool_address);
     }
 
-    // Remove a fuse pool 
+    // Remove a fuse pool
     function removeFusePool(address pool_address) public onlyByOwnerOrGovernance {
         require(pool_address != address(0), "Zero address detected");
         require(fuse_pools[pool_address] == true, "Address nonexistant");
@@ -263,6 +284,7 @@ contract RariFuseLendingAMO is Owned {
         custodian_address = _custodian_address;
     }
 
+    // Only owner or timelock can call
     function setMintCap(uint256 _mint_cap) external onlyByOwnerOrGovernance {
         mint_cap = int256(_mint_cap);
     }
@@ -283,7 +305,6 @@ contract RariFuseLendingAMO is Owned {
         
         emit Recovered(tokenAddress, tokenAmount);
     }
-
 
     /* ========== EVENTS ========== */
 

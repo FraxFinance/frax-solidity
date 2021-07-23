@@ -28,7 +28,7 @@ pragma experimental ABIEncoderV2;
 // github.com/denett
 // Sam Sun: https://github.com/samczsun
 
-// Originally inspired by Synthetixio, but heavily modified by the Frax team
+// Originally inspired by Synthetix.io, but heavily modified by the Frax team
 // (Locked, veFXS, and UniV3 portions are new)
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 

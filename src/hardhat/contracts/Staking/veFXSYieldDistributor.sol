@@ -22,7 +22,7 @@ pragma solidity >=0.6.11;
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
 
-// Originally inspired by Synthetixio, but heavily modified by the Frax team (veFXS portion)
+// Originally inspired by Synthetix.io, but heavily modified by the Frax team (veFXS portion)
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingYield.sol
 
 import "../Math/Math.sol";
