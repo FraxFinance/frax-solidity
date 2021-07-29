@@ -139,6 +139,11 @@ contract RariFuseLendingAMO is Owned {
         return fuse_pools_array;
     }
 
+    // Helpful for UIs
+    function allPoolsLength() external view returns (uint256){
+        return fuse_pools_array.length;
+    }
+
     function poolAddrToIdx(address pool_address) public view returns (uint256) {
         for (uint i = 0; i < fuse_pools_array.length; i++){ 
             if (fuse_pools_array[i] == pool_address){
@@ -194,10 +199,10 @@ contract RariFuseLendingAMO is Owned {
     }
 
     // E18
-    function lendToPool(address pool_address, uint256 mint_amount) validPool(pool_address) public onlyByOwnerOrGovernanceOrCustodian {
+    function lendToPool(address pool_address, uint256 lend_amount) validPool(pool_address) public onlyByOwnerOrGovernanceOrCustodian {
         uint256 pool_idx = poolAddrToIdx(pool_address);
-        FRAX.approve(pool_address, mint_amount);
-        ICErc20Delegator(fuse_pools_array[pool_idx]).mint(mint_amount);
+        FRAX.approve(pool_address, lend_amount);
+        ICErc20Delegator(fuse_pools_array[pool_idx]).mint(lend_amount);
     }
 
     // E18

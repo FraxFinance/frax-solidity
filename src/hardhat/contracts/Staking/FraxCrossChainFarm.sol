@@ -10,10 +10,11 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================= StakingRewardsDualV5 =======================
+// ======================== FraxCrossChainFarm ========================
 // ====================================================================
-// Includes veFXS boost logic
-// Unlocked deposits are removed to free up space
+// No veFXS logic
+// Because of lack of cross-chain reading of the gauge controller's emission rate,
+// the contract sets its reward based on its token balance(s)
 
 // Frax Finance: https://github.com/FraxFinance
 
@@ -23,7 +24,6 @@ pragma experimental ABIEncoderV2;
 // Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
-// Sam Sun: https://github.com/samczsun
 
 // Originally inspired by Synthetix.io, but heavily modified by the Frax team
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
@@ -35,23 +35,27 @@ import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
 import "../Frax/Frax.sol";
-import "../Uniswap/Interfaces/IUniswapV2Pair.sol";
+// import '../Uniswap/Interfaces/IFeederPool.sol';
+import '../Misc_AMOs/mstable/IFeederPool.sol';
 import "../Utils/ReentrancyGuard.sol";
 
 // Inheritance
 import "./Owned.sol";
 
-contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
+contract FraxCrossChainFarm is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
     /* ========== STATE VARIABLES ========== */
 
     // Instances
-    IveFXS private veFXS;
-    ERC20 private rewardsToken0;
-    ERC20 private rewardsToken1;
-    IUniswapV2Pair private stakingToken;
+    IveFXS public veFXS;
+    ERC20 public rewardsToken0;
+    ERC20 public rewardsToken1;
+    IFeederPool public stakingToken;
+
+    // FRAX
+    address public frax_address;
     
     // Constant for various precisions
     uint256 private constant MULTIPLIER_PRECISION = 1e18;
@@ -82,8 +86,12 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     // Reward tracking
+    uint256 public ttlRew0Owed;
+    uint256 public ttlRew1Owed;
+    uint256 public ttlRew0Paid;
+    uint256 public ttlRew1Paid;
     uint256 private rewardPerTokenStored0;
-    uint256 private rewardPerTokenStored1 = 0;
+    uint256 private rewardPerTokenStored1;
     mapping(address => uint256) public userRewardPerTokenPaid0;
     mapping(address => uint256) public userRewardPerTokenPaid1;
     mapping(address => uint256) public rewards0;
@@ -95,8 +103,8 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     mapping(address => uint256) private _locked_liquidity;
     mapping(address => uint256) private _combined_weights;
 
-    // Uniswap related
-    bool frax_is_token0;
+    // // Uniswap V2 ONLY
+    // bool frax_is_token0;
 
     // Stake tracking
     mapping(address => LockedStake[]) private lockedStakes;
@@ -111,12 +119,12 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     mapping(address => bool) public greylist;
 
     // Administrative booleans
-    bool public token1_rewards_on = true;
     bool public migrationsOn; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
     bool public stakesUnlocked; // Release locked stakes in case of system migration or emergency
     bool public withdrawalsPaused; // For emergencies
     bool public rewardsCollectionPaused; // For emergencies
     bool public stakingPaused; // For emergencies
+    bool public isInitialized;
 
     /* ========== STRUCTS ========== */
     
@@ -168,31 +176,25 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         address _rewardsToken1,
         address _stakingToken,
         address _frax_address,
-        address _timelock_address,
-        address _veFXS_address
+        address _timelock_address
     ) Owned(_owner){
+        frax_address = _frax_address;
         rewardsToken0 = ERC20(_rewardsToken0);
         rewardsToken1 = ERC20(_rewardsToken1);
-        stakingToken = IUniswapV2Pair(_stakingToken);
-        veFXS = IveFXS(_veFXS_address);
+        stakingToken = IFeederPool(_stakingToken);
         timelock_address = _timelock_address;
 
-        // 10 FXS a day
-        rewardRate0 = 0; // (uint256(3650e18)).div(365 * 86400); 
-
-        // 1 token1 a day
-        rewardRate1 = 0; // (uint256(365e18)).div(365 * 86400); 
-
-        // Uniswap related. Need to know which token frax is (0 or 1)
-        address token0 = stakingToken.token0();
-        if (token0 == _frax_address) frax_is_token0 = true;
-        else frax_is_token0 = false;
+        // // Uniswap V2 ONLY
+        // // Uniswap related. Need to know which token frax is (0 or 1)
+        // address token0 = stakingToken.token0();
+        // if (token0 == frax_address) frax_is_token0 = true;
+        // else frax_is_token0 = false;
         
         // Other booleans
         migrationsOn = false;
         stakesUnlocked = false;
 
-        // Initialization
+        // For initialization
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
     }
@@ -243,14 +245,27 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     function fraxPerLPToken() public view returns (uint256) {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
+
+        // Uniswap V2
+        // ============================================
+        // {
+        //     uint256 total_frax_reserves;
+        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+        //     if (frax_is_token0) total_frax_reserves = reserve0;
+        //     else total_frax_reserves = reserve1;
+
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        // }
+
+        // mStable
+        // ============================================
         {
             uint256 total_frax_reserves;
-            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-            if (frax_is_token0) total_frax_reserves = reserve0;
-            else total_frax_reserves = reserve1;
-
+            (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
+            total_frax_reserves = uint256(vaultData.vaultBalance);
             frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
         }
+
         return frax_per_lp_token;
     }
 
@@ -263,20 +278,23 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     }
 
     function veFXSMultiplier(address account) public view returns (uint256) {
-        // The claimer gets a boost depending on amount of veFXS they have relative to the amount of FRAX 'inside'
-        // of their locked LP tokens
-        uint256 veFXS_needed_for_max_boost = minVeFXSForMaxBoost(account);
-        if (veFXS_needed_for_max_boost > 0){ 
-            uint256 user_vefxs_fraction = (veFXS.balanceOf(account)).mul(MULTIPLIER_PRECISION).div(veFXS_needed_for_max_boost);
-            
-            uint256 vefxs_multiplier = ((user_vefxs_fraction).mul(vefxs_max_multiplier)).div(MULTIPLIER_PRECISION);
+        if (address(veFXS) != address(0)){
+            // The claimer gets a boost depending on amount of veFXS they have relative to the amount of FRAX 'inside'
+            // of their locked LP tokens
+            uint256 veFXS_needed_for_max_boost = minVeFXSForMaxBoost(account);
+            if (veFXS_needed_for_max_boost > 0){ 
+                uint256 user_vefxs_fraction = (veFXS.balanceOf(account)).mul(MULTIPLIER_PRECISION).div(veFXS_needed_for_max_boost);
+                
+                uint256 vefxs_multiplier = ((user_vefxs_fraction).mul(vefxs_max_multiplier)).div(MULTIPLIER_PRECISION);
 
-            // Cap the boost to the vefxs_max_multiplier
-            if (vefxs_multiplier > vefxs_max_multiplier) vefxs_multiplier = vefxs_max_multiplier;
+                // Cap the boost to the vefxs_max_multiplier
+                if (vefxs_multiplier > vefxs_max_multiplier) vefxs_multiplier = vefxs_max_multiplier;
 
-            return vefxs_multiplier;        
+                return vefxs_multiplier;        
+            }
+            else return 0; // This will happen with the first stake, when user_staked_frax is 0
         }
-        else return 0; // This will happen with the first stake, when user_staked_frax is 0
+        else return 0;
     }
 
     function calcCurCombinedWeight(address account) public view
@@ -506,44 +524,88 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     function _getReward(address rewardee, address destination_address) internal updateRewardAndBalance(rewardee, true) returns (uint256 reward0, uint256 reward1) {
         reward0 = rewards0[rewardee];
         reward1 = rewards1[rewardee];
+
         if (reward0 > 0) {
+            // uint256 curr_bal_0 = rewardsToken0.balanceOf(address(this));
+            // uint256 payout_amount_0 = 0;
+            // if (reward0 > curr_bal_0) payout_amount_0 = curr_bal_0;
+            // else payout_amount_0 = reward0;
+
+            // rewards0[rewardee] = (rewards0[rewardee]).sub(payout_amount_0); // Carry over unpaid rewards to the next period
+            // rewardsToken0.transfer(destination_address, payout_amount_0);
+            // ttlRew0Paid += payout_amount_0;
+            // emit RewardPaid(rewardee, payout_amount_0, address(rewardsToken0), destination_address);
             rewards0[rewardee] = 0;
             rewardsToken0.transfer(destination_address, reward0);
+            ttlRew0Paid += reward0;
             emit RewardPaid(rewardee, reward0, address(rewardsToken0), destination_address);
         }
-        // if (token1_rewards_on){
-            if (reward1 > 0) {
-                rewards1[rewardee] = 0;
-                rewardsToken1.transfer(destination_address, reward1);
-                emit RewardPaid(rewardee, reward1, address(rewardsToken1), destination_address);
-            }
-        // }
 
+        if (reward1 > 0) {
+            uint256 curr_bal_1 = rewardsToken1.balanceOf(address(this));
+            uint256 payout_amount_1 = 1;
+            if (reward1 > curr_bal_1) payout_amount_1 = curr_bal_1;
+            else payout_amount_1 = reward1;
+
+            rewards1[rewardee] = (rewards1[rewardee]).sub(payout_amount_1); // Carry over unpaid rewards to the next period
+            rewardsToken1.transfer(destination_address, payout_amount_1);
+            ttlRew1Paid += payout_amount_1;
+            emit RewardPaid(rewardee, payout_amount_1, address(rewardsToken1), destination_address);
+        }
+    }
+
+    // Quasi-notifyRewardAmount() logic
+    function syncRewards() internal {
+        uint256 curr_bal_0 = rewardsToken0.balanceOf(address(this));
+        uint256 curr_bal_1 = rewardsToken1.balanceOf(address(this));
+
+        // First see how much still hasn't been paid out
+        // This handles a rounding edge case
+        {
+            uint256 unpaid_0;
+            if (ttlRew0Paid > ttlRew0Owed) unpaid_0 = 0;
+            else unpaid_0 = ttlRew0Owed.sub(ttlRew0Paid);
+
+            if (curr_bal_0 > unpaid_0){
+                // There is enough reward0
+                uint256 overage_0 = curr_bal_0.sub(unpaid_0);
+                ttlRew0Owed += overage_0;
+                rewardRate0 = (overage_0).div(rewardsDuration);
+            }
+            else {
+                // Not enough reward0 to start a new period, so stop emitting it
+                rewardRate0 = 0;
+            }
+        }
+
+        {
+            uint256 unpaid_1;
+            if (ttlRew1Paid > ttlRew1Owed) unpaid_1 = 0;
+            else unpaid_1 = ttlRew1Owed.sub(ttlRew1Paid);
+
+            if (curr_bal_1 > unpaid_1){
+                // There is enough reward1
+                uint256 overage_1 = curr_bal_1.sub(unpaid_1);
+                ttlRew1Owed += overage_1;
+                rewardRate1 = (overage_1).div(rewardsDuration);
+            }
+            else {
+                // Not enough reward1 to start a new period, so stop emitting it
+                rewardRate1 = 0;
+            }
+        }
+
+        if (block.timestamp >= periodFinish) {
+            uint256 time_elapsed = uint256(block.timestamp.sub(periodFinish));
+            uint256 num_periods_elapsed = time_elapsed / rewardsDuration; // Floor division to the nearest period
+            periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(rewardsDuration));
+        }
     }
 
     // If the period expired, renew it
     function retroCatchUp() internal {
-        // Failsafe check
-        require(block.timestamp > periodFinish, "Period has not expired yet!");
-
-        // Ensure the provided reward amount is not more than the balance in the contract.
-        // This keeps the reward rate in the right range, preventing overflows due to
-        // very high values of rewardRate in the earned and rewardsPerToken functions;
-        // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
-        uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / rewardsDuration; // Floor division to the nearest period
-        uint balance0 = rewardsToken0.balanceOf(address(this));
-        uint balance1 = rewardsToken1.balanceOf(address(this));
-        require(rewardRate0.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance0, "Not enough FXS available");
         
-        if (token1_rewards_on){
-            require(rewardRate1.mul(rewardsDuration).mul(num_periods_elapsed + 1) <= balance1, "Not enough token1 available for rewards!");
-        }
-        
-        // uint256 old_lastUpdateTime = lastUpdateTime;
-        // uint256 new_lastUpdateTime = block.timestamp;
-
-        // lastUpdateTime = periodFinish;
-        periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(rewardsDuration));
+        syncRewards();
 
         (uint256 reward0, uint256 reward1) = rewardPerToken();
         rewardPerTokenStored0 = reward0;
@@ -554,10 +616,15 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     }
 
     function sync() public {
-        if (block.timestamp > periodFinish) {
+        require(isInitialized, "Contract not initialized");
+
+        if (block.timestamp >= periodFinish) {
             retroCatchUp();
         }
         else {
+            // // Make sure the rewardRates are synced to the current balance
+            // syncRewards();
+
             (uint256 reward0, uint256 reward1) = rewardPerToken();
             rewardPerTokenStored0 = reward0;
             rewardPerTokenStored1 = reward1;
@@ -566,6 +633,15 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
+
+    // Needed when first deploying the farm
+    // Make sure rewards are present
+    function initializeDefault() external onlyByOwnerOrGovernanceOrController {
+        require(!isInitialized, "Already initialized");
+        isInitialized = true;
+
+        emit DefaultInitialization();
+    }
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
     function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs, uint256 start_timestamp) external isMigrating {
@@ -605,7 +681,7 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
 
     function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernanceOrController {
         require(
-            periodFinish == 0 || block.timestamp > periodFinish,
+            periodFinish == 0 || block.timestamp >= periodFinish,
             "Reward period incomplete"
         );
         rewardsDuration = _rewardsDuration;
@@ -661,22 +737,6 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         rewardsCollectionPaused = !rewardsCollectionPaused;
     }
 
-    function setRewardRates(uint256 _new_rate0, uint256 _new_rate1, bool sync_too) external onlyByOwnerOrGovernanceOrController {
-        rewardRate0 = _new_rate0;
-        rewardRate1 = _new_rate1;
-
-        if (sync_too){
-            sync();
-        }
-    }
-
-    function toggleToken1Rewards() external onlyByOwnerOrGovernance {
-        if (token1_rewards_on) {
-            rewardRate1 = 0;
-        }
-        token1_rewards_on = !token1_rewards_on;
-    }
-
     function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
         timelock_address = _new_timelock;
     }
@@ -685,12 +745,17 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         controller_address = _controller_address;
     }
 
+    function setVeFXS(address _vefxs_address) external onlyByOwnerOrGovernance {
+        veFXS = IveFXS(_vefxs_address);
+    }
+
     /* ========== EVENTS ========== */
 
     event StakeLocked(address indexed user, uint256 amount, uint256 secs, bytes32 kek_id, address source_address);
     event WithdrawLocked(address indexed user, uint256 amount, bytes32 kek_id, address destination_address);
     event RewardPaid(address indexed user, uint256 reward, address token_address, address destination_address);
     event RewardsDurationUpdated(uint256 newDuration);
+    event DefaultInitialization();
     event Recovered(address token, uint256 amount);
     event RewardsPeriodRenewed(address token);
     event LockedStakeMaxMultiplierUpdated(uint256 multiplier);

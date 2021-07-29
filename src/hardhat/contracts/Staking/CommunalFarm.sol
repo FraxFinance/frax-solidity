@@ -50,7 +50,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     /* ========== STATE VARIABLES ========== */
 
     // Instances
-    ISaddleD4_LP private stakingToken;
+    ISaddleD4_LP public stakingToken;
     
     // Constant for various precisions
     uint256 private constant MULTIPLIER_PRECISION = 1e18;
@@ -146,8 +146,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         rewardRates = _rewardRates;
         rewardSymbols = _rewardSymbols;
 
-        lastUpdateTime = block.timestamp;
-
         for (uint256 i = 0; i < _rewardTokens.length; i++){ 
             // For fast token address -> token ID lookups later
             rewardTokenAddrToIdx[_rewardTokens[i]] = i;
@@ -161,6 +159,10 @@ contract CommunalFarm is Owned, ReentrancyGuard {
 
         // Other booleans
         stakesUnlocked = false;
+
+        // Initialization
+        lastUpdateTime = block.timestamp;
+        periodFinish = block.timestamp.add(rewardsDuration);
     }
 
     /* ========== VIEWS ========== */
@@ -591,12 +593,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         emit LockedStakeMinTime(_lock_time_min);
     }
 
-    function initializeDefault() external onlyByOwner {
-        lastUpdateTime = block.timestamp;
-        periodFinish = block.timestamp.add(rewardsDuration);
-        emit DefaultInitialization();
-    }
-
     function greylistAddress(address _address) external onlyByOwner {
         greylist[_address] = !(greylist[_address]);
     }
@@ -639,7 +635,6 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     event RewardsDurationUpdated(uint256 newDuration);
     event Recovered(address destination_address, address token, uint256 amount);
     event RewardsPeriodRenewed(address token);
-    event DefaultInitialization();
     event LockedStakeMaxMultiplierUpdated(uint256 multiplier);
     event LockedStakeTimeForMaxMultiplier(uint256 secs);
     event LockedStakeMinTime(uint256 secs);

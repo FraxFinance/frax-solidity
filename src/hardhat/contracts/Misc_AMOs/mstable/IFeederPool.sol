@@ -42,8 +42,8 @@ interface IFeederPool {
   // function data() external view returns (uint256 swapFee, uint256 redemptionFee, uint256 govFee, uint256 pendingFees, uint256 cacheSize, tuple ampData, tuple weightLimits);
   function decimals() external view returns (uint8);
   function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool);
-  function getBasset(address _bAsset) external view returns (BassetPersonal[] memory personal, BassetData[] memory data);
-  // function getBassets() external view returns (tuple[], tuple[] vaultData);
+  function getBasset(address _bAsset) external view returns (BassetPersonal memory personal, BassetData memory data);
+  function getBassets() external view returns (BassetPersonal[] memory personal, BassetData[] memory data);
   // function getConfig() external view returns (tuple config);
   // function getMintMultiOutput(address[] _inputs, uint256[] _inputQuantities) external view returns (uint256 mintOutput);
   function getMintOutput(address _input, uint256 _inputQuantity) external view returns (uint256 mintOutput);
