@@ -43,6 +43,7 @@ import '../Uniswap/TransferHelper.sol';
 // import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
 import '../Misc_AMOs/mstable/IFeederPool.sol';
 import "../Curve/IFraxGaugeController.sol";
+import "../Curve/FraxGaugeFXSRewardsDistributor.sol";
 import "../Utils/ReentrancyGuard.sol";
 
 // Inheritance
@@ -55,8 +56,9 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     /* ========== STATE VARIABLES ========== */
 
     // Instances
-    IveFXS private veFXS;
-    IFeederPool private stakingToken;
+    IveFXS private veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
+    IFeederPool public stakingToken;
+    FraxGaugeFXSRewardsDistributor public rewards_distributor;
 
     // FRAX
     address private constant frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
@@ -155,22 +157,25 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     constructor(
         address _owner,
         address _stakingToken,
-        address _veFXS_address,
+        address _rewards_distributor_address,
         string[] memory _rewardSymbols,
         address[] memory _gaugeControllers,
         address[] memory _rewardTokens,
         address[] memory _rewardManagers,
         uint256[] memory _rewardRatesManual
     ) Owned(_owner){
+        // mStable
         stakingToken = IFeederPool(_stakingToken);
-        veFXS = IveFXS(_veFXS_address);
+
+        // // Uniswap V2
+        // stakingToken = IUniswapV2Pair(_stakingToken);
+
+        rewards_distributor = FraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
 
         rewardTokens = _rewardTokens;
         gaugeControllers = _gaugeControllers;
         rewardRatesManual = _rewardRatesManual;
         rewardSymbols = _rewardSymbols;
-
-        lastUpdateTime = block.timestamp;
 
         for (uint256 i = 0; i < _rewardTokens.length; i++){ 
             // For fast token address -> token ID lookups later
@@ -191,6 +196,11 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
         // Other booleans
         stakesUnlocked = false;
+
+        // Initialization
+        lastUpdateTime = block.timestamp;
+        periodFinish = block.timestamp.add(rewardsDuration);
+        sync_gauge_weights(true);
     }
 
     /* ========== VIEWS ========== */
@@ -235,8 +245,8 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         // ============================================
         {
             uint256 total_frax_reserves;
-            (, IFeederPool.BassetData[] memory vaultData) = (stakingToken.getBasset(frax_address));
-            total_frax_reserves = uint256(vaultData[0].vaultBalance);
+            (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
+            total_frax_reserves = uint256(vaultData.vaultBalance);
             frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
         }
 
@@ -582,6 +592,9 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         // Failsafe check
         require(block.timestamp > periodFinish, "Period has not expired yet!");
 
+        // Pull in rewards from the rewards distributor
+        rewards_distributor.distributeReward(address(this));
+
         // Ensure the provided reward amount is not more than the balance in the contract.
         // This keeps the reward rate in the right range, preventing overflows due to
         // very high values of rewardRate in the earned and rewardsPerToken functions;
@@ -711,13 +724,6 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         emit LockedStakeMinTime(_lock_time_min);
     }
 
-    function initializeDefault() external onlyByOwner {
-        lastUpdateTime = block.timestamp;
-        periodFinish = block.timestamp.add(rewardsDuration);
-        sync_gauge_weights(true);
-        emit DefaultInitialization();
-    }
-
     function greylistAddress(address _address) external onlyByOwner {
         greylist[_address] = !(greylist[_address]);
     }
@@ -748,9 +754,10 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     }
 
     // The owner or the reward token managers can set reward rates 
-    function setGaugeController(address reward_token_address, address _gauge_controller_address, bool sync_too) external onlyTokenManagers(reward_token_address) {
+    function setGaugeController(address reward_token_address, address _rewards_distributor_address, address _gauge_controller_address, bool sync_too) external onlyTokenManagers(reward_token_address) {
         gaugeControllers[rewardTokenAddrToIdx[reward_token_address]] = _gauge_controller_address;
-        
+        rewards_distributor = FraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
+
         if (sync_too){
             sync();
         }
@@ -769,7 +776,6 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     event RewardsDurationUpdated(uint256 newDuration);
     event Recovered(address destination_address, address token, uint256 amount);
     event RewardsPeriodRenewed(address token);
-    event DefaultInitialization();
     event LockedStakeMaxMultiplierUpdated(uint256 multiplier);
     event LockedStakeTimeForMaxMultiplier(uint256 secs);
     event LockedStakeMinTime(uint256 secs);

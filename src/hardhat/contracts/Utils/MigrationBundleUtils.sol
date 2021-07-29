@@ -3,11 +3,11 @@ pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
 //import "../Staking/StakingRewards.sol";
-import "../Staking/FraxFarm_UniV3_veFXS.sol";
+import "../Staking/FraxUniV3Farm_Stable.sol";
 
 contract MigrationBundleUtils {
 
-	FraxFarm_UniV3_veFXS frax_usdc_staking_contract;
+	FraxUniV3Farm_Stable frax_usdc_staking_contract;
 	address owner_address;
 
     // Struct for the stake
@@ -26,7 +26,7 @@ contract MigrationBundleUtils {
 		address _v3_frax_usdc_staking_contract_address
 	) {
 		owner_address = creator_address;
-		frax_usdc_staking_contract = FraxFarm_UniV3_veFXS(_v3_frax_usdc_staking_contract_address);
+		frax_usdc_staking_contract = FraxUniV3Farm_Stable(_v3_frax_usdc_staking_contract_address);
 	}
 
 	modifier onlyByOwner {
@@ -39,7 +39,7 @@ contract MigrationBundleUtils {
 	}
 
 	function changeStakingAddress(address _new_staking_address) external onlyByOwner {
-		frax_usdc_staking_contract = FraxFarm_UniV3_veFXS(_new_staking_address);
+		frax_usdc_staking_contract = FraxUniV3Farm_Stable(_new_staking_address);
 	}
 
 	function checkParentHash(bytes32 _parent_hash) public view returns (bool) {
