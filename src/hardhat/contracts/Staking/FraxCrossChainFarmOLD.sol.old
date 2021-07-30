@@ -15,9 +15,7 @@ pragma experimental ABIEncoderV2;
 // No veFXS logic
 // Because of lack of cross-chain reading of the gauge controller's emission rate,
 // the contract sets its reward based on its token balance(s)
-// Rolling 7 day reward period idea credit goes to denett
-// rewardRate0 and rewardRate1 will look weird as people claim, but if you track the rewards actually emitted,
-// the numbers do check out
+// Rolling 7 week reward period idea credit goes to denett
 
 // Frax Finance: https://github.com/FraxFinance
 
@@ -87,7 +85,7 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
     uint256 public rewardRate1;
 
     // Reward period
-    uint256 public rewardsDuration = 604800; // 7 * 86400 (7 days). 
+    uint256 public rewardsDuration = 604800; // 7 * 86400  (7 days)
 
     // Reward tracking
     uint256 public ttlRew0Owed;
@@ -560,63 +558,80 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
 
     // Quasi-notifyRewardAmount() logic
     function syncRewards() internal {
-        // Get the current reward token balances
         uint256 curr_bal_0 = rewardsToken0.balanceOf(address(this));
         uint256 curr_bal_1 = rewardsToken1.balanceOf(address(this));
 
-        // Update the owed amounts based off the old reward rates
-        // Anything over a week is zeroed
+        // First see how much still hasn't been paid out
+        // This handles a rounding edge case
         {
-            uint256 eligible_elapsed_time = Math.min((block.timestamp).sub(lastUpdateTime), rewardsDuration);
-            ttlRew0Owed += rewardRate0.mul(eligible_elapsed_time);
-            ttlRew1Owed += rewardRate1.mul(eligible_elapsed_time);
-        }
+            uint256 unpaid_0;
+            if (ttlRew0Paid > ttlRew0Owed) unpaid_0 = 0;
+            else unpaid_0 = ttlRew0Owed.sub(ttlRew0Paid);
 
-        // Update the stored amounts too
-        {
-            (uint256 reward0, uint256 reward1) = rewardPerToken();
-            rewardPerTokenStored0 = reward0;
-            rewardPerTokenStored1 = reward1;
-        }
-
-        // Set the reward rates based on the free amount of tokens
-        {
-            // Don't count unpaid rewards as free
-            uint256 unpaid0 = ttlRew0Owed.sub(ttlRew0Paid);
-            uint256 unpaid1 = ttlRew1Owed.sub(ttlRew1Paid);
-
-            // Handle reward token0
-            if (curr_bal_0 <= unpaid0){
-                // token0 is depleted, so stop emitting
+            if (curr_bal_0 > unpaid_0){
+                // There is enough reward0
+                uint256 overage_0 = curr_bal_0.sub(unpaid_0);
+                ttlRew0Owed += overage_0;
+                rewardRate0 = (overage_0).div(rewardsDuration);
+            }
+            else {
+                // Not enough reward0 to start a new period, so stop emitting it
                 rewardRate0 = 0;
             }
-            else {
-                uint256 free0 = curr_bal_0.sub(unpaid0);
-                rewardRate0 = (free0).div(rewardsDuration);
-            }
+        }
 
-            // Handle reward token1
-            if (curr_bal_1 <= unpaid1){
-                // token1 is depleted, so stop emitting
+        {
+            uint256 unpaid_1;
+            if (ttlRew1Paid > ttlRew1Owed) unpaid_1 = 0;
+            else unpaid_1 = ttlRew1Owed.sub(ttlRew1Paid);
+
+            if (curr_bal_1 > unpaid_1){
+                // There is enough reward1
+                uint256 overage_1 = curr_bal_1.sub(unpaid_1);
+                ttlRew1Owed += overage_1;
+                rewardRate1 = (overage_1).div(rewardsDuration);
+            }
+            else {
+                // Not enough reward1 to start a new period, so stop emitting it
                 rewardRate1 = 0;
             }
-            else {
-                uint256 free1 = curr_bal_1.sub(unpaid1);
-                rewardRate1 = (free1).div(rewardsDuration);
-            }
+        }
+
+        if (block.timestamp >= periodFinish) {
+            uint256 time_elapsed = uint256(block.timestamp.sub(periodFinish));
+            uint256 num_periods_elapsed = time_elapsed / rewardsDuration; // Floor division to the nearest period
+            periodFinish = periodFinish.add((num_periods_elapsed.add(1)).mul(rewardsDuration));
         }
     }
 
+    // If the period expired, renew it
+    function retroCatchUp() internal {
+        
+        syncRewards();
+
+        (uint256 reward0, uint256 reward1) = rewardPerToken();
+        rewardPerTokenStored0 = reward0;
+        rewardPerTokenStored1 = reward1;
+        lastUpdateTime = lastTimeRewardApplicable();
+
+        emit RewardsPeriodRenewed(address(stakingToken));
+    }
 
     function sync() public {
         require(isInitialized, "Contract not initialized");
 
-        // Make sure the rewardRates are synced to the current FXS balance
-        syncRewards();
+        if (block.timestamp >= periodFinish) {
+            retroCatchUp();
+        }
+        else {
+            // // Make sure the rewardRates are synced to the current balance
+            // syncRewards();
 
-        // Rolling 8 days rewards period
-        lastUpdateTime = block.timestamp;
-        periodFinish = (block.timestamp).add(rewardsDuration);
+            (uint256 reward0, uint256 reward1) = rewardPerToken();
+            rewardPerTokenStored0 = reward0;
+            rewardPerTokenStored1 = reward1;
+            lastUpdateTime = lastTimeRewardApplicable();
+        }
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -664,6 +679,15 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         // Only the owner address can ever receive the recovery withdrawal
         ERC20(tokenAddress).transfer(owner, tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
+    }
+
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernanceOrController {
+        require(
+            periodFinish == 0 || block.timestamp >= periodFinish,
+            "Reward period incomplete"
+        );
+        rewardsDuration = _rewardsDuration;
+        emit RewardsDurationUpdated(rewardsDuration);
     }
 
     function setMultipliers(uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_per_frax_for_max_boost) external onlyByOwnerOrGovernance {
@@ -732,8 +756,10 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
     event StakeLocked(address indexed user, uint256 amount, uint256 secs, bytes32 kek_id, address source_address);
     event WithdrawLocked(address indexed user, uint256 amount, bytes32 kek_id, address destination_address);
     event RewardPaid(address indexed user, uint256 reward, address token_address, address destination_address);
+    event RewardsDurationUpdated(uint256 newDuration);
     event DefaultInitialization();
     event Recovered(address token, uint256 amount);
+    event RewardsPeriodRenewed(address token);
     event LockedStakeMaxMultiplierUpdated(uint256 multiplier);
     event LockedStakeTimeForMaxMultiplier(uint256 secs);
     event LockedStakeMinTime(uint256 secs);
