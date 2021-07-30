@@ -911,7 +911,7 @@ export const CONTRACT_ADDRESSES = {
       'mStable FRAX/mUSD': '0xB30a907084AC8a0d25dDDAB4E364827406Fd09f0',
     },
     staking_contracts: {
-      'mStable FRAX/mUSD': '0xE30521fe7f3bEB6Ad556887b50739d6C7CA667E6', // '0x2C37fb628b35dfdFD515d41B0cAAe11B542773C3',
+      'mStable FRAX/mUSD': '0x9FAf14fc9DE04aE53F710AA4f7C5b0EB753bE188', 
     }
   }
 }
