@@ -35,8 +35,8 @@ module.exports = async (deployer) => {
 	let CONTRACT_ADDRESSES;
 	let timelockInstance;
 	let migrationHelperInstance;
-	let fraxInstance;
-	let fxsInstance;
+	let frax_instance;
+	let fxs_instance;
     let cakeInstance;
 	
     // Staking
@@ -46,8 +46,8 @@ module.exports = async (deployer) => {
 
     // For mainnet
     CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
-    fraxInstance = await FraxMock.at(CONTRACT_ADDRESSES.bsc.main.FRAX);
-    fxsInstance = await FxsMock.at(CONTRACT_ADDRESSES.bsc.main.FXS);
+    frax_instance = await FraxMock.at(CONTRACT_ADDRESSES.bsc.main.FRAX);
+    fxs_instance = await FxsMock.at(CONTRACT_ADDRESSES.bsc.main.FXS);
     cakeInstance = await Cake.at(CONTRACT_ADDRESSES.bsc.reward_tokens.cake);
     impossibleFinanceInstance = await ImpossibleFinance.at(CONTRACT_ADDRESSES.bsc.reward_tokens.impossible_finance);
 
@@ -84,8 +84,8 @@ module.exports = async (deployer) => {
 
     // console.log("Curve AMO address:", curve_amo_instance.address);
 
-    FraxMock.setAsDeployed(fraxInstance);
-    FxsMock.setAsDeployed(fxsInstance);
+    FraxMock.setAsDeployed(frax_instance);
+    FxsMock.setAsDeployed(fxs_instance);
     Cake.setAsDeployed(cakeInstance);
     ImpossibleFinance.setAsDeployed(impossibleFinanceInstance);
     // Timelock.setAsDeployed(timelockInstance);

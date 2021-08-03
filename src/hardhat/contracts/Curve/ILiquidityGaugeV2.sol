@@ -3,7 +3,7 @@ pragma solidity >=0.6.11;
 
 // https://github.com/swervefi/swerve/blob/master/packages/swerve-contracts/interfaces/ILiquidityGauge.sol
 
-interface ILiquidityGauge {
+interface ILiquidityGaugeV2 {
 	// Public variables
     function minter() external view returns (address);
     function crv_token() external view returns (address);

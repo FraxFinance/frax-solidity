@@ -47,10 +47,8 @@ interface IFraxGaugeController {
 
     // Getter functions
     function gauge_types(address) external view returns (int128);
-    function gauge_relative_weight(address, uint256)
-        external
-        view
-        returns (uint256);
+    function gauge_relative_weight(address) external view returns (uint256);
+    function gauge_relative_weight(address, uint256) external view returns (uint256);
     function get_gauge_weight(address) external view returns (uint256);
     function get_type_weight(int128) external view returns (uint256);
     function get_total_weight() external view returns (uint256);
@@ -67,6 +65,9 @@ interface IFraxGaugeController {
     function checkpoint() external;
     function checkpoint_gauge(address) external;
     function global_emission_rate() external view returns (uint256);
+    function gauge_relative_weight_write(address)
+        external
+        returns (uint256);
     function gauge_relative_weight_write(address, uint256)
         external
         returns (uint256);
