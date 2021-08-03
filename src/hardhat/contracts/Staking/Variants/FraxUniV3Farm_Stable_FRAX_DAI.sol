@@ -9,12 +9,11 @@ contract FraxUniV3Farm_Stable_FRAX_DAI is FraxUniV3Farm_Stable {
         address _owner,
         address _lp_pool_address,
         address _timelock_address,
-        address _gauge_controller_address,
         address _rewards_distributor_address,
         int24 _uni_tick_lower,
         int24 _uni_tick_upper,
         int24 _uni_ideal_tick
     ) 
-    FraxUniV3Farm_Stable(_owner, _lp_pool_address, _timelock_address, _gauge_controller_address, _rewards_distributor_address, _uni_tick_lower, _uni_tick_upper, _uni_ideal_tick)
+    FraxUniV3Farm_Stable(_owner, _lp_pool_address, _timelock_address, _rewards_distributor_address, _uni_tick_lower, _uni_tick_upper, _uni_ideal_tick)
     {}
 }

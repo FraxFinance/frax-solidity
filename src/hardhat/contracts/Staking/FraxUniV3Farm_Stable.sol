@@ -56,10 +56,10 @@ contract FraxUniV3Farm_Stable is Owned, ReentrancyGuard {
     // Instances
     IveFXS private veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
     ERC20 private rewardsToken0 = ERC20(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
-    IFraxGaugeController private gauge_controller;
-    FraxGaugeFXSRewardsDistributor private rewards_distributor;
+    IFraxGaugeController public gauge_controller;
+    FraxGaugeFXSRewardsDistributor public rewards_distributor;
     IUniswapV3PositionsNFT private stakingTokenNFT = IUniswapV3PositionsNFT(0xC36442b4a4522E871399CD717aBDD847Ab11FE88); // UniV3 uses an NFT
-    IUniswapV3Pool private lp_pool;
+    IUniswapV3Pool public lp_pool;
 
     // Admin addresses
     address public timelock_address;
@@ -166,7 +166,6 @@ contract FraxUniV3Farm_Stable is Owned, ReentrancyGuard {
         address _owner,
         address _lp_pool_address,
         address _timelock_address,
-        address _gauge_controller_address,
         address _rewards_distributor_address,
         int24 _uni_tick_lower,
         int24 _uni_tick_upper,
@@ -174,7 +173,6 @@ contract FraxUniV3Farm_Stable is Owned, ReentrancyGuard {
     ) Owned(_owner) {
         rewards_distributor = FraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
         lp_pool = IUniswapV3Pool(_lp_pool_address); // call getPool(token0, token1, fee) on the Uniswap V3 Factory (0x1F98431c8aD98523631AE4a59f267346ea31F984) to get this otherwise
-        gauge_controller = IFraxGaugeController(_gauge_controller_address);
         timelock_address = _timelock_address;
 
         // Set the UniV3 addresses
@@ -198,9 +196,6 @@ contract FraxUniV3Farm_Stable is Owned, ReentrancyGuard {
         // Initialize
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
-        if (address(gauge_controller) != address(0)){
-            sync_gauge_weight(true);
-        }
     }
 
     /* ========== VIEWS ========== */
