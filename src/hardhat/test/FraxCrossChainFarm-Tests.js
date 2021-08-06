@@ -22,12 +22,12 @@ const e = require('express');
 
 // Uniswap related
 const SwapToPrice = artifacts.require("Uniswap/SwapToPrice");
-const UniswapV2ERC20 = artifacts.require("Uniswap/UniswapV2ERC20");
-const UniswapV2Factory = artifacts.require("Uniswap/UniswapV2Factory");
+const IUniswapV2ERC20 = artifacts.require("Uniswap/Interfaces/IUniswapV2ERC20");
+const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
 const UniswapV2Library = artifacts.require("Uniswap/UniswapV2Library");
 const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary");
-const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
-const UniswapV2Router02 = artifacts.require("Uniswap/UniswapV2Router02");
+const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
+const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
 
 // mStable related
 const IFeederPool = artifacts.require("Misc_AMOs/mstable/IFeederPool");
@@ -37,8 +37,6 @@ const IUniswapV3PositionsNFT = artifacts.require("Uniswap_V3/IUniswapV3Positions
 
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
-const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
-
 
 // Collateral Pools
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
@@ -237,11 +235,11 @@ contract('FraxCrossChainFarm-Tests-Tests', async (accounts) => {
 		frax_instance = await FRAXStablecoin.deployed();
 		fxs_instance = await FRAXShares.deployed();
 		wethInstance = await WETH.deployed();
-		usdc_instance = await FakeCollateral_USDC.deployed();
+		usdc_instance = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
 		iq_instance = await IQToken.deployed();
 
 		// Fill the Uniswap Router Instance
-		routerInstance = await UniswapV2Router02.deployed(); 
+		routerInstance = await IUniswapV2Router02.deployed(); 
 
 		// Fill the Timelock instance
 		timelockInstance = await Timelock.deployed(); 
@@ -259,7 +257,7 @@ contract('FraxCrossChainFarm-Tests-Tests', async (accounts) => {
 		pool_instance_USDC = await Pool_USDC.deployed();
 		
 		// Initialize the Uniswap Factory Instance
-		uniswapFactoryInstance = await UniswapV2Factory.deployed(); 
+		uniswapFactoryInstance = await IUniswapV2Factory.deployed(); 
 
 		// Initialize the Uniswap Libraries
 		// uniswapLibraryInstance = await UniswapV2OracleLibrary.deployed(); 
@@ -272,11 +270,11 @@ contract('FraxCrossChainFarm-Tests-Tests', async (accounts) => {
 		// swapToPriceInstance = await SwapToPrice.deployed(); 
 
 		// Get instances of the Uniswap pairs
-		pair_instance_FRAX_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/WETH"]);
-		pair_instance_FRAX_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/USDC"]);
-		pair_instance_FXS_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/FXS"]);
-		// pair_instance_FRAX_IQ = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/IQ"]);
-		// pair_instance_FXS_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FXS/USDC"]);
+		pair_instance_FRAX_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/WETH"]);
+		pair_instance_FRAX_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/USDC"]);
+		pair_instance_FXS_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/FXS"]);
+		// pair_instance_FRAX_IQ = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/IQ"]);
+		// pair_instance_FXS_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FXS/USDC"]);
 
 		// Get instances of the mStable pairs 
 		pair_instance_mUSD_GUSD = await IFeederPool.at("0x4fB30C5A3aC8e85bC32785518633303C4590752d");
@@ -373,9 +371,9 @@ contract('FraxCrossChainFarm-Tests-Tests', async (accounts) => {
 	});
 
 	it('Locked stakes', async () => {
-		console.log(chalk.hex("#ff8b3d")("===================================================================="));
-		console.log(chalk.hex("#ff8b3d")("TRY TESTS WITH LOCKED STAKES."));
-		console.log(chalk.hex("#ff8b3d")("===================================================================="));
+		console.log(chalk.hex("#ff8b3d").bold("===================================================================="));
+		console.log(chalk.hex("#ff8b3d").bold("TRY TESTS WITH LOCKED STAKES."));
+		console.log(chalk.hex("#ff8b3d").bold("===================================================================="));
 
 		const ACCOUNT_9_CLAIMS_EARLY = true;
 		let ACCOUNT_9_EARLY_EARN = [0, 0];

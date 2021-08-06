@@ -33,8 +33,8 @@ import "./olympus/IOlympusStaking.sol";
 import "./olympus/IOlympusBondDepository.sol";
 import "../Staking/Owned.sol";
 import '../Uniswap/TransferHelper.sol';
-import '../Uniswap/UniswapV2Router02_Modified.sol';
-import '../Uniswap/UniswapV2Pair.sol';
+import '../Uniswap/Interfaces/IUniswapV2Router02.sol';
+import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
 import "../Proxy/Initializable.sol";
 import "../Staking/Owned_Proxy.sol";
 
@@ -61,7 +61,7 @@ contract OHM_AMO_V2 is Initializable, Owned_Proxy {
 
     // Uniswap related
     IUniswapV2Router02 private UniRouterV2;
-    UniswapV2Pair private UNI_OHM_FRAX_PAIR;
+    IUniswapV2Pair private UNI_OHM_FRAX_PAIR;
     address payable public UNISWAP_ROUTER_ADDRESS;
 
     // OHM related
@@ -131,7 +131,7 @@ contract OHM_AMO_V2 is Initializable, Owned_Proxy {
         // Uniswap
         UNISWAP_ROUTER_ADDRESS = payable(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         UniRouterV2 = IUniswapV2Router02(UNISWAP_ROUTER_ADDRESS);
-        UNI_OHM_FRAX_PAIR = UniswapV2Pair(0x2dcE0dDa1C2f98e0F171DE8333c3c6Fe1BbF4877);
+        UNI_OHM_FRAX_PAIR = IUniswapV2Pair(0x2dcE0dDa1C2f98e0F171DE8333c3c6Fe1BbF4877);
 
         PRICE_PRECISION = 1e6;
         missing_decimals_collat = 12;

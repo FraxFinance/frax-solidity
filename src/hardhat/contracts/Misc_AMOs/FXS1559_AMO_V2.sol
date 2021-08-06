@@ -29,7 +29,7 @@ import "../Oracle/UniswapPairOracle.sol";
 import '../Uniswap/TransferHelper.sol';
 import '../Misc_AMOs/FraxPoolInvestorForV2.sol';
 import '../Misc_AMOs/InvestorAMO_V2.sol';
-import '../Uniswap/UniswapV2Router02_Modified.sol';
+import '../Uniswap/Interfaces/IUniswapV2Router02.sol';
 import "../Proxy/Initializable.sol";
 import "../Staking/Owned.sol";
 

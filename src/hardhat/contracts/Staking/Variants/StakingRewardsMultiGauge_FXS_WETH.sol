@@ -4,17 +4,17 @@ pragma experimental ABIEncoderV2;
 
 import "../StakingRewardsMultiGauge.sol";
 
-contract StakingRewardsMultiGauge_FRAX_MTA is StakingRewardsMultiGauge {
+contract StakingRewardsMultiGauge_FXS_WETH is StakingRewardsMultiGauge {
     constructor(
         address _owner,
         address _stakingToken, 
         address _rewards_distributor_address,
         string[] memory _rewardSymbols,
-        address[] memory _gaugeControllers,
         address[] memory _rewardTokens,
         address[] memory _rewardManagers,
-        uint256[] memory _rewardRates
+        uint256[] memory _rewardRates,
+        address[] memory _gaugeControllers
     ) 
-    StakingRewardsMultiGauge(_owner, _stakingToken, _rewards_distributor_address, _rewardSymbols, _gaugeControllers, _rewardTokens, _rewardManagers, _rewardRates)
+    StakingRewardsMultiGauge(_owner, _stakingToken, _rewards_distributor_address, _rewardSymbols, _rewardTokens, _rewardManagers, _rewardRates, _gaugeControllers)
     {}
 }

@@ -28,13 +28,15 @@ import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
 import "../ERC20/ERC20.sol";
 import "../ERC20/SafeERC20.sol";
-import "./FraxGaugeFXSRewardsDistributor.sol";
+import "./IFraxGaugeFXSRewardsDistributor.sol";
+import "../Misc_AMOs/harmony/IERC20EthManager.sol";
 import "../Misc_AMOs/polygon/IRootChainManager.sol";
 import "../Misc_AMOs/solana/IWormhole.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../Staking/Owned.sol";
+import "../Utils/ReentrancyGuard.sol";
 
-contract FraxMiddlemanGauge is Owned {
+contract FraxMiddlemanGauge is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -100,7 +102,7 @@ contract FraxMiddlemanGauge is Owned {
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     // Callable only by the rewards distributor
-    function pullAndBridge(uint256 reward_amount) external onlyRewardsDistributor {
+    function pullAndBridge(uint256 reward_amount) external onlyRewardsDistributor nonReentrant {
         require(bridge_address != address(0), "Invalid bridge address");
 
         // Pull in the rewards from the rewards distributor
@@ -110,16 +112,17 @@ contract FraxMiddlemanGauge is Owned {
         if (destination_address_override != address(0)) address_to_send_to = destination_address_override;
 
         if (bridge_type == 0) {
-            // Avalanche [Anyswap]
-            TransferHelper.safeTransfer(reward_token_address, address_to_send_to, reward_amount);
+            // Avalanche [AB]
+            TransferHelper.safeTransfer(reward_token_address, bridge_address, reward_amount);
         }
         else if (bridge_type == 1) {
             // BSC
-            TransferHelper.safeTransfer(reward_token_address, address_to_send_to, reward_amount);
+            TransferHelper.safeTransfer(reward_token_address, bridge_address, reward_amount);
         }
         else if (bridge_type == 2) {
-            // Fantom [Anyswap]
-            TransferHelper.safeTransfer(reward_token_address, address_to_send_to, reward_amount);
+            // Fantom [Multichain / Anyswap]
+            // Bridge is 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE
+            TransferHelper.safeTransfer(reward_token_address, bridge_address, reward_amount);
         }
         else if (bridge_type == 3) {
             // Polygon
@@ -158,6 +161,16 @@ contract FraxMiddlemanGauge is Owned {
             //     false
             // );
         }
+        else if (bridge_type == 5) {
+            // Harmony
+            // Bridge is at 0x2dccdb493827e15a5dc8f8b72147e6c4a5620857
+
+            // Approve
+            ERC20(reward_token_address).approve(bridge_address, reward_amount);
+
+            // lockToken
+            IERC20EthManager(bridge_address).lockToken(reward_token_address, reward_amount, address_to_send_to);
+        }
 
         fake_nonce += 1;
     }
@@ -183,6 +196,7 @@ contract FraxMiddlemanGauge is Owned {
         // 2: Fantom
         // 3: Polygon
         // 4: Solana
+        // 5: Harmony
         bridge_type = _bridge_type;
 
         // Overridden cross-chain destination address

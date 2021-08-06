@@ -38,7 +38,6 @@ import "../Curve/IveFXS.sol";
 import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
-import "../Frax/Frax.sol";
 // import '../Uniswap/Interfaces/IFeederPool.sol';
 import '../Misc_AMOs/mstable/IFeederPool.sol';
 import "../Utils/ReentrancyGuard.sol";
@@ -144,11 +143,6 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
 
     modifier onlyByOwnerOrGovernance() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
-        _;
-    }
-
-    modifier onlyByOwnerOrGovernanceOrMigrator() {
-        require(msg.sender == owner || msg.sender == timelock_address || valid_migrators[msg.sender] == true, "You are not the owner, governance timelock, or a migrator");
         _;
     }
 
@@ -530,15 +524,6 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         reward1 = rewards1[rewardee];
 
         if (reward0 > 0) {
-            // uint256 curr_bal_0 = rewardsToken0.balanceOf(address(this));
-            // uint256 payout_amount_0 = 0;
-            // if (reward0 > curr_bal_0) payout_amount_0 = curr_bal_0;
-            // else payout_amount_0 = reward0;
-
-            // rewards0[rewardee] = (rewards0[rewardee]).sub(payout_amount_0); // Carry over unpaid rewards to the next period
-            // rewardsToken0.transfer(destination_address, payout_amount_0);
-            // ttlRew0Paid += payout_amount_0;
-            // emit RewardPaid(rewardee, payout_amount_0, address(rewardsToken0), destination_address);
             rewards0[rewardee] = 0;
             rewardsToken0.transfer(destination_address, reward0);
             ttlRew0Paid += reward0;
@@ -546,15 +531,10 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         }
 
         if (reward1 > 0) {
-            uint256 curr_bal_1 = rewardsToken1.balanceOf(address(this));
-            uint256 payout_amount_1 = 1;
-            if (reward1 > curr_bal_1) payout_amount_1 = curr_bal_1;
-            else payout_amount_1 = reward1;
-
-            rewards1[rewardee] = (rewards1[rewardee]).sub(payout_amount_1); // Carry over unpaid rewards to the next period
-            rewardsToken1.transfer(destination_address, payout_amount_1);
-            ttlRew1Paid += payout_amount_1;
-            emit RewardPaid(rewardee, payout_amount_1, address(rewardsToken1), destination_address);
+            rewards1[rewardee] = 0;
+            rewardsToken1.transfer(destination_address, reward1);
+            ttlRew1Paid += reward1;
+            emit RewardPaid(rewardee, reward1, address(rewardsToken1), destination_address);
         }
     }
 

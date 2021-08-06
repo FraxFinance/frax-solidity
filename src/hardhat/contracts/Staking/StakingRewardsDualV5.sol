@@ -135,11 +135,6 @@ contract StakingRewardsDualV5 is Owned, ReentrancyGuard {
         _;
     }
 
-    modifier onlyByOwnerOrGovernanceOrMigrator() {
-        require(msg.sender == owner || msg.sender == timelock_address || valid_migrators[msg.sender] == true, "You are not the owner, governance timelock, or a migrator");
-        _;
-    }
-
     modifier onlyByOwnerOrGovernanceOrController() {
         require(msg.sender == owner || msg.sender == timelock_address || msg.sender == controller_address, "You are not the owner, governance timelock, or controller");
         _;
