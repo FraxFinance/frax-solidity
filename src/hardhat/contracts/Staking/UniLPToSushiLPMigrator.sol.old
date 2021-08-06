@@ -94,8 +94,8 @@ contract UniLPToSushiLPMigrator is IStakingRewards, RewardsDistributionRecipient
     // FRAXStablecoin private FRAX;
     IStakingRewardsDualForMigrator public SourceStakingContract;
     IStakingRewardsDualForMigrator public DestStakingContract;
-    UniswapV2Pair public SourceLPPair;
-    UniswapV2Pair public DestLPPair;
+    IUniswapV2Pair public SourceLPPair;
+    IUniswapV2Pair public DestLPPair;
 
     // address public owner_address;
     // address public timelock_address; // Governance timelock address
@@ -129,8 +129,8 @@ contract UniLPToSushiLPMigrator is IStakingRewards, RewardsDistributionRecipient
         source_lp_pair_addr = address(SourceStakingContract.stakingToken());
         dest_lp_pair_addr = address(DestStakingContract.stakingToken());
 
-        SourceLPPair = UniswapV2Pair(source_lp_pair_addr);
-        DestLPPair = UniswapV2Pair(dest_lp_pair_addr);
+        SourceLPPair = IUniswapV2Pair(source_lp_pair_addr);
+        DestLPPair = IUniswapV2Pair(dest_lp_pair_addr);
     }
 
     /* ========== VIEWS ========== */

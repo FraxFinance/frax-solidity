@@ -37,7 +37,7 @@ import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
 import "../Curve/IveFXS.sol";
 import "../Curve/IFraxGaugeController.sol";
-import "../Curve/FraxGaugeFXSRewardsDistributor.sol";
+import "../Curve/IFraxGaugeFXSRewardsDistributor.sol";
 import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
@@ -58,7 +58,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
     IveFXS private veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
     ERC20 private rewardsToken0 = ERC20(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
     IFraxGaugeController private gauge_controller;
-    FraxGaugeFXSRewardsDistributor private rewards_distributor;
+    IFraxGaugeFXSRewardsDistributor public rewards_distributor;
     IUniswapV3PositionsNFT private stakingTokenNFT = IUniswapV3PositionsNFT(0xC36442b4a4522E871399CD717aBDD847Ab11FE88); // UniV3 uses an NFT
     IUniswapV3Pool private lp_pool;
 
@@ -172,7 +172,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
         int24 _uni_ideal_tick,
         int24 _min_tick_range_width
     ) Owned(_owner) {
-        rewards_distributor = FraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
+        rewards_distributor = IFraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
         lp_pool = IUniswapV3Pool(_lp_pool_address); // call getPool(token0, token1, fee) on the Uniswap V3 Factory (0x1F98431c8aD98523631AE4a59f267346ea31F984) to get this otherwise
         gauge_controller = IFraxGaugeController(_gauge_controller_address);
         timelock_address = _timelock_address;
@@ -798,7 +798,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
     // Set gauge_controller to address(0) to fall back to the reward_rate_manual
     function setGaugeRelatedAddrs(address _gauge_controller_address, address _rewards_distributor_address) external onlyByOwnerOrGovernance {
         gauge_controller = IFraxGaugeController(_gauge_controller_address);
-        rewards_distributor = FraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
+        rewards_distributor = IFraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
     }
 
     /* ========== EVENTS ========== */

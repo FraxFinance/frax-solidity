@@ -26,13 +26,12 @@ const MigrationBundleUtils = artifacts.require("Utils/MigrationBundleUtils.sol")
 
 // Uniswap related
 const SwapToPrice = artifacts.require("Uniswap/SwapToPrice");
-const UniswapV2ERC20 = artifacts.require("Uniswap/UniswapV2ERC20");
-const UniswapV2Factory = artifacts.require("Uniswap/UniswapV2Factory");
+const IUniswapV2ERC20 = artifacts.require("Uniswap/Interfaces/IUniswapV2ERC20");
+const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
 const UniswapV2Library = artifacts.require("Uniswap/UniswapV2Library");
 const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary");
-const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
-const UniswapV2Router02 = artifacts.require("Uniswap/UniswapV2Router02");
-const UniswapV2Router02_Modified = artifacts.require("Uniswap/UniswapV2Router02_Modified");
+const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
+const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
 
 // Uniswap V3 related
 const IUniswapV3PositionsNFT = artifacts.require("Uniswap_V3/IUniswapV3PositionsNFT");
@@ -45,11 +44,10 @@ const OHM = artifacts.require("ERC20/Variants/OHM");
 const IQToken = artifacts.require("ERC20/Variants/IQToken");
 const FRAX3CRV_V2_Mock = artifacts.require("ERC20/Variants/FRAX3CRV_V2_Mock");
 const CRV_DAO_ERC20_Mock = artifacts.require("ERC20/Variants/CRV_DAO_ERC20_Mock");
+const ERC20 = artifacts.require("ERC20/ERC20");
 
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
-const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
-const FakeCollateral_USDT = artifacts.require("FakeCollateral/FakeCollateral_USDT");
 
 // Collateral Pools
 const FraxPoolLibrary = artifacts.require("Frax/Pools/FraxPoolLibrary");
@@ -95,7 +93,7 @@ const CommunalFarm_SaddleD4 = artifacts.require("Staking/Variants/CommunalFarm_S
 const FraxUniV3Farm_Stable_FRAX_USDC = artifacts.require("Staking/Variants/FraxUniV3Farm_Stable_FRAX_USDC");
 const FraxUniV3Farm_Stable_FRAX_DAI = artifacts.require("Staking/Variants/FraxUniV3Farm_Stable_FRAX_DAI");
 const FraxUniV3Farm_Volatile_FRAX_WETH = artifacts.require("Staking/Variants/FraxUniV3Farm_Volatile_FRAX_WETH");
-// const StakingRewardsMultiGauge_FRAX_MTA = artifacts.require("Staking/Variants/StakingRewardsMultiGauge_FRAX_MTA");
+const StakingRewardsMultiGauge_FXS_WETH = artifacts.require("Staking/Variants/StakingRewardsMultiGauge_FXS_WETH");
 const FraxMiddlemanGauge_FRAX_mUSD = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_FRAX_mUSD");
 
 // Migrator contracts
@@ -133,12 +131,12 @@ const CurveAMO_V3 = artifacts.require("Curve/CurveAMO_V3");
 const MetaImplementationUSD = artifacts.require("Curve/IMetaImplementationUSD");
 const LiquidityGaugeV2 = artifacts.require("Curve/ILiquidityGaugeV2");
 const FraxGaugeController = artifacts.require("Curve/IFraxGaugeController");
-const FraxGaugeFXSRewardsDistributor = artifacts.require("Curve/FraxGaugeFXSRewardsDistributor");
+const FraxGaugeFXSRewardsDistributor = artifacts.require("Curve/IFraxGaugeFXSRewardsDistributor");
 
 // Misc AMOs
-const FXS1559_AMO = artifacts.require("Misc_AMOs/FXS1559_AMO");
+const FXS1559_AMO = artifacts.require("Misc_AMOs/FXS1559_AMO_V2");
 const StakeDAO_AMO = artifacts.require("Misc_AMOs/StakeDAO_AMO");
-const OHM_AMO = artifacts.require("Misc_AMOs/OHM_AMO");
+const OHM_AMO = artifacts.require("Misc_AMOs/OHM_AMO_V2");
 const Convex_AMO = artifacts.require("Misc_AMOs/Convex_AMO");
 const RariFuseLendingAMO = artifacts.require("Misc_AMOs/RariFuseLendingAMO");
 
@@ -211,7 +209,7 @@ module.exports = async (deployer) => {
     let fraxUniV3Farm_Stable_FRAX_USDC;
     let fraxUniV3Farm_Stable_FRAX_DAI;
     let fraxUniV3Farm_Volatile_FRAX_WETH;
-    let stakingInstanceMultiGauge_FRAX_MTA;
+    let stakingInstanceMultiGauge_FXS_WETH;
     let fraxCrossChainFarm_FRAX_mUSD;
     let middlemanGauge_FRAX_mUSD;
 
@@ -275,6 +273,7 @@ module.exports = async (deployer) => {
     fnxInstance = await FNX.at(CONTRACT_ADDRESSES.mainnet.reward_tokens.fnx);
     ohmInstance = await OHM.at(CONTRACT_ADDRESSES.mainnet.reward_tokens.ohm);
     iqInstance = await IQToken.at(CONTRACT_ADDRESSES.mainnet.reward_tokens.iq);
+    usdc_instance = await ERC20.at(CONTRACT_ADDRESSES.mainnet.collateral.USDC);
     FRAX3CRV_V2_Instance = await MetaImplementationUSD.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Curve FRAX3CRV-f-2"]);
     mockCRVDAOInstance = await CRV_DAO_ERC20_Mock.at(CONTRACT_ADDRESSES.mainnet.reward_tokens.curve_dao);
     yUSDC_instance = await IyUSDC_V2_Partial.at(CONTRACT_ADDRESSES.mainnet.investments["yearn_yUSDC_V2"]);
@@ -284,20 +283,10 @@ module.exports = async (deployer) => {
     compController_instance = await ICompComptrollerPartial.at(CONTRACT_ADDRESSES.mainnet.investments["compound_controller"]);
 
     crFRAX_instance = await ICREAM_crFRAX.at(CONTRACT_ADDRESSES.mainnet.investments["cream_crFRAX"]);
-    CFNX_instance = await IFNX_CFNX.at(CONTRACT_ADDRESSES.mainnet.investments["fnx_CFNX"]);
-    IFNX_FPT_FRAX_instance = await IFNX_FPT_FRAX.at(CONTRACT_ADDRESSES.mainnet.investments["fnx_FPT_FRAX"]);
-    IFNX_FPT_B_instance = await IFNX_FPT_B.at(CONTRACT_ADDRESSES.mainnet.investments["fnx_FPT_B"]);
-    IFNX_IntegratedStake_instance = await IFNX_IntegratedStake.at(CONTRACT_ADDRESSES.mainnet.investments["fnx_IntegratedStake"]);
-    IFNX_MinePool_instance = await IFNX_MinePool.at(CONTRACT_ADDRESSES.mainnet.investments["fnx_MinePool"]);
-    IFNX_TokenConverter_instance = await IFNX_TokenConverter.at(CONTRACT_ADDRESSES.mainnet.investments["fnx_TokenConverter"]);
-    IFNX_ManagerProxy_instance = await IFNX_ManagerProxy.at(CONTRACT_ADDRESSES.mainnet.investments["fnx_ManagerProxy"]);
 
-    routerInstance = await UniswapV2Router02.at(CONTRACT_ADDRESSES.mainnet.uniswap_other.router); 
-    uniswapFactoryInstance = await UniswapV2Factory.at(CONTRACT_ADDRESSES.mainnet.uniswap_other.factory); 
+    routerInstance = await IUniswapV2Router02.at(CONTRACT_ADDRESSES.mainnet.uniswap_other.router); 
+    uniswapFactoryInstance = await IUniswapV2Factory.at(CONTRACT_ADDRESSES.mainnet.uniswap_other.factory); 
     uniswapV3PositionsNFTInstance = await IUniswapV3PositionsNFT.at(CONTRACT_ADDRESSES.mainnet.uniswap_other.v3_positions_NFT); 
-    swapToPriceInstance = await UniswapV2Factory.at(CONTRACT_ADDRESSES.mainnet.pricing.swap_to_price); 
-
-    usdc_instance = await FakeCollateral_USDC.at(CONTRACT_ADDRESSES.mainnet.collateral.USDC);
 
     oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.at(CONTRACT_ADDRESSES.mainnet.oracles.FRAX_WETH);
     oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.at(CONTRACT_ADDRESSES.mainnet.oracles.FRAX_USDC); 
@@ -540,34 +529,33 @@ module.exports = async (deployer) => {
     //     ],
     // );
 
-    // console.log("========== StakingRewardsMultiGauge_FRAX_MTA ==========");
-    // // StakingRewardsMultiGauge_FRAX_MTA 
-    // stakingInstanceMultiGauge_FRAX_MTA = await StakingRewardsMultiGauge_FRAX_MTA.new(
-    //     THE_ACCOUNTS[6], 
-    //     '0x4fB30C5A3aC8e85bC32785518633303C4590752d', // fPmUSD/GUSD since MTA
-    //     // CONTRACT_ADDRESSES.mainnet.pair_tokens['mStable FRAX/mUSD'],
-    //     CONTRACT_ADDRESSES.mainnet.main.veFXS,
-    //     [
-    //         "FXS",
-    //         "MTA",
-    //     ],
-    //     [
-    //         "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS. E18
-    //         "0xa3BeD4E1c75D00fa6f4E5E6922DB7261B5E9AcD2", // MTA. E18
-    //     ], 
-    //     [
-    //         "0x0000000000000000000000000000000000000000", // FXS Gauge Controller. E18
-    //         "0x0000000000000000000000000000000000000000", // MTA Gauge Controller. E18
-    //     ], 
-    //     [
-    //         "0xa448833bEcE66fD8803ac0c390936C79b5FD6eDf", // FXS Deployer
-    //         "0x19F12C947D25Ff8a3b748829D8001cA09a28D46d", // MTA Deployer
-    //     ],
-    //     [
-    //         11574074074074, // 1 FXS per day
-    //         23148148148148, // 2 MTA per day
-    //     ],
-    // );
+    console.log("========== StakingRewardsMultiGauge_FXS_WETH ==========");
+    // StakingRewardsMultiGauge_FXS_WETH 
+    stakingInstanceMultiGauge_FXS_WETH = await StakingRewardsMultiGauge_FXS_WETH.new(
+        THE_ACCOUNTS[6], 
+        CONTRACT_ADDRESSES.mainnet.pair_tokens['Sushi FXS/WETH'],
+        CONTRACT_ADDRESSES.mainnet.misc.frax_gauge_rewards_distributor,
+        [
+            "FXS",
+            "SUSHI",
+        ],
+        [
+            "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS. E18
+            "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2", // SUSHI. E18
+        ], 
+        [
+            "0x234D953a9404Bf9DbC3b526271d440cD2870bCd2", // FRAX [1]
+            "0x19F12C947D25Ff8a3b748829D8001cA09a28D46d", // SUSHI Deployer
+        ],
+        [
+            0, // 0 FXS per day. Uses the gauge
+            11574074074074, // 1 SUSHI per day
+        ],
+        [
+            "0x44ade9AA409B0C29463fF7fcf07c9d3c939166ce", // FXS Gauge Controller. E18
+            "0x0000000000000000000000000000000000000000", // SUSHI Gauge Controller. E18
+        ], 
+    );
 
     console.log("========== FraxPoolMultiCollateral ==========");
     // FraxPoolMultiCollateral 
@@ -622,15 +610,8 @@ module.exports = async (deployer) => {
     IcUSDC_Partial.setAsDeployed(cUSDC_instance);
     ICompComptrollerPartial.setAsDeployed(compController_instance);
     ICREAM_crFRAX.setAsDeployed(crFRAX_instance);
-    IFNX_CFNX.setAsDeployed(CFNX_instance);
-    IFNX_FPT_FRAX.setAsDeployed(IFNX_FPT_FRAX_instance);
-    IFNX_FPT_B.setAsDeployed(IFNX_FPT_B_instance);
-    IFNX_IntegratedStake.setAsDeployed(IFNX_IntegratedStake_instance);
-    IFNX_MinePool.setAsDeployed(IFNX_MinePool_instance);
-    IFNX_TokenConverter.setAsDeployed(IFNX_TokenConverter_instance);
-    IFNX_ManagerProxy.setAsDeployed(IFNX_ManagerProxy_instance);
-    UniswapV2Router02.setAsDeployed(routerInstance);
-    UniswapV2Factory.setAsDeployed(uniswapFactoryInstance);
+    IUniswapV2Router02.setAsDeployed(routerInstance);
+    IUniswapV2Factory.setAsDeployed(uniswapFactoryInstance);
     IUniswapV3PositionsNFT.setAsDeployed(uniswapV3PositionsNFTInstance);
     UniswapPairOracle_FRAX_WETH.setAsDeployed(oracle_instance_FRAX_WETH);
     UniswapPairOracle_FRAX_USDC.setAsDeployed(oracle_instance_FRAX_USDC);
@@ -638,7 +619,6 @@ module.exports = async (deployer) => {
     UniswapPairOracle_FXS_WETH.setAsDeployed(oracle_instance_FXS_WETH);
     UniswapPairOracle_FXS_USDC.setAsDeployed(oracle_instance_FXS_USDC);
     UniswapPairOracle_USDC_WETH.setAsDeployed(oracle_instance_USDC_WETH);
-    SwapToPrice.setAsDeployed(swapToPriceInstance);
     PIDController.setAsDeployed(pid_controller_instance);
     ReserveTracker.setAsDeployed(reserve_tracker_instance);
     // StakingRewards_FRAX_WETH.setAsDeployed(stakingInstance_FRAX_WETH);
@@ -650,7 +630,7 @@ module.exports = async (deployer) => {
     StakingRewardsDualV5_FRAX_OHM.setAsDeployed(stakingInstanceDualV5_FRAX_OHM);
     FraxCrossChainFarm_FRAX_mUSD.setAsDeployed(fraxCrossChainFarm_FRAX_mUSD);
     CommunalFarm_SaddleD4.setAsDeployed(communalFarmInstance_Saddle_D4);
-    // StakingRewardsMultiGauge_FRAX_MTA.setAsDeployed(stakingInstanceMultiGauge_FRAX_MTA);
+    StakingRewardsMultiGauge_FXS_WETH.setAsDeployed(stakingInstanceMultiGauge_FXS_WETH);
     FraxUniV3Farm_Stable_FRAX_USDC.setAsDeployed(fraxUniV3Farm_Stable_FRAX_USDC);
     FraxUniV3Farm_Stable_FRAX_DAI.setAsDeployed(fraxUniV3Farm_Stable_FRAX_DAI);
     FraxUniV3Farm_Volatile_FRAX_WETH.setAsDeployed(fraxUniV3Farm_Volatile_FRAX_WETH);
@@ -666,7 +646,6 @@ module.exports = async (deployer) => {
     // OHM_AMO.setAsDeployed(ohm_amo_instance);
     FraxLendingAMO.setAsDeployed(fraxLendingAMO_instance);
     RariFuseLendingAMO.setAsDeployed(rari_amo_instance);
-    FakeCollateral_USDC.setAsDeployed(usdc_instance);
     Pool_USDC.setAsDeployed(pool_instance_USDC);
     FraxPoolMultiCollateral.setAsDeployed(pool_instance_multicollateral);
     PoolvAMM_USDC.setAsDeployed(pool_instance_USDC_vAMM);

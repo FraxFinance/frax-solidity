@@ -23,13 +23,13 @@ const e = require('express');
 
 // Uniswap related
 const SwapToPrice = artifacts.require("Uniswap/SwapToPrice");
-const UniswapV2ERC20 = artifacts.require("Uniswap/UniswapV2ERC20");
-const UniswapV2Factory = artifacts.require("Uniswap/UniswapV2Factory");
+const IUniswapV2ERC20 = artifacts.require("Uniswap/Interfaces/IUniswapV2ERC20");
+const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
 const UniswapV2Library = artifacts.require("Uniswap/UniswapV2Library");
 const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary");
 const ERC20 = artifacts.require("ERC20/ERC20");
-const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
-const UniswapV2Router02 = artifacts.require("Uniswap/UniswapV2Router02");
+const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
+const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
 
 // Uniswap V3 related
 const IUniswapV3PositionsNFT = artifacts.require("Uniswap_V3/IUniswapV3PositionsNFT");
@@ -39,8 +39,6 @@ const ISaddleD4_LP = artifacts.require("Misc_AMOs/saddle/ISaddleD4_LP");
 
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
-const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
-
 
 // Collateral Pools
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
@@ -64,16 +62,9 @@ const FRAXStablecoin = artifacts.require("Frax/FRAXStablecoin");
 const FRAXShares = artifacts.require("FXS/FRAXShares");
 
 // Staking contracts
-const StakingRewards_FRAX_WETH = artifacts.require("Staking/Variants/Stake_FRAX_WETH.sol");
-const StakingRewards_FRAX_USDC = artifacts.require("Staking/Variants/Stake_FRAX_USDC.sol");
-const StakingRewards_FRAX_FXS = artifacts.require("Staking/Variants/Stake_FRAX_FXS.sol");
-const StakingRewardsDual_FRAX_FXS_Sushi = artifacts.require("Staking/Variants/StakingRewardsDual_FRAX_FXS_Sushi.sol");
-const StakingRewardsDual_FXS_WETH_Sushi = artifacts.require("Staking/Variants/StakingRewardsDual_FXS_WETH_Sushi.sol");
-// const StakingRewardsDual_FRAX3CRV = artifacts.require("Staking/Variants/StakingRewardsDual_FRAX3CRV.sol");
-const StakingRewardsDualV2_FRAX3CRV_V2 = artifacts.require("Staking/Variants/StakingRewardsDualV2_FRAX3CRV_V2.sol");
 const StakingRewardsDualV5_FRAX_OHM = artifacts.require("Staking/Variants/StakingRewardsDualV5_FRAX_OHM");
 const CommunalFarm_SaddleD4 = artifacts.require("Staking/Variants/CommunalFarm_SaddleD4");
-const FraxFarm_UniV3_veFXS_FRAX_USDC = artifacts.require("Staking/Variants/FraxFarm_UniV3_veFXS_FRAX_USDC");
+const FraxUniV3Farm_Stable_FRAX_USDC = artifacts.require("Staking/Variants/FraxUniV3Farm_Stable_FRAX_USDC");
 
 // Rewards token related
 const SushiToken = artifacts.require("ERC20/Variants/SushiToken");
@@ -90,7 +81,7 @@ const GovernorAlpha = artifacts.require("Governance/GovernorAlpha");
 const Timelock = artifacts.require("Governance/Timelock");
 
 // veFXS related
-const veFXS = artifacts.require("Curve/veFXS");
+const veFXS = artifacts.require("Curve/IveFXS");
 
 const ONE_MILLION_DEC18 = new BigNumber(1000000e18);
 const COLLATERAL_SEED_DEC18 = new BigNumber(508500e18);
@@ -128,21 +119,21 @@ contract('CommunalFarm-Tests', async (accounts) => {
 
 	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
 	const ADDRESS_WITH_LP_TOKENS = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
-	const ADDRESS_WITH_FXS = '0x8a97a178408d7027355a7ef144fdf13277cea776';
+	const ADDRESS_WITH_FXS = '0xF977814e90dA44bFA03b6295A0616a897441aceC';
 	const ADDRESS_WITH_TRIBE = '0xA06Ad2e0339375124D255F1fAb201964eF707E18';
 	const ADDRESS_WITH_ALCX = '0x000000000000000000000000000000000000dEaD';
 	const ADDRESS_WITH_LQTY = '0xF6323aD07c30D696D3e572cb4648814F1188372D';
 
 	// Initialize core contract instances
-	let fraxInstance;
-	let fxsInstance;
+	let frax_instance;
+	let fxs_instance;
 
 	// Initialize vesting instances
 	let vestingInstance;
 
 	// Initialize collateral instances
 	let wethInstance;
-	let col_instance_USDC;
+	let usdc_instance;
 	let sushi_instance;
 	let iq_instance;
 	let tribe_instance;
@@ -248,35 +239,23 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		MIGRATOR_ADDRESS = accounts[10];
 
 		// Fill core contract instances
-		fraxInstance = await FRAXStablecoin.deployed();
-		fxsInstance = await FRAXShares.deployed();
-
-		// vestingInstance = await TokenVesting.deployed();
-
-		// Fill collateral instances
+		frax_instance = await FRAXStablecoin.deployed();
+		fxs_instance = await FRAXShares.deployed();
 		wethInstance = await WETH.deployed();
-		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
-		sushi_instance = await SushiToken.deployed(); 
+		usdc_instance = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
 		iq_instance = await IQToken.deployed();
 		tribe_instance = await ERC20.at("0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B");
 		alcx_instance = await ERC20.at("0xdBdb4d16EdA451D0503b854CF79D55697F90c8DF");
 		lqty_instance = await ERC20.at("0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D");
 
 		// Fill the Uniswap Router Instance
-		routerInstance = await UniswapV2Router02.deployed(); 
+		routerInstance = await IUniswapV2Router02.deployed(); 
 
 		// Fill the Timelock instance
 		timelockInstance = await Timelock.deployed(); 
 
 		// Fill oracle instances
-		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.deployed();
-		oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.deployed(); 
-		oracle_instance_FRAX_FXS = await UniswapPairOracle_FRAX_FXS.deployed(); 
-		 
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
-		oracle_instance_FXS_USDC = await UniswapPairOracle_FXS_USDC.deployed();
-		
-		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.deployed();
 		
 		// Initialize ETH-USD Chainlink Oracle too
 		oracle_chainlink_ETH_USD = await ChainlinkETHUSDPriceConsumer.deployed();
@@ -288,7 +267,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		pool_instance_USDC = await Pool_USDC.deployed();
 		
 		// Initialize the Uniswap Factory Instance
-		uniswapFactoryInstance = await UniswapV2Factory.deployed(); 
+		uniswapFactoryInstance = await IUniswapV2Factory.deployed(); 
 
 		// Initialize the Uniswap Libraries
 		// uniswapLibraryInstance = await UniswapV2OracleLibrary.deployed(); 
@@ -301,12 +280,12 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		// swapToPriceInstance = await SwapToPrice.deployed(); 
 
 		// Get instances of the Uniswap pairs
-		pair_instance_FRAX_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/WETH"]);
-		pair_instance_FRAX_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/USDC"]);
-		pair_instance_FXS_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/FXS"]);
-		pair_instance_FRAX_IQ = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/IQ"]);
+		pair_instance_FRAX_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/WETH"]);
+		pair_instance_FRAX_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/USDC"]);
+		pair_instance_FXS_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/FXS"]);
+		pair_instance_FRAX_IQ = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/IQ"]);
 		pair_instance_Saddle_D4 = await ISaddleD4_LP.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Saddle alUSD/FEI/FRAX/LUSD"]);
-		// pair_instance_FXS_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FXS/USDC"]);
+		// pair_instance_FXS_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FXS/USDC"]);
 
 		// Get the mock CRVDAO Instance
 		mockCRVDAOInstance = await CRV_DAO_ERC20_Mock.deployed();
@@ -314,28 +293,12 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		// Get the mock FRAX3CRV Instance
 		// uniswapV3PositionsNFTInstance = await FRAX3CRV_Mock.deployed(); 
 
-		// Get the pair order results
-		isToken0Frax_FRAX_WETH = await oracle_instance_FRAX_WETH.token0();
-		isToken0Frax_FRAX_USDC = await oracle_instance_FRAX_USDC.token0();
-		isToken0Fxs_FXS_WETH = await oracle_instance_FXS_WETH.token0();
-		isToken0Fxs_FXS_USDC = await oracle_instance_FXS_USDC.token0();
-
-		isToken0Frax_FRAX_WETH = fraxInstance.address == isToken0Frax_FRAX_WETH;
-		isToken0Frax_FRAX_USDC = fraxInstance.address == isToken0Frax_FRAX_USDC;
-		isToken0Fxs_FXS_WETH = fxsInstance.address == isToken0Fxs_FXS_WETH;
-		isToken0Fxs_FXS_USDC = fxsInstance.address == isToken0Fxs_FXS_USDC;
+		
 
 		// Fill the staking rewards instances
-		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
-		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.deployed();
-		// stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.deployed();
-		// stakingInstanceDual_FRAX_FXS_Sushi = await StakingRewardsDual_FRAX_FXS_Sushi.deployed();
-		// stakingInstanceDual_FXS_WETH_Sushi = await StakingRewardsDual_FXS_WETH_Sushi.deployed();
-		// stakingInstanceDual_FRAX3CRV = await StakingRewardsDual_FRAX3CRV.deployed();
-		// stakingInstanceDualV2_FRAX3CRV_V2 = await StakingRewardsDualV2_FRAX3CRV_V2.deployed();
 		// stakingInstanceDualV5_FRAX_OHM = await StakingRewardsDualV5_FRAX_OHM.deployed();
 		communalFarmInstance_Saddle_D4 = await CommunalFarm_SaddleD4.deployed();
-		// fraxFarmInstance_FRAX_USDC = await FraxFarm_UniV3_veFXS_FRAX_USDC.deployed();
+		// fraxFarmInstance_FRAX_USDC = await FraxUniV3Farm_Stable_FRAX_USDC.deployed();
 
 		// veFXS_instance = await veFXS.deployed();
 	});
@@ -352,7 +315,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("=========================Initialization=========================")
 
 		// Refresh oracle
-		try{
+		try {
 			await oracle_instance_FXS_WETH.update();
 		}
 		catch (err) {}
@@ -364,7 +327,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FRAX]
 		});
 
-		await fraxInstance.transfer(communalFarmInstance_Saddle_D4.address, new BigNumber("1e18"), { from: ADDRESS_WITH_FRAX });
+		await frax_instance.transfer(communalFarmInstance_Saddle_D4.address, new BigNumber("1e18"), { from: ADDRESS_WITH_FRAX });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -378,7 +341,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FXS]
 		});
 
-		await fxsInstance.transfer(communalFarmInstance_Saddle_D4.address, new BigNumber("10000e18"), { from: ADDRESS_WITH_FXS });
+		await fxs_instance.transfer(communalFarmInstance_Saddle_D4.address, new BigNumber("10000e18"), { from: ADDRESS_WITH_FXS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -459,8 +422,8 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		await utilities.printCalcCurCombinedWeightNoVeFXS(communalFarmInstance_Saddle_D4, accounts[9]);
 
 		// Print FXS and veFXS balances
-		console.log("accounts[1] FXS balance:", new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
-		console.log("accounts[9] FXS balance:", new BigNumber(await fxsInstance.balanceOf(accounts[9])).div(BIG18).toNumber());
+		console.log("accounts[1] FXS balance:", new BigNumber(await fxs_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
+		console.log("accounts[9] FXS balance:", new BigNumber(await fxs_instance.balanceOf(accounts[9])).div(BIG18).toNumber());
 		
 		// Need to approve first so the staking can use transfer
 		const uni_pool_locked_1 = new BigNumber("75e17");
@@ -470,8 +433,8 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, uni_pool_locked_9, { from: accounts[9] });
 		
 		// // Note the FRAX amounts before
-		// const frax_before_1_locked = new BigNumber(await fraxInstance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		// const frax_before_9_locked = new BigNumber(await fraxInstance.balanceOf.call(accounts[9])).div(BIG18);
+		// const frax_before_1_locked = new BigNumber(await frax_instance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		// const frax_before_9_locked = new BigNumber(await frax_instance.balanceOf.call(accounts[9])).div(BIG18);
 		// console.log("FRAX_USDC Uniswap Liquidity Tokens BEFORE [1]: ", frax_before_1_locked.toString());
 		// console.log("FRAX_USDC Uniswap Liquidity Tokens BEFORE [9]: ", frax_before_9_locked.toString());
 
@@ -525,7 +488,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		await time.advanceBlock();
 
 		// Refresh oracle
-		try{
+		try {
 			await oracle_instance_FXS_WETH.update();
 		}
 		catch (err) {}
@@ -590,7 +553,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		await time.advanceBlock();
 
 		// Refresh oracle
-		try{
+		try {
 			await oracle_instance_FXS_WETH.update();
 		}
 		catch (err) {}
@@ -664,8 +627,8 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		const uni_pool_lock_boundary_check_amount = new BigNumber("1e18");
 
 		// Get starting FXS balances
-		const starting_bal_fxs_1 =  new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
-		const starting_bal_fxs_9 = new BigNumber(await fxsInstance.balanceOf(accounts[9])).div(BIG18).toNumber();
+		const starting_bal_fxs_1 =  new BigNumber(await fxs_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const starting_bal_fxs_9 = new BigNumber(await fxs_instance.balanceOf(accounts[9])).div(BIG18).toNumber();
 		
 		// Approve
 		await pair_instance_Saddle_D4.approve(communalFarmInstance_Saddle_D4.address, uni_pool_lock_boundary_check_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -701,8 +664,8 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		await communalFarmInstance_Saddle_D4.getReward({ from: accounts[9] });
 
 		// Fetch the new balances
-		const ending_bal_fxs_1 =  new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
-		const ending_bal_fxs_9 = new BigNumber(await fxsInstance.balanceOf(accounts[9])).div(BIG18).toNumber();
+		const ending_bal_fxs_1 =  new BigNumber(await fxs_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const ending_bal_fxs_9 = new BigNumber(await fxs_instance.balanceOf(accounts[9])).div(BIG18).toNumber();
 
 		// Print the balance changes. Should be close to the same
 		console.log("account[1] FXS difference: ", ending_bal_fxs_1 - starting_bal_fxs_1);
@@ -747,7 +710,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		const test_recovery_amount = new BigNumber("1e18");
 
 		console.log("Try recovering a non-reward token as the owner");
-		await communalFarmInstance_Saddle_D4.recoverERC20(fraxInstance.address, test_recovery_amount, { from: STAKING_OWNER });
+		await communalFarmInstance_Saddle_D4.recoverERC20(frax_instance.address, test_recovery_amount, { from: STAKING_OWNER });
 
 		console.log("Set a reward rate as the owner");
 		await communalFarmInstance_Saddle_D4.setRewardRate(staking_reward_tokens_addresses[3], 1000, true, { from: STAKING_OWNER });

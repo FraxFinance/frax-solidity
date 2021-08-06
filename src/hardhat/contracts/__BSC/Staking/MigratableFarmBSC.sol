@@ -113,11 +113,6 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
         _;
     }
 
-    modifier onlyByOwnerOrGovernanceOrMigrator() {
-        require(msg.sender == owner_address || msg.sender == timelock_address || valid_migrators[msg.sender] == true, "You are not the owner, governance timelock, or a migrator");
-        _;
-    }
-
     modifier isMigrating() {
         require(migrationsOn == true, "Not in migration");
         _;

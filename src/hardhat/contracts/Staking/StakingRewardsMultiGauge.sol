@@ -40,10 +40,10 @@ import "../ERC20/ERC20.sol";
 import "../Curve/IveFXS.sol";
 import "../ERC20/SafeERC20.sol";
 import '../Uniswap/TransferHelper.sol';
-// import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
-import '../Misc_AMOs/mstable/IFeederPool.sol';
+import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
+// import '../Misc_AMOs/mstable/IFeederPool.sol';
 import "../Curve/IFraxGaugeController.sol";
-import "../Curve/FraxGaugeFXSRewardsDistributor.sol";
+import "../Curve/IFraxGaugeFXSRewardsDistributor.sol";
 import "../Utils/ReentrancyGuard.sol";
 
 // Inheritance
@@ -57,8 +57,14 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
     // Instances
     IveFXS private veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
-    IFeederPool public stakingToken;
-    FraxGaugeFXSRewardsDistributor public rewards_distributor;
+    
+    // Uniswap V2
+    IUniswapV2Pair public stakingToken;
+
+    // // mStable
+    // IFeederPool public stakingToken;
+
+    IFraxGaugeFXSRewardsDistributor public rewards_distributor;
 
     // FRAX
     address private constant frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
@@ -105,8 +111,14 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     mapping(address => uint256) private _locked_liquidity;
     mapping(address => uint256) private _combined_weights;
 
-    // // Uniswap V2 ONLY
-    // bool frax_is_token0;
+    // List of valid migrators (set by governance)
+    mapping(address => bool) public valid_migrators;
+
+    // Stakers set which migrator(s) they want to use
+    mapping(address => mapping(address => bool)) public staker_allowed_migrators;
+
+    // Uniswap V2 ONLY
+    bool frax_is_token0;
 
     // Stake tracking
     mapping(address => LockedStake[]) private lockedStakes;
@@ -116,6 +128,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
     // Administrative booleans
     bool public stakesUnlocked; // Release locked stakes in case of emergency
+    bool public migrationsOn; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
     bool public withdrawalsPaused; // For emergencies
     bool public rewardsCollectionPaused; // For emergencies
     bool public stakingPaused; // For emergencies
@@ -142,6 +155,12 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         _;
     }
 
+
+    modifier isMigrating() {
+        require(migrationsOn == true, "Not in migration");
+        _;
+    }
+
     modifier notStakingPaused() {
         require(stakingPaused == false, "Staking is paused");
         _;
@@ -159,18 +178,18 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         address _stakingToken,
         address _rewards_distributor_address,
         string[] memory _rewardSymbols,
-        address[] memory _gaugeControllers,
         address[] memory _rewardTokens,
         address[] memory _rewardManagers,
-        uint256[] memory _rewardRatesManual
+        uint256[] memory _rewardRatesManual,
+        address[] memory _gaugeControllers
     ) Owned(_owner){
-        // mStable
-        stakingToken = IFeederPool(_stakingToken);
+        // // mStable
+        // stakingToken = IFeederPool(_stakingToken);
 
-        // // Uniswap V2
-        // stakingToken = IUniswapV2Pair(_stakingToken);
+        // Uniswap V2
+        stakingToken = IUniswapV2Pair(_stakingToken);
 
-        rewards_distributor = FraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
+        rewards_distributor = IFraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
 
         rewardTokens = _rewardTokens;
         gaugeControllers = _gaugeControllers;
@@ -186,13 +205,19 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
             // Initialize the reward managers
             rewardManagers[_rewardTokens[i]] = _rewardManagers[i];
+
+            // Push in empty relative weights to initialize the array
+            last_gauge_relative_weights.push(0);
+
+            // Push in empty time totals to initialize the array
+            last_gauge_time_totals.push(0);
         }
 
-        // // Uniswap V2 ONLY
-        // // Uniswap related. Need to know which token frax is (0 or 1)
-        // address token0 = stakingToken.token0();
-        // if (token0 == frax_address) frax_is_token0 = true;
-        // else frax_is_token0 = false;
+        // Uniswap V2 ONLY
+        // Uniswap related. Need to know which token frax is (0 or 1)
+        address token0 = stakingToken.token0();
+        if (token0 == frax_address) frax_is_token0 = true;
+        else frax_is_token0 = false;
 
         // Other booleans
         stakesUnlocked = false;
@@ -200,7 +225,9 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         // Initialization
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
-        sync_gauge_weights(true);
+
+        // // Need to call eventually
+        // sync_gauge_weights(true);
     }
 
     /* ========== VIEWS ========== */
@@ -232,23 +259,23 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
         // Uniswap V2
         // ============================================
-        // {
-        //     uint256 total_frax_reserves;
-        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-        //     if (frax_is_token0) total_frax_reserves = reserve0;
-        //     else total_frax_reserves = reserve1;
-
-        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
-        // }
-
-        // mStable
-        // ============================================
         {
             uint256 total_frax_reserves;
-            (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
-            total_frax_reserves = uint256(vaultData.vaultBalance);
+            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+            if (frax_is_token0) total_frax_reserves = reserve0;
+            else total_frax_reserves = reserve1;
+
             frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
         }
+
+        // // mStable
+        // // ============================================
+        // {
+        //     uint256 total_frax_reserves;
+        //     (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
+        //     total_frax_reserves = uint256(vaultData.vaultBalance);
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        // }
 
         return frax_per_lp_token;
     }
@@ -421,6 +448,18 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
+    // Staker can allow a migrator 
+    function stakerAllowMigrator(address migrator_address) external {
+        require(valid_migrators[migrator_address], "Invalid migrator address");
+        staker_allowed_migrators[msg.sender][migrator_address] = true; 
+    }
+
+    // Staker can disallow a previously-allowed migrator  
+    function stakerDisallowMigrator(address migrator_address) external {
+        // Delete from the mapping
+        delete staker_allowed_migrators[msg.sender][migrator_address];
+    }
+
     function _updateRewardAndBalance(address account, bool sync_too) internal {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
         if (sync_too){
@@ -526,7 +565,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
-    // functions like withdraw()
+    // functions like withdraw(), migrator_withdraw_unlocked() and migrator_withdraw_locked()
     function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id) internal  {
         // Collect rewards first and then update the balances
         _getReward(staker_address, destination_address);
@@ -542,7 +581,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
             }
         }
         require(thisStake.kek_id == kek_id, "Stake not found");
-        require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true, "Stake is still locked!");
+        require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true || valid_migrators[msg.sender] == true, "Stake is still locked!");
 
         uint256 liquidity = thisStake.liquidity;
 
@@ -589,9 +628,6 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
     // If the period expired, renew it
     function retroCatchUp() internal {
-        // Failsafe check
-        require(block.timestamp > periodFinish, "Period has not expired yet!");
-
         // Pull in rewards from the rewards distributor
         rewards_distributor.distributeReward(address(this));
 
@@ -648,7 +684,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         // Sync the gauge weight, if applicable
         sync_gauge_weights(false);
 
-        if (block.timestamp > periodFinish) {
+        if (block.timestamp >= periodFinish) {
             retroCatchUp();
         }
         else {
@@ -657,6 +693,31 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
+
+    // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
+    function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs, uint256 start_timestamp) external isMigrating {
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        _stakeLocked(staker_address, msg.sender, amount, secs, start_timestamp);
+    }
+
+    // Used for migrations
+    function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        _withdrawLocked(staker_address, msg.sender, kek_id);
+    }
+
+    // Adds supported migrator address 
+    function addMigrator(address migrator_address) external onlyByOwner {
+        valid_migrators[migrator_address] = true;
+    }
+
+    // Remove a migrator address
+    function removeMigrator(address migrator_address) external onlyByOwner {
+        require(valid_migrators[migrator_address] == true, "Address nonexistant");
+        
+        // Delete from the mapping
+        delete valid_migrators[migrator_address];
+    }
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTokenManagers(tokenAddress) {
@@ -736,6 +797,10 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         stakingPaused = !stakingPaused;
     }
 
+    function toggleMigrations() external onlyByOwner {
+        migrationsOn = !migrationsOn;
+    }
+
     function toggleWithdrawals() external onlyByOwner {
         withdrawalsPaused = !withdrawalsPaused;
     }
@@ -756,7 +821,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     // The owner or the reward token managers can set reward rates 
     function setGaugeController(address reward_token_address, address _rewards_distributor_address, address _gauge_controller_address, bool sync_too) external onlyTokenManagers(reward_token_address) {
         gaugeControllers[rewardTokenAddrToIdx[reward_token_address]] = _gauge_controller_address;
-        rewards_distributor = FraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
+        rewards_distributor = IFraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
 
         if (sync_too){
             sync();

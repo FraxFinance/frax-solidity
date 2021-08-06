@@ -31,16 +31,17 @@ import "./IFraxGaugeController.sol";
 import "./FraxMiddlemanGauge.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../Staking/Owned.sol";
+import "../Utils/ReentrancyGuard.sol";
 
-contract FraxGaugeFXSRewardsDistributor is Owned {
+contract FraxGaugeFXSRewardsDistributor is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
     /* ========== STATE VARIABLES ========== */
 
     // Instances and addresses
-    address private reward_token_address;
-    IFraxGaugeController private gauge_controller;
+    address public reward_token_address;
+    IFraxGaugeController public gauge_controller;
 
     // Admin addresses
     address public timelock_address;
@@ -106,10 +107,10 @@ contract FraxGaugeFXSRewardsDistributor is Owned {
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     // Callable by anyone
-    function distributeReward(address gauge_address) public isDistributing returns (uint256 weeks_elapsed, uint256 reward_tally) {
+    function distributeReward(address gauge_address) public isDistributing nonReentrant returns (uint256 weeks_elapsed, uint256 reward_tally) {
         require(gauge_whitelist[gauge_address], "Gauge not whitelisted");
         
-        // Calculate the elapsed time in weeks. Truncation desired
+        // Calculate the elapsed time in weeks. 
         uint256 last_time_paid = last_time_gauge_paid[gauge_address];
 
         // Edge case for first reward for this gauge
@@ -117,6 +118,7 @@ contract FraxGaugeFXSRewardsDistributor is Owned {
             weeks_elapsed = 1;
         }
         else {
+            // Truncation desired
             weeks_elapsed = (block.timestamp).sub(last_time_gauge_paid[gauge_address]) / ONE_WEEK;
 
             // Return early here for 0 weeks instead of throwing, as it could have bad effects in other contracts
