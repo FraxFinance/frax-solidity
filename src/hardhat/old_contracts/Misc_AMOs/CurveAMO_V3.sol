@@ -48,7 +48,6 @@ contract CurveAMO_V4 is AccessControl, Initializable {
     address private three_pool_address;
     address private three_pool_token_address;
     address private fxs_contract_address;
-    address private collateral_token_address;
     address private crv_address;
 
     address public frax3crv_metapool_address;
@@ -120,8 +119,7 @@ contract CurveAMO_V4 is AccessControl, Initializable {
     ) public payable initializer {
         FRAX = FRAXStablecoin(_frax_contract_address);
         fxs_contract_address = _fxs_contract_address;
-        collateral_token_address = _collateral_address;
-        collateral_token = ERC20(_collateral_address);
+        collateral_token = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
         crv_address = 0xD533a949740bb3306d119CC777fa900bA034cd52;
         missing_decimals = uint(18).sub(collateral_token.decimals());
         timelock_address = _timelock_address;

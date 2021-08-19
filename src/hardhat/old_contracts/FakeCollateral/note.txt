@@ -1,0 +1,1 @@
+Truffle doesn't really allow multiple versions of a contract to be deployed, so you have to kind of jank it and duplicate code.

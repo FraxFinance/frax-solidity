@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../StakingRewardsDualV2.sol";
 
 contract StakingRewardsDualV2_FRAX3CRV_V2 is StakingRewardsDualV2 {
-    constructor(
+    constructor (
         address _owner,
         address _rewardsToken0,
         address _rewardsToken1,

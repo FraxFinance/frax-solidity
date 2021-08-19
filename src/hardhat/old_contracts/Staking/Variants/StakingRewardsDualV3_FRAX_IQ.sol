@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../StakingRewardsDualV3.sol";
 
 contract StakingRewardsDualV3_FRAX_IQ is StakingRewardsDualV3 {
-    constructor(
+    constructor (
         address _owner,
         address _rewardsToken0,
         address _rewardsToken1,

@@ -107,7 +107,7 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _rewardsToken0,
         address _rewardsToken1,
@@ -384,14 +384,14 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         // Admin cannot withdraw the staking token from the contract
         require(tokenAddress != address(stakingToken));
         ERC20(tokenAddress).transfer(owner_address, tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
 
-    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernance {
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnGov {
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
             "Reward period incomplete"
@@ -400,7 +400,7 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
         emit RewardsDurationUpdated(rewardsDuration);
     }
 
-    function setMultipliers(uint256 _locked_stake_max_multiplier, uint256 _cr_boost_max_multiplier) external onlyByOwnerOrGovernance {
+    function setMultipliers(uint256 _locked_stake_max_multiplier, uint256 _cr_boost_max_multiplier) external onlyByOwnGov {
         require(_locked_stake_max_multiplier >= 1, "Multiplier must be greater than or equal to 1");
         require(_cr_boost_max_multiplier >= 1, "Max CR Boost must be greater than or equal to 1");
 
@@ -411,7 +411,7 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
         emit LockedStakeMaxMultiplierUpdated(locked_stake_max_multiplier);
     }
 
-    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier, uint256 _locked_stake_min_time) external onlyByOwnerOrGovernance {
+    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier, uint256 _locked_stake_min_time) external onlyByOwnGov {
         require(_locked_stake_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
         require(_locked_stake_min_time >= 1, "Mul min time must be >= 1");
         
@@ -424,30 +424,30 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
         emit LockedStakeMinTime(_locked_stake_min_time);
     }
 
-    function initializeDefault() external onlyByOwnerOrGovernance {
+    function initializeDefault() external onlyByOwnGov {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
         emit DefaultInitialization();
     }
 
-    function greylistAddress(address _address) external onlyByOwnerOrGovernance {
+    function greylistAddress(address _address) external onlyByOwnGov {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function unlockStakes() external onlyByOwnerOrGovernance {
+    function unlockStakes() external onlyByOwnGov {
         unlockedStakes = !unlockedStakes;
     }
 
-    function setRewardRates(uint256 _new_rate0, uint256 _new_rate1) external onlyByOwnerOrGovernance {
+    function setRewardRates(uint256 _new_rate0, uint256 _new_rate1) external onlyByOwnGov {
         rewardRate0 = _new_rate0;
         rewardRate1 = _new_rate1;
     }
 
-    function toggleToken1Rewards() external onlyByOwnerOrGovernance {
+    function toggleToken1Rewards() external onlyByOwnGov {
         token1_rewards_on = !token1_rewards_on;
     }
 
-    function setOwnerAndTimelock(address _new_owner, address _new_timelock) external onlyByOwnerOrGovernance {
+    function setOwnerAndTimelock(address _new_owner, address _new_timelock) external onlyByOwnGov {
         owner_address = _new_owner;
         timelock_address = _new_timelock;
     }
@@ -475,7 +475,7 @@ contract StakingRewardsDual is IStakingRewardsDual, Owned, ReentrancyGuard, Paus
         _;
     }
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner_address || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
