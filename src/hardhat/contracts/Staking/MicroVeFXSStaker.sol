@@ -46,12 +46,12 @@ contract MicroVeFXSStaker is Owned {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwner() {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == owner, "Not the owner");
         _;
     }    
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _owner) Owned(_owner){}
+    constructor (address _owner) Owned(_owner){}
 
     function vefxs_create_lock(uint256 fxs_amount, uint256 timestamp) external onlyByOwner {
         FXS.approve(address(veFXS), fxs_amount);

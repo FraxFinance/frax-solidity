@@ -30,7 +30,7 @@ contract SigRelayer2 {
 	address public compToken;
 	address public owner;
 
-	constructor(address governorBravo_, address compToken_) public {
+	constructor (address governorBravo_, address compToken_) public {
 		governorBravo = governorBravo_;
 		compToken = compToken_;
 		owner = msg.sender;

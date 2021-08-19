@@ -61,7 +61,7 @@ contract FraxGaugeFXSRewardsDistributor is Owned, ReentrancyGuard {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
@@ -78,7 +78,7 @@ contract FraxGaugeFXSRewardsDistributor is Owned, ReentrancyGuard {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _timelock_address,
         address _curator_address,
@@ -174,28 +174,28 @@ contract FraxGaugeFXSRewardsDistributor is Owned, ReentrancyGuard {
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
     
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         // Only the owner address can ever receive the recovery withdrawal
         TransferHelper.safeTransfer(tokenAddress, owner, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
-    function setGaugeState(address _gauge_address, bool _is_middleman, bool _is_active) external onlyByOwnerOrGovernance {
+    function setGaugeState(address _gauge_address, bool _is_middleman, bool _is_active) external onlyByOwnGov {
         is_middleman[_gauge_address] = _is_middleman;
         gauge_whitelist[_gauge_address] = _is_active;
 
         emit GaugeStateChanged(_gauge_address, _is_middleman, _is_active);
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address _new_timelock) external onlyByOwnGov {
         timelock_address = _new_timelock;
     }
 
-    function setCurator(address _new_curator_address) external onlyByOwnerOrGovernance {
+    function setCurator(address _new_curator_address) external onlyByOwnGov {
         curator_address = _new_curator_address;
     }
 
-    function setGaugeController(address _gauge_controller_address) external onlyByOwnerOrGovernance {
+    function setGaugeController(address _gauge_controller_address) external onlyByOwnGov {
         gauge_controller = IFraxGaugeController(_gauge_controller_address);
     }
 

@@ -63,7 +63,7 @@ contract FraxMiddlemanGauge is Owned, ReentrancyGuard {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
@@ -75,7 +75,7 @@ contract FraxMiddlemanGauge is Owned, ReentrancyGuard {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _timelock_address,
         address _rewards_distributor_address,
@@ -178,17 +178,17 @@ contract FraxMiddlemanGauge is Owned, ReentrancyGuard {
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
     
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         // Only the owner address can ever receive the recovery withdrawal
         TransferHelper.safeTransfer(tokenAddress, owner, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address _new_timelock) external onlyByOwnGov {
         timelock_address = _new_timelock;
     }
 
-    function setBridgeInfo(address _bridge_address, uint256 _bridge_type, address _destination_address_override, string memory _non_evm_destination_address) external onlyByOwnerOrGovernance {
+    function setBridgeInfo(address _bridge_address, uint256 _bridge_type, address _destination_address_override, string memory _non_evm_destination_address) external onlyByOwnGov {
         _bridge_address = bridge_address;
         
         // 0: Avalanche
@@ -208,7 +208,7 @@ contract FraxMiddlemanGauge is Owned, ReentrancyGuard {
         emit BridgeInfoChanged(_bridge_address, _bridge_type, _destination_address_override, _non_evm_destination_address);
     }
 
-    function setRewardsDistributor(address _rewards_distributor_address) external onlyByOwnerOrGovernance {
+    function setRewardsDistributor(address _rewards_distributor_address) external onlyByOwnGov {
         rewards_distributor_address = _rewards_distributor_address;
     }
 

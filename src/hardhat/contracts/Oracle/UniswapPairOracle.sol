@@ -30,12 +30,12 @@ contract UniswapPairOracle is Owned {
     FixedPoint.uq112x112 public price0Average;
     FixedPoint.uq112x112 public price1Average;
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "You are not an owner or the governance timelock");
         _;
     }
 
-    constructor(address factory, address tokenA, address tokenB, address _owner_address, address _timelock_address) public Owned(_owner_address) {
+    constructor (address factory, address tokenA, address tokenB, address _owner_address, address _timelock_address) public Owned(_owner_address) {
         IUniswapV2Pair _pair = IUniswapV2Pair(UniswapV2Library.pairFor(factory, tokenA, tokenB));
         pair = _pair;
         token0 = _pair.token0();
@@ -50,19 +50,19 @@ contract UniswapPairOracle is Owned {
         timelock_address = _timelock_address;
     }
 
-    function setTimelock(address _timelock_address) external onlyByOwnerOrGovernance {
+    function setTimelock(address _timelock_address) external onlyByOwnGov {
         timelock_address = _timelock_address;
     }
 
-    function setPeriod(uint _period) external onlyByOwnerOrGovernance {
+    function setPeriod(uint _period) external onlyByOwnGov {
         PERIOD = _period;
     }
 
-    function setConsultLeniency(uint _consult_leniency) external onlyByOwnerOrGovernance {
+    function setConsultLeniency(uint _consult_leniency) external onlyByOwnGov {
         CONSULT_LENIENCY = _consult_leniency;
     }
 
-    function setAllowStaleConsults(bool _allow_stale_consults) external onlyByOwnerOrGovernance {
+    function setAllowStaleConsults(bool _allow_stale_consults) external onlyByOwnGov {
         ALLOW_STALE_CONSULTS = _allow_stale_consults;
     }
 

@@ -17,7 +17,7 @@ contract FraxBridge is AccessControl, Owned {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(
             msg.sender == timelock_address || msg.sender == owner,
             "Not owner or timelock"
@@ -27,7 +27,7 @@ contract FraxBridge is AccessControl, Owned {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _frax_contract_address,
         address _creator_address,
         address _timelock_address
@@ -61,7 +61,7 @@ contract FraxBridge is AccessControl, Owned {
 
     function withdrawFrax(address _to, uint256 _amount_d18)
         external
-        onlyByOwnerOrGovernance
+        onlyByOwnGov
     {
         cumulative_withdrawals += _amount_d18;
         FRAX.pool_mint(_to, _amount_d18);

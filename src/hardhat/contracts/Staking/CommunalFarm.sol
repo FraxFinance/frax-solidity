@@ -111,17 +111,17 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwner() {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == owner, "Not the owner");
         _;
     }
 
-    modifier onlyTokenManagers(address reward_token_address) {
-        require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "You are not the owner or the correct token manager");
+    modifier onlyTknMgrs(address reward_token_address) {
+        require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "Not owner or tkn mgr");
         _;
     }
 
     modifier notStakingPaused() {
-        require(stakingPaused == false, "Staking is paused");
+        require(stakingPaused == false, "Staking paused");
         _;
     }
 
@@ -132,7 +132,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _stakingToken,
         string[] memory _rewardSymbols,
@@ -381,7 +381,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) {
-        require(!stakingPaused, "Staking is paused");
+        require(!stakingPaused, "Staking paused");
         require(liquidity > 0, "Must stake more than zero");
         require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
@@ -533,7 +533,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTokenManagers(tokenAddress) {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTknMgrs(tokenAddress) {
         // Cannot rug the staking / LP tokens
         require(tokenAddress != address(stakingToken), "Cannot rug staking / LP tokens");
 
@@ -567,7 +567,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwner {
-        require(_rewardsDuration >= 86400, "Rewards duration must be at least one day");
+        require(_rewardsDuration >= 86400, "Rewards duration too short");
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
             "Reward period incomplete"
@@ -614,7 +614,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     // The owner or the reward token managers can set reward rates 
-    function setRewardRate(address reward_token_address, uint256 new_rate, bool sync_too) external onlyTokenManagers(reward_token_address) {
+    function setRewardRate(address reward_token_address, uint256 new_rate, bool sync_too) external onlyTknMgrs(reward_token_address) {
         rewardRates[rewardTokenAddrToIdx[reward_token_address]] = new_rate;
         
         if (sync_too){
@@ -623,7 +623,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     // The owner or the reward token managers can change managers
-    function changeTokenManager(address reward_token_address, address new_manager_address) external onlyTokenManagers(reward_token_address) {
+    function changeTokenManager(address reward_token_address, address new_manager_address) external onlyTknMgrs(reward_token_address) {
         rewardManagers[reward_token_address] = new_manager_address;
     }
 

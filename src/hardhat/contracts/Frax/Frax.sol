@@ -89,7 +89,7 @@ contract FRAXStablecoin is ERC20Custom, AccessControl, Owned {
     } 
     
     modifier onlyByOwnerGovernanceOrController() {
-        require(msg.sender == owner || msg.sender == timelock_address || msg.sender == controller_address, "You are not the owner, controller, or the governance timelock");
+        require(msg.sender == owner || msg.sender == timelock_address || msg.sender == controller_address, "Not the owner, controller, or the governance timelock");
         _;
     }
 
@@ -98,13 +98,13 @@ contract FRAXStablecoin is ERC20Custom, AccessControl, Owned {
             msg.sender == owner 
             || msg.sender == timelock_address 
             || frax_pools[msg.sender] == true, 
-            "You are not the owner, the governance timelock, or a pool");
+            "Not the owner, the governance timelock, or a pool");
         _;
     }
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         string memory _name,
         string memory _symbol,
         address _creator_address,

@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../StakingRewardsMultiGauge.sol";
 
 contract StakingRewardsMultiGauge_FXS_WETH is StakingRewardsMultiGauge {
-    constructor(
+    constructor (
         address _owner,
         address _stakingToken, 
         address _rewards_distributor_address,

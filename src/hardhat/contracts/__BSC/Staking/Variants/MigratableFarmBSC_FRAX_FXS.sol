@@ -4,7 +4,7 @@ pragma solidity >=0.6.11;
 import "../MigratableFarmBSC.sol";
 
 contract MigratableFarmBSC_FRAX_FXS is MigratableFarmBSC {
-    constructor(
+    constructor (
         address _owner,
         address _rewardsToken0,
         address _rewardsToken1,

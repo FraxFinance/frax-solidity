@@ -615,7 +615,7 @@ interface IConvexClaimZap {
 //     address public immutable owner;
 //     address public chefRewards;
 
-//     constructor() public {
+//     constructor () public {
 //         owner = msg.sender;
 //         chefRewards = address(0x5F465e9fcfFc217c5849906216581a657cd60605);
 //     }

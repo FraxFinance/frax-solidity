@@ -58,14 +58,14 @@ contract GovernanceAMO is Owned, ReentrancyGuard, Pausable {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner_address || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _timelock_address
     ) public Owned(_owner){
@@ -77,12 +77,12 @@ contract GovernanceAMO is Owned, ReentrancyGuard, Pausable {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function setCompAddress(address _comp_address) external onlyByOwnerOrGovernance {
+    function setCompAddress(address _comp_address) external onlyByOwnGov {
         comp_address = _comp_address;
         COMP = Comp(comp_address);
     }
 
-    function setCompGovernorAddress(address _comp_governor_address) external onlyByOwnerOrGovernance {
+    function setCompGovernorAddress(address _comp_governor_address) external onlyByOwnGov {
         comp_governor_address = _comp_governor_address;
         CompGovernor = GovernorBravoDelegate(comp_governor_address);
     }
@@ -95,7 +95,7 @@ contract GovernanceAMO is Owned, ReentrancyGuard, Pausable {
         bytes32 s;
     }
 
-    function voteWithSignatures(sig[] memory signatures) external onlyByOwnerOrGovernance {
+    function voteWithSignatures(sig[] memory signatures) external onlyByOwnGov {
         // for(int i = 0; i < signatures.length; i++){
             // try COMP.signatures[i]
         // }

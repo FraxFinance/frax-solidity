@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../CommunalFarm.sol";
 
 contract CommunalFarm_SaddleD4 is CommunalFarm {
-    constructor(
+    constructor (
         address _owner,
         address _stakingToken,
         string[] memory _rewardSymbols,

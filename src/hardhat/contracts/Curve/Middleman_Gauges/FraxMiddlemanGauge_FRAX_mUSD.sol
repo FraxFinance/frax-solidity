@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../FraxMiddlemanGauge.sol";
 
 contract FraxMiddlemanGauge_FRAX_mUSD is FraxMiddlemanGauge {
-    constructor(
+    constructor (
         address _owner,
         address _timelock_address,
         address _rewards_distributor_address,

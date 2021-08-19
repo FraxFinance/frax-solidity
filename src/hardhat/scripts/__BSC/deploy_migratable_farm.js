@@ -33,11 +33,11 @@ async function main() {
 
 	// const staking_dual_fxs_weth = await StakingRewardsDual_FXS_WETH_Sushi.deploy(
 	// 	STAKING_OWNER, 
-	// 	CONTRACT_ADDRESSES.mainnet.main.FXS, 
-	// 	CONTRACT_ADDRESSES.mainnet.reward_tokens.sushi, 
-	// 	CONTRACT_ADDRESSES.mainnet.pair_tokens['Sushi FXS/WETH'], 
-	// 	CONTRACT_ADDRESSES.mainnet.main.FRAX, 
-	// 	CONTRACT_ADDRESSES.mainnet.misc.timelock, 
+	// 	CONTRACT_ADDRESSES.ethereum.main.FXS, 
+	// 	CONTRACT_ADDRESSES.ethereum.reward_tokens.sushi, 
+	// 	CONTRACT_ADDRESSES.ethereum.pair_tokens['Sushi FXS/WETH'], 
+	// 	CONTRACT_ADDRESSES.ethereum.main.FRAX, 
+	// 	CONTRACT_ADDRESSES.ethereum.misc.timelock, 
 	// 	1000000, 
 	// 	1000000
 	// )

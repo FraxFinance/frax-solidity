@@ -99,7 +99,7 @@ contract FXSRewards {
     // 1 - max slippage for curve swap, in 1e6
     uint256 public curve_slippage = 990000;
 
-    constructor(
+    constructor (
         address _frax_contract_address,
         address _fxs_contract_address,
         address _collateral_address,
@@ -134,7 +134,7 @@ contract FXSRewards {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == timelock_address || msg.sender == owner_address, "Must be owner or timelock");
         _;
     }
@@ -156,7 +156,7 @@ contract FXSRewards {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function setFXSUSDOracle(address _fxs_usd_consumer_address) public onlyByOwnerOrGovernance {
+    function setFXSUSDOracle(address _fxs_usd_consumer_address) public onlyByOwnGov {
         fxs_usd_consumer_address = _fxs_usd_consumer_address;
         fxs_usd_pricer = ChainlinkFXSUSDPriceConsumer(fxs_usd_consumer_address);
         fxs_usd_pricer_decimals = fxs_usd_pricer.getDecimals(); // should be 8
@@ -169,7 +169,7 @@ contract FXSRewards {
         uint256 cur_frax_supply = FRAX.totalSupply();
         uint256 new_frax_supply = cur_frax_supply.add(frax_amount);
         uint256 new_cr = (current_collateral_E18.mul(1e6)).div(new_frax_supply);
-        require (new_cr > min_cr, "Minting would cause collateral ratio to be too low");
+        require(new_cr > min_cr, "CR would be too low");
 
         // Mint the frax 
         minted_frax_historical = minted_frax_historical.add(frax_amount);
@@ -177,12 +177,12 @@ contract FXSRewards {
     }
 
     // wrap the minting function
-    function mintFrax(uint256 frax_amount) external onlyByOwnerOrGovernance {
+    function mintFrax(uint256 frax_amount) external onlyByOwnGov {
         _mintFRAX(frax_amount);
     }
 
     // Burn unneeded or excess FRAX
-    function burnFRAX(uint256 frax_amount) public onlyByOwnerOrGovernance {
+    function burnFRAX(uint256 frax_amount) public onlyByOwnGov {
         FRAX.burn(frax_amount);
         burned_frax_historical = burned_frax_historical.add(frax_amount);
     }
@@ -190,20 +190,20 @@ contract FXSRewards {
     int128 FRAX_INDEX = 0;
     int128 USDC_INDEX = 2;
     // swap minted FRAX for collateral from curve pool, returns collateral amount received
-    function swapCollateral(uint256 frax_amount) public onlyByOwnerOrGovernance returns (uint256) {
+    function swapCollateral(uint256 frax_amount) public onlyByOwnGov returns (uint256) {
         uint256 received_collat = frax3crv_metapool.exchange_underlying(FRAX_INDEX, USDC_INDEX, frax_amount, frax_amount.mul(curve_slippage).div(1e6));
         swapped_collateral_historical = swapped_collateral_historical.add(received_collat);
         return received_collat;
     }
 
     // swap collateral for FRAX, returns FRAX amount received
-    function returnCollateral(uint256 collateral_amount) public onlyByOwnerOrGovernance returns (uint256) {
+    function returnCollateral(uint256 collateral_amount) public onlyByOwnGov returns (uint256) {
         uint256 received_frax = frax3crv_metapool.exchange_underlying(USDC_INDEX, FRAX_INDEX, collateral_amount, collateral_amount.mul(curve_slippage).div(1e6));
         returned_collateral_historical = returned_collateral_historical.add(received_frax);
         return received_frax;
     }
 
-    function setMinimumCollateralRatio(uint256 _min_cr) external onlyByOwnerOrGovernance {
+    function setMinimumCollateralRatio(uint256 _min_cr) external onlyByOwnGov {
         min_cr = _min_cr;
     }
 

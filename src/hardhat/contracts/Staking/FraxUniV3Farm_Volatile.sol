@@ -139,7 +139,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
@@ -161,7 +161,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _lp_pool_address,
         address _timelock_address,
@@ -672,13 +672,13 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can).
     function migrator_stakeLocked_for(address staker_address, uint256 token_id, uint256 secs, uint256 start_timestamp) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _stakeLocked(staker_address, msg.sender, token_id, secs, start_timestamp);
     }
 
     // Used for migrations
     function migrator_withdraw_locked(address staker_address, uint256 token_id) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _withdrawLocked(staker_address, msg.sender, token_id);
     }
 
@@ -699,25 +699,25 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
     
     // Adds supported migrator address
-    function addMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+    function addMigrator(address migrator_address) external onlyByOwnGov {
         valid_migrators[migrator_address] = true;
     }
 
     // Remove a migrator address
-    function removeMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+    function removeMigrator(address migrator_address) external onlyByOwnGov {
         // Delete from the mapping
         delete valid_migrators[migrator_address];
     }
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         // Only the owner address can ever receive the recovery withdrawal
         TransferHelper.safeTransfer(tokenAddress, owner, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC721(address tokenAddress, uint256 token_id) external onlyByOwnerOrGovernance {
+    function recoverERC721(address tokenAddress, uint256 token_id) external onlyByOwnGov {
         // Admin cannot withdraw the staking token from the contract unless currently migrating
         if (!migrationsOn) {
             require(tokenAddress != address(stakingTokenNFT), "Not in migration"); // Only Governance / Timelock can trigger a migration
@@ -729,7 +729,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
         emit RecoveredERC721(tokenAddress, token_id);
     }
 
-    function setMultipliers(uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_per_frax_for_max_boost) external onlyByOwnerOrGovernance {
+    function setMultipliers(uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_per_frax_for_max_boost) external onlyByOwnGov {
         require(_lock_max_multiplier >= MULTIPLIER_PRECISION, "Mult must be >= MULTIPLIER_PRECISION");
         require(_vefxs_max_multiplier >= 0, "veFXS mul must be >= 0");
         require(_vefxs_per_frax_for_max_boost > 0, "veFXS pct max must be >= 0");
@@ -743,7 +743,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
         emit veFXSPctForMaxBoostUpdated(vefxs_per_frax_for_max_boost);
     }
 
-    function setLockedNFTTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnerOrGovernance {
+    function setLockedNFTTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnGov {
         require(_lock_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
         require(_lock_time_min >= 1, "Mul min time must be >= 1");
 
@@ -754,15 +754,15 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
         emit LockedNFTMinTime(_lock_time_min);
     }
 
-    function unlockStakes() external onlyByOwnerOrGovernance {
+    function unlockStakes() external onlyByOwnGov {
         stakesUnlocked = !stakesUnlocked;
     }
 
-    function toggleMigrations() external onlyByOwnerOrGovernance {
+    function toggleMigrations() external onlyByOwnGov {
         migrationsOn = !migrationsOn;
     }
 
-    function setManualRewardRate(uint256 _reward_rate_manual, bool sync_too) external onlyByOwnerOrGovernance {
+    function setManualRewardRate(uint256 _reward_rate_manual, bool sync_too) external onlyByOwnGov {
         reward_rate_manual = _reward_rate_manual;
 
         if (sync_too) {
@@ -775,7 +775,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
         int24 _uni_tick_upper, 
         int24 _ideal_tick,
         int24 _min_tick_range_width
-        ) external onlyByOwnerOrGovernance {
+        ) external onlyByOwnGov {
         // Tick and Liquidity related
         uni_tick_lower = _uni_tick_lower;
         uni_tick_upper = _uni_tick_upper;
@@ -787,16 +787,16 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
         min_tick_range_width = _min_tick_range_width;
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address _new_timelock) external onlyByOwnGov {
         timelock_address = _new_timelock;
     }
 
-    function setCurator(address _new_curator) external onlyByOwnerOrGovernance {
+    function setCurator(address _new_curator) external onlyByOwnGov {
         curator_address = _new_curator;
     }
 
     // Set gauge_controller to address(0) to fall back to the reward_rate_manual
-    function setGaugeRelatedAddrs(address _gauge_controller_address, address _rewards_distributor_address) external onlyByOwnerOrGovernance {
+    function setGaugeRelatedAddrs(address _gauge_controller_address, address _rewards_distributor_address) external onlyByOwnGov {
         gauge_controller = IFraxGaugeController(_gauge_controller_address);
         rewards_distributor = IFraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
     }

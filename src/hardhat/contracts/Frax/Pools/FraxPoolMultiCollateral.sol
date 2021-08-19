@@ -65,6 +65,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     uint256 public unclaimedPoolFXS;
     mapping (address => uint256) public lastRedeemed; // Collateral independent
     uint256 public redemption_delay = 2; // Number of blocks to wait before being able to collectRedemption()
+    uint256 public redeem_price_threshold = 990000; // $0.99
 
     // Fees and rates
     uint256[] public minting_fee;
@@ -72,6 +73,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     uint256[] public buyback_fee;
     uint256[] public recollat_fee;
     uint256 public bonus_rate; // Bonus rate on FXS minted during recollateralizeFrax(); 6 decimals of precision, set to 0.75% on genesis
+    
 
     // Constants for various precisions
     uint256 private constant PRICE_PRECISION = 1e6;
@@ -92,7 +94,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == timelock_address || msg.sender == owner, "Not owner or timelock");
         _;
     }
@@ -104,7 +106,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
  
     /* ========== CONSTRUCTOR ========== */
     
-    constructor(
+    constructor (
         address _pool_manager_address,
         address _timelock_address,
         address _frax_contract_address,
@@ -223,7 +225,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     }
 
     // Helpful for UIs
-    function allCollateralAddresses() external view returns (address[] memory){
+    function allCollateralAddresses() external view returns (address[] memory) {
         return collateral_addresses;
     }
 
@@ -233,12 +235,12 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     }
 
     // Returns the FRAX value in collateral tokens
-    function getFRAXInCollateral(uint256 col_idx, uint256 frax_amount) public view returns (uint256){
+    function getFRAXInCollateral(uint256 col_idx, uint256 frax_amount) public view returns (uint256) {
         return frax_amount.mul(PRICE_PRECISION).div(10 ** missing_decimals[col_idx]).div(collateral_prices[col_idx]);
     }
 
     // Used by some functions.
-    function freeCollatBalance(uint256 col_idx) internal view returns (uint256){
+    function freeCollatBalance(uint256 col_idx) internal view returns (uint256) {
         return ERC20(collateral_addresses[col_idx]).balanceOf(address(this)).sub(unclaimedPoolCollateral[col_idx]);
     }
 
@@ -321,6 +323,10 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         uint256 fxs_out
     ) {
         require(redeemPaused[col_idx] == false, "Redeeming is paused");
+
+        // Prevent unneccessary redemptions that could adversely affect the FXS price
+        require(FRAX.frax_price() <= redeem_price_threshold, "Frax price too high" );
+
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
         uint256 frax_after_fee = (frax_amount.mul(PRICE_PRECISION.sub(redemption_fee[col_idx]))).div(PRICE_PRECISION);
 
@@ -511,13 +517,13 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         emit PoolToggled(col_idx, enabled_pools[pool_address]);
     }
 
-    function setPoolCeiling(uint256 col_idx, uint256 new_ceiling) external onlyByOwnerOrGovernance {
+    function setPoolCeiling(uint256 col_idx, uint256 new_ceiling) external onlyByOwnGov {
         pool_ceilings[col_idx] = new_ceiling;
 
         emit PoolCeilingSet(col_idx, new_ceiling);
     }
 
-    function setFees(uint256 col_idx, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee) external onlyByOwnerOrGovernance {
+    function setFees(uint256 col_idx, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee) external onlyByOwnGov {
         minting_fee[col_idx] = new_mint_fee;
         redemption_fee[col_idx] = new_redeem_fee;
         buyback_fee[col_idx] = new_buyback_fee;
@@ -526,13 +532,14 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         emit FeesSet(col_idx, new_mint_fee, new_redeem_fee, new_buyback_fee, new_recollat_fee);
     }
 
-    function setPoolParameters(uint256 new_bonus_rate, uint256 new_redemption_delay) external onlyByOwnerOrGovernance {
+    function setPoolParameters(uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_redeem_price_threshold) external onlyByOwnGov {
         bonus_rate = new_bonus_rate;
         redemption_delay = new_redemption_delay;
-        emit PoolParametersSet(new_bonus_rate, new_redemption_delay);
+        redeem_price_threshold = new_redeem_price_threshold;
+        emit PoolParametersSet(new_bonus_rate, new_redemption_delay, new_redeem_price_threshold);
     }
 
-    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address new_timelock) external onlyByOwnGov {
         timelock_address = new_timelock;
 
         emit TimelockSet(new_timelock);
@@ -542,7 +549,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     event PoolToggled(uint256 col_idx, bool new_state);
     event PoolCeilingSet(uint256 col_idx, uint256 new_ceiling);
     event FeesSet(uint256 col_idx, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee);
-    event PoolParametersSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
+    event PoolParametersSet(uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_redeem_price_threshold);
     event TimelockSet(address new_timelock);
     event MintingToggled(uint256 col_idx, bool toggled);
     event RedeemingToggled(uint256 col_idx, bool toggled);

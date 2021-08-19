@@ -146,12 +146,12 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwner() {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == owner, "Not the owner");
         _;
     }
 
-    modifier onlyTokenManagers(address reward_token_address) {
-        require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "You are not the owner or the correct token manager");
+    modifier onlyTknMgrs(address reward_token_address) {
+        require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "Not owner or tkn mgr");
         _;
     }
 
@@ -162,7 +162,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     }
 
     modifier notStakingPaused() {
-        require(stakingPaused == false, "Staking is paused");
+        require(stakingPaused == false, "Staking paused");
         _;
     }
 
@@ -173,7 +173,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _stakingToken,
         address _rewards_distributor_address,
@@ -526,7 +526,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) {
-        require(!stakingPaused, "Staking is paused");
+        require(!stakingPaused, "Staking paused");
         require(liquidity > 0, "Must stake more than zero");
         require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
@@ -696,13 +696,13 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
     function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs, uint256 start_timestamp) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _stakeLocked(staker_address, msg.sender, amount, secs, start_timestamp);
     }
 
     // Used for migrations
     function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _withdrawLocked(staker_address, msg.sender, kek_id);
     }
 
@@ -720,7 +720,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     }
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTokenManagers(tokenAddress) {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTknMgrs(tokenAddress) {
         // Check if the desired token is a reward token
         bool isRewardToken = false;
         for (uint256 i = 0; i < rewardTokens.length; i++){ 
@@ -751,7 +751,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     }
 
     function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwner {
-        require(_rewardsDuration >= 86400, "Rewards duration must be at least one day");
+        require(_rewardsDuration >= 86400, "Rewards duration too short");
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
             "Reward period incomplete"
@@ -810,7 +810,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     }
 
     // The owner or the reward token managers can set reward rates 
-    function setRewardRate(address reward_token_address, uint256 new_rate, bool sync_too) external onlyTokenManagers(reward_token_address) {
+    function setRewardRate(address reward_token_address, uint256 new_rate, bool sync_too) external onlyTknMgrs(reward_token_address) {
         rewardRatesManual[rewardTokenAddrToIdx[reward_token_address]] = new_rate;
         
         if (sync_too){
@@ -819,7 +819,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     }
 
     // The owner or the reward token managers can set reward rates 
-    function setGaugeController(address reward_token_address, address _rewards_distributor_address, address _gauge_controller_address, bool sync_too) external onlyTokenManagers(reward_token_address) {
+    function setGaugeController(address reward_token_address, address _rewards_distributor_address, address _gauge_controller_address, bool sync_too) external onlyTknMgrs(reward_token_address) {
         gaugeControllers[rewardTokenAddrToIdx[reward_token_address]] = _gauge_controller_address;
         rewards_distributor = IFraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
 
@@ -829,7 +829,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     }
 
     // The owner or the reward token managers can change managers
-    function changeTokenManager(address reward_token_address, address new_manager_address) external onlyTokenManagers(reward_token_address) {
+    function changeTokenManager(address reward_token_address, address new_manager_address) external onlyTknMgrs(reward_token_address) {
         rewardManagers[reward_token_address] = new_manager_address;
     }
 

@@ -53,7 +53,7 @@ contract FraxCrossChainRewarder is Owned, ReentrancyGuard {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
@@ -70,7 +70,7 @@ contract FraxCrossChainRewarder is Owned, ReentrancyGuard {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _curator_address,
         address _reward_token_address
@@ -107,23 +107,23 @@ contract FraxCrossChainRewarder is Owned, ReentrancyGuard {
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
     
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         // Only the owner address can ever receive the recovery withdrawal
         TransferHelper.safeTransfer(tokenAddress, owner, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
-    function setFarmAddress(address _farm_address) external onlyByOwnerOrGovernance {
+    function setFarmAddress(address _farm_address) external onlyByOwnGov {
         farm_address = _farm_address;
 
         emit FarmAddressChanged(farm_address);
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address _new_timelock) external onlyByOwnGov {
         timelock_address = _new_timelock;
     }
 
-    function setCurator(address _new_curator_address) external onlyByOwnerOrGovernance {
+    function setCurator(address _new_curator_address) external onlyByOwnGov {
         curator_address = _new_curator_address;
     }
 

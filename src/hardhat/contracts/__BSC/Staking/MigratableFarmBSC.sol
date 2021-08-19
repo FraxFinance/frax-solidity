@@ -108,7 +108,7 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner_address || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
@@ -147,7 +147,7 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _rewardsToken0,
         address _rewardsToken1,
@@ -475,35 +475,35 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can)
     function migrator_stake_for(address staker_address, uint256 amount) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _stake(staker_address, msg.sender, amount);
     }
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
     function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _stakeLocked(staker_address, msg.sender, amount, secs);
     }
 
     // Used for migrations
     function migrator_withdraw_unlocked(address staker_address) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _withdraw(staker_address, msg.sender, _unlocked_balances[staker_address]);
     }
 
     // Used for migrations
     function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _withdrawLocked(staker_address, msg.sender, kek_id);
     }
 
     // Adds supported migrator address 
-    function addMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+    function addMigrator(address migrator_address) external onlyByOwnGov {
         valid_migrators[migrator_address] = true;
     }
 
     // Remove a migrator address
-    function removeMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+    function removeMigrator(address migrator_address) external onlyByOwnGov {
         require(valid_migrators[migrator_address] == true, "Address nonexistant");
         
         // Delete from the mapping
@@ -511,7 +511,7 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
     }
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverBEP20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverBEP20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         // Admin cannot withdraw the staking token from the contract unless currently migrating
         if(!migrationsOn){
             require(tokenAddress != address(stakingToken), "Not in migration"); // Only Governance / Timelock can trigger a migration
@@ -521,7 +521,7 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
         emit Recovered(tokenAddress, tokenAmount);
     }
 
-    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernance {
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnGov {
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
             "Reward period incomplete"
@@ -530,7 +530,7 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
         emit RewardsDurationUpdated(rewardsDuration);
     }
 
-    function setMultipliers(uint256 _locked_stake_max_multiplier) external onlyByOwnerOrGovernance {
+    function setMultipliers(uint256 _locked_stake_max_multiplier) external onlyByOwnGov {
         require(_locked_stake_max_multiplier >= 1, "Multiplier must be greater than or equal to 1");
 
         locked_stake_max_multiplier = _locked_stake_max_multiplier;
@@ -538,7 +538,7 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
         emit LockedStakeMaxMultiplierUpdated(locked_stake_max_multiplier);
     }
 
-    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier, uint256 _locked_stake_min_time) external onlyByOwnerOrGovernance {
+    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier, uint256 _locked_stake_min_time) external onlyByOwnGov {
         require(_locked_stake_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
         require(_locked_stake_min_time >= 1, "Mul min time must be >= 1");
         
@@ -550,33 +550,33 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
         emit LockedStakeMinTime(_locked_stake_min_time);
     }
 
-    function initializeDefault() external onlyByOwnerOrGovernance {
+    function initializeDefault() external onlyByOwnGov {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
         emit DefaultInitialization();
     }
 
-    function greylistAddress(address _address) external onlyByOwnerOrGovernance {
+    function greylistAddress(address _address) external onlyByOwnGov {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function unlockStakes() external onlyByOwnerOrGovernance {
+    function unlockStakes() external onlyByOwnGov {
         stakesUnlocked = !stakesUnlocked;
     }
 
-    function toggleMigrations() external onlyByOwnerOrGovernance {
+    function toggleMigrations() external onlyByOwnGov {
         migrationsOn = !migrationsOn;
     }
 
-    function toggleWithdrawals() external onlyByOwnerOrGovernance {
+    function toggleWithdrawals() external onlyByOwnGov {
         withdrawalsPaused = !withdrawalsPaused;
     }
 
-    function toggleRewardsCollection() external onlyByOwnerOrGovernance {
+    function toggleRewardsCollection() external onlyByOwnGov {
         rewardsCollectionPaused = !rewardsCollectionPaused;
     }
 
-    function setRewardRates(uint256 _new_rate0, uint256 _new_rate1, bool sync_too) external onlyByOwnerOrGovernance {
+    function setRewardRates(uint256 _new_rate0, uint256 _new_rate1, bool sync_too) external onlyByOwnGov {
         rewardRate0 = _new_rate0;
         rewardRate1 = _new_rate1;
 
@@ -585,18 +585,18 @@ contract MigratableFarmBSC is Owned, ReentrancyGuard, Pausable {
         }
     }
 
-    function toggleToken1Rewards() external onlyByOwnerOrGovernance {
+    function toggleToken1Rewards() external onlyByOwnGov {
         if (token1_rewards_on) {
             rewardRate1 = 0;
         }
         token1_rewards_on = !token1_rewards_on;
     }
 
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+    function setOwner(address _owner_address) external onlyByOwnGov {
         owner_address = _owner_address;
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address _new_timelock) external onlyByOwnGov {
         timelock_address = _new_timelock;
     }
 
