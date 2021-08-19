@@ -180,7 +180,7 @@ interface IFNX_MinePool {
 // contract newBaseProxy {
 //     bytes32 private constant implementPositon = keccak256("org.Finnexus.implementation.storage");
 //     bytes32 private constant proxyOwnerPosition  = keccak256("org.Finnexus.Owner.storage");
-//     constructor(address implementation_) public {
+//     constructor (address implementation_) public {
 //         // Creator of the contract is admin during initialization
 //         _setProxyOwner(msg.sender);
 //         _setImplementation(implementation_);
@@ -377,7 +377,7 @@ interface IFNX_MinePool {
 //     /**
 //      * @dev Implementation of getting the eligible whitelist.
 //      */
-//     function getWhiteList()public view returns (address[] memory){
+//     function getWhiteList()public view returns (address[] memory) {
 //         delegateToViewAndReturn();
 //     }
 //     /**
@@ -445,7 +445,7 @@ interface IFNX_MinePool {
 //     function getUserExpired(address /*account*/)public view returns (uint256) {
 //         delegateToViewAndReturn(); 
 //     }
-//     function getCurrentTotalAPY(address /*mineCoin*/)public view returns (uint256){
+//     function getCurrentTotalAPY(address /*mineCoin*/)public view returns (uint256) {
 //         delegateToViewAndReturn(); 
 //     }
 //     /**
@@ -453,10 +453,10 @@ interface IFNX_MinePool {
 //      * account user's account.
 //      * mineCoin mine coin address
 //      */
-//     function getUserCurrentAPY(address /*account*/,address /*mineCoin*/)public view returns (uint256){
+//     function getUserCurrentAPY(address /*account*/,address /*mineCoin*/)public view returns (uint256) {
 //         delegateToViewAndReturn(); 
 //     }
-//     function getAverageLockedTime()public view returns (uint256){
+//     function getAverageLockedTime()public view returns (uint256) {
 //         delegateToViewAndReturn(); 
 //     }
 //     /**
@@ -471,7 +471,7 @@ interface IFNX_MinePool {
 //      * @dev retrieve total distributed mine coins.
 //      *  mineCoin mineCoin address
 //      */
-//     function getTotalMined(address /*mineCoin*/)public view returns(uint256){
+//     function getTotalMined(address /*mineCoin*/)public view returns(uint256) {
 //         delegateToViewAndReturn(); 
 //     }
 //     /**
@@ -487,7 +487,7 @@ interface IFNX_MinePool {
 //      *  account user's account
 //      *  mineCoin mineCoin address
 //      */
-//     function getMinerBalance(address /*account*/,address /*mineCoin*/)public view returns(uint256){
+//     function getMinerBalance(address /*account*/,address /*mineCoin*/)public view returns(uint256) {
 //         delegateToViewAndReturn(); 
 //     }
 //     /**
@@ -518,7 +518,7 @@ interface IFNX_MinePool {
 //     /**
 //      * @dev getting whole pool's mine shared distribution. All these distributions will share base mine production.
 //      */
-//     function getTotalDistribution() public view returns (uint256){
+//     function getTotalDistribution() public view returns (uint256) {
 //         delegateToViewAndReturn(); 
 //     }
 //     /**
@@ -583,7 +583,7 @@ interface IFNX_MinePool {
 //        /**
 //      * @dev retrieve total distributed premium coins.
 //      */
-//     function getTotalPremium()public view returns(uint256){
+//     function getTotalPremium()public view returns(uint256) {
 //         delegateToViewAndReturn(); 
 //     }
 //     /**
@@ -603,7 +603,7 @@ interface IFNX_MinePool {
 //      * @dev get user's premium balance.
 //      * account user's account
 //      */ 
-//     function getUserLatestPremium(address /*account*/,address /*premiumCoin*/)public view returns(uint256){
+//     function getUserLatestPremium(address /*account*/,address /*premiumCoin*/)public view returns(uint256) {
 //         delegateToViewAndReturn(); 
 //     }
  

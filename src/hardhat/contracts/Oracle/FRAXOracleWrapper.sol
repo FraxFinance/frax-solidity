@@ -35,35 +35,39 @@ contract FRAXOracleWrapper is Owned {
     uint256 public chainlink_frax_eth_decimals;
 
     uint256 public PRICE_PRECISION = 1e6;
+    uint256 public EXTRA_PRECISION = 1e6;
     address public timelock_address;
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _creator_address,
         address _timelock_address
     ) Owned(_creator_address) {
         timelock_address = _timelock_address;
 
-        // FRAX/ETH
+        // FRAX / ETH
         priceFeedFRAXETH = AggregatorV3Interface(0x14d04Fff8D21bd62987a5cE9ce543d2F1edF5D3E);
         chainlink_frax_eth_decimals = priceFeedFRAXETH.decimals();
     }
 
     /* ========== VIEWS ========== */
 
-    function getFRAXPrice() public view returns (uint256) {
+    function getFRAXPrice() public view returns (uint256 raw_price, uint256 precise_price) {
         ( , int price, , , ) = priceFeedFRAXETH.latestRoundData();
-        return uint256(price).mul(PRICE_PRECISION).div(uint256(10) ** chainlink_frax_eth_decimals);
-    }
+        // E6
+        raw_price = uint256(price).mul(PRICE_PRECISION).div(uint256(10) ** chainlink_frax_eth_decimals);
 
+        // E12
+        precise_price = uint256(price).mul(PRICE_PRECISION).mul(EXTRA_PRECISION).div(uint256(10) ** chainlink_frax_eth_decimals);
+    }
 
     // Override the logic of the FRAX-WETH Uniswap TWAP Oracle
     // Expected Parameters: weth address, uint256 1e6
@@ -74,12 +78,13 @@ contract FRAXOracleWrapper is Owned {
         require(amountIn == 1e6, "must call with 1e6");
 
         // needs to return it inverted
-        return PRICE_PRECISION.mul(PRICE_PRECISION).div(getFRAXPrice());
+        (, uint256 frax_precise_price) = getFRAXPrice(); 
+        return PRICE_PRECISION.mul(PRICE_PRECISION).mul(EXTRA_PRECISION).div(frax_precise_price);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function setChainlinkFRAXETHOracle(address _chainlink_frax_eth_oracle) external onlyByOwnerOrGovernance {
+    function setChainlinkFRAXETHOracle(address _chainlink_frax_eth_oracle) external onlyByOwnGov {
         priceFeedFRAXETH = AggregatorV3Interface(_chainlink_frax_eth_oracle);
         chainlink_frax_eth_decimals = priceFeedFRAXETH.decimals();
     }

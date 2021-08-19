@@ -8,7 +8,7 @@ contract ChainlinkFXSUSDPriceConsumer {
     AggregatorV3Interface internal priceFeed;
 
 
-    constructor() public {
+    constructor () public {
         priceFeed = AggregatorV3Interface(0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f);
     }
 

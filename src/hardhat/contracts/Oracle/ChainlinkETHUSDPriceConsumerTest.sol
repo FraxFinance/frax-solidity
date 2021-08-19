@@ -49,7 +49,7 @@ contract ChainlinkETHUSDPriceConsumerTest {
      */
 
      
-    constructor() public {
+    constructor () public {
         // VERY IMPORTANT: UNCOMMENT THIS LATER
         // VERY IMPORTANT: UNCOMMENT THIS LATER
         // VERY IMPORTANT: UNCOMMENT THIS LATER

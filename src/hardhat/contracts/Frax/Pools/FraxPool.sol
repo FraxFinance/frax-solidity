@@ -96,7 +96,7 @@ contract FraxPool is AccessControl, Owned {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == timelock_address || msg.sender == owner, "Not owner or timelock");
         _;
     }
@@ -113,7 +113,7 @@ contract FraxPool is AccessControl, Owned {
  
     /* ========== CONSTRUCTOR ========== */
     
-    constructor(
+    constructor (
         address _frax_contract_address,
         address _fxs_contract_address,
         address _collateral_address,
@@ -185,7 +185,7 @@ contract FraxPool is AccessControl, Owned {
         }
     }
 
-    function setCollatETHOracle(address _collateral_weth_oracle_address, address _weth_address) external onlyByOwnerOrGovernance {
+    function setCollatETHOracle(address _collateral_weth_oracle_address, address _weth_address) external onlyByOwnGov {
         collat_eth_oracle_address = _collateral_weth_oracle_address;
         collatEthOracle = UniswapPairOracle(_collateral_weth_oracle_address);
         weth_address = _weth_address;
@@ -471,7 +471,7 @@ contract FraxPool is AccessControl, Owned {
     }
 
     // Combined into one function due to 24KiB contract memory limit
-    function setPoolParameters(uint256 new_ceiling, uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee) external onlyByOwnerOrGovernance {
+    function setPoolParameters(uint256 new_ceiling, uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee) external onlyByOwnGov {
         pool_ceiling = new_ceiling;
         bonus_rate = new_bonus_rate;
         redemption_delay = new_redemption_delay;
@@ -483,7 +483,7 @@ contract FraxPool is AccessControl, Owned {
         emit PoolParametersSet(new_ceiling, new_bonus_rate, new_redemption_delay, new_mint_fee, new_redeem_fee, new_buyback_fee, new_recollat_fee);
     }
 
-    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address new_timelock) external onlyByOwnGov {
         timelock_address = new_timelock;
 
         emit TimelockSet(new_timelock);

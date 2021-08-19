@@ -32,7 +32,7 @@ module.exports = {
     networks: {
 		hardhat: {
 			forking: {
-				url: `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+				url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}${process.env.INFURA_PROJECT_ID}`,
 				// url: `https://apis.ankr.com/${process.env.ANKR_STRING}`
 				// url: 'https://bsc-dataseed.binance.org/'
 			},
@@ -40,24 +40,54 @@ module.exports = {
 				mnemonic: process.env.ROPSTEN_HARDHAT_PHRASE
 			},
 		},
-		mainnet: {
-			url:`https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+		ethereum: {
+			url:`${process.env.ETHEREUM_NETWORK_ENDPOINT}${process.env.INFURA_PROJECT_ID}`,
 			accounts: {
 				mnemonic: process.env.MNEMONIC_PHRASE
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 40000000000,
+			gasPrice: 32000000000,
 			gasMultiplier: 1.2
 		},
-		bsc_mainnet: {
-			url: `https://bsc-dataseed.binance.org/`,
+		bsc: {
+			url: process.env.BSC_NETWORK_ENDPOINT,
 			accounts: {
 				mnemonic: process.env.BSC_MNEMONIC_PHRASE
 			},
 			chainId: 56,
 			gas: "auto",
-			gasPrice: 15000000000,
+			gasPrice: 8000000000, // 8 Gwei
+			gasMultiplier: 1.2
+		},
+		fantom: {
+			url: process.env.FANTOM_NETWORK_ENDPOINT,
+			accounts: {
+				mnemonic: process.env.FANTOM_MNEMONIC_PHRASE
+			},
+			chainId: 250,
+			gas: "auto",
+			gasPrice: 80000000000, // XX Gwei
+			gasMultiplier: 1.2
+		},
+		harmony: {
+			url: process.env.HARMONY_NETWORK_ENDPOINT,
+			accounts: {
+				mnemonic: process.env.HARMONY_MNEMONIC_PHRASE
+			},
+			chainId: 1666600000,
+			gas: "auto",
+			gasPrice: 5000000000, // 5 Gwei
+			gasMultiplier: 1.2
+		},
+		polygon: {
+			url: `${process.env.POLYGON_NETWORK_ENDPOINT}${process.env.INFURA_PROJECT_ID}`,
+			accounts: {
+				mnemonic: process.env.POLYGON_MNEMONIC_PHRASE
+			},
+			chainId: 137,
+			gas: "auto",
+			gasPrice: 8000000000, // 8 Gwei
 			gasMultiplier: 1.2
 		},
 		ropsten: {
@@ -120,6 +150,15 @@ module.exports = {
 				  }
 			},
 			{
+				version: "0.8.2",
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 100000
+					}
+				  }
+			},
+			{
 				version: "0.8.4",
 				settings: {
 					optimizer: {
@@ -137,11 +176,13 @@ module.exports = {
       artifacts: "./artifacts"
     },
     mocha: {
-      timeout: 360000
+      timeout: 500000
 	},
 	etherscan: {
-		apiKey: process.env.ETHERSCAN_API_KEY, // ETH Mainnet
-		// apiKey: process.env.BSCSCAN_API_KEY // BSC
+		apiKey: process.env.BSCSCAN_API_KEY // BSC
+		// apiKey: process.env.ETHERSCAN_API_KEY, // ETH Mainnet
+		// apiKey: process.env.FTMSCAN_API_KEY // Fantom
+		// apiKey: process.env.POLYGONSCAN_API_KEY // Polygon
 	},
 
 	contractSizer: {

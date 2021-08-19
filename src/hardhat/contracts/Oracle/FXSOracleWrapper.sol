@@ -41,14 +41,14 @@ contract FXSOracleWrapper is Owned {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _creator_address,
         address _timelock_address
     ) Owned(_creator_address) {
@@ -89,12 +89,12 @@ contract FXSOracleWrapper is Owned {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function setChainlinkFXSUSDOracle(address _chainlink_fxs_usd_oracle) external onlyByOwnerOrGovernance {
+    function setChainlinkFXSUSDOracle(address _chainlink_fxs_usd_oracle) external onlyByOwnGov {
         priceFeedFXSUSD = AggregatorV3Interface(_chainlink_fxs_usd_oracle);
         chainlink_fxs_usd_decimals = priceFeedFXSUSD.decimals();
     }
 
-    function setChainlinkETHUSDOracle(address _chainlink_eth_usd_oracle) external onlyByOwnerOrGovernance {
+    function setChainlinkETHUSDOracle(address _chainlink_eth_usd_oracle) external onlyByOwnGov {
         priceFeedETHUSD = AggregatorV3Interface(_chainlink_eth_usd_oracle);
         chainlink_eth_usd_decimals = priceFeedETHUSD.decimals();
     }

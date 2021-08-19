@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../StakingRewards.sol";
 
 contract Stake_FRAX_FXS is StakingRewards {
-    constructor(
+    constructor (
         address _owner,
         address _rewardsDistribution,
         address _rewardsToken,

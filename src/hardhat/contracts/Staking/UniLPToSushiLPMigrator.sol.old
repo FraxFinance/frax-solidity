@@ -114,7 +114,7 @@ contract UniLPToSushiLPMigrator is IStakingRewards, RewardsDistributionRecipient
     
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _source_staking_contract_addr,
         address _dest_staking_contract_addr
@@ -295,12 +295,12 @@ contract UniLPToSushiLPMigrator is IStakingRewards, RewardsDistributionRecipient
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         ERC20(tokenAddress).transfer(owner_address, tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
     }
 
-    function setOwnerAndTimelock(address _new_owner, address _new_timelock) external onlyByOwnerOrGovernance {
+    function setOwnerAndTimelock(address _new_owner, address _new_timelock) external onlyByOwnGov {
         owner_address = _new_owner;
         timelock_address = _new_timelock;
     }
@@ -329,7 +329,7 @@ contract UniLPToSushiLPMigrator is IStakingRewards, RewardsDistributionRecipient
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner_address || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }

@@ -25,7 +25,7 @@ interface IFNX_IntegratedStake {
 //     /**
 //      * @dev constructor.
 //      */
-//     constructor(address FPTA,address FPTB,address FPTAColPool,address FPTBColPool,address minePool)public{
+//     constructor (address FPTA,address FPTB,address FPTAColPool,address FPTBColPool,address minePool)public{
 //         setAddress(FPTA,FPTB,FPTAColPool,FPTBColPool,minePool);
 //     }
 //     function setAddress(address FPTA,address FPTB,address FPTAColPool,address FPTBColPool,address minePool) onlyOwner public{

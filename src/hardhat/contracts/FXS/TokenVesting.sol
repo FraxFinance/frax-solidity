@@ -55,7 +55,7 @@ contract TokenVesting {
      * @param revocable whether the vesting is revocable or not
      */
 
-    constructor(
+    constructor (
         address beneficiary,
         uint256 start,
         uint256 cliffDuration,

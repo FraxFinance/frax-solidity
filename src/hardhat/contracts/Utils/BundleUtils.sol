@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 contract BundleUtils {
 
-	constructor() {}
+	constructor () {}
 
 	function checkParentHash(bytes32 _parent_hash) public view returns (bool) {
 		require(blockhash(block.number - 1) == _parent_hash, "stale bundle");

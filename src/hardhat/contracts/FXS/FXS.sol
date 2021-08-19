@@ -66,14 +66,14 @@ contract FRAXShares is ERC20Custom, AccessControl, Owned {
         _;
     } 
     
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "You are not an owner or the governance timelock");
         _;
     }
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         string memory _name,
         string memory _symbol, 
         address _oracle_address,
@@ -94,18 +94,18 @@ contract FRAXShares is ERC20Custom, AccessControl, Owned {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function setOracle(address new_oracle) external onlyByOwnerOrGovernance {
+    function setOracle(address new_oracle) external onlyByOwnGov {
         require(new_oracle != address(0), "Zero address detected");
 
         oracle_address = new_oracle;
     }
 
-    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address new_timelock) external onlyByOwnGov {
         require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
     
-    function setFRAXAddress(address frax_contract_address) external onlyByOwnerOrGovernance {
+    function setFRAXAddress(address frax_contract_address) external onlyByOwnGov {
         require(frax_contract_address != address(0), "Zero address detected");
 
         FRAX = FRAXStablecoin(frax_contract_address);
@@ -145,7 +145,7 @@ contract FRAXShares is ERC20Custom, AccessControl, Owned {
         emit FXSBurned(b_address, address(this), b_amount);
     }
 
-    function toggleVotes() external onlyByOwnerOrGovernance {
+    function toggleVotes() external onlyByOwnGov {
         trackingVotes = !trackingVotes;
     }
 

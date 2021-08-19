@@ -66,14 +66,14 @@ contract PIDController is Owned {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _frax_contract_address,
         address _fxs_contract_address,
         address _creator_address,
@@ -172,53 +172,53 @@ contract PIDController is Owned {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function activate(bool _state) external onlyByOwnerOrGovernance {
+    function activate(bool _state) external onlyByOwnGov {
         is_active = _state;
     }
 
-    function useGrowthRatio(bool _use_growth_ratio) external onlyByOwnerOrGovernance {
+    function useGrowthRatio(bool _use_growth_ratio) external onlyByOwnGov {
         use_growth_ratio = _use_growth_ratio;
     }
 
-    function setReserveTracker(address _reserve_tracker_address) external onlyByOwnerOrGovernance {
+    function setReserveTracker(address _reserve_tracker_address) external onlyByOwnGov {
         reserve_tracker_address = _reserve_tracker_address;
         reserve_tracker = ReserveTracker(_reserve_tracker_address);
     }
 
-    function setMetapool(address _metapool_address) external onlyByOwnerOrGovernance {
+    function setMetapool(address _metapool_address) external onlyByOwnGov {
         frax_metapool_address = _metapool_address;
         frax_metapool = IMetaImplementationUSD(_metapool_address);
     }
 
     // As a percentage added/subtracted from the previous; e.g. top_band = 4000 = 0.4% -> will decollat if GR increases by 0.4% or more
-    function setGrowthRatioBands(uint256 _GR_top_band, uint256 _GR_bottom_band) external onlyByOwnerOrGovernance {
+    function setGrowthRatioBands(uint256 _GR_top_band, uint256 _GR_bottom_band) external onlyByOwnGov {
         GR_top_band = _GR_top_band;
         GR_bottom_band = _GR_bottom_band;
     }
 
-    function setInternalCooldown(uint256 _internal_cooldown) external onlyByOwnerOrGovernance {
+    function setInternalCooldown(uint256 _internal_cooldown) external onlyByOwnGov {
         internal_cooldown = _internal_cooldown;
     }
 
-    function setFraxStep(uint256 _new_step) external onlyByOwnerOrGovernance {
+    function setFraxStep(uint256 _new_step) external onlyByOwnGov {
         frax_step = _new_step;
     }
 
-    function setPriceBands(uint256 _top_band, uint256 _bottom_band) external onlyByOwnerOrGovernance {
+    function setPriceBands(uint256 _top_band, uint256 _bottom_band) external onlyByOwnGov {
         FRAX_top_band = _top_band;
         FRAX_bottom_band = _bottom_band;
     }
 
-    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address new_timelock) external onlyByOwnGov {
         require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
 
-    function toggleCollateralRatio(bool _is_paused) external onlyByOwnerOrGovernance {
+    function toggleCollateralRatio(bool _is_paused) external onlyByOwnGov {
     	collateral_ratio_paused = _is_paused;
     }
 
-    function activateFIP6(bool _activate) external onlyByOwnerOrGovernance {
+    function activateFIP6(bool _activate) external onlyByOwnGov {
         FIP_6 = _activate;
     }
 

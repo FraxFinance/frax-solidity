@@ -183,7 +183,7 @@ contract Owned {
     address public owner;
     address public nominatedOwner;
 
-    constructor(address _owner) public {
+    constructor (address _owner) public {
         require(_owner != address(0), "Owner address cannot be 0");
         owner = _owner;
         emit OwnerChanged(address(0), _owner);
@@ -218,7 +218,7 @@ contract Pausable is Owned {
     uint public lastPauseTime;
     bool public paused;
 
-    constructor() internal {
+    constructor () internal {
         // This contract is abstract, and thus cannot be instantiated directly
         require(owner != address(0), "Owner must be set");
         // Paused will be false, and lastPauseTime will be 0 upon initialisation
@@ -470,7 +470,7 @@ contract FRAX3CRV_Curve_FXS_Distributor is IStakingRewards, RewardsDistributionR
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _rewardsDistribution,
         address _rewardsToken,

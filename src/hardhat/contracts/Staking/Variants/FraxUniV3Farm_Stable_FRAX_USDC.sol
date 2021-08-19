@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../FraxUniV3Farm_Stable.sol";
 
 contract FraxUniV3Farm_Stable_FRAX_USDC is FraxUniV3Farm_Stable {
-    constructor(
+    constructor (
         address _owner,
         address _lp_pool_address,
         address _timelock_address,

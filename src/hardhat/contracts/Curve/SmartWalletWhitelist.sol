@@ -16,7 +16,7 @@ contract SmartWalletWhitelist is Owned {
     event ApproveWallet(address);
     event RevokeWallet(address);
     
-    constructor(address _owner) Owned(_owner) {
+    constructor (address _owner) Owned(_owner) {
         checker = address(0);
     }
     

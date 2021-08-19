@@ -122,7 +122,7 @@ contract FraxPoolvAMM is AccessControl {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == timelock_address || msg.sender == owner_address, "Not owner or timelock");
         _;
     }
@@ -144,7 +144,7 @@ contract FraxPoolvAMM is AccessControl {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _frax_contract_address,
         address _fxs_contract_address,
         address _collateral_address,
@@ -599,7 +599,7 @@ contract FraxPoolvAMM is AccessControl {
     }
 
     // Combined into one function due to 24KiB contract memory limit
-    function setPoolParameters(uint256 new_ceiling, uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee, uint256 _reserve_refresh_cooldown, uint256 _max_drift_band) external onlyByOwnerOrGovernance {
+    function setPoolParameters(uint256 new_ceiling, uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee, uint256 _reserve_refresh_cooldown, uint256 _max_drift_band) external onlyByOwnGov {
         pool_ceiling = new_ceiling;
         bonus_rate = new_bonus_rate;
         redemption_delay = new_redemption_delay;
@@ -613,21 +613,21 @@ contract FraxPoolvAMM is AccessControl {
     
 
     // Sets the FXS_USDC Uniswap oracle address 
-    function setFXSUSDCOracle(address _fxs_usdc_oracle_addr) public onlyByOwnerOrGovernance {
+    function setFXSUSDCOracle(address _fxs_usdc_oracle_addr) public onlyByOwnGov {
         fxs_usdc_oracle_address = _fxs_usdc_oracle_addr;
         fxsUSDCOracle = UniswapPairOracle(_fxs_usdc_oracle_addr);
     }
 
-    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address new_timelock) external onlyByOwnGov {
         require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
 
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+    function setOwner(address _owner_address) external onlyByOwnGov {
         owner_address = _owner_address;
     }
 
-    function setInvestorParameters(address _investor_contract_address, uint256 _global_investment_cap_percentage) external onlyByOwnerOrGovernance {
+    function setInvestorParameters(address _investor_contract_address, uint256 _global_investment_cap_percentage) external onlyByOwnGov {
         investor_contract_address = _investor_contract_address;
         global_investment_cap_percentage = _global_investment_cap_percentage;
     }

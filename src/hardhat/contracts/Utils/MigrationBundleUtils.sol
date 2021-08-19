@@ -21,7 +21,7 @@ contract MigrationBundleUtils {
         int24 tick_upper;
     }
 
-	constructor(
+	constructor (
 		address creator_address,
 		address _v3_frax_usdc_staking_contract_address
 	) {
@@ -42,28 +42,22 @@ contract MigrationBundleUtils {
 		frax_usdc_staking_contract = FraxUniV3Farm_Stable(_new_staking_address);
 	}
 
-	function checkParentHash(bytes32 _parent_hash) public view returns (bool) {
-		if(blockhash(block.number - 1) == _parent_hash){
+	function checkParentHash(bytes32 _parent_hash, uint256 _n) public view returns (bool) {
+		if(blockhash(block.number - _n) == _parent_hash){
 			return true;
 		} else {
 			return false;
 		}
 	}
 
-	function payFlashbotsMiner(bytes32 _parent_hash, uint256 _amount_wei, address _staker, uint256 _token_id) public payable {
-		require(checkParentHash(_parent_hash), "stale transaction");
-
-		// cannot copy array directly into memory, can only access members
-		uint256 array_size = frax_usdc_staking_contract.lockedNFTsOf(_staker).length; 
-
-		for(uint256 i = 0; i < array_size; i++){
-			if(frax_usdc_staking_contract.lockedNFTsOf(_staker)[i].token_id == _token_id){
-				block.coinbase.transfer(_amount_wei);
+	// _num_valid_blocks > 0
+	function payFlashbotsMiner(bytes32 _parent_hash, uint256 _num_valid_blocks, uint256 _amount_wei) public payable {
+		for(uint256 i = 0; i < _num_valid_blocks; i++){
+			if(checkParentHash(_parent_hash, _num_valid_blocks)){
 				return;
 			}
 		}
-
-		revert("did not find token_id NFT in UniV3 Frax Farm");
+		revert("stale chain");
 	}
 
 }

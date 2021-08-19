@@ -9,7 +9,7 @@ contract MigrationHelper {
     if (msg.sender == owner) _;
   }
 
-  constructor(address _owner) public {
+  constructor (address _owner) public {
     owner = _owner;
   }
 

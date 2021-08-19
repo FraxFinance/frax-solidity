@@ -35,11 +35,13 @@ pragma experimental ABIEncoderV2;
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
 import "../Curve/IveFXS.sol";
+import "../Curve/FraxCrossChainRewarder.sol";
 import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
-// import '../Uniswap/Interfaces/IFeederPool.sol';
-import '../Misc_AMOs/mstable/IFeederPool.sol';
+import '../Misc_AMOs/impossible/IStableXPair.sol'; // Impossible
+// import '../Uniswap/Interfaces/IUniswapV2Pair.sol'; // Uniswap V2
+// import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
 import "../Utils/ReentrancyGuard.sol";
 
 // Inheritance
@@ -55,7 +57,12 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
     IveFXS public veFXS;
     ERC20 public rewardsToken0;
     ERC20 public rewardsToken1;
-    IFeederPool public stakingToken;
+    
+    IStableXPair public stakingToken; // Impossible
+    // IFeederPool public stakingToken; // mStable
+    // IUniswapV2Pair public stakingToken; // Uniswap V2
+
+    FraxCrossChainRewarder public rewarder;
 
     // FRAX
     address public frax_address;
@@ -99,6 +106,7 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
     mapping(address => uint256) public userRewardPerTokenPaid1;
     mapping(address => uint256) public rewards0;
     mapping(address => uint256) public rewards1;
+    uint256 public lastRewardPull;
 
     // Balance tracking
     uint256 private _total_liquidity_locked;
@@ -106,8 +114,8 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
     mapping(address => uint256) private _locked_liquidity;
     mapping(address => uint256) private _combined_weights;
 
-    // // Uniswap V2 ONLY
-    // bool frax_is_token0;
+    // Uniswap V2 / Impossible ONLY
+    bool frax_is_token0;
 
     // Stake tracking
     mapping(address => LockedStake[]) private lockedStakes;
@@ -141,13 +149,13 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
-    modifier onlyByOwnerOrGovernanceOrController() {
-        require(msg.sender == owner || msg.sender == timelock_address || msg.sender == controller_address, "You are not the owner, governance timelock, or controller");
+    modifier onlyByOwnGovCtrlr() {
+        require(msg.sender == owner || msg.sender == timelock_address || msg.sender == controller_address, "Not own, tlk, or ctrlr");
         _;
     }
 
@@ -157,7 +165,7 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
     }
 
     modifier notStakingPaused() {
-        require(stakingPaused == false, "Staking is paused");
+        require(stakingPaused == false, "Staking paused");
         _;
     }
 
@@ -168,25 +176,31 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
     
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _rewardsToken0,
         address _rewardsToken1,
         address _stakingToken,
         address _frax_address,
-        address _timelock_address
+        address _timelock_address,
+        address _rewarder_address
     ) Owned(_owner){
         frax_address = _frax_address;
         rewardsToken0 = ERC20(_rewardsToken0);
         rewardsToken1 = ERC20(_rewardsToken1);
-        stakingToken = IFeederPool(_stakingToken);
-        timelock_address = _timelock_address;
+        
+        stakingToken = IStableXPair(_stakingToken);
+        // stakingToken = IFeederPool(_stakingToken);
+        // stakingToken = IUniswapV2Pair(_stakingToken);
 
-        // // Uniswap V2 ONLY
-        // // Uniswap related. Need to know which token frax is (0 or 1)
-        // address token0 = stakingToken.token0();
-        // if (token0 == frax_address) frax_is_token0 = true;
-        // else frax_is_token0 = false;
+        timelock_address = _timelock_address;
+        rewarder = FraxCrossChainRewarder(_rewarder_address);
+
+        // Uniswap V2 / Impossible ONLY
+        // Need to know which token frax is (0 or 1)
+        address token0 = stakingToken.token0();
+        if (token0 == frax_address) frax_is_token0 = true;
+        else frax_is_token0 = false;
         
         // Other booleans
         migrationsOn = false;
@@ -244,25 +258,25 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
-        // Uniswap V2
-        // ============================================
-        // {
-        //     uint256 total_frax_reserves;
-        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-        //     if (frax_is_token0) total_frax_reserves = reserve0;
-        //     else total_frax_reserves = reserve1;
-
-        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
-        // }
-
-        // mStable
+        // Uniswap V2 & Impossible
         // ============================================
         {
             uint256 total_frax_reserves;
-            (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
-            total_frax_reserves = uint256(vaultData.vaultBalance);
+            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+            if (frax_is_token0) total_frax_reserves = reserve0;
+            else total_frax_reserves = reserve1;
+
             frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
         }
+
+        // mStable
+        // ============================================
+        // {
+        //     uint256 total_frax_reserves;
+        //     (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
+        //     total_frax_reserves = uint256(vaultData.vaultBalance);
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        // }
 
         return frax_per_lp_token;
     }
@@ -540,6 +554,12 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
 
     // Quasi-notifyRewardAmount() logic
     function syncRewards() internal {
+        // Bring in rewards, if applicable
+        if ((address(rewarder) != address(0)) && ((block.timestamp).sub(lastRewardPull) >= rewardsDuration)){
+            rewarder.distributeReward();
+            lastRewardPull = block.timestamp;
+        }
+
         // Get the current reward token balances
         uint256 curr_bal_0 = rewardsToken0.balanceOf(address(this));
         uint256 curr_bal_1 = rewardsToken1.balanceOf(address(this));
@@ -603,32 +623,38 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
 
     // Needed when first deploying the farm
     // Make sure rewards are present
-    function initializeDefault() external onlyByOwnerOrGovernanceOrController {
+    function initializeDefault() external onlyByOwnGovCtrlr {
         require(!isInitialized, "Already initialized");
         isInitialized = true;
+
+        // Bring in rewards, if applicable
+        if (address(rewarder) != address(0)){
+            rewarder.distributeReward();
+            lastRewardPull = block.timestamp;
+        }
 
         emit DefaultInitialization();
     }
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
     function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs, uint256 start_timestamp) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _stakeLocked(staker_address, msg.sender, amount, secs, start_timestamp);
     }
 
     // Used for migrations
     function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _withdrawLocked(staker_address, msg.sender, kek_id);
     }
 
     // Adds supported migrator address 
-    function addMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+    function addMigrator(address migrator_address) external onlyByOwnGov {
         valid_migrators[migrator_address] = true;
     }
 
     // Remove a migrator address
-    function removeMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+    function removeMigrator(address migrator_address) external onlyByOwnGov {
         require(valid_migrators[migrator_address] == true, "Address nonexistant");
         
         // Delete from the mapping
@@ -636,7 +662,7 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
     }
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         // Admin cannot withdraw the staking token from the contract unless currently migrating
         if(!migrationsOn){
             require(tokenAddress != address(stakingToken), "Not in migration"); // Only Governance / Timelock can trigger a migration
@@ -646,7 +672,7 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         emit Recovered(tokenAddress, tokenAmount);
     }
 
-    function setMultipliers(uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_per_frax_for_max_boost) external onlyByOwnerOrGovernance {
+    function setMultipliers(uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_per_frax_for_max_boost) external onlyByOwnGov {
         require(_lock_max_multiplier >= MULTIPLIER_PRECISION, "Mult must be >= MULTIPLIER_PRECISION");
         require(_vefxs_max_multiplier >= 0, "veFXS mul must be >= 0");
         require(_vefxs_per_frax_for_max_boost > 0, "veFXS pct max must be >= 0");
@@ -660,7 +686,7 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         emit veFXSPerFraxForMaxBoostUpdated(vefxs_per_frax_for_max_boost);
     }
 
-    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnerOrGovernance {
+    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnGov {
         require(_lock_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
         require(_lock_time_min >= 1, "Mul min time must be >= 1");
 
@@ -671,39 +697,39 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         emit LockedStakeMinTime(_lock_time_min);
     }
 
-    function greylistAddress(address _address) external onlyByOwnerOrGovernance {
+    function greylistAddress(address _address) external onlyByOwnGov {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function unlockStakes() external onlyByOwnerOrGovernance {
+    function unlockStakes() external onlyByOwnGov {
         stakesUnlocked = !stakesUnlocked;
     }
 
-    function toggleMigrations() external onlyByOwnerOrGovernance {
+    function toggleMigrations() external onlyByOwnGov {
         migrationsOn = !migrationsOn;
     }
 
-    function toggleStaking() external onlyByOwnerOrGovernance {
+    function toggleStaking() external onlyByOwnGov {
         stakingPaused = !stakingPaused;
     }
 
-    function toggleWithdrawals() external onlyByOwnerOrGovernance {
+    function toggleWithdrawals() external onlyByOwnGov {
         withdrawalsPaused = !withdrawalsPaused;
     }
 
-    function toggleRewardsCollection() external onlyByOwnerOrGovernance {
+    function toggleRewardsCollection() external onlyByOwnGov {
         rewardsCollectionPaused = !rewardsCollectionPaused;
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address _new_timelock) external onlyByOwnGov {
         timelock_address = _new_timelock;
     }
 
-    function setController(address _controller_address) external onlyByOwnerOrGovernance {
+    function setController(address _controller_address) external onlyByOwnGov {
         controller_address = _controller_address;
     }
 
-    function setVeFXS(address _vefxs_address) external onlyByOwnerOrGovernance {
+    function setVeFXS(address _vefxs_address) external onlyByOwnGov {
         veFXS = IveFXS(_vefxs_address);
     }
 

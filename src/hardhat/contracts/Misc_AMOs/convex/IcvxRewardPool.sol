@@ -831,7 +831,7 @@ interface IcvxRewardPool {
 //     event Withdrawn(address indexed user, uint256 amount);
 //     event RewardPaid(address indexed user, uint256 reward);
 
-//     constructor(
+//     constructor (
 //         address stakingToken_,
 //         address rewardToken_,
 //         address crvDeposits_,

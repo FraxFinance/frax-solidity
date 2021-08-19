@@ -44,7 +44,7 @@ interface IFNX_Oracle {
 //     /**
 //      * @dev Initializes the contract setting the deployer as the initial owner.
 //      */
-//     constructor() internal {
+//     constructor () internal {
 //         _owner = msg.sender;
 //         emit OwnershipTransferred(address(0), _owner);
 //     }
@@ -146,7 +146,7 @@ interface IFNX_Oracle {
 //         }
 //         return false;
 //     }
-//     function _getEligibleIndexUint32(uint32[] memory whiteList,uint32 temp) internal pure returns (uint256){
+//     function _getEligibleIndexUint32(uint32[] memory whiteList,uint32 temp) internal pure returns (uint256) {
 //         uint256 len = whiteList.length;
 //         uint256 i=0;
 //         for (;i<len;i++){
@@ -190,7 +190,7 @@ interface IFNX_Oracle {
 //         }
 //         return false;
 //     }
-//     function _getEligibleIndexUint256(uint256[] memory whiteList,uint256 temp) internal pure returns (uint256){
+//     function _getEligibleIndexUint256(uint256[] memory whiteList,uint256 temp) internal pure returns (uint256) {
 //         uint256 len = whiteList.length;
 //         uint256 i=0;
 //         for (;i<len;i++){
@@ -234,7 +234,7 @@ interface IFNX_Oracle {
 //         }
 //         return false;
 //     }
-//     function _getEligibleIndexAddress(address[] memory whiteList,address temp) internal pure returns (uint256){
+//     function _getEligibleIndexAddress(address[] memory whiteList,address temp) internal pure returns (uint256) {
 //         uint256 len = whiteList.length;
 //         uint256 i=0;
 //         for (;i<len;i++){
@@ -444,7 +444,7 @@ interface IFNX_Oracle {
 //      * Aggregator: LTC/USD
 //      * Address: 0x727B59d0989d6D1961138122BC9F94f534E82B32
 //      */
-//     constructor() public {
+//     constructor () public {
 //         //mainnet
 //         assetsMap[1] = AggregatorV3Interface(0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c);
 //         assetsMap[2] = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);

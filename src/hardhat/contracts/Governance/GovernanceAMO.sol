@@ -50,14 +50,14 @@ contract GovernanceAMO is Owned, ReentrancyGuard, Pausable {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner_address || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _timelock_address
     ) public Owned(_owner){

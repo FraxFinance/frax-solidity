@@ -117,7 +117,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
@@ -128,7 +128,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
     }
 
     modifier notStakingPaused() {
-        require(stakingPaused == false, "Staking is paused");
+        require(stakingPaused == false, "Staking paused");
         _;
     }
 
@@ -139,7 +139,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
     
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _rewardsToken0,
         address _rewardsToken1,
@@ -483,23 +483,23 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
 
     // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
     function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs, uint256 start_timestamp) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _stakeLocked(staker_address, msg.sender, amount, secs, start_timestamp);
     }
 
     // Used for migrations
     function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Migrator invalid or unapproved");
+        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
         _withdrawLocked(staker_address, msg.sender, kek_id);
     }
 
     // Adds supported migrator address 
-    function addMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+    function addMigrator(address migrator_address) external onlyByOwnGov {
         valid_migrators[migrator_address] = true;
     }
 
     // Remove a migrator address
-    function removeMigrator(address migrator_address) external onlyByOwnerOrGovernance {
+    function removeMigrator(address migrator_address) external onlyByOwnGov {
         require(valid_migrators[migrator_address] == true, "Address nonexistant");
         
         // Delete from the mapping
@@ -507,7 +507,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
     }
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
-    function recoverBEP20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverBEP20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         // Admin cannot withdraw the staking token from the contract unless currently migrating
         if(!migrationsOn){
             require(tokenAddress != address(stakingToken), "Not in migration"); // Only Governance / Timelock can trigger a migration
@@ -517,7 +517,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
         emit Recovered(tokenAddress, tokenAmount);
     }
 
-    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnerOrGovernance {
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyByOwnGov {
         require(
             periodFinish == 0 || block.timestamp > periodFinish,
             "Reward period incomplete"
@@ -526,7 +526,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
         emit RewardsDurationUpdated(rewardsDuration);
     }
 
-    function setMultipliers(uint256 _lock_max_multiplier) external onlyByOwnerOrGovernance {
+    function setMultipliers(uint256 _lock_max_multiplier) external onlyByOwnGov {
         require(_lock_max_multiplier >= uint256(1e6), "Multiplier must be greater than or equal to 1e6");
 
         lock_max_multiplier = _lock_max_multiplier;
@@ -534,7 +534,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
         emit LockedStakeMaxMultiplierUpdated(lock_max_multiplier);
     }
 
-    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnerOrGovernance {
+    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnGov {
         require(_lock_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
         require(_lock_time_min >= 1, "Mul min time must be >= 1");
 
@@ -545,37 +545,37 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
         emit LockedStakeMinTime(_lock_time_min);
     }
 
-    function initializeDefault() external onlyByOwnerOrGovernance {
+    function initializeDefault() external onlyByOwnGov {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
         emit DefaultInitialization();
     }
 
-    function greylistAddress(address _address) external onlyByOwnerOrGovernance {
+    function greylistAddress(address _address) external onlyByOwnGov {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function unlockStakes() external onlyByOwnerOrGovernance {
+    function unlockStakes() external onlyByOwnGov {
         stakesUnlocked = !stakesUnlocked;
     }
 
-    function toggleMigrations() external onlyByOwnerOrGovernance {
+    function toggleMigrations() external onlyByOwnGov {
         migrationsOn = !migrationsOn;
     }
 
-    function toggleStaking() external onlyByOwnerOrGovernance {
+    function toggleStaking() external onlyByOwnGov {
         stakingPaused = !stakingPaused;
     }
 
-    function toggleWithdrawals() external onlyByOwnerOrGovernance {
+    function toggleWithdrawals() external onlyByOwnGov {
         withdrawalsPaused = !withdrawalsPaused;
     }
 
-    function toggleRewardsCollection() external onlyByOwnerOrGovernance {
+    function toggleRewardsCollection() external onlyByOwnGov {
         rewardsCollectionPaused = !rewardsCollectionPaused;
     }
 
-    function setRewardRates(uint256 _new_rate0, uint256 _new_rate1, bool sync_too) external onlyByOwnerOrGovernance {
+    function setRewardRates(uint256 _new_rate0, uint256 _new_rate1, bool sync_too) external onlyByOwnGov {
         rewardRate0 = _new_rate0;
         rewardRate1 = _new_rate1;
 
@@ -584,14 +584,14 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
         }
     }
 
-    function toggleToken1Rewards() external onlyByOwnerOrGovernance {
+    function toggleToken1Rewards() external onlyByOwnGov {
         if (token1_rewards_on) {
             rewardRate1 = 0;
         }
         token1_rewards_on = !token1_rewards_on;
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address _new_timelock) external onlyByOwnGov {
         timelock_address = _new_timelock;
     }
 

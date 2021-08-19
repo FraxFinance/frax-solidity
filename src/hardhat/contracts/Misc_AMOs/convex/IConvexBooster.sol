@@ -836,7 +836,7 @@ interface IConvexBooster {
 //     event Deposited(address indexed user, uint256 indexed poolid, uint256 amount);
 //     event Withdrawn(address indexed user, uint256 indexed poolid, uint256 amount);
 
-//     constructor(address _staker, address _minter) public {
+//     constructor (address _staker, address _minter) public {
 //         isShutdown = false;
 //         staker = _staker;
 //         owner = msg.sender;

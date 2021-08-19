@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../FraxUniV3Farm_Volatile.sol";
 
 contract FraxUniV3Farm_Volatile_FRAX_WETH is FraxUniV3Farm_Volatile {
-    constructor(
+    constructor (
         address _owner,
         address _lp_pool_address,
         address _timelock_address,

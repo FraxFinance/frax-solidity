@@ -5,7 +5,7 @@ import "./FraxPool.sol";
 
 contract Pool_USDC is FraxPool {
     address public USDC_address;
-    constructor(
+    constructor (
         address _frax_contract_address,
         address _fxs_contract_address,
         address _collateral_address,

@@ -456,7 +456,7 @@ interface IOlympusBondDepository {
 
 //     bytes32 public DOMAIN_SEPARATOR;
 
-//     constructor() {
+//     constructor () {
 //         uint256 chainID;
 //         assembly {
 //             chainID := chainid()

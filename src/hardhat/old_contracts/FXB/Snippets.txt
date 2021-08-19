@@ -1,0 +1,123 @@
+    // Release curve
+    // ========================================================================================
+    
+    // Address for the pre-calculated release curve points
+    address public release_curve_contract_address; 
+    IFraxBond_Curve private RELEASE_CURVE;
+    uint8 release_curve_choice;
+
+
+    // Maximum number of FXB tokens that should be floating outside the contract
+    // The goal is to do a smooth release so price spikes don't happen
+    function max_fxb_releaseable() public view returns (uint256 max_fxb_releaseable) {
+        if (isInEpoch()) {
+            uint256 time_into_epoch = (block.timestamp).sub(epoch_start);
+            if(useCurve) {
+                // Given n points on the curve, find the nearest one
+                // e.g. 100 points total, if the time_into_epoch is 50% of the epoch length, nearest_curve_index should be 50
+                
+                uint256 release_curve_total_points = uint256(RELEASE_CURVE.get_total_points(release_curve_choice));
+
+                // Truncation desired
+                uint256 nearest_curve_index = ((release_curve_total_points).mul(time_into_epoch)) / epoch_length;
+                
+                // Failsafe to avoid out-of-bounds array
+                // Otherwise proceed normally
+                if (nearest_curve_index == release_curve_total_points) max_fxb_releaseable = max_fxb_outstanding;
+                else {
+                    uint256 max_fxb_releaseable = max_fxb_outstanding.mul(RELEASE_CURVE.get_curve_point(release_curve_choice, uint8(nearest_curve_index))).div(PRICE_PRECISION);
+                }
+            }
+            else {
+                // Use linear
+                max_fxb_releaseable = max_fxb_outstanding.mul(time_into_epoch).div(epoch_length);
+            }
+        }
+        else {
+            // No selling outside of an epoch
+            max_fxb_releaseable = 0;
+        }
+
+    }
+    
+
+    function setReleaseCurveContractAndChoice(address _release_curve_contract_address, uint8 _release_curve_choice) external onlyByOwnGov {
+        release_curve_contract_address = _release_curve_contract_address;
+        release_curve_choice = _release_curve_choice;
+        RELEASE_CURVE = IFraxBond_Curve(_release_curve_contract_address);
+        require(RELEASE_CURVE.get_total_points(release_curve_choice) != 0, "Invalid curve address or choice");
+        require(RELEASE_CURVE.get_curve_point(release_curve_choice, 1) != 0, "Invalid curve point");
+    }
+
+    function toggleUseCurve() external {
+        require(hasRole(USE_CURVE_TOGGLER, msg.sender));
+        useCurve = !useCurve;
+    }
+
+
+
+
+
+
+    // AMM floor sell under floor price
+    // ========================================================================================
+
+
+    function sellFXBintoAMM(uint256 fxb_amount, uint256 frax_out_min) external notSellingPaused returns (uint256 fxb_sold_under_floor, uint256 frax_out, uint256 frax_fee_amt) {
+        require(isInEpoch(), 'Not in an epoch');
+
+        uint256 the_floor_price = floor_price();
+        uint256 amm_price = amm_spot_price();
+
+        fxb_sold_under_floor = 0;
+
+        // The AMM will buy back FXB at market rates in all cases
+        // However, any FXB bought back under the floor price will be burned
+        uint256 max_market_sellable_fxb = maximum_fxb_AMM_sellable_above_floor();
+        if(fxb_amount > max_market_sellable_fxb){
+            fxb_sold_under_floor = fxb_amount.sub(max_market_sellable_fxb);
+        }
+        else {
+            fxb_sold_under_floor = 0;
+        }
+
+        // Get the expected amount of FRAX via the AMM from the market-priced portion
+        frax_out = getAmountOutNoFee(fxb_amount, FXB.balanceOf(address(this)), FRAX.balanceOf(address(this)));
+
+        // Apply the normal selling fee
+        frax_fee_amt = frax_out.mul(selling_fee).div(PRICE_PRECISION);
+        frax_out = frax_out.sub(frax_fee_amt);
+
+        // Check frax_out_min
+        require(frax_out >= frax_out_min, "[sellFXBintoAMM frax_out_min]: Slippage limit reached");
+
+        // AMM will never allow an effective sale price above 1
+        {
+            uint256 effective_sale_price = frax_out.mul(PRICE_PRECISION).div(fxb_amount);
+            require(effective_sale_price <= PRICE_PRECISION, "[sellFXBintoAMM]: Effective sale price is above 1");
+        }
+
+        // Take FXB from the sender
+        FXB.transferFrom(msg.sender, address(this), fxb_amount);
+
+        // If any FXB was sold under the floor price, retire / burn it
+        // This is less FXB that will have to be redeemed at full value later and is essentially a protocol-level profit
+        if (fxb_sold_under_floor > 0){
+            FXB.burn(fxb_sold_under_floor);
+        }
+
+        // Give FRAX to sender
+        FRAX.transfer(msg.sender, frax_out);
+
+        // Safety checks (must be done after the transfers in this case)
+        // Tx will still revert if not true
+        {
+            uint256 amm_price = amm_spot_price();
+
+            // The spot price should not land above 1 after a sale
+            require(amm_price <= PRICE_PRECISION, "[sellFXBintoAMM]: Spot price is above 1");
+
+            // It is ok for the AMM to buy back FXB below the floor price and retire it, as this is basically a discount
+            // and less money it will have to pay back later
+        }
+    }

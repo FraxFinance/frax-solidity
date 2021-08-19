@@ -279,7 +279,7 @@ contract AnyswapV4ERC20 is IAnyswapV3ERC20 {
     event LogSwapout(address indexed account, address indexed bindaddr, uint amount);
     event LogAddAuth(address indexed auth, uint timestamp);
 
-    constructor(string memory _name, string memory _symbol, uint8 _decimals, address _underlying, address _vault) {
+    constructor (string memory _name, string memory _symbol, uint8 _decimals, address _underlying, address _vault) {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;

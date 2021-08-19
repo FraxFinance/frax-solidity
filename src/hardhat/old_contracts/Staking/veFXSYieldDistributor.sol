@@ -78,7 +78,7 @@ contract veFXSYieldDistributor is Owned, ReentrancyGuard {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner_address || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
@@ -95,7 +95,7 @@ contract veFXSYieldDistributor is Owned, ReentrancyGuard {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _owner,
         address _emittedToken,
         address _timelock_address,
@@ -246,34 +246,34 @@ contract veFXSYieldDistributor is Owned, ReentrancyGuard {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // Added to support recovering LP Yield and other mistaken tokens from other systems to be distributed to holders
-    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnerOrGovernance {
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         // Only the owner address can ever receive the recovery withdrawal
         ERC20(tokenAddress).transfer(owner_address, tokenAmount);
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
-    function setYieldDuration(uint256 _yieldDuration) external onlyByOwnerOrGovernance {
+    function setYieldDuration(uint256 _yieldDuration) external onlyByOwnGov {
         require(periodFinish == 0 || block.timestamp > periodFinish, "Previous yield period must be complete before changing the duration for the new period");
         yieldDuration = _yieldDuration;
         emit YieldDurationUpdated(yieldDuration);
     }
 
-    function initializeDefault() external onlyByOwnerOrGovernance {
+    function initializeDefault() external onlyByOwnGov {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(yieldDuration);
         totalVeFXSSupplyStored = veFXS.totalSupply();
         emit DefaultInitialization();
     }
 
-    function greylistAddress(address _address) external onlyByOwnerOrGovernance {
+    function greylistAddress(address _address) external onlyByOwnGov {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function setPauses(bool _yieldCollectionPaused) external onlyByOwnerOrGovernance {
+    function setPauses(bool _yieldCollectionPaused) external onlyByOwnGov {
         yieldCollectionPaused = _yieldCollectionPaused;
     }
 
-    function setYieldRate(uint256 _new_rate0, bool sync_too) external onlyByOwnerOrGovernance {
+    function setYieldRate(uint256 _new_rate0, bool sync_too) external onlyByOwnGov {
         yieldRate = _new_rate0;
 
         if (sync_too) {
@@ -281,11 +281,11 @@ contract veFXSYieldDistributor is Owned, ReentrancyGuard {
         }
     }
 
-    function setOwner(address _owner_address) external onlyByOwnerOrGovernance {
+    function setOwner(address _owner_address) external onlyByOwnGov {
         owner_address = _owner_address;
     }
 
-    function setTimelock(address _new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address _new_timelock) external onlyByOwnGov {
         timelock_address = _new_timelock;
     }
 

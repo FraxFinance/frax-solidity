@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../StakingRewardsDualV5.sol";
 
 contract StakingRewardsDualV5_FRAX_OHM is StakingRewardsDualV5 {
-    constructor(
+    constructor (
         address _owner,
         address _rewardsToken0,
         address _rewardsToken1, // OHM is E9

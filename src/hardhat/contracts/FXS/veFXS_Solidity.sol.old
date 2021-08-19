@@ -147,7 +147,7 @@ contract veFXS_Solidity is ReentrancyGuard{
         * @param _symbol Token symbol
         * @param _version Contract version - required for Aragon compatibility
     */
-    constructor(
+    constructor (
         address token_addr,
         string memory _name,
         string memory _symbol,

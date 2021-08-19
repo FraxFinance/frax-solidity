@@ -79,14 +79,14 @@ contract ReserveTracker is Owned {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyByOwnerOrGovernance() {
+    modifier onlyByOwnGov() {
         require(msg.sender == owner || msg.sender == timelock_address, "Not owner or timelock");
         _;
     }
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(
+    constructor (
         address _frax_contract_address,
         address _fxs_contract_address,
         address _creator_address,
@@ -153,21 +153,21 @@ contract ReserveTracker is Owned {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function toggleCurveTWAP(bool _state) external onlyByOwnerOrGovernance {
+    function toggleCurveTWAP(bool _state) external onlyByOwnGov {
         twap_paused = _state;
     }
 
-    function setCurveTWAPPeriod(uint _period) external onlyByOwnerOrGovernance {
+    function setCurveTWAPPeriod(uint _period) external onlyByOwnGov {
         PERIOD = _period;
     }
 
-    function setChainlinkFXSOracle(address _chainlink_fxs_oracle) external onlyByOwnerOrGovernance {
+    function setChainlinkFXSOracle(address _chainlink_fxs_oracle) external onlyByOwnGov {
         chainlink_fxs_oracle = ChainlinkFXSUSDPriceConsumer(_chainlink_fxs_oracle);
         chainlink_fxs_oracle_decimals = uint256(chainlink_fxs_oracle.getDecimals());
     }
 
     // Get the pair of which to price FRAX from
-    function setFRAXPriceOracle(address _frax_price_oracle_address, address _frax_pair_collateral_address, uint256 _frax_pair_collateral_decimals) public onlyByOwnerOrGovernance {
+    function setFRAXPriceOracle(address _frax_price_oracle_address, address _frax_pair_collateral_address, uint256 _frax_pair_collateral_decimals) public onlyByOwnGov {
         frax_price_oracle_address = _frax_price_oracle_address;
         frax_pair_collateral_address = _frax_pair_collateral_address;
         frax_pair_collateral_decimals = _frax_pair_collateral_decimals;
@@ -175,19 +175,19 @@ contract ReserveTracker is Owned {
         CONSULT_FRAX_DEC = 1e6 * (10 ** (uint256(18).sub(frax_pair_collateral_decimals)));
     }
 
-    function setMetapool(address _frax_metapool_address) public onlyByOwnerOrGovernance {
+    function setMetapool(address _frax_metapool_address) public onlyByOwnGov {
         frax_metapool_address = _frax_metapool_address;
         frax_metapool = IMetaImplementationUSD(_frax_metapool_address);
     }
 
     // Get the pair of which to price FXS from (using FXS-WETH)
-    function setFXSETHOracle(address _fxs_weth_oracle_address, address _weth_address) public onlyByOwnerOrGovernance {
+    function setFXSETHOracle(address _fxs_weth_oracle_address, address _weth_address) public onlyByOwnGov {
         fxs_weth_oracle_address = _fxs_weth_oracle_address;
         weth_address = _weth_address;
         fxs_weth_oracle = UniswapPairOracle(fxs_weth_oracle_address);
     }
 
-    function setETHCollateralOracle(address _weth_collateral_oracle_address, uint _collateral_decimals) public onlyByOwnerOrGovernance {
+    function setETHCollateralOracle(address _weth_collateral_oracle_address, uint _collateral_decimals) public onlyByOwnGov {
         weth_collat_oracle_address = _weth_collateral_oracle_address;
         weth_collat_decimals = _collateral_decimals;
         weth_collat_oracle = UniswapPairOracle(_weth_collateral_oracle_address);
@@ -195,14 +195,14 @@ contract ReserveTracker is Owned {
     }
 
     // Adds collateral addresses supported, such as tether and busd, must be ERC20 
-    function addFXSPair(address pair_address) public onlyByOwnerOrGovernance {
+    function addFXSPair(address pair_address) public onlyByOwnGov {
         require(fxs_pairs[pair_address] == false, "Address already exists");
         fxs_pairs[pair_address] = true; 
         fxs_pairs_array.push(pair_address);
     }
 
     // Remove a pool 
-    function removeFXSPair(address pair_address) public onlyByOwnerOrGovernance {
+    function removeFXSPair(address pair_address) public onlyByOwnGov {
         require(fxs_pairs[pair_address] == true, "Address nonexistant");
         
         // Delete from the mapping
@@ -217,7 +217,7 @@ contract ReserveTracker is Owned {
         }
     }
 
-    function setTimelock(address new_timelock) external onlyByOwnerOrGovernance {
+    function setTimelock(address new_timelock) external onlyByOwnGov {
         require(new_timelock != address(0), "Timelock address cannot be 0");
         timelock_address = new_timelock;
     }
