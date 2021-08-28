@@ -26,7 +26,7 @@ pragma solidity >=0.6.11;
 import "../Math/SafeMath.sol";
 import "./IFrax.sol";
 import "../FXS/FXS.sol";
-import "../Frax/Pools/FraxPool.sol";
+import "../Frax/Pools/FraxPoolV3.sol";
 import "../ERC20/ERC20.sol";
 import "../Staking/Owned.sol";
 import '../Uniswap/TransferHelper.sol';
@@ -40,10 +40,14 @@ contract FraxAMOMinter is Owned {
     // Core
     IFrax public FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
     FRAXShares public FXS = FRAXShares(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
-    ERC20 public collateral_token = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-    FraxPool public pool = FraxPool(0x1864Ca3d47AaB98Ee78D11fc9DCC5E7bADdA1c0d);
+    ERC20 public collateral_token;
+    FraxPoolV3 public pool;
     address public timelock_address;
     address public custodian_address;
+
+    // Collateral related
+    address collateral_address;
+    uint256 col_idx;
 
     // AMO addresses
     address[] public amos_array;
@@ -85,12 +89,20 @@ contract FraxAMOMinter is Owned {
     constructor (
         address _owner_address,
         address _custodian_address,
-        address _timelock_address
+        address _timelock_address,
+        address _collateral_address,
+        address _pool_address
     ) Owned(_owner_address) {
         custodian_address = _custodian_address;
         timelock_address = _timelock_address;
-        collateral_token = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
 
+        // Pool related
+        pool = FraxPoolV3(_pool_address);
+
+        // Collateral related
+        collateral_address = _collateral_address;
+        col_idx = pool.collateralAddrToIdx(_collateral_address);
+        collateral_token = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
         missing_decimals = uint(18).sub(collateral_token.decimals());
     }
 
@@ -209,11 +221,14 @@ contract FraxAMOMinter is Owned {
     // on the main FRAX contract
     // It mints FRAX from nothing, and redeems it on the target pool for collateral and FXS
     // The burn can be called separately later on
-    function mintRedeemPart1(address destination_amo, uint256 frax_amount) external onlyByOwnGov validAMO(destination_amo) {
+    function mintRedeemPart1(
+        address destination_amo,
+        uint256 frax_amount
+    ) external onlyByOwnGov validAMO(destination_amo) {
         //require(allow_yearn || allow_aave || allow_compound, 'All strategies are currently off');
-        uint256 redeem_amount_E6 = (frax_amount.mul(uint256(1e6).sub(pool.redemption_fee()))).div(1e6).div(10 ** missing_decimals);
+        uint256 redeem_amount_E6 = (frax_amount.mul(uint256(1e6).sub(pool.redemption_fee(col_idx)))).div(1e6).div(10 ** missing_decimals);
         uint256 expected_collat_amount = redeem_amount_E6.mul(FRAX.global_collateral_ratio()).div(1e6);
-        expected_collat_amount = expected_collat_amount.mul(1e6).div(pool.getCollateralPrice());
+        expected_collat_amount = expected_collat_amount.mul(1e6).div(pool.collateral_prices(col_idx));
         int256 expected_collat_amount_i256 = int256(expected_collat_amount);
 
         require((collat_borrowed_sum + expected_collat_amount_i256) <= collat_borrow_cap, "Borrow cap");
@@ -227,17 +242,17 @@ contract FraxAMOMinter is Owned {
 
         // Redeem the frax
         FRAX.approve(address(pool), frax_amount);
-        pool.redeemFractionalFRAX(frax_amount, 0, 0);
+        pool.redeemFrax(col_idx, frax_amount, 0, 0);
 
         // Sync
         syncDollarBalances();
     }
 
     function mintRedeemPart2(address destination_amo) external onlyByOwnGov validAMO(destination_amo) {
-        pool.collectRedemption();
+        pool.collectRedemption(col_idx);
 
         // Transfer first
-        TransferHelper.safeTransfer(address(collateral_token), destination_amo, unclaimed_collat[destination_amo]);
+        TransferHelper.safeTransfer(collateral_address, destination_amo, unclaimed_collat[destination_amo]);
 
         // Then update the balances
         unclaimed_collat_sum -= unclaimed_collat[destination_amo];
@@ -251,7 +266,7 @@ contract FraxAMOMinter is Owned {
         int256 collat_amt_i256 = int256(usdc_amount);
 
         // Give back first
-        TransferHelper.safeTransferFrom(address(collateral_token), msg.sender, address(pool), usdc_amount);
+        TransferHelper.safeTransferFrom(collateral_address, msg.sender, address(pool), usdc_amount);
 
         // Then update the balances
         collat_borrowed_balances[msg.sender] -= collat_amt_i256;
@@ -327,10 +342,6 @@ contract FraxAMOMinter is Owned {
     // Only owner or timelock can call
     function setMintCap(uint256 _mint_cap) external onlyByOwnGov {
         mint_cap = int256(_mint_cap);
-    }
-
-    function setPool(address _pool_address) external onlyByOwnGov {
-        pool = FraxPool(_pool_address);
     }
 
     function setMinimumCollateralRatio(uint256 _min_cr) external onlyByOwnGov {

@@ -112,7 +112,7 @@ contract FraxMiddlemanGauge is Owned, ReentrancyGuard {
         if (destination_address_override != address(0)) address_to_send_to = destination_address_override;
 
         if (bridge_type == 0) {
-            // Avalanche [AB]
+            // Avalanche [Anyswap]
             TransferHelper.safeTransfer(reward_token_address, bridge_address, reward_amount);
         }
         else if (bridge_type == 1) {
