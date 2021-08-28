@@ -46,8 +46,8 @@ contract FraxAMOMinter is Owned {
     address public custodian_address;
 
     // Collateral related
-    address collateral_address;
-    uint256 col_idx;
+    address public collateral_address;
+    uint256 public col_idx;
 
     // AMO addresses
     address[] public amos_array;
@@ -122,7 +122,7 @@ contract FraxAMOMinter is Owned {
     function collatDollarBalance() external view returns (uint256) {
         // Needs to mimic the FraxPool value and return in E18
         // Override is here in case of a brick
-        if(override_collat_balance){
+        if (override_collat_balance){
             return override_collat_balance_amount;
         }
         else {
@@ -200,7 +200,7 @@ contract FraxAMOMinter is Owned {
     // on the main FRAX contract
     // It mints FRAX from nothing, and redeems it on the target pool for collateral and FXS
     // The burn can be called separately later on
-    function getCollatForAMO(
+    function giveCollatToAMO(
         address destination_amo,
         uint256 collat_amount
     ) external onlyByOwnGov validAMO(destination_amo) {
@@ -211,7 +211,10 @@ contract FraxAMOMinter is Owned {
         collat_borrowed_sum += collat_amount_i256;
 
         // Borrow the collateral
-        pool.amoMinterBorrow(col_idx, collat_amount);
+        pool.amoMinterBorrow(collat_amount);
+
+        // Give the collateral to the AMO
+        TransferHelper.safeTransfer(collateral_address, destination_amo, collat_amount);
 
         // Sync
         syncDollarBalances();

@@ -25,7 +25,7 @@ pragma experimental ABIEncoderV2;
 // Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
-// github.com/denett
+// Dennis: github.com/denett
 // Sam Sun: https://github.com/samczsun
 
 // Originally inspired by Synthetix.io, but heavily modified by the Frax team

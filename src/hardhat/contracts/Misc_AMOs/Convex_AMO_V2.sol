@@ -19,7 +19,7 @@ pragma solidity >=0.8.0;
 
 // Reviewer(s) / Contributor(s)
 // Sam Kazemian: https://github.com/samkazemian
-// github.com/denett
+// Dennis: github.com/denett
 
 
 import "../Curve/IStableSwap3Pool.sol";
@@ -205,8 +205,11 @@ contract Convex_AMO_V2 is AccessControl, Owned {
     }
 
     function dollarBalances() public view returns (uint256 frax_val_e18, uint256 collat_val_e18) {
-        frax_val_e18 = (showAllocations()[2]).add((showAllocations()[5]).mul((10 ** missing_decimals)));
-        collat_val_e18 = (showAllocations()[6]).mul(10 ** missing_decimals);
+        // Get the allocations
+        uint256[11] memory allocations = showAllocations();
+
+        frax_val_e18 = (allocations[2]).add((allocations[5]).mul((10 ** missing_decimals)));
+        collat_val_e18 = (allocations[6]).mul(10 ** missing_decimals);
     }
 
     function showRewards() public view returns (uint256[4] memory return_arr) {

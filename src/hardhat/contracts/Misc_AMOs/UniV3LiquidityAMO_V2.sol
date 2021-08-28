@@ -164,8 +164,12 @@ contract UniV3LiquidityAMO_V2 is Owned {
 
     // Needed for the Frax contract to function 
     function collatDollarBalance() public view returns (uint256) {
-        uint256 collat_portion = showAllocations()[1];
-        uint256 frax_portion = (showAllocations()[0]).add(showAllocations()[2]);
+        // Get the allocations
+        uint256[4] memory allocations = showAllocations();
+
+        // Get the collateral and FRAX portions
+        uint256 collat_portion = allocations[1];
+        uint256 frax_portion = (allocations[0]).add(allocations[2]);
 
         // Assumes worst case scenario if FRAX slips out of range. 
         // Otherwise, it would only be half that is multiplied by the CR
