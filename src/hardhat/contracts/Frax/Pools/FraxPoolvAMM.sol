@@ -19,7 +19,7 @@ pragma solidity >=0.6.11;
 // Sam Kazemian: https://github.com/samkazemian
 
 // Reviewer(s) / Contributor(s)
-// github.com/denett
+// Dennis: github.com/denett
 // github.com/realisation
 
 // TODO

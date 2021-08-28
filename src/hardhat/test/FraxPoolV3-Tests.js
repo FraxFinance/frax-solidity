@@ -39,11 +39,7 @@ const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 const FraxPoolV3 = artifacts.require("Frax/Pools/FraxPoolV3");
 
 // Oracles
-
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
-const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
-
-const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
 
 // Chainlink-based. Eliminates the need for FRAX/WETH and FXS/WETH liquidity
 const FXSOracleWrapper = artifacts.require("Oracle/FXSOracleWrapper");
@@ -113,15 +109,13 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 	let MIGRATOR_ADDRESS;
 
 	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
-	const ADDRESS_WITH_FXS = '0xF977814e90dA44bFA03b6295A0616a897441aceC';
-	const ADDRESS_WITH_USDC = '0xF977814e90dA44bFA03b6295A0616a897441aceC';
-	const ADDRESS_WITH_LUSD1 = '0x6914FC70fAC4caB20a8922E900C4BA57fEECf8E1';
-	const ADDRESS_WITH_LUSD2 = '0x6914FC70fAC4caB20a8922E900C4BA57fEECf8E1';
-	const ADDRESS_WITH_sUSD = '0xa5f7a39E55D7878bC5bd754eE5d6BD7a7662355b';
-	const ADDRESS_WITH_USDP1 = '0x2cD9e6e76725739208F5Cc7b4B2d7629BF006c0d';
-	const ADDRESS_WITH_USDP2 = '0xf0c5ed4e9c62fd017681edc576cd5e0dcc5cab52';
-	const ADDRESS_WITH_wUST = '0xeB2629a2734e272Bcc07BDA959863f316F4bD4Cf';
-	const ADDRESS_WITH_FEI = '0xc803698a4BE31F0B9035B6eBA17623698f3E2F82';
+	const ADDRESS_WITH_FXS = '0xf977814e90da44bfa03b6295a0616a897441acec';
+	const ADDRESS_WITH_USDC = '0xf977814e90da44bfa03b6295a0616a897441acec';
+	const ADDRESS_WITH_LUSD = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
+	const ADDRESS_WITH_sUSD = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
+	const ADDRESS_WITH_USDP = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
+	const ADDRESS_WITH_wUST = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
+	const ADDRESS_WITH_FEI = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
 
 	// Initialize core contract instances
 	let frax_instance;
@@ -320,7 +314,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FXS]
 		});
 
-		await fxs_instance.transfer(accounts[9], new BigNumber("125000e18"), { from: ADDRESS_WITH_FXS });
+		await fxs_instance.transfer(accounts[9], new BigNumber("400e18"), { from: ADDRESS_WITH_FXS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -328,31 +322,17 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		});
 
 		console.log("------------------------------------------------");
-		console.log("Give the minter some LUSD [Address #1]");
+		console.log("Give the minter some LUSD");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_LUSD1]
+			params: [ADDRESS_WITH_LUSD]
 		});
 
-		await lusd_instance.transfer(accounts[9], new BigNumber("60000e18"), { from: ADDRESS_WITH_LUSD1 });
+		await lusd_instance.transfer(accounts[9], new BigNumber("500e18"), { from: ADDRESS_WITH_LUSD });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_LUSD1]
-		});
-
-		console.log("------------------------------------------------");
-		console.log("Give the minter some LUSD [Address #2]");
-		await hre.network.provider.request({
-			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_LUSD2]
-		});
-
-		await lusd_instance.transfer(accounts[9], new BigNumber("80000e18"), { from: ADDRESS_WITH_LUSD2 });
-
-		await hre.network.provider.request({
-			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_LUSD2]
+			params: [ADDRESS_WITH_LUSD]
 		});
 
 		console.log("------------------------------------------------");
@@ -362,7 +342,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_sUSD]
 		});
 
-		await susd_instance.transfer(accounts[9], new BigNumber("125000e18"), { from: ADDRESS_WITH_sUSD });
+		await susd_instance.transfer(accounts[9], new BigNumber("500e18"), { from: ADDRESS_WITH_sUSD });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -370,32 +350,19 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		});
 
 		console.log("------------------------------------------------");
-		console.log("Give the minter some USDP [Address #1]");
+		console.log("Give the minter some USDP");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_USDP1]
+			params: [ADDRESS_WITH_USDP]
 		});
 
-		await usdp_instance.transfer(accounts[9], new BigNumber("50000e18"), { from: ADDRESS_WITH_USDP1 });
+		await usdp_instance.transfer(accounts[9], new BigNumber("500e18"), { from: ADDRESS_WITH_USDP });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_USDP1]
+			params: [ADDRESS_WITH_USDP]
 		});
 
-		console.log("------------------------------------------------");
-		console.log("Give the minter some USDP [Address #2]");
-		await hre.network.provider.request({
-			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_USDP2]
-		});
-
-		await usdp_instance.transfer(accounts[9], new BigNumber("40000e18"), { from: ADDRESS_WITH_USDP2 });
-
-		await hre.network.provider.request({
-			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_USDP2]
-		});
 
 		console.log("------------------------------------------------");
 		console.log("Give the minter some wUST");
@@ -404,7 +371,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_wUST]
 		});
 
-		await wust_instance.transfer(accounts[9], new BigNumber("125000e18"), { from: ADDRESS_WITH_wUST });
+		await wust_instance.transfer(accounts[9], new BigNumber("500e18"), { from: ADDRESS_WITH_wUST });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -418,7 +385,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FEI]
 		});
 
-		await fei_instance.transfer(accounts[9], new BigNumber("125000e18"), { from: ADDRESS_WITH_FEI });
+		await fei_instance.transfer(accounts[9], new BigNumber("500e18"), { from: ADDRESS_WITH_FEI });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -432,7 +399,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_USDC]
 		});
 
-		await usdc_instance.transfer(accounts[9], new BigNumber("125000e6"), { from: ADDRESS_WITH_USDC });
+		await usdc_instance.transfer(accounts[9], new BigNumber("500e6"), { from: ADDRESS_WITH_USDC });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -441,7 +408,6 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 
 		console.log("Adding pool_instance_v3 as a valid pool");
 		await frax_instance.addPool(pool_instance_v3.address, { from: ORIGINAL_FRAX_ONE_ADDRESS });
-
 
 		console.log(chalk.hex('#ffa500')("---------- Do a huge mint to open up a recollat for later ----------"));
 
@@ -486,6 +452,25 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 			console.log(chalk.red.bold("USING WRAPPED ORACLES LATE"));
 			// Do nothing
 		}
+
+		console.log("------------------------------------------------");
+		console.log("Give the pool some collateral to start");
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [ADDRESS_WITH_sUSD]
+		});
+
+		await lusd_instance.transfer(pool_instance_v3.address, new BigNumber("200e18"), { from: ADDRESS_WITH_LUSD });
+		await susd_instance.transfer(pool_instance_v3.address, new BigNumber("200e18"), { from: ADDRESS_WITH_sUSD });
+		await usdp_instance.transfer(pool_instance_v3.address, new BigNumber("200e18"), { from: ADDRESS_WITH_USDP });
+		await wust_instance.transfer(pool_instance_v3.address, new BigNumber("200e18"), { from: ADDRESS_WITH_wUST });
+		await fei_instance.transfer(pool_instance_v3.address, new BigNumber("200e18"), { from: ADDRESS_WITH_FEI });
+		await usdc_instance.transfer(pool_instance_v3.address, new BigNumber("200e6"), { from: ADDRESS_WITH_USDC });
+
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [ADDRESS_WITH_sUSD]
+		});
 	});
 
 	it('Main tests', async () => {
@@ -494,13 +479,13 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log(chalk.yellow("===================================================================="));
 
 		// Do approvals for minting
-		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("125000e6"), { from: accounts[9] });
+		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("125e6"), { from: accounts[9] });
 
 		// Refresh oracle
 		try{
@@ -511,7 +496,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 
 		console.log(chalk.hex('#ffa500')("---------- Prepare to mint ----------"));
 		const SLIPPAGE_MULTIPLIER = .975;
-		const FRAX_AMOUNT = new BigNumber("10000e18");
+		const FRAX_AMOUNT = new BigNumber("100e18");
 		const FRAX_OUT_MIN = FRAX_AMOUNT.multipliedBy(SLIPPAGE_MULTIPLIER).integerValue(BigNumber.ROUND_FLOOR);
 		const global_cr = new BigNumber(await frax_instance.global_collateral_ratio());
 		const fxs_price = new BigNumber(await frax_instance.fxs_price());
@@ -702,10 +687,10 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log(chalk.yellow("===================================================================="));
 
 		// Do approvals for redeems
-		await frax_instance.approve(pool_instance_v3.address, new BigNumber("50000e18"), { from: accounts[9] });
+		await frax_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
 
 		console.log(chalk.hex('#ffa500')("---------- Prepare to redeem ----------"));
-		const FRAX_AMOUNT_RDM = new BigNumber("1000e18");
+		const FRAX_AMOUNT_RDM = new BigNumber("100e18");
 		const FRAX_AMOUNT_RDM_SLIPPED = FRAX_AMOUNT_RDM.multipliedBy(SLIPPAGE_MULTIPLIER);
 		const FRAX_FOR_COLLAT_RDM = FRAX_AMOUNT_RDM_SLIPPED.multipliedBy(global_cr).div(BIG6).integerValue(BigNumber.ROUND_FLOOR);
 		const FRAX_FOR_FXS_RDM = FRAX_AMOUNT_RDM_SLIPPED.minus(FRAX_FOR_COLLAT_RDM);
@@ -943,17 +928,17 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log(chalk.yellow("===================================================================="));
 
 		// Do approvals for recollats
-		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("1000e18"), { from: accounts[9] });
-		await susd_instance.approve(pool_instance_v3.address, new BigNumber("1000e18"), { from: accounts[9] });
-		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("1000e18"), { from: accounts[9] });
-		await wust_instance.approve(pool_instance_v3.address, new BigNumber("1000e18"), { from: accounts[9] });
-		await fei_instance.approve(pool_instance_v3.address, new BigNumber("1000e18"), { from: accounts[9] });
-		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("1000e6"), { from: accounts[9] });
+		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("10e18"), { from: accounts[9] });
+		await susd_instance.approve(pool_instance_v3.address, new BigNumber("10e18"), { from: accounts[9] });
+		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("10e18"), { from: accounts[9] });
+		await wust_instance.approve(pool_instance_v3.address, new BigNumber("10e18"), { from: accounts[9] });
+		await fei_instance.approve(pool_instance_v3.address, new BigNumber("10e18"), { from: accounts[9] });
+		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("10e6"), { from: accounts[9] });
 
 		console.log(chalk.hex('#ffa500')("---------- Prepare to recollat ----------"));
-		const COLLAT_AMT_RCLT = new BigNumber("1000e18");
+		const COLLAT_AMT_RCLT = new BigNumber("10e18");
 		const COLLAT_AMT_RCLT_SLIPPED = COLLAT_AMT_RCLT.multipliedBy(SLIPPAGE_MULTIPLIER);
-		const COLLAT_AMT_RCLT_E6 = new BigNumber("1000e6");
+		const COLLAT_AMT_RCLT_E6 = new BigNumber("10e6");
 		const COLLAT_AMT_RCLT_E6_SLIPPED = COLLAT_AMT_RCLT_E6.multipliedBy(SLIPPAGE_MULTIPLIER);
 		const COLLAT_AMT_LUSD_RCLT_DV = COLLAT_AMT_RCLT_SLIPPED.multipliedBy(lusd_price);
 		const COLLAT_AMT_sUSD_RCLT_DV = COLLAT_AMT_RCLT_SLIPPED.multipliedBy(susd_price);
@@ -1101,10 +1086,10 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log(chalk.yellow("===================================================================="));
 
 		// Do approvals for buybacks
-		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("10000e18"), { from: accounts[9] });
+		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("10e18"), { from: accounts[9] });
 
 		console.log(chalk.hex('#ffa500')("---------- Prepare to buyback ----------"));
-		const FXS_AMT_BBK = new BigNumber("1000e18");
+		const FXS_AMT_BBK = new BigNumber("10e18");
 		const FXS_AMT_BBK_SLIPPED = FXS_AMT_BBK.multipliedBy(SLIPPAGE_MULTIPLIER);
 		const FXS_AMT_BBK_DV = FXS_AMT_BBK_SLIPPED.multipliedBy(fxs_price).div(BIG6);
 		const COL_OUT_MIN_LUSD_BBK = FXS_AMT_BBK_DV.div(lusd_price).integerValue(BigNumber.ROUND_FLOOR);
@@ -1257,17 +1242,17 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log(chalk.yellow("===================================================================="));
 
 		// Do approvals for minting
-		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("125000e6"), { from: accounts[9] });
+		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await susd_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await wust_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await fei_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("100e6"), { from: accounts[9] });
 
 		console.log(chalk.hex('#ffa500')("---------- Prepare to mint 1-to-1 ----------"));
 		const SLIPPAGE_MULTIPLIER = .975;
-		const FRAX_AMOUNT = new BigNumber("10000e18");
+		const FRAX_AMOUNT = new BigNumber("100e18");
 		const FRAX_OUT_MIN = FRAX_AMOUNT.multipliedBy(SLIPPAGE_MULTIPLIER).integerValue(BigNumber.ROUND_FLOOR);
 		const global_cr = new BigNumber(await frax_instance.global_collateral_ratio());
 		const fxs_price = new BigNumber(await frax_instance.fxs_price());
@@ -1451,13 +1436,13 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log("USDC Balance: ", usdc_balance.div(BIG6).toNumber());
 
 		// Do approvals for minting
-		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("125000e6"), { from: accounts[9] });
+		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("125e6"), { from: accounts[9] });
 
 		console.log("Set the mint threshold to $0.99 now so mints work");
 		await pool_instance_v3.setPriceThresholds(990000, 980000, { from: POOL_CREATOR }); 
@@ -1470,7 +1455,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		catch (err) {}
 
 		console.log(chalk.hex('#ffa500')("---------- Try minting above pool ceilings ----------"));
-		const OVERMINT_FRAX_AMT = new BigNumber("110000e18");
+		const OVERMINT_FRAX_AMT = new BigNumber("1100e18");
 		await expectRevert(
 			pool_instance_v3.mintFrax(col_idx_lusd, OVERMINT_FRAX_AMT, 0, 0, { from: accounts[9] }),
 			"Pool ceiling"
@@ -1617,12 +1602,12 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log("USDC Balance: ", usdc_balance.div(BIG6).toNumber());
 
 		// Do approvals for minting
-		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
+		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
 
 		// Refresh oracle
 		try{
@@ -1739,12 +1724,12 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log("USDC Balance: ", usdc_balance.div(BIG6).toNumber());
 
 		// Do approvals for minting
-		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
+		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
 
 		// Refresh oracle
 		try{
@@ -1861,12 +1846,12 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log("USDC Balance: ", usdc_balance.div(BIG6).toNumber());
 
 		// Do approvals for minting
-		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
-		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125000e18"), { from: accounts[9] });
+		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
+		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
 
 		// Refresh oracle
 		try{
@@ -1964,7 +1949,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log("global_cr:", global_cr.div(BIG6).toNumber());
 		console.log("fxs_price:", fxs_price.div(BIG6).toNumber());
 
-		const FRAX_AMOUNT_TEST_RDM = new BigNumber("1000e18");
+		const FRAX_AMOUNT_TEST_RDM = new BigNumber("100e18");
 		const FRAX_AMOUNT_TEST_RDM_SLIPPED = FRAX_AMOUNT_TEST_RDM.multipliedBy(SLIPPAGE_MULTIPLIER);
 		const FRAX_FOR_COLLAT_RDM = FRAX_AMOUNT_TEST_RDM_SLIPPED.multipliedBy(global_cr).div(BIG6).integerValue(BigNumber.ROUND_FLOOR);
 		const FRAX_FOR_FXS_RDM = FRAX_AMOUNT_TEST_RDM_SLIPPED.minus(FRAX_FOR_COLLAT_RDM);

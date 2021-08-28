@@ -24,26 +24,27 @@ pragma solidity >=0.8.0;
 // Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
-// github.com/denett
+// Dennis: github.com/denett
 
 import "../../Math/SafeMath.sol";
 import '../../Uniswap/TransferHelper.sol';
 import "../../Staking/Owned.sol";
 import "../../FXS/FXS.sol";
 import "../../Frax/Frax.sol";
+import "../../Frax/FraxAMOMinter.sol";
 import "../../ERC20/ERC20.sol";
-import "../../Governance/AccessControl.sol";
 
-contract FraxPoolV3 is AccessControl, Owned {
+contract FraxPoolV3 is Owned {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
 
     // Core
     address private timelock_address;
-    address public amo_minter_address;
+    address public custodian_address; // Custodian is an EOA (or msig) with pausing privileges only, in case of an emergency
     FRAXStablecoin private FRAX = FRAXStablecoin(0x853d955aCEf822Db058eb8505911ED77F175b99e);
     FRAXShares private FXS = FRAXShares(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
+    mapping(address => bool) public amo_minter_addresses; // minter address -> is it enabled
 
     // Collateral
     address[] public collateral_addresses;
@@ -74,15 +75,7 @@ contract FraxPoolV3 is AccessControl, Owned {
     // Constants for various precisions
     uint256 private constant PRICE_PRECISION = 1e6;
 
-    // AccessControl Roles
-    bytes32 private constant MINT_PAUSER = keccak256("MINT_PAUSER");
-    bytes32 private constant REDEEM_PAUSER = keccak256("REDEEM_PAUSER");
-    bytes32 private constant BUYBACK_PAUSER = keccak256("BUYBACK_PAUSER");
-    bytes32 private constant RECOLLATERALIZE_PAUSER = keccak256("RECOLLATERALIZE_PAUSER");
-    bytes32 private constant COLLATERAL_PRICE_SETTER = keccak256("COLLATERAL_PRICE_SETTER");
-    bytes32 private constant POOL_TOGGLER = keccak256("POOL_TOGGLER");
-    
-    // AccessControl state variables
+    // Pause variables
     bool[] public mintPaused; // Collateral-specific
     bool[] public redeemPaused; // Collateral-specific
     bool[] public recollateralizePaused; // Collateral-specific
@@ -95,8 +88,13 @@ contract FraxPoolV3 is AccessControl, Owned {
         _;
     }
 
-    modifier onlyAMOMinter() {
-        require(msg.sender == amo_minter_address, "Not AMO Minter");
+    modifier onlyByOwnGovCust() {
+        require(msg.sender == timelock_address || msg.sender == owner || msg.sender == custodian_address, "Not owner, tlck, or custd");
+        _;
+    }
+
+    modifier onlyAMOMinters() {
+        require(amo_minter_addresses[msg.sender], "Not an AMO Minter");
         _;
     }
 
@@ -109,6 +107,7 @@ contract FraxPoolV3 is AccessControl, Owned {
     
     constructor (
         address _pool_manager_address,
+        address _custodian_address,
         address _timelock_address,
         address[] memory _collateral_addresses,
         uint256[] memory _pool_ceilings,
@@ -116,6 +115,7 @@ contract FraxPoolV3 is AccessControl, Owned {
     ) Owned(_pool_manager_address){
         // Core
         timelock_address = _timelock_address;
+        custodian_address = _custodian_address;
 
         // Fill collateral info
         collateral_addresses = _collateral_addresses;
@@ -153,25 +153,6 @@ contract FraxPoolV3 is AccessControl, Owned {
 
         // Pool ceiling
         pool_ceilings = _pool_ceilings;
-
-        // Roles
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-
-        // Pool Manager
-        grantRole(MINT_PAUSER, _pool_manager_address);
-        grantRole(REDEEM_PAUSER, _pool_manager_address);
-        grantRole(RECOLLATERALIZE_PAUSER, _pool_manager_address);
-        grantRole(BUYBACK_PAUSER, _pool_manager_address);
-        grantRole(COLLATERAL_PRICE_SETTER, _pool_manager_address);
-        grantRole(POOL_TOGGLER, _pool_manager_address);
-        
-        // Timelock
-        grantRole(MINT_PAUSER, timelock_address);
-        grantRole(REDEEM_PAUSER, timelock_address);
-        grantRole(RECOLLATERALIZE_PAUSER, timelock_address);
-        grantRole(BUYBACK_PAUSER, timelock_address);
-        grantRole(COLLATERAL_PRICE_SETTER, timelock_address);
-        grantRole(POOL_TOGGLER, timelock_address);
     }
 
     /* ========== STRUCTS ========== */
@@ -375,6 +356,7 @@ contract FraxPoolV3 is AccessControl, Owned {
     // contract to the user. Redemption is split into two functions to prevent flash loans from being able
     // to take out FRAX/collateral from the system, use an AMM to trade the new price, and then mint back into the system.
     function collectRedemption(uint256 col_idx) external returns (uint256 fxs_amount, uint256 collateral_amount) {
+        require(redeemPaused[col_idx] == false, "Redeeming is paused");
         require((lastRedeemed[msg.sender].add(redemption_delay)) <= block.number, "Too soon");
         bool sendFXS = false;
         bool sendCollateral = false;
@@ -472,49 +454,71 @@ contract FraxPoolV3 is AccessControl, Owned {
     }
 
     // Bypasses the gassy mint->redeem cycle for AMOs to borrow collateral
-    function amoMinterBorrow(uint256 col_idx, uint256 collateral_amount) external onlyAMOMinter {
-        TransferHelper.safeTransfer(collateral_addresses[col_idx], amo_minter_address, collateral_amount);
+    function amoMinterBorrow(uint256 collateral_amount) external onlyAMOMinters {
+        // Checks the col_idx of the minter as an additional safety check
+        uint256 minter_col_idx = FraxAMOMinter(msg.sender).col_idx();
+
+        // Transfer
+        TransferHelper.safeTransfer(collateral_addresses[minter_col_idx], msg.sender, collateral_amount);
     }
 
-    /* ========== RESTRICTED FUNCTIONS ========== */
+    /* ========== RESTRICTED FUNCTIONS, CUSTODIAN CAN CALL TOO ========== */
 
-    function toggleMinting(uint256 col_idx) external {
-        require(hasRole(MINT_PAUSER, msg.sender));
+    function toggleMinting(uint256 col_idx) external onlyByOwnGovCust {
         mintPaused[col_idx] = !mintPaused[col_idx];
 
         emit MintingToggled(col_idx, mintPaused[col_idx]);
     }
 
-    function toggleRedeeming(uint256 col_idx) external {
-        require(hasRole(REDEEM_PAUSER, msg.sender));
+    function toggleRedeeming(uint256 col_idx) external onlyByOwnGovCust {
         redeemPaused[col_idx] = !redeemPaused[col_idx];
 
         emit RedeemingToggled(col_idx, redeemPaused[col_idx]);
     }
 
-    function toggleRecollateralize(uint256 col_idx) external {
-        require(hasRole(RECOLLATERALIZE_PAUSER, msg.sender));
+    function toggleRecollateralize(uint256 col_idx) external onlyByOwnGovCust {
         recollateralizePaused[col_idx] = !recollateralizePaused[col_idx];
 
         emit RecollateralizeToggled(col_idx, recollateralizePaused[col_idx]);
     }
     
-    function toggleBuyBack(uint256 col_idx) external {
-        require(hasRole(BUYBACK_PAUSER, msg.sender));
+    function toggleBuyBack(uint256 col_idx) external onlyByOwnGovCust {
         buyBackPaused[col_idx] = !buyBackPaused[col_idx];
 
         emit BuybackToggled(col_idx, buyBackPaused[col_idx]);
     }
 
-    function setCollateralPrice(uint256 col_idx, uint256 _new_price) external {
-        require(hasRole(COLLATERAL_PRICE_SETTER, msg.sender));
+    /* ========== RESTRICTED FUNCTIONS, GOVERNANCE ONLY ========== */
+
+    // Add an AMO Minter
+    function addAMOMinter(address amo_minter_addr) public onlyByOwnGov {
+        require(amo_minter_addr != address(0), "Zero address detected");
+
+        // Make sure the AMO Minter has collatDollarBalance()
+        uint256 collat_val_e18 = FraxAMOMinter(amo_minter_addr).collatDollarBalance();
+        require(collat_val_e18 >= 0, "Invalid AMO");
+
+        amo_minter_addresses[amo_minter_addr] = true;
+
+        emit AMOMinterAdded(amo_minter_addr);
+    }
+
+    // Remove an AMO Minter 
+    function removeAMOMinter(address amo_minter_addr) public onlyByOwnGov {
+        require(amo_minter_addr != address(0), "Zero address detected");
+
+        amo_minter_addresses[amo_minter_addr] = false;
+        
+        emit AMOMinterRemoved(amo_minter_addr);
+    }
+
+    function setCollateralPrice(uint256 col_idx, uint256 _new_price) external onlyByOwnGov {
         collateral_prices[col_idx] = _new_price;
 
         emit CollateralPriceSet(col_idx, _new_price);
     }
 
-    function togglePool(uint256 col_idx) external {
-        require(hasRole(POOL_TOGGLER, msg.sender));
+    function togglePool(uint256 col_idx) external onlyByOwnGov {
         address pool_address = collateral_addresses[col_idx];
         enabled_pools[pool_address] = !enabled_pools[pool_address];
 
@@ -548,12 +552,6 @@ contract FraxPoolV3 is AccessControl, Owned {
         emit PriceThresholdsSet(new_mint_price_threshold, new_redeem_price_threshold);
     }
 
-    function setAMOMinter(address new_amo_minter_address) external onlyByOwnGov {
-        amo_minter_address = new_amo_minter_address;
-
-        emit AMOMinterSet(new_amo_minter_address);
-    }
-
     function setTimelock(address new_timelock) external onlyByOwnGov {
         timelock_address = new_timelock;
 
@@ -566,7 +564,8 @@ contract FraxPoolV3 is AccessControl, Owned {
     event FeesSet(uint256 col_idx, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee);
     event PoolParametersSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
     event PriceThresholdsSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
-    event AMOMinterSet(address new_amo_minter);
+    event AMOMinterAdded(address amo_minter_addr);
+    event AMOMinterRemoved(address amo_minter_addr);
     event TimelockSet(address new_timelock);
     event MintingToggled(uint256 col_idx, bool toggled);
     event RedeemingToggled(uint256 col_idx, bool toggled);

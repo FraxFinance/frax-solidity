@@ -19,7 +19,7 @@ pragma solidity >=0.6.11;
 // Reviewer(s) / Contributor(s)
 // Travis Moore: https://github.com/FortisFortuna
 // Sam Kazemian: https://github.com/samkazemian
-// github.com/denett
+// Dennis: github.com/denett
 // Hameed
 
 // This contract borrows FXS staked in the veFXS contract
