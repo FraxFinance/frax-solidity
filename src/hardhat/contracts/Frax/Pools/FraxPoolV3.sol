@@ -41,6 +41,7 @@ contract FraxPoolV3 is AccessControl, Owned {
 
     // Core
     address private timelock_address;
+    address public amo_minter_address;
     FRAXStablecoin private FRAX = FRAXStablecoin(0x853d955aCEf822Db058eb8505911ED77F175b99e);
     FRAXShares private FXS = FRAXShares(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
 
@@ -91,6 +92,11 @@ contract FraxPoolV3 is AccessControl, Owned {
 
     modifier onlyByOwnGov() {
         require(msg.sender == timelock_address || msg.sender == owner, "Not owner or timelock");
+        _;
+    }
+
+    modifier onlyAMOMinter() {
+        require(msg.sender == amo_minter_address, "Not AMO Minter");
         _;
     }
 
@@ -465,6 +471,11 @@ contract FraxPoolV3 is AccessControl, Owned {
         FXS.pool_mint(msg.sender, fxs_paid_back);
     }
 
+    // Bypasses the gassy mint->redeem cycle for AMOs to borrow collateral
+    function amoMinterBorrow(uint256 col_idx, uint256 collateral_amount) external onlyAMOMinter {
+        TransferHelper.safeTransfer(collateral_addresses[col_idx], amo_minter_address, collateral_amount);
+    }
+
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     function toggleMinting(uint256 col_idx) external {
@@ -537,6 +548,12 @@ contract FraxPoolV3 is AccessControl, Owned {
         emit PriceThresholdsSet(new_mint_price_threshold, new_redeem_price_threshold);
     }
 
+    function setAMOMinter(address new_amo_minter_address) external onlyByOwnGov {
+        amo_minter_address = new_amo_minter_address;
+
+        emit AMOMinterSet(new_amo_minter_address);
+    }
+
     function setTimelock(address new_timelock) external onlyByOwnGov {
         timelock_address = new_timelock;
 
@@ -549,6 +566,7 @@ contract FraxPoolV3 is AccessControl, Owned {
     event FeesSet(uint256 col_idx, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee);
     event PoolParametersSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
     event PriceThresholdsSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
+    event AMOMinterSet(address new_amo_minter);
     event TimelockSet(address new_timelock);
     event MintingToggled(uint256 col_idx, bool toggled);
     event RedeemingToggled(uint256 col_idx, bool toggled);
