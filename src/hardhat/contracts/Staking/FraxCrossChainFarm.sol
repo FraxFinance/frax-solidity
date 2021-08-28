@@ -39,9 +39,13 @@ import "../Curve/FraxCrossChainRewarder.sol";
 import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
-import '../Misc_AMOs/impossible/IStableXPair.sol'; // Impossible
-// import '../Uniswap/Interfaces/IUniswapV2Pair.sol'; // Uniswap V2
+
+// import '../Misc_AMOs/impossible/IStableXPair.sol'; // Impossible
 // import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
+import '../Misc_AMOs/snowball/ILPToken.sol'; // Snowball S4D - [Part 1]
+import '../Misc_AMOs/snowball/ISwapFlashLoan.sol'; // Snowball S4D - [Part 2]
+// import '../Uniswap/Interfaces/IUniswapV2Pair.sol'; // Uniswap V2
+
 import "../Utils/ReentrancyGuard.sol";
 
 // Inheritance
@@ -58,8 +62,9 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
     ERC20 public rewardsToken0;
     ERC20 public rewardsToken1;
     
-    IStableXPair public stakingToken; // Impossible
+    // IStableXPair public stakingToken; // Impossible
     // IFeederPool public stakingToken; // mStable
+    ILPToken public stakingToken; // Snowball S4D
     // IUniswapV2Pair public stakingToken; // Uniswap V2
 
     FraxCrossChainRewarder public rewarder;
@@ -189,18 +194,19 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         rewardsToken0 = ERC20(_rewardsToken0);
         rewardsToken1 = ERC20(_rewardsToken1);
         
-        stakingToken = IStableXPair(_stakingToken);
+        // stakingToken = IStableXPair(_stakingToken);
         // stakingToken = IFeederPool(_stakingToken);
+        stakingToken = ILPToken(_stakingToken);
         // stakingToken = IUniswapV2Pair(_stakingToken);
 
         timelock_address = _timelock_address;
         rewarder = FraxCrossChainRewarder(_rewarder_address);
 
-        // Uniswap V2 / Impossible ONLY
-        // Need to know which token frax is (0 or 1)
-        address token0 = stakingToken.token0();
-        if (token0 == frax_address) frax_is_token0 = true;
-        else frax_is_token0 = false;
+        // // Uniswap V2 / Impossible ONLY
+        // // Need to know which token frax is (0 or 1)
+        // address token0 = stakingToken.token0();
+        // if (token0 == frax_address) frax_is_token0 = true;
+        // else frax_is_token0 = false;
         
         // Other booleans
         migrationsOn = false;
@@ -258,17 +264,6 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
-        // Uniswap V2 & Impossible
-        // ============================================
-        {
-            uint256 total_frax_reserves;
-            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-            if (frax_is_token0) total_frax_reserves = reserve0;
-            else total_frax_reserves = reserve1;
-
-            frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
-        }
-
         // mStable
         // ============================================
         // {
@@ -277,6 +272,27 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         //     total_frax_reserves = uint256(vaultData.vaultBalance);
         //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
         // }
+
+        // Snowball S4D
+        // ============================================
+        {
+            ISwapFlashLoan ISFL = ISwapFlashLoan(0xA0bE4f05E37617138Ec212D4fB0cD2A8778a535F);
+            uint256 total_frax = ISFL.getTokenBalance(ISFL.getTokenIndex(frax_address));
+            frax_per_lp_token = total_frax.mul(1e18).div(stakingToken.totalSupply());
+        }
+
+        // Uniswap V2 & Impossible
+        // ============================================
+        // {
+        //     uint256 total_frax_reserves;
+        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+        //     if (frax_is_token0) total_frax_reserves = reserve0;
+        //     else total_frax_reserves = reserve1;
+
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        // }
+
+
 
         return frax_per_lp_token;
     }

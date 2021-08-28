@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity >=0.6.11;
+pragma solidity >=0.8.0;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -9,7 +9,7 @@ pragma solidity >=0.6.11;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ====================== FraxPoolMultiCollateral =====================
+// ============================ FraxPoolV3 ============================
 // ====================================================================
 // Allows multiple stablecoins (fixed amount at initialization) as collateral
 // LUSD, sUSD, USDP, Wrapped UST, and FEI initially
@@ -26,8 +26,6 @@ pragma solidity >=0.6.11;
 // Sam Kazemian: https://github.com/samkazemian
 // github.com/denett
 
-// TODO: Remove oracle code and do different fees per collateral
-
 import "../../Math/SafeMath.sol";
 import '../../Uniswap/TransferHelper.sol';
 import "../../Staking/Owned.sol";
@@ -36,22 +34,19 @@ import "../../Frax/Frax.sol";
 import "../../ERC20/ERC20.sol";
 import "../../Governance/AccessControl.sol";
 
-contract FraxPoolMultiCollateral is AccessControl, Owned {
+contract FraxPoolV3 is AccessControl, Owned {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
 
     // Core
-    address private frax_contract_address;
-    address private fxs_contract_address;
     address private timelock_address;
-    FRAXShares private FXS;
-    FRAXStablecoin private FRAX;
+    FRAXStablecoin private FRAX = FRAXStablecoin(0x853d955aCEf822Db058eb8505911ED77F175b99e);
+    FRAXShares private FXS = FRAXShares(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
 
     // Collateral
     address[] public collateral_addresses;
     string[] public collateral_symbols;
-    address[] public collateral_oracle_addresses; // Chainlink: https://docs.chain.link/docs/ethereum-addresses/
     uint256[] public missing_decimals; // Number of decimals needed to get to E18. collateral index -> missing_decimals
     uint256[] public pool_ceilings; // Total across all collaterals. Accounts for missing_decimals
     uint256[] public collateral_prices; // Stores price of the collateral, if price is paused
@@ -66,7 +61,8 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     mapping (address => uint256) public lastRedeemed; // Collateral independent
     uint256 public redemption_delay = 2; // Number of blocks to wait before being able to collectRedemption()
     uint256 public redeem_price_threshold = 990000; // $0.99
-
+    uint256 public mint_price_threshold = 1010000; // $1.01
+    
     // Fees and rates
     uint256[] public minting_fee;
     uint256[] public redemption_fee;
@@ -74,7 +70,6 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     uint256[] public recollat_fee;
     uint256 public bonus_rate; // Bonus rate on FXS minted during recollateralizeFrax(); 6 decimals of precision, set to 0.75% on genesis
     
-
     // Constants for various precisions
     uint256 private constant PRICE_PRECISION = 1e6;
 
@@ -109,17 +104,11 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     constructor (
         address _pool_manager_address,
         address _timelock_address,
-        address _frax_contract_address,
-        address _fxs_contract_address,
         address[] memory _collateral_addresses,
         uint256[] memory _pool_ceilings,
         uint256[] memory _initial_fees
     ) Owned(_pool_manager_address){
         // Core
-        FRAX = FRAXStablecoin(_frax_contract_address);
-        FXS = FRAXShares(_fxs_contract_address);
-        frax_contract_address = _frax_contract_address;
-        fxs_contract_address = _fxs_contract_address;
         timelock_address = _timelock_address;
 
         // Fill collateral info
@@ -245,7 +234,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     }
 
     // Returns dollar value of collateral held in this Frax pool, in E18
-    function collatDollarBalance() public view returns (uint256 balance_tally) {
+    function collatDollarBalance() external view returns (uint256 balance_tally) {
         balance_tally = 0;
         for (uint256 i = 0; i < collateral_addresses.length; i++){ 
             ERC20 collat_token = ERC20(collateral_addresses[i]);
@@ -280,6 +269,10 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         uint256 fxs_needed
     ) {
         require(mintPaused[col_idx] == false, "Minting is paused");
+
+        // Prevent unneccessary mints
+        require(FRAX.frax_price() >= mint_price_threshold, "Frax price too low");
+
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
 
         if (one_to_one_override || global_collateral_ratio >= PRICE_PRECISION) { 
@@ -325,7 +318,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         require(redeemPaused[col_idx] == false, "Redeeming is paused");
 
         // Prevent unneccessary redemptions that could adversely affect the FXS price
-        require(FRAX.frax_price() <= redeem_price_threshold, "Frax price too high" );
+        require(FRAX.frax_price() <= redeem_price_threshold, "Frax price too high");
 
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
         uint256 frax_after_fee = (frax_amount.mul(PRICE_PRECISION.sub(redemption_fee[col_idx]))).div(PRICE_PRECISION);
@@ -397,7 +390,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
 
         // Send out the tokens
         if(sendFXS){
-            TransferHelper.safeTransfer(fxs_contract_address, msg.sender, fxs_amount);
+            TransferHelper.safeTransfer(address(FXS), msg.sender, fxs_amount);
         }
         if(sendCollateral){
             TransferHelper.safeTransfer(collateral_addresses[col_idx], msg.sender, collateral_amount);
@@ -437,7 +430,7 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     // Thus, if the target collateral ratio is higher than the actual value of collateral, minters get FXS for adding collateral
     // This function simply rewards anyone that sends collateral to a pool with the same amount of FXS + the bonus rate
     // Anyone can call this function to recollateralize the protocol and take the extra FXS value from the bonus rate as an arb opportunity
-    function recollateralizeFrax(uint256 col_idx, uint256 collateral_amount, uint256 fxs_out_min) external collateralEnabled(col_idx) returns (uint256 collateral_units_precision, uint256 fxs_paid_back){
+    function recollateralizeFrax(uint256 col_idx, uint256 collateral_amount, uint256 fxs_out_min) external collateralEnabled(col_idx) returns (uint256 collateral_units_precision, uint256 fxs_paid_back) {
         require(recollateralizePaused[col_idx] == false, "Recollat is paused");
         uint256 collateral_amount_d18 = collateral_amount * (10 ** missing_decimals[col_idx]);
         uint256 fxs_price = FRAX.fxs_price();
@@ -532,11 +525,16 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
         emit FeesSet(col_idx, new_mint_fee, new_redeem_fee, new_buyback_fee, new_recollat_fee);
     }
 
-    function setPoolParameters(uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_redeem_price_threshold) external onlyByOwnGov {
+    function setPoolParameters(uint256 new_bonus_rate, uint256 new_redemption_delay) external onlyByOwnGov {
         bonus_rate = new_bonus_rate;
         redemption_delay = new_redemption_delay;
+        emit PoolParametersSet(new_bonus_rate, new_redemption_delay);
+    }
+
+    function setPriceThresholds(uint256 new_mint_price_threshold, uint256 new_redeem_price_threshold) external onlyByOwnGov {
+        mint_price_threshold = new_mint_price_threshold;
         redeem_price_threshold = new_redeem_price_threshold;
-        emit PoolParametersSet(new_bonus_rate, new_redemption_delay, new_redeem_price_threshold);
+        emit PriceThresholdsSet(new_mint_price_threshold, new_redeem_price_threshold);
     }
 
     function setTimelock(address new_timelock) external onlyByOwnGov {
@@ -549,7 +547,8 @@ contract FraxPoolMultiCollateral is AccessControl, Owned {
     event PoolToggled(uint256 col_idx, bool new_state);
     event PoolCeilingSet(uint256 col_idx, uint256 new_ceiling);
     event FeesSet(uint256 col_idx, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee);
-    event PoolParametersSet(uint256 new_bonus_rate, uint256 new_redemption_delay, uint256 new_redeem_price_threshold);
+    event PoolParametersSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
+    event PriceThresholdsSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
     event TimelockSet(address new_timelock);
     event MintingToggled(uint256 col_idx, bool toggled);
     event RedeemingToggled(uint256 col_idx, bool toggled);
