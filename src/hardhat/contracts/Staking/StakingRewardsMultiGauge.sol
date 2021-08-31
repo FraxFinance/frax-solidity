@@ -319,7 +319,15 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         // Get the veFXS multipliers
         // For the calculations, use the midpoint (analogous to midpoint Riemann sum)
         new_vefxs_multiplier = veFXSMultiplier(account);
-        uint256 midpoint_vefxs_multiplier = ((new_vefxs_multiplier).add(_vefxsMultiplierStored[account])).div(2); 
+
+        uint256 midpoint_vefxs_multiplier;
+        if (_locked_liquidity[account] == 0 && _combined_weights[account] == 0) {
+            // This is only called for the first stake to make sure the veFXS multiplier is not cut in half
+            midpoint_vefxs_multiplier = new_vefxs_multiplier;
+        }
+        else {
+            midpoint_vefxs_multiplier = ((new_vefxs_multiplier).add(_vefxsMultiplierStored[account])).div(2);
+        }
 
         // Loop through the locked stakes, first by getting the liquidity * lock_multiplier portion
         new_combined_weight = 0;
