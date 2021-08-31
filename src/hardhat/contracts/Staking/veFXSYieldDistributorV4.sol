@@ -59,7 +59,6 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
     uint256 public lastUpdateTime;
     uint256 public yieldRate;
     uint256 public yieldDuration = 604800; // 7 * 86400  (7 days)
-    uint256 public min_lock_time_for_yield = 2592000; // 1 month
 
     // Yield tracking
     uint256 public yieldPerVeFXSStored = 0;
@@ -72,6 +71,7 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
     mapping(address => bool) public userIsInitialized;
     mapping(address => uint256) public userVeFXSCheckpointed;
     mapping(address => uint256) public userVeFXSEndpointCheckpointed;
+    mapping(address => uint256) private lastRewardClaimTime; // staker addr -> timestamp
 
     // Greylists
     mapping(address => bool) public greylist;
@@ -134,14 +134,11 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
         
         current_ending_timestamp = curr_locked_bal_pack.end;
 
-        // Only unexpired veFXS that is locked for min_lock_time_for_yield or longer should be eligible
+        // Only unexpired veFXS should be eligible
         if (userVeFXSEndpointCheckpointed[account] != 0 && (block.timestamp >= userVeFXSEndpointCheckpointed[account])){
             eligible_vefxs_bal = 0;
         }
         else if (block.timestamp >= current_ending_timestamp){
-            eligible_vefxs_bal = 0;
-        }
-        else if ((curr_locked_bal_pack.end).sub(block.timestamp) < min_lock_time_for_yield){
             eligible_vefxs_bal = 0;
         }
         else {
@@ -173,30 +170,43 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
         // Uninitialized users should not earn anything yet
         if (!userIsInitialized[account]) return 0;
 
-        uint256 yield0 = yieldPerVeFXS();
+        // Get eligible veFXS balances
+        (uint256 eligible_current_vefxs, uint256 ending_timestamp) = eligibleCurrentVeFXS(account);
 
-        // Get the old and the new veFXS balances
-        uint256 old_vefxs_balance = userVeFXSCheckpointed[account];
-        (uint256 eligible_current_vefxs, ) = eligibleCurrentVeFXS(account);
+        // If your veFXS is unlocked
+        uint256 eligible_time_fraction = PRICE_PRECISION;
+        if (eligible_current_vefxs == 0){
+            // And you already claimed after expiration
+            if (lastRewardClaimTime[account] >= ending_timestamp) {
+                // You get NOTHING. You LOSE. Good DAY ser!
+                return 0;
+            }
+            // You haven't claimed yet
+            else {
+                uint256 eligible_time = (ending_timestamp).sub(lastRewardClaimTime[account]);
+                uint256 total_time = (block.timestamp).sub(lastRewardClaimTime[account]);
+                eligible_time_fraction = PRICE_PRECISION.mul(eligible_time).div(total_time);
+            }
+        }
 
-        // If your veFXS is unlocked, you automatically get no rewards
-        // You need to make sure you claim in time.
-        if (eligible_current_vefxs == 0) return 0;
-
-        // If the amount of veFXS increased, only pay off the old balance
+        // If the amount of veFXS increased, only pay off based on the old balance
         // Otherwise, take the midpoint
         uint256 vefxs_balance_to_use;
-        if (eligible_current_vefxs > old_vefxs_balance){
-            vefxs_balance_to_use = old_vefxs_balance;
-        }
-        else {
-            vefxs_balance_to_use = ((eligible_current_vefxs).add(old_vefxs_balance)).div(2); 
+        {
+            uint256 old_vefxs_balance = userVeFXSCheckpointed[account];
+            if (eligible_current_vefxs > old_vefxs_balance){
+                vefxs_balance_to_use = old_vefxs_balance;
+            }
+            else {
+                vefxs_balance_to_use = ((eligible_current_vefxs).add(old_vefxs_balance)).div(2); 
+            }
         }
 
         return (
             vefxs_balance_to_use
-                .mul(yield0.sub(userYieldPerTokenPaid[account]))
-                .div(1e18)
+                .mul(yieldPerVeFXS().sub(userYieldPerTokenPaid[account]))
+                .mul(eligible_time_fraction)
+                .div(1e18 * PRICE_PRECISION)
                 .add(yields[account])
         );
     }
@@ -234,7 +244,10 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
         }
 
         // Mark the user as initialized
-        if (!userIsInitialized[account]) userIsInitialized[account] = true;
+        if (!userIsInitialized[account]) {
+            userIsInitialized[account] = true;
+            lastRewardClaimTime[account] = block.timestamp;
+        }
     }
 
     function _syncEarned(address account) internal {
@@ -243,6 +256,11 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
             yields[account] = earned0;
             userYieldPerTokenPaid[account] = yieldPerVeFXSStored;
         }
+    }
+
+    // Anyone can checkpoint another user
+    function checkpointOtherUser(address user_addr) external {
+        _checkpointUser(user_addr);
     }
 
     // Checkpoints the user
@@ -263,6 +281,8 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
             );
             emit YieldCollected(msg.sender, yield0, emitted_token_address);
         }
+
+        lastRewardClaimTime[msg.sender] = block.timestamp;
     }
 
     // If the period expired, renew it
@@ -332,9 +352,6 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
         greylist[_address] = !(greylist[_address]);
     }
 
-    function setMinLockTimeForYield(uint256 _min_lock_time_for_yield) external onlyByOwnGov {
-        min_lock_time_for_yield = _min_lock_time_for_yield;
-    }
 
     function setPauses(bool _yieldCollectionPaused) external onlyByOwnGov {
         yieldCollectionPaused = _yieldCollectionPaused;

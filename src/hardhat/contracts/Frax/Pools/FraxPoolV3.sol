@@ -56,11 +56,11 @@ contract FraxPoolV3 is Owned {
     mapping(address => bool) public enabled_pools; // collateral address -> is it enabled
     
     // Redeem related
-    mapping (address => uint256) public redeemFXSBalances;
-    mapping (address => mapping(uint256 => uint256)) public redeemCollateralBalances; // Address -> collateral index -> balance
+    mapping (address => uint256) private redeemFXSBalances;
+    mapping (address => mapping(uint256 => uint256)) private redeemCollateralBalances; // Address -> collateral index -> balance
     uint256[] public unclaimedPoolCollateral; // collateral index -> balance
     uint256 public unclaimedPoolFXS;
-    mapping (address => uint256) public lastRedeemed; // Collateral independent
+    mapping (address => uint256) private lastRedeemed; // Collateral independent
     uint256 public redemption_delay = 2; // Number of blocks to wait before being able to collectRedemption()
     uint256 public redeem_price_threshold = 990000; // $0.99
     uint256 public mint_price_threshold = 1010000; // $1.01
@@ -491,7 +491,7 @@ contract FraxPoolV3 is Owned {
     /* ========== RESTRICTED FUNCTIONS, GOVERNANCE ONLY ========== */
 
     // Add an AMO Minter
-    function addAMOMinter(address amo_minter_addr) public onlyByOwnGov {
+    function addAMOMinter(address amo_minter_addr) external onlyByOwnGov {
         require(amo_minter_addr != address(0), "Zero address detected");
 
         // Make sure the AMO Minter has collatDollarBalance()
@@ -504,9 +504,7 @@ contract FraxPoolV3 is Owned {
     }
 
     // Remove an AMO Minter 
-    function removeAMOMinter(address amo_minter_addr) public onlyByOwnGov {
-        require(amo_minter_addr != address(0), "Zero address detected");
-
+    function removeAMOMinter(address amo_minter_addr) external onlyByOwnGov {
         amo_minter_addresses[amo_minter_addr] = false;
         
         emit AMOMinterRemoved(amo_minter_addr);
@@ -552,6 +550,12 @@ contract FraxPoolV3 is Owned {
         emit PriceThresholdsSet(new_mint_price_threshold, new_redeem_price_threshold);
     }
 
+    function setCustodian(address new_custodian) external onlyByOwnGov {
+        custodian_address = new_custodian;
+
+        emit CustodianSet(new_custodian);
+    }
+
     function setTimelock(address new_timelock) external onlyByOwnGov {
         timelock_address = new_timelock;
 
@@ -566,6 +570,7 @@ contract FraxPoolV3 is Owned {
     event PriceThresholdsSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
     event AMOMinterAdded(address amo_minter_addr);
     event AMOMinterRemoved(address amo_minter_addr);
+    event CustodianSet(address new_custodian);
     event TimelockSet(address new_timelock);
     event MintingToggled(uint256 col_idx, bool toggled);
     event RedeemingToggled(uint256 col_idx, bool toggled);
