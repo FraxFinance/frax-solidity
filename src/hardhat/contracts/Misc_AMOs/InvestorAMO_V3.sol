@@ -179,7 +179,7 @@ contract InvestorAMO_V3 is AccessControl, Owned {
     // Give USDC profits back. Goes through the minter
     function giveCollatBack(uint256 collat_amount) external onlyByOwnGovCust {
         collateral_token.approve(address(amo_minter), collat_amount);
-        amo_minter.giveBackCollatFromAMO(collat_amount);
+        amo_minter.receiveCollatFromAMO(collat_amount);
     }
    
     // Burn unneeded FXS. Goes through the minter

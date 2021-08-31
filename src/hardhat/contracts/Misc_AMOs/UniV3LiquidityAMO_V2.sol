@@ -416,7 +416,7 @@ contract UniV3LiquidityAMO_V2 is Owned {
     // Give USDC profits back. Goes through the minter
     function giveCollatBack(uint256 collat_amount) external onlyByOwnGovCust {
         giveback_collateral.approve(address(amo_minter), collat_amount);
-        amo_minter.giveBackCollatFromAMO(collat_amount);
+        amo_minter.receiveCollatFromAMO(collat_amount);
     }
 
     // Burn unneeded or excess FRAX. Goes through the minter

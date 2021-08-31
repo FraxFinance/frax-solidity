@@ -356,7 +356,7 @@ contract Convex_AMO_V2 is AccessControl, Owned {
     // Give USDC profits back. Goes through the minter
     function giveCollatBack(uint256 collat_amount) external onlyByOwnGovCust {
         collateral_token.approve(address(amo_minter), collat_amount);
-        amo_minter.giveBackCollatFromAMO(collat_amount);
+        amo_minter.receiveCollatFromAMO(collat_amount);
     }
    
     // Burn unneeded or excess FRAX. Goes through the minter

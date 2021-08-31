@@ -8,7 +8,7 @@ interface IFraxAMOMinter {
     function mint_balances(address amo_address) external view returns (int256);
     function collat_borrowed_balances(address amo_address) external view returns (int256);
     function unspentProfitGlobal() external view returns (uint256);
-    function giveBackCollatFromAMO(uint256 usdc_amount) external;
+    function receiveCollatFromAMO(uint256 usdc_amount) external;
     function burnFraxFromAMO(uint256 frax_amount) external;
     function burnFxsFromAMO(uint256 fxs_amount) external;
 }

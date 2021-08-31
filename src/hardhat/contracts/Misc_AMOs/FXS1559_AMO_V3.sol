@@ -63,10 +63,6 @@ contract FXS1559_AMO_V3 is Owned {
     // FRAX -> FXS max slippage
     uint256 public max_slippage;
 
-    // AMO profits
-    bool public override_amo_profits;
-    uint256 public overridden_amo_profit;
-
     // Burned vs given to yield distributor
     uint256 burn_fraction; // E6. Fraction of FXS burned vs transferred to the yield distributor
 
@@ -90,8 +86,6 @@ contract FXS1559_AMO_V3 is Owned {
         amo_minter = IFraxAMOMinter(_amo_minter_address);
 
         max_slippage = 200000; // 20%
-        override_amo_profits = false;
-        overridden_amo_profit = 0;
         burn_fraction = 500000;
 
         // Get the custodian and timelock addresses from the minter
@@ -179,7 +173,7 @@ contract FXS1559_AMO_V3 is Owned {
 
 
     // Burn unneeded or excess FRAX
-    function mintSwapBurn(uint256 override_USDC_amount, bool use_override) public onlyByOwnGov {
+    function swapBurn(uint256 override_USDC_amount, bool use_override) public onlyByOwnGov {
         uint256 mintable_frax;
         if (use_override){
             mintable_frax = override_USDC_amount.mul(10 ** missing_decimals).mul(COLLATERAL_RATIO_PRECISION).div(FRAX.global_collateral_ratio());
@@ -233,11 +227,6 @@ contract FXS1559_AMO_V3 is Owned {
 
     function setSafetyParams(uint256 _max_slippage) external onlyByOwnGov {
         max_slippage = _max_slippage;
-    }
-
-    function setAMOProfits(uint256 _overridden_amo_profit_e18, bool _override_amo_profits) external onlyByOwnGov {
-        overridden_amo_profit = _overridden_amo_profit_e18; // E18
-        override_amo_profits = _override_amo_profits;
     }
 
     function setYieldDistributor(address _yield_distributor_address) external onlyByOwnGov {

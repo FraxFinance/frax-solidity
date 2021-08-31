@@ -239,7 +239,7 @@ contract FraxAMOMinter is Owned {
         FXS.pool_burn_from(msg.sender, fxs_amount);
     }
 
-    function giveBackCollatFromAMO(uint256 usdc_amount) external validAMO(msg.sender) {
+    function receiveCollatFromAMO(uint256 usdc_amount) external validAMO(msg.sender) {
         int256 collat_amt_i256 = int256(usdc_amount);
 
         // Give back first
