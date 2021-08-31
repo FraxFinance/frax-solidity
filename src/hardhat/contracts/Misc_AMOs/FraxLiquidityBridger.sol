@@ -29,9 +29,9 @@ import "../Frax/Frax.sol";
 import "../Frax/FraxAMOMinter.sol";
 import "../ERC20/ERC20.sol";
 import "../ERC20/SafeERC20.sol";
-import "../Misc_AMOs/harmony/IERC20EthManager.sol";
-import "../Misc_AMOs/polygon/IRootChainManager.sol";
-import "../Misc_AMOs/solana/IWormhole.sol";
+import "./harmony/IERC20EthManager.sol";
+import "./polygon/IRootChainManager.sol";
+import "./solana/IWormhole.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../Staking/Owned.sol";
 
@@ -233,7 +233,7 @@ contract FraxLiquidityBridger is Owned {
     // Give collat profits back. Goes through the minter
     function giveCollatBack(uint256 collat_amount) external onlyByOwnGov {
         collateral_token.approve(amo_minter_address, collat_amount);
-        amo_minter.giveBackCollatFromAMO(collat_amount);
+        amo_minter.receiveCollatFromAMO(collat_amount);
 
         // Update the balance after the transfer goes through
         collat_bridged -= collat_amount;
