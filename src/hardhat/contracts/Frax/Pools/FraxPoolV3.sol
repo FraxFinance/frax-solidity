@@ -25,6 +25,7 @@ pragma solidity >=0.8.0;
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
 // Dennis: github.com/denett
+// Hameed
 
 import "../../Math/SafeMath.sol";
 import '../../Uniswap/TransferHelper.sol';
@@ -40,7 +41,7 @@ contract FraxPoolV3 is Owned {
     /* ========== STATE VARIABLES ========== */
 
     // Core
-    address private timelock_address;
+    address public timelock_address;
     address public custodian_address; // Custodian is an EOA (or msig) with pausing privileges only, in case of an emergency
     FRAXStablecoin private FRAX = FRAXStablecoin(0x853d955aCEf822Db058eb8505911ED77F175b99e);
     FRAXShares private FXS = FRAXShares(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
@@ -56,30 +57,32 @@ contract FraxPoolV3 is Owned {
     mapping(address => bool) public enabled_pools; // collateral address -> is it enabled
     
     // Redeem related
-    mapping (address => uint256) private redeemFXSBalances;
-    mapping (address => mapping(uint256 => uint256)) private redeemCollateralBalances; // Address -> collateral index -> balance
+    mapping (address => uint256) public redeemFXSBalances;
+    mapping (address => mapping(uint256 => uint256)) public redeemCollateralBalances; // Address -> collateral index -> balance
     uint256[] public unclaimedPoolCollateral; // collateral index -> balance
     uint256 public unclaimedPoolFXS;
-    mapping (address => uint256) private lastRedeemed; // Collateral independent
+    mapping (address => uint256) public lastRedeemed; // Collateral independent
     uint256 public redemption_delay = 2; // Number of blocks to wait before being able to collectRedemption()
     uint256 public redeem_price_threshold = 990000; // $0.99
     uint256 public mint_price_threshold = 1010000; // $1.01
     
     // Fees and rates
-    uint256[] public minting_fee;
-    uint256[] public redemption_fee;
-    uint256[] public buyback_fee;
-    uint256[] public recollat_fee;
+    // getters are in collateral_information()
+    uint256[] private minting_fee;
+    uint256[] private redemption_fee;
+    uint256[] private buyback_fee;
+    uint256[] private recollat_fee;
     uint256 public bonus_rate; // Bonus rate on FXS minted during recollateralizeFrax(); 6 decimals of precision, set to 0.75% on genesis
     
     // Constants for various precisions
     uint256 private constant PRICE_PRECISION = 1e6;
 
     // Pause variables
-    bool[] public mintPaused; // Collateral-specific
-    bool[] public redeemPaused; // Collateral-specific
-    bool[] public recollateralizePaused; // Collateral-specific
-    bool[] public buyBackPaused; // Collateral-specific
+    // getters are in collateral_information()
+    bool[] private mintPaused; // Collateral-specific
+    bool[] private redeemPaused; // Collateral-specific
+    bool[] private recollateralizePaused; // Collateral-specific
+    bool[] private buyBackPaused; // Collateral-specific
 
     /* ========== MODIFIERS ========== */
 
@@ -179,24 +182,27 @@ contract FraxPoolV3 is Owned {
 
     // Helpful for UIs
     function collateral_information(address collat_address) external view returns (CollateralInformation memory return_data){
+        require(enabled_pools[collat_address], "Invalid collateral");
+
+        // Get the index
         uint256 idx = collateralAddrToIdx[collat_address];
         
         return_data = CollateralInformation(
-            idx,
-            collateral_symbols[idx],
-            collat_address,
-            enabled_pools[collat_address],
-            missing_decimals[idx],
-            collateral_prices[idx],
-            pool_ceilings[idx],
-            mintPaused[idx],
-            redeemPaused[idx],
-            recollateralizePaused[idx],
-            buyBackPaused[idx],
-            minting_fee[idx],
-            redemption_fee[idx],
-            buyback_fee[idx],
-            recollat_fee[idx]
+            idx, // [0]
+            collateral_symbols[idx], // [1]
+            collat_address, // [2]
+            enabled_pools[collat_address], // [3]
+            missing_decimals[idx], // [4]
+            collateral_prices[idx], // [5]
+            pool_ceilings[idx], // [6]
+            mintPaused[idx], // [7]
+            redeemPaused[idx], // [8]
+            recollateralizePaused[idx], // [9]
+            buyBackPaused[idx], // [10]
+            minting_fee[idx], // [11]
+            redemption_fee[idx], // [12]
+            buyback_fee[idx], // [13]
+            recollat_fee[idx] // [14]
         );
     }
 
@@ -216,7 +222,7 @@ contract FraxPoolV3 is Owned {
     }
 
     // Used by some functions.
-    function freeCollatBalance(uint256 col_idx) internal view returns (uint256) {
+    function freeCollatBalance(uint256 col_idx) public view returns (uint256) {
         return ERC20(collateral_addresses[col_idx]).balanceOf(address(this)).sub(unclaimedPoolCollateral[col_idx]);
     }
 
