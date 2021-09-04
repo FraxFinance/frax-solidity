@@ -22,6 +22,8 @@ pragma solidity >=0.6.11;
 // Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
+// Dennis: github.com/denett
+// Hameed
 
 import "../Math/SafeMath.sol";
 import "./IFrax.sol";
@@ -195,11 +197,6 @@ contract FraxAMOMinter is Owned {
         syncDollarBalances();
     }
 
-    // This is basically a workaround to transfer USDC from the FraxPool to this investor contract
-    // This contract is essentially marked as a 'pool' so it can call OnlyPools functions like pool_mint and pool_burn_from
-    // on the main FRAX contract
-    // It mints FRAX from nothing, and redeems it on the target pool for collateral and FXS
-    // The burn can be called separately later on
     function giveCollatToAMO(
         address destination_amo,
         uint256 collat_amount
@@ -327,6 +324,13 @@ contract FraxAMOMinter is Owned {
     function setOverrideCollatBalance(bool _state, uint256 _balance) external onlyByOwnGov {
         override_collat_balance = _state;
         override_collat_balance_amount = _balance;
+    }
+
+    function setFraxPool(address _pool_address) external onlyByOwnGov {
+        pool = FraxPoolV3(_pool_address);
+
+        // Make sure the collaterals match, or balances could get corrupted
+        require(pool.collateralAddrToIdx(collateral_address) == col_idx, "col_idx mismatch");
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {

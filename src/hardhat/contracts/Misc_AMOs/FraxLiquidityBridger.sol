@@ -46,6 +46,9 @@ contract FraxLiquidityBridger is Owned {
     FraxAMOMinter private amo_minter;
     ERC20 private collateral_token;
 
+    // Informational
+    string public name;
+
     // Price constants
     uint256 private constant PRICE_PRECISION = 1e6;
 
@@ -89,7 +92,8 @@ contract FraxLiquidityBridger is Owned {
         address _bridge_address,
         uint256 _bridge_type,
         address _destination_address_override,
-        string memory _non_evm_destination_address
+        string memory _non_evm_destination_address,
+        string memory _name
     ) Owned(_owner) {
         timelock_address = _timelock_address;
 
@@ -98,6 +102,9 @@ contract FraxLiquidityBridger is Owned {
         bridge_type = _bridge_type;
         destination_address_override = _destination_address_override;
         non_evm_destination_address = _non_evm_destination_address;
+
+        // Informational
+        name = _name;
 
         // AMO Minter related
         amo_minter_address = _amo_minter_address;
@@ -142,7 +149,7 @@ contract FraxLiquidityBridger is Owned {
         // Get the allocations
         uint256[5] memory allocations = showAllocations();
 
-        frax_val_e18 = allocations[0] + allocations[1];
+        frax_val_e18 = allocations[4];
         collat_val_e18 = collatDollarBalance();
     }
 
@@ -236,7 +243,10 @@ contract FraxLiquidityBridger is Owned {
         amo_minter.receiveCollatFromAMO(collat_amount);
 
         // Update the balance after the transfer goes through
-        collat_bridged -= collat_amount;
+        if (collat_amount >= collat_bridged) collat_bridged = 0;
+        else {
+            collat_bridged -= collat_amount;
+        }
     }
    
     // Burn unneeded or excess FRAX. Goes through the minter
@@ -245,7 +255,10 @@ contract FraxLiquidityBridger is Owned {
         amo_minter.burnFraxFromAMO(frax_amount);
 
         // Update the balance after the transfer goes through
-        frax_bridged -= frax_amount;
+        if (frax_amount >= frax_bridged) frax_bridged = 0;
+        else {
+            frax_bridged -= frax_amount;
+        }
     }
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */

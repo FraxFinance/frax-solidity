@@ -35,7 +35,6 @@ const IUniswapV3PositionsNFT = artifacts.require("Uniswap_V3/IUniswapV3Positions
 const ISaddleD4_LP = artifacts.require("Misc_AMOs/saddle/ISaddleD4_LP");
 
 // Collateral Pools
-const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 const FraxPoolV3 = artifacts.require("Frax/Pools/FraxPoolV3");
 
 // Oracles
@@ -109,8 +108,8 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 	let MIGRATOR_ADDRESS;
 
 	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
-	const ADDRESS_WITH_FXS = '0xf977814e90da44bfa03b6295a0616a897441acec';
-	const ADDRESS_WITH_USDC = '0xf977814e90da44bfa03b6295a0616a897441acec';
+	const ADDRESS_WITH_FXS = '0x3C60DBCD24b49f7fbFE27b8ff6c49a37bb087d63';
+	const ADDRESS_WITH_USDC = '0x68A99f89E475a078645f4BAC491360aFe255Dff1';
 	const ADDRESS_WITH_LUSD = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
 	const ADDRESS_WITH_sUSD = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
 	const ADDRESS_WITH_USDP = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
@@ -162,8 +161,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 	let fxs_oracle_wrapper_instance;
 
 	// Initialize pool instances
-	let pool_instance_USDC;
-	let pool_instance_v3;
+	let pool_instance_V3;
 	
 	// Initialize pair addresses
 	let pair_addr_FRAX_WETH;
@@ -255,7 +253,6 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		governanceInstance = await GovernorAlpha.deployed();
 
 		// Initialize pool instances
-		pool_instance_USDC = await Pool_USDC.deployed();
 		pool_instance_v3 = await FraxPoolV3.deployed();
 		
 		// Initialize the Uniswap Factory Instance
@@ -308,13 +305,27 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		catch (err) {}
 
 		console.log("------------------------------------------------");
+		console.log("Give the minter some FRAX");
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [ADDRESS_WITH_FRAX]
+		});
+
+		await frax_instance.transfer(accounts[9], new BigNumber("50000e18"), { from: ADDRESS_WITH_FRAX });
+
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [ADDRESS_WITH_FRAX]
+		});
+
+		console.log("------------------------------------------------");
 		console.log("Give the minter some FXS");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
 			params: [ADDRESS_WITH_FXS]
 		});
 
-		await fxs_instance.transfer(accounts[9], new BigNumber("400e18"), { from: ADDRESS_WITH_FXS });
+		await fxs_instance.transfer(accounts[9], new BigNumber("10000e18"), { from: ADDRESS_WITH_FXS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -401,13 +412,16 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 
 		await usdc_instance.transfer(accounts[9], new BigNumber("500e6"), { from: ADDRESS_WITH_USDC });
 
+		console.log("Give the pool some collateral to start");
+		await usdc_instance.transfer(pool_instance_v3.address, new BigNumber("5000e6"), { from: ADDRESS_WITH_USDC });
+
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
 			params: [ADDRESS_WITH_USDC]
 		});
 
-		console.log("Adding pool_instance_v3 as a valid pool");
-		await frax_instance.addPool(pool_instance_v3.address, { from: ORIGINAL_FRAX_ONE_ADDRESS });
+		// console.log("Adding pool_instance_v3 as a valid pool");
+		// await frax_instance.addPool(pool_instance_v3.address, { from: ORIGINAL_FRAX_ONE_ADDRESS });
 
 		console.log(chalk.hex('#ffa500')("---------- Do a huge mint to open up a recollat for later ----------"));
 
@@ -465,7 +479,6 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		await usdp_instance.transfer(pool_instance_v3.address, new BigNumber("200e18"), { from: ADDRESS_WITH_USDP });
 		await wust_instance.transfer(pool_instance_v3.address, new BigNumber("200e18"), { from: ADDRESS_WITH_wUST });
 		await fei_instance.transfer(pool_instance_v3.address, new BigNumber("200e18"), { from: ADDRESS_WITH_FEI });
-		await usdc_instance.transfer(pool_instance_v3.address, new BigNumber("200e6"), { from: ADDRESS_WITH_USDC });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -479,13 +492,13 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log(chalk.yellow("===================================================================="));
 
 		// Do approvals for minting
-		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
-		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
-		await susd_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
-		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
-		await wust_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
-		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
-		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("125e6"), { from: accounts[9] });
+		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("500e18"), { from: accounts[9] });
+		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("500e18"), { from: accounts[9] });
+		await susd_instance.approve(pool_instance_v3.address, new BigNumber("500e18"), { from: accounts[9] });
+		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("500e18"), { from: accounts[9] });
+		await wust_instance.approve(pool_instance_v3.address, new BigNumber("500e18"), { from: accounts[9] });
+		await fei_instance.approve(pool_instance_v3.address, new BigNumber("500e18"), { from: accounts[9] });
+		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("500e6"), { from: accounts[9] });
 
 		// Refresh oracle
 		try{
@@ -513,8 +526,8 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		const col_idx_fei = 4;
 		const col_idx_usdc = 5;
 
-		console.log("Set the mint threshold to $0.99 now so mints work");
-		await pool_instance_v3.setPriceThresholds(990000, 980000, { from: POOL_CREATOR }); 
+		console.log("Set the mint threshold to $0.98 now so mints work");
+		await pool_instance_v3.setPriceThresholds(980000, 970000, { from: POOL_CREATOR }); 
 		
 		console.log(chalk.hex('#ffa500')("---------- Print collateral info ----------"));
 		await utilities.printCollateralInfo(pool_instance_v3, lusd_instance.address);
@@ -664,6 +677,10 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		let usdc_balance_before_5 = new BigNumber(await usdc_instance.balanceOf.call(accounts[9]));
 		let fxs_balance_before_5 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
 		
+		// Print some data
+		console.log("freeCollatBalance: ", (new BigNumber(await pool_instance_v3.freeCollatBalance.call(5))).div(BIG6).toNumber());
+		console.log("pool ceiling: ", (new BigNumber(await pool_instance_v3.pool_ceilings.call(5))).div(BIG6).toNumber());
+
 		// Mint
 		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_usdc, FRAX_AMOUNT)).div(BIG6).toNumber())
 		const usdc_mint_result_CALL = await pool_instance_v3.mintFrax.call(col_idx_usdc, FRAX_AMOUNT, FRAX_OUT_MIN, 0, { from: accounts[9] });
@@ -683,11 +700,172 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 
 
 		console.log(chalk.yellow("===================================================================="));
+		console.log(chalk.yellow("============ MINTING TESTS (1-TO-1 OVERRIDE) ============"));
+		console.log(chalk.yellow("===================================================================="));
+
+		// Do approvals for minting
+		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await susd_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await wust_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await fei_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("100e6"), { from: accounts[9] });
+
+		console.log(chalk.hex('#ffa500')("---------- Prepare to mint 1-to-1 ----------"));
+		const SLIPPAGE_MULTIPLIER_M1T1 = .975;
+		const FRAX_AMOUNT_M1T1 = new BigNumber("100e18");
+		const FRAX_OUT_MIN_M1T1 = FRAX_AMOUNT_M1T1.multipliedBy(SLIPPAGE_MULTIPLIER_M1T1).integerValue(BigNumber.ROUND_FLOOR);
+		const global_cr_m1t1 = new BigNumber(await frax_instance.global_collateral_ratio());
+		const fxs_price_m1t1 = new BigNumber(await frax_instance.fxs_price());
+		const frax_price_m1t1 = new BigNumber(await frax_instance.frax_price());
+
+		console.log("global_cr_m1t1:", global_cr_m1t1.div(BIG6).toNumber());
+		console.log("fxs_price_m1t1:", fxs_price_m1t1.div(BIG6).toNumber());
+		console.log("frax_price_m1t1:", frax_price_m1t1.div(BIG6).toNumber());
+
+		console.log("Set the mint threshold to $0.98 now so mints work");
+		await pool_instance_v3.setPriceThresholds(980000, 970000, { from: POOL_CREATOR }); 
+
+		console.log(chalk.hex('#2eb6ea')("---------- Mint FRAX with LUSD (1-to-1 override) ----------"));
+		let frax_balance_before_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let lusd_balance_before_m1t1 = new BigNumber(await lusd_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_before_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		// Mint
+		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_lusd, FRAX_AMOUNT_M1T1)).div(BIG18).toNumber())
+		const lusd_mint_result_CALL_M1T1 = await pool_instance_v3.mintFrax.call(col_idx_lusd, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+		await pool_instance_v3.mintFrax(col_idx_lusd, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+
+		let frax_balance_after_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let lusd_balance_after_m1t1 = new BigNumber(await lusd_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_after_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+
+		console.log("total_frax_mint: ", new BigNumber(lusd_mint_result_CALL_M1T1[0]).div(BIG18).toNumber());
+		console.log("collat_needed: ", new BigNumber(lusd_mint_result_CALL_M1T1[1]).div(BIG18).toNumber());
+		console.log("fxs_needed: ", new BigNumber(lusd_mint_result_CALL_M1T1[2]).div(BIG18).toNumber());
+
+		console.log("FRAX change: ", frax_balance_after_m1t1.minus(frax_balance_before_m1t1).div(BIG18).toNumber());
+		console.log("LUSD change: ", lusd_balance_after_m1t1.minus(lusd_balance_before_m1t1).div(BIG18).toNumber());
+		console.log("FXS change: ", fxs_balance_after_m1t1.minus(fxs_balance_before_m1t1).div(BIG18).toNumber());
+
+		console.log(chalk.hex('#ffffff')("---------- Mint FRAX with sUSD (1-to-1 override) ----------"));
+		let frax_balance_before_1_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let susd_balance_before_1_m1t1 = new BigNumber(await susd_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_before_1_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		// Mint
+		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_susd, FRAX_AMOUNT_M1T1)).div(BIG18).toNumber())
+		const susd_mint_result_CALL_M1T1 = await pool_instance_v3.mintFrax.call(col_idx_susd, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+		await pool_instance_v3.mintFrax(col_idx_susd, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+
+		let frax_balance_after_1_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let susd_balance_after_1_m1t1 = new BigNumber(await susd_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_after_1_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		console.log("total_frax_mint: ", new BigNumber(susd_mint_result_CALL_M1T1[0]).div(BIG18).toNumber());
+		console.log("collat_needed: ", new BigNumber(susd_mint_result_CALL_M1T1[1]).div(BIG18).toNumber());
+		console.log("fxs_needed: ", new BigNumber(susd_mint_result_CALL_M1T1[2]).div(BIG18).toNumber());
+
+		console.log("FRAX change: ", frax_balance_after_1_m1t1.minus(frax_balance_before_1_m1t1).div(BIG18).toNumber());
+		console.log("sUSD change: ", susd_balance_after_1_m1t1.minus(susd_balance_before_1_m1t1).div(BIG18).toNumber());
+		console.log("FXS change: ", fxs_balance_after_1_m1t1.minus(fxs_balance_before_1_m1t1).div(BIG18).toNumber());
+
+		console.log(chalk.hex('#4460ef')("---------- Mint FRAX with USDP (1-to-1 override) ----------"));
+		let frax_balance_before_2_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let usdp_balance_before_2_m1t1 = new BigNumber(await usdp_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_before_2_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		// Mint
+		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_usdp, FRAX_AMOUNT_M1T1)).div(BIG18).toNumber())
+		const usdp_mint_result_CALL_M1T1 = await pool_instance_v3.mintFrax.call(col_idx_usdp, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+		await pool_instance_v3.mintFrax(col_idx_usdp, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+
+		let frax_balance_after_2_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let usdp_balance_after_2_m1t1 = new BigNumber(await usdp_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_after_2_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		console.log("total_frax_mint: ", new BigNumber(usdp_mint_result_CALL_M1T1[0]).div(BIG18).toNumber());
+		console.log("collat_needed: ", new BigNumber(usdp_mint_result_CALL_M1T1[1]).div(BIG18).toNumber());
+		console.log("fxs_needed: ", new BigNumber(usdp_mint_result_CALL_M1T1[2]).div(BIG18).toNumber());
+
+		console.log("FRAX change: ", frax_balance_after_2_m1t1.minus(frax_balance_before_2_m1t1).div(BIG18).toNumber());
+		console.log("USDP change: ", usdp_balance_after_2_m1t1.minus(usdp_balance_before_2_m1t1).div(BIG18).toNumber());
+		console.log("FXS change: ", fxs_balance_after_2_m1t1.minus(fxs_balance_before_2_m1t1).div(BIG18).toNumber());
+
+		console.log(chalk.hex('#5493f7')("---------- Mint FRAX with wUST (1-to-1 override) ----------"));
+		let frax_balance_before_3_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let wust_balance_before_3_m1t1 = new BigNumber(await wust_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_before_3_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		// Mint
+		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_wust, FRAX_AMOUNT_M1T1)).div(BIG18).toNumber())
+		const wust_mint_result_CALL_M1T1 = await pool_instance_v3.mintFrax.call(col_idx_wust, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+		await pool_instance_v3.mintFrax(col_idx_wust, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+
+		let frax_balance_after_3_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let wust_balance_after_3_m1t1 = new BigNumber(await wust_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_after_3_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		console.log("total_frax_mint: ", new BigNumber(wust_mint_result_CALL_M1T1[0]).div(BIG18).toNumber());
+		console.log("collat_needed: ", new BigNumber(wust_mint_result_CALL_M1T1[1]).div(BIG18).toNumber());
+		console.log("fxs_needed: ", new BigNumber(wust_mint_result_CALL_M1T1[2]).div(BIG18).toNumber());
+
+		console.log("FRAX change: ", frax_balance_after_3_m1t1.minus(frax_balance_before_3_m1t1).div(BIG18).toNumber());
+		console.log("wUST change: ", wust_balance_after_3_m1t1.minus(wust_balance_before_3_m1t1).div(BIG18).toNumber());
+		console.log("FXS change: ", fxs_balance_after_3_m1t1.minus(fxs_balance_before_3_m1t1).div(BIG18).toNumber());
+
+		console.log(chalk.hex('#22996e')("---------- Mint FRAX with FEI (1-to-1 override) ----------"));
+		let frax_balance_before_4_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let fei_balance_before_4_m1t1 = new BigNumber(await fei_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_before_4_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		// Mint
+		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_fei, FRAX_AMOUNT_M1T1)).div(BIG18).toNumber())
+		const fei_mint_result_CALL_M1T1 = await pool_instance_v3.mintFrax.call(col_idx_fei, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+		await pool_instance_v3.mintFrax(col_idx_fei, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+
+		let frax_balance_after_4_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let fei_balance_after_4_m1t1 = new BigNumber(await fei_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_after_4_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		console.log("total_frax_mint: ", new BigNumber(fei_mint_result_CALL_M1T1[0]).div(BIG18).toNumber());
+		console.log("collat_needed: ", new BigNumber(fei_mint_result_CALL_M1T1[1]).div(BIG18).toNumber());
+		console.log("fxs_needed: ", new BigNumber(fei_mint_result_CALL_M1T1[2]).div(BIG18).toNumber());
+
+		console.log("FRAX change: ", frax_balance_after_4_m1t1.minus(frax_balance_before_4_m1t1).div(BIG18).toNumber());
+		console.log("FEI change: ", fei_balance_after_4_m1t1.minus(fei_balance_before_4_m1t1).div(BIG18).toNumber());
+		console.log("FXS change: ", fxs_balance_after_4_m1t1.minus(fxs_balance_before_4_m1t1).div(BIG18).toNumber());
+
+		console.log(chalk.hex('#2871c3')("---------- Mint FRAX with USDC (1-to-1 override) ----------"));
+		let frax_balance_before_5_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let usdc_balance_before_5_m1t1 = new BigNumber(await usdc_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_before_5_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		// Mint
+		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_usdc, FRAX_AMOUNT_M1T1)).div(BIG6).toNumber())
+		const usdc_mint_result_CALL_M1T1 = await pool_instance_v3.mintFrax.call(col_idx_usdc, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+		await pool_instance_v3.mintFrax(col_idx_usdc, FRAX_AMOUNT_M1T1, FRAX_OUT_MIN_M1T1, 1, { from: accounts[9] });
+
+		let frax_balance_after_5_m1t1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
+		let usdc_balance_after_5_m1t1 = new BigNumber(await usdc_instance.balanceOf.call(accounts[9]));
+		let fxs_balance_after_5_m1t1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
+		
+		console.log("total_frax_mint: ", new BigNumber(usdc_mint_result_CALL_M1T1[0]).div(BIG18).toNumber());
+		console.log("collat_needed: ", new BigNumber(usdc_mint_result_CALL_M1T1[1]).div(BIG6).toNumber());
+		console.log("fxs_needed: ", new BigNumber(usdc_mint_result_CALL_M1T1[2]).div(BIG18).toNumber());
+
+		console.log("FRAX change: ", frax_balance_after_5_m1t1.minus(frax_balance_before_5_m1t1).div(BIG18).toNumber());
+		console.log("USDC change: ", usdc_balance_after_5_m1t1.minus(usdc_balance_before_5_m1t1).div(BIG6).toNumber());
+		console.log("FXS change: ", fxs_balance_after_5_m1t1.minus(fxs_balance_before_5_m1t1).div(BIG18).toNumber());
+		
+
+		console.log(chalk.yellow("===================================================================="));
 		console.log(chalk.yellow("============ REDEEM TESTS ============"));
 		console.log(chalk.yellow("===================================================================="));
 
 		// Do approvals for redeems
-		await frax_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
+		await frax_instance.approve(pool_instance_v3.address, new BigNumber("50000e18"), { from: accounts[9] });
 
 		console.log(chalk.hex('#ffa500')("---------- Prepare to redeem ----------"));
 		const FRAX_AMOUNT_RDM = new BigNumber("100e18");
@@ -1086,7 +1264,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		console.log(chalk.yellow("===================================================================="));
 
 		// Do approvals for buybacks
-		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("10e18"), { from: accounts[9] });
+		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("1000e18"), { from: accounts[9] });
 
 		console.log(chalk.hex('#ffa500')("---------- Prepare to buyback ----------"));
 		const FXS_AMT_BBK = new BigNumber("10e18");
@@ -1119,7 +1297,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_USDC]
 		});
 
-		await usdc_instance.transfer(pool_instance_USDC.address, new BigNumber("5000000e6"), { from: ADDRESS_WITH_USDC });
+		await usdc_instance.transfer("0x1864Ca3d47AaB98Ee78D11fc9DCC5E7bADdA1c0d", new BigNumber("5000000e6"), { from: ADDRESS_WITH_USDC });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -1236,174 +1414,6 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 
 	});
 
-	it('Mint 1-to-1 override tests', async () => {
-		console.log(chalk.yellow("===================================================================="));
-		console.log(chalk.yellow("============ MINTING TESTS (1-TO-1 OVERRIDE) ============"));
-		console.log(chalk.yellow("===================================================================="));
-
-		// Do approvals for minting
-		await fxs_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
-		await lusd_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
-		await susd_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
-		await usdp_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
-		await wust_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
-		await fei_instance.approve(pool_instance_v3.address, new BigNumber("100e18"), { from: accounts[9] });
-		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("100e6"), { from: accounts[9] });
-
-		console.log(chalk.hex('#ffa500')("---------- Prepare to mint 1-to-1 ----------"));
-		const SLIPPAGE_MULTIPLIER = .975;
-		const FRAX_AMOUNT = new BigNumber("100e18");
-		const FRAX_OUT_MIN = FRAX_AMOUNT.multipliedBy(SLIPPAGE_MULTIPLIER).integerValue(BigNumber.ROUND_FLOOR);
-		const global_cr = new BigNumber(await frax_instance.global_collateral_ratio());
-		const fxs_price = new BigNumber(await frax_instance.fxs_price());
-		const frax_price = new BigNumber(await frax_instance.frax_price());
-
-		console.log("global_cr:", global_cr.div(BIG6).toNumber());
-		console.log("fxs_price:", fxs_price.div(BIG6).toNumber());
-		console.log("frax_price:", frax_price.div(BIG6).toNumber());
-
-		const col_idx_lusd = 0;
-		const col_idx_susd = 1;
-		const col_idx_usdp = 2;
-		const col_idx_wust = 3;
-		const col_idx_fei = 4;
-		const col_idx_usdc = 5;
-
-		console.log("Set the mint threshold to $0.99 now so mints work");
-		await pool_instance_v3.setPriceThresholds(990000, 980000, { from: POOL_CREATOR }); 
-
-		console.log(chalk.hex('#2eb6ea')("---------- Mint FRAX with LUSD (1-to-1 override) ----------"));
-		let frax_balance_before_0 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let lusd_balance_before_0 = new BigNumber(await lusd_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_before_0 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		// Mint
-		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_lusd, FRAX_AMOUNT)).div(BIG18).toNumber())
-		const lusd_mint_result_CALL = await pool_instance_v3.mintFrax.call(col_idx_lusd, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-		await pool_instance_v3.mintFrax(col_idx_lusd, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-
-		let frax_balance_after_0 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let lusd_balance_after_0 = new BigNumber(await lusd_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_after_0 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-
-		console.log("total_frax_mint: ", new BigNumber(lusd_mint_result_CALL[0]).div(BIG18).toNumber());
-		console.log("collat_needed: ", new BigNumber(lusd_mint_result_CALL[1]).div(BIG18).toNumber());
-		console.log("fxs_needed: ", new BigNumber(lusd_mint_result_CALL[2]).div(BIG18).toNumber());
-
-		console.log("FRAX change: ", frax_balance_after_0.minus(frax_balance_before_0).div(BIG18).toNumber());
-		console.log("LUSD change: ", lusd_balance_after_0.minus(lusd_balance_before_0).div(BIG18).toNumber());
-		console.log("FXS change: ", fxs_balance_after_0.minus(fxs_balance_before_0).div(BIG18).toNumber());
-
-		console.log(chalk.hex('#ffffff')("---------- Mint FRAX with sUSD (1-to-1 override) ----------"));
-		let frax_balance_before_1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let susd_balance_before_1 = new BigNumber(await susd_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_before_1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		// Mint
-		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_susd, FRAX_AMOUNT)).div(BIG18).toNumber())
-		const susd_mint_result_CALL = await pool_instance_v3.mintFrax.call(col_idx_susd, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-		await pool_instance_v3.mintFrax(col_idx_susd, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-
-		let frax_balance_after_1 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let susd_balance_after_1 = new BigNumber(await susd_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_after_1 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		console.log("total_frax_mint: ", new BigNumber(susd_mint_result_CALL[0]).div(BIG18).toNumber());
-		console.log("collat_needed: ", new BigNumber(susd_mint_result_CALL[1]).div(BIG18).toNumber());
-		console.log("fxs_needed: ", new BigNumber(susd_mint_result_CALL[2]).div(BIG18).toNumber());
-
-		console.log("FRAX change: ", frax_balance_after_1.minus(frax_balance_before_1).div(BIG18).toNumber());
-		console.log("sUSD change: ", susd_balance_after_1.minus(susd_balance_before_1).div(BIG18).toNumber());
-		console.log("FXS change: ", fxs_balance_after_1.minus(fxs_balance_before_1).div(BIG18).toNumber());
-
-		console.log(chalk.hex('#4460ef')("---------- Mint FRAX with USDP (1-to-1 override) ----------"));
-		let frax_balance_before_2 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let usdp_balance_before_2 = new BigNumber(await usdp_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_before_2 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		// Mint
-		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_usdp, FRAX_AMOUNT)).div(BIG18).toNumber())
-		const usdp_mint_result_CALL = await pool_instance_v3.mintFrax.call(col_idx_usdp, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-		await pool_instance_v3.mintFrax(col_idx_usdp, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-
-		let frax_balance_after_2 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let usdp_balance_after_2 = new BigNumber(await usdp_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_after_2 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		console.log("total_frax_mint: ", new BigNumber(usdp_mint_result_CALL[0]).div(BIG18).toNumber());
-		console.log("collat_needed: ", new BigNumber(usdp_mint_result_CALL[1]).div(BIG18).toNumber());
-		console.log("fxs_needed: ", new BigNumber(usdp_mint_result_CALL[2]).div(BIG18).toNumber());
-
-		console.log("FRAX change: ", frax_balance_after_2.minus(frax_balance_before_2).div(BIG18).toNumber());
-		console.log("USDP change: ", usdp_balance_after_2.minus(usdp_balance_before_2).div(BIG18).toNumber());
-		console.log("FXS change: ", fxs_balance_after_2.minus(fxs_balance_before_2).div(BIG18).toNumber());
-
-		console.log(chalk.hex('#5493f7')("---------- Mint FRAX with wUST (1-to-1 override) ----------"));
-		let frax_balance_before_3 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let wust_balance_before_3 = new BigNumber(await wust_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_before_3 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		// Mint
-		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_wust, FRAX_AMOUNT)).div(BIG18).toNumber())
-		const wust_mint_result_CALL = await pool_instance_v3.mintFrax.call(col_idx_wust, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-		await pool_instance_v3.mintFrax(col_idx_wust, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-
-		let frax_balance_after_3 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let wust_balance_after_3 = new BigNumber(await wust_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_after_3 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		console.log("total_frax_mint: ", new BigNumber(wust_mint_result_CALL[0]).div(BIG18).toNumber());
-		console.log("collat_needed: ", new BigNumber(wust_mint_result_CALL[1]).div(BIG18).toNumber());
-		console.log("fxs_needed: ", new BigNumber(wust_mint_result_CALL[2]).div(BIG18).toNumber());
-
-		console.log("FRAX change: ", frax_balance_after_3.minus(frax_balance_before_3).div(BIG18).toNumber());
-		console.log("wUST change: ", wust_balance_after_3.minus(wust_balance_before_3).div(BIG18).toNumber());
-		console.log("FXS change: ", fxs_balance_after_3.minus(fxs_balance_before_3).div(BIG18).toNumber());
-
-		console.log(chalk.hex('#22996e')("---------- Mint FRAX with FEI (1-to-1 override) ----------"));
-		let frax_balance_before_4 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let fei_balance_before_4 = new BigNumber(await fei_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_before_4 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		// Mint
-		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_fei, FRAX_AMOUNT)).div(BIG18).toNumber())
-		const fei_mint_result_CALL = await pool_instance_v3.mintFrax.call(col_idx_fei, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-		await pool_instance_v3.mintFrax(col_idx_fei, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-
-		let frax_balance_after_4 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let fei_balance_after_4 = new BigNumber(await fei_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_after_4 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		console.log("total_frax_mint: ", new BigNumber(fei_mint_result_CALL[0]).div(BIG18).toNumber());
-		console.log("collat_needed: ", new BigNumber(fei_mint_result_CALL[1]).div(BIG18).toNumber());
-		console.log("fxs_needed: ", new BigNumber(fei_mint_result_CALL[2]).div(BIG18).toNumber());
-
-		console.log("FRAX change: ", frax_balance_after_4.minus(frax_balance_before_4).div(BIG18).toNumber());
-		console.log("FEI change: ", fei_balance_after_4.minus(fei_balance_before_4).div(BIG18).toNumber());
-		console.log("FXS change: ", fxs_balance_after_4.minus(fxs_balance_before_4).div(BIG18).toNumber());
-
-		console.log(chalk.hex('#2871c3')("---------- Mint FRAX with USDC (1-to-1 override) ----------"));
-		let frax_balance_before_5 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let usdc_balance_before_5 = new BigNumber(await usdc_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_before_5 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		// Mint
-		console.log("getFRAXInCollateral: ", new BigNumber(await pool_instance_v3.getFRAXInCollateral.call(col_idx_usdc, FRAX_AMOUNT)).div(BIG6).toNumber())
-		const usdc_mint_result_CALL = await pool_instance_v3.mintFrax.call(col_idx_usdc, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-		await pool_instance_v3.mintFrax(col_idx_usdc, FRAX_AMOUNT, FRAX_OUT_MIN, 1, { from: accounts[9] });
-
-		let frax_balance_after_5 = new BigNumber(await frax_instance.balanceOf.call(accounts[9]));
-		let usdc_balance_after_5 = new BigNumber(await usdc_instance.balanceOf.call(accounts[9]));
-		let fxs_balance_after_5 = new BigNumber(await fxs_instance.balanceOf.call(accounts[9]));
-		
-		console.log("total_frax_mint: ", new BigNumber(usdc_mint_result_CALL[0]).div(BIG18).toNumber());
-		console.log("collat_needed: ", new BigNumber(usdc_mint_result_CALL[1]).div(BIG6).toNumber());
-		console.log("fxs_needed: ", new BigNumber(usdc_mint_result_CALL[2]).div(BIG18).toNumber());
-
-		console.log("FRAX change: ", frax_balance_after_5.minus(frax_balance_before_5).div(BIG18).toNumber());
-		console.log("USDC change: ", usdc_balance_after_5.minus(usdc_balance_before_5).div(BIG6).toNumber());
-		console.log("FXS change: ", fxs_balance_after_5.minus(fxs_balance_before_5).div(BIG18).toNumber());
-	});
 
 	it("Mint Fail Tests ", async () => {
 		console.log(chalk.yellow("===================================================================="));
@@ -1444,8 +1454,8 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		await fei_instance.approve(pool_instance_v3.address, new BigNumber("125e18"), { from: accounts[9] });
 		await usdc_instance.approve(pool_instance_v3.address, new BigNumber("125e6"), { from: accounts[9] });
 
-		console.log("Set the mint threshold to $0.99 now so mints work");
-		await pool_instance_v3.setPriceThresholds(990000, 980000, { from: POOL_CREATOR }); 
+		console.log("Set the mint threshold to $0.98 now so mints work");
+		await pool_instance_v3.setPriceThresholds(980000, 970000, { from: POOL_CREATOR }); 
 
 		// Refresh oracle
 		try{
@@ -1455,7 +1465,17 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 		catch (err) {}
 
 		console.log(chalk.hex('#ffa500')("---------- Try minting above pool ceilings ----------"));
-		const OVERMINT_FRAX_AMT = new BigNumber("1100e18");
+
+		console.log("Lower pool ceilings");
+		await pool_instance_v3.setPoolCeiling(0, new BigNumber("100e18"), { from: POOL_CREATOR }); 
+		await pool_instance_v3.setPoolCeiling(1, new BigNumber("100e18"), { from: POOL_CREATOR }); 
+		await pool_instance_v3.setPoolCeiling(2, new BigNumber("100e18"), { from: POOL_CREATOR }); 
+		await pool_instance_v3.setPoolCeiling(3, new BigNumber("100e18"), { from: POOL_CREATOR }); 
+		await pool_instance_v3.setPoolCeiling(4, new BigNumber("100e18"), { from: POOL_CREATOR }); 
+		await pool_instance_v3.setPoolCeiling(5, new BigNumber("100e6"), { from: POOL_CREATOR }); 
+
+		const OVERMINT_FRAX_AMT = new BigNumber("125e18");
+		const OVERMINT_FRAX_AMT_E6 = new BigNumber("125e6");
 		await expectRevert(
 			pool_instance_v3.mintFrax(col_idx_lusd, OVERMINT_FRAX_AMT, 0, 0, { from: accounts[9] }),
 			"Pool ceiling"
@@ -1477,7 +1497,7 @@ contract('FraxPoolV3-Tests', async (accounts) => {
 			"Pool ceiling"
 		);
 		await expectRevert(
-			pool_instance_v3.mintFrax(col_idx_usdc, OVERMINT_FRAX_AMT, 0, 0, { from: accounts[9] }),
+			pool_instance_v3.mintFrax(col_idx_usdc, OVERMINT_FRAX_AMT_E6, 0, 0, { from: accounts[9] }),
 			"Pool ceiling"
 		);
 
