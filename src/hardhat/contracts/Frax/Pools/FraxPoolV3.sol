@@ -30,22 +30,25 @@ pragma solidity >=0.8.0;
 import "../../Math/SafeMath.sol";
 import '../../Uniswap/TransferHelper.sol';
 import "../../Staking/Owned.sol";
-import "../../FXS/FXS.sol";
-import "../../Frax/Frax.sol";
-import "../../Frax/FraxAMOMinter.sol";
+import "../../FXS/IFxs.sol";
+import "../../Frax/IFrax.sol";
+import "../../Oracle/FXSOracleWrapper.sol";
+import "../../Frax/IFraxAMOMinter.sol";
 import "../../ERC20/ERC20.sol";
 
 contract FraxPoolV3 is Owned {
     using SafeMath for uint256;
+    // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
 
     // Core
     address public timelock_address;
     address public custodian_address; // Custodian is an EOA (or msig) with pausing privileges only, in case of an emergency
-    FRAXStablecoin private FRAX = FRAXStablecoin(0x853d955aCEf822Db058eb8505911ED77F175b99e);
-    FRAXShares private FXS = FRAXShares(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
+    IFrax private FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
+    IFxs private FXS = IFxs(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
     mapping(address => bool) public amo_minter_addresses; // minter address -> is it enabled
+    FXSOracleWrapper public fxsUSDOracle = FXSOracleWrapper(0xeE0F15e5Ffc105EBb3d1368cf84F43b40caB3480);
 
     // Collateral
     address[] public collateral_addresses;
@@ -54,7 +57,7 @@ contract FraxPoolV3 is Owned {
     uint256[] public pool_ceilings; // Total across all collaterals. Accounts for missing_decimals
     uint256[] public collateral_prices; // Stores price of the collateral, if price is paused
     mapping(address => uint256) public collateralAddrToIdx; // collateral addr -> collateral index
-    mapping(address => bool) public enabled_pools; // collateral address -> is it enabled
+    mapping(address => bool) public enabled_collaterals; // collateral address -> is it enabled
     
     // Redeem related
     mapping (address => uint256) public redeemFXSBalances;
@@ -66,13 +69,21 @@ contract FraxPoolV3 is Owned {
     uint256 public redeem_price_threshold = 990000; // $0.99
     uint256 public mint_price_threshold = 1010000; // $1.01
     
+    // Buyback related
+    mapping(uint256 => uint256) public bbkHourlyCum; // Epoch hour ->  Collat out in that hour (E18)
+    uint256 public bbkMaxColE18OutPerHour = 1000e18;
+
+    // Recollat related
+    mapping(uint256 => uint256) public rctHourlyCum; // Epoch hour ->  FXS out in that hour
+    uint256 public rctMaxFxsOutPerHour = 1000e18;
+
     // Fees and rates
     // getters are in collateral_information()
     uint256[] private minting_fee;
     uint256[] private redemption_fee;
     uint256[] private buyback_fee;
     uint256[] private recollat_fee;
-    uint256 public bonus_rate; // Bonus rate on FXS minted during recollateralizeFrax(); 6 decimals of precision, set to 0.75% on genesis
+    uint256 public bonus_rate; // Bonus rate on FXS minted during recollateralize(); 6 decimals of precision, set to 0.75% on genesis
     
     // Constants for various precisions
     uint256 private constant PRICE_PRECISION = 1e6;
@@ -102,7 +113,7 @@ contract FraxPoolV3 is Owned {
     }
 
     modifier collateralEnabled(uint256 col_idx) {
-        require(enabled_pools[collateral_addresses[col_idx]], "Collateral disabled");
+        require(enabled_collaterals[collateral_addresses[col_idx]], "Collateral disabled");
         _;
     }
  
@@ -127,7 +138,7 @@ contract FraxPoolV3 is Owned {
             collateralAddrToIdx[_collateral_addresses[i]] = i;
 
             // Validate the collaterals
-            enabled_pools[_collateral_addresses[i]] = true;
+            enabled_collaterals[_collateral_addresses[i]] = true;
 
             // Add in the missing decimals
             missing_decimals.push(uint256(18).sub(ERC20(_collateral_addresses[i]).decimals()));
@@ -182,7 +193,7 @@ contract FraxPoolV3 is Owned {
 
     // Helpful for UIs
     function collateral_information(address collat_address) external view returns (CollateralInformation memory return_data){
-        require(enabled_pools[collat_address], "Invalid collateral");
+        require(enabled_collaterals[collat_address], "Invalid collateral");
 
         // Get the index
         uint256 idx = collateralAddrToIdx[collat_address];
@@ -191,7 +202,7 @@ contract FraxPoolV3 is Owned {
             idx, // [0]
             collateral_symbols[idx], // [1]
             collat_address, // [2]
-            enabled_pools[collat_address], // [3]
+            enabled_collaterals[collat_address], // [3]
             missing_decimals[idx], // [4]
             collateral_prices[idx], // [5]
             pool_ceilings[idx], // [6]
@@ -206,14 +217,8 @@ contract FraxPoolV3 is Owned {
         );
     }
 
-    // Helpful for UIs
-    function allCollateralAddresses() external view returns (address[] memory) {
+    function allCollaterals() external view returns (address[] memory) {
         return collateral_addresses;
-    }
-
-    // Helpful for UIs
-    function allCollateralSymbols() external view returns (string[] memory){
-        return collateral_symbols;
     }
 
     // Returns the FRAX value in collateral tokens
@@ -229,24 +234,113 @@ contract FraxPoolV3 is Owned {
     // Returns dollar value of collateral held in this Frax pool, in E18
     function collatDollarBalance() external view returns (uint256 balance_tally) {
         balance_tally = 0;
+        // Orig
+        // for (uint256 i = 0; i < collateral_addresses.length; i++){ 
+        //     if (enabled_collaterals[collateral_addresses[i]]){
+        //         ERC20 collat_token = ERC20(collateral_addresses[i]);
+        //         uint256 cur_bal = collat_token.balanceOf(address(this)).sub(unclaimedPoolCollateral[i]);
+        //         balance_tally += cur_bal.mul(10 ** missing_decimals[i]).mul(collateral_prices[i]).div(PRICE_PRECISION);
+        //     }
+        // }
+
+        // Test 1
         for (uint256 i = 0; i < collateral_addresses.length; i++){ 
-            ERC20 collat_token = ERC20(collateral_addresses[i]);
-            if (enabled_pools[collateral_addresses[i]]){
-                balance_tally = balance_tally.add((collat_token.balanceOf(address(this)).sub(unclaimedPoolCollateral[i])).mul(10 ** missing_decimals[i]).mul(collateral_prices[i]).div(PRICE_PRECISION));
+            if (enabled_collaterals[collateral_addresses[i]]){
+                balance_tally += freeCollatBalance(i).mul(10 ** missing_decimals[i]).mul(collateral_prices[i]).div(PRICE_PRECISION);
             }
         }
+
+        // Test 2
+        // for (uint256 i = 0; i < collateral_addresses.length; i++){ 
+        //     address col_addr = collateral_addresses[i];
+        //     uint256 col_idx = collateralAddrToIdx[col_addr];
+        //     if (enabled_collaterals[col_addr]){
+        //         uint256 cur_bal = freeCollatBalance(col_idx);
+        //         balance_tally += cur_bal.mul(10 ** missing_decimals[col_idx]).mul(collateral_prices[col_idx]).div(PRICE_PRECISION);
+        //     }
+        // }
     }
 
-    // Returns the value of excess collateral held in this Frax pool, compared to what is needed to maintain the global collateral ratio
-    function availableExcessCollatDV() public view returns (uint256) {
+    function comboCalcBbkRct(uint256 cur, uint256 max, uint256 theo) internal pure returns (uint256) {
+        if (cur >= max) {
+            // If the hourly limit has already been reached, return 0;
+            return 0;
+        }
+        else {
+            // Get the available amount
+            uint256 available = max.sub(cur);
+
+            if (theo >= available) {
+                // If the the theoretical is more than the available, return the available
+                return available;
+            }
+            else {
+                // Otherwise, return the theoretical amount
+                return theo;
+            }
+        } 
+    }
+
+    // Returns the value of excess collateral (in E18) held globally, compared to what is needed to maintain the global collateral ratio
+    // Also has throttling to avoid dumps during large price movements
+    function buybackAvailableCollat() public view returns (uint256) {
         uint256 total_supply = FRAX.totalSupply();
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
         uint256 global_collat_value = FRAX.globalCollateralValue();
 
         if (global_collateral_ratio > PRICE_PRECISION) global_collateral_ratio = PRICE_PRECISION; // Handles an overcollateralized contract with CR > 1
         uint256 required_collat_dollar_value_d18 = (total_supply.mul(global_collateral_ratio)).div(PRICE_PRECISION); // Calculates collateral needed to back each 1 FRAX with $1 of collateral at current collat ratio
-        if (global_collat_value > required_collat_dollar_value_d18) return global_collat_value.sub(required_collat_dollar_value_d18);
+        
+        if (global_collat_value > required_collat_dollar_value_d18) {
+            // Get the theoretical buyback amount
+            uint256 theoretical_bbk_amt = global_collat_value.sub(required_collat_dollar_value_d18);
+
+            // See how much has collateral has been issued this hour
+            uint256 current_hr_bbk = bbkHourlyCum[curEpochHr()];
+
+            // Account for the throttling
+            return comboCalcBbkRct(current_hr_bbk, bbkMaxColE18OutPerHour, theoretical_bbk_amt);
+        }
         else return 0;
+    }
+
+    // Returns the missing amount of collateral (in E18) needed to maintain the collateral ratio
+    function recollatTheoColAvailableE18() public view returns (uint256) {
+        uint256 frax_total_supply = FRAX.totalSupply();
+        uint256 effective_collateral_ratio = FRAX.globalCollateralValue().mul(PRICE_PRECISION).div(frax_total_supply); // Returns it in 1e6
+        
+        uint256 desired_collat_e24 = (FRAX.global_collateral_ratio()).mul(frax_total_supply);
+        uint256 effective_collat_e24 = effective_collateral_ratio.mul(frax_total_supply);
+
+        // Return 0 if already overcollateralized
+        // Otherwise, return the deficiency
+        if (effective_collat_e24 >= desired_collat_e24) return 0;
+        else {
+            return (desired_collat_e24.sub(effective_collat_e24)).div(PRICE_PRECISION);
+        }
+    }
+
+    // Returns the value of FXS available to be used for recollats
+    // Also has throttling to avoid dumps during large price movements
+    function recollatAvailableFxs() public view returns (uint256) {
+        uint256 fxs_price = fxsUSDOracle.getFXSPrice();
+
+        // Get the amount of collateral theoretically available
+        uint256 recollat_theo_available_e18 = recollatTheoColAvailableE18();
+
+        // Get the amount of FXS theoretically outputtable
+        uint256 fxs_theo_out = recollat_theo_available_e18.mul(PRICE_PRECISION).div(fxs_price);
+
+        // See how much FXS has been issued this hour
+        uint256 current_hr_rct = rctHourlyCum[curEpochHr()];
+
+        // Account for the throttling
+        return comboCalcBbkRct(current_hr_rct, rctMaxFxsOutPerHour, fxs_theo_out);
+    }
+
+    // Returns the current epoch hour
+    function curEpochHr() public view returns (uint256) {
+        return (block.timestamp / 3600); // Truncation desired
     }
 
     /* ========== PUBLIC FUNCTIONS ========== */
@@ -275,13 +369,13 @@ contract FraxPoolV3 is Owned {
         } else if (global_collateral_ratio == 0) { 
             // Algorithmic
             collat_needed = 0;
-            fxs_needed = frax_amt.mul(PRICE_PRECISION).div(FRAX.fxs_price());
+            fxs_needed = frax_amt.mul(PRICE_PRECISION).div(fxsUSDOracle.getFXSPrice());
         } else { 
             // Fractional
             uint256 frax_for_collat = frax_amt.mul(global_collateral_ratio).div(PRICE_PRECISION);
             uint256 frax_for_fxs = frax_amt.sub(frax_for_collat);
             collat_needed = getFRAXInCollateral(col_idx, frax_for_collat);
-            fxs_needed = frax_for_fxs.mul(PRICE_PRECISION).div(FRAX.fxs_price());
+            fxs_needed = frax_for_fxs.mul(PRICE_PRECISION).div(fxsUSDOracle.getFXSPrice());
         }
 
         // Subtract the minting fee
@@ -327,7 +421,7 @@ contract FraxPoolV3 is Owned {
             // Algorithmic
             fxs_out = frax_after_fee
                             .mul(PRICE_PRECISION)
-                            .div(FRAX.fxs_price());
+                            .div(fxsUSDOracle.getFXSPrice());
             collat_out = 0;
         } else { 
             // Fractional
@@ -337,7 +431,7 @@ contract FraxPoolV3 is Owned {
                             .div(10 ** (12 + missing_decimals[col_idx])); // PRICE_PRECISION ^2 + missing decimals
             fxs_out = frax_after_fee
                             .mul(PRICE_PRECISION.sub(global_collateral_ratio))
-                            .div(FRAX.fxs_price()); // PRICE_PRECISIONS CANCEL OUT
+                            .div(fxsUSDOracle.getFXSPrice()); // PRICE_PRECISIONS CANCEL OUT
         }
 
         // Checks
@@ -395,15 +489,15 @@ contract FraxPoolV3 is Owned {
     // This can also happen if the collateral ratio > 1
     function buyBackFxs(uint256 col_idx, uint256 fxs_amount, uint256 col_out_min) external collateralEnabled(col_idx) returns (uint256 col_out) {
         require(buyBackPaused[col_idx] == false, "Buyback is paused");
-        uint256 fxs_price = FRAX.fxs_price();
-        uint256 available_excess_collat_dv = availableExcessCollatDV();
+        uint256 fxs_price = fxsUSDOracle.getFXSPrice();
+        uint256 available_excess_collat_dv = buybackAvailableCollat();
 
         // If the total collateral value is higher than the amount required at the current collateral ratio then buy back up to the possible FXS with the desired collateral
-        require(available_excess_collat_dv > 0, "No excess collateral");
+        require(available_excess_collat_dv > 0, "Insuf Collat Avail For BBK");
 
         // Make sure not to take more than is available
         uint256 fxs_dollar_value_d18 = fxs_amount.mul(fxs_price).div(PRICE_PRECISION);
-        require(fxs_dollar_value_d18 <= available_excess_collat_dv, "Not enough excess collat");
+        require(fxs_dollar_value_d18 <= available_excess_collat_dv, "Insuf Collat Avail For BBK");
 
         // Get the equivalent amount of collateral based on the market value of FXS provided 
         uint256 collateral_equivalent_d18 = fxs_dollar_value_d18.mul(PRICE_PRECISION).div(collateral_prices[col_idx]);
@@ -418,51 +512,49 @@ contract FraxPoolV3 is Owned {
         // Take in and burn the FXS, then send out the collateral
         FXS.pool_burn_from(msg.sender, fxs_amount);
         TransferHelper.safeTransfer(collateral_addresses[col_idx], msg.sender, col_out);
+
+        // Increment the outbound collateral, in E18, for that hour
+        // Used for buyback throttling
+        bbkHourlyCum[curEpochHr()] += collateral_equivalent_d18;
     }
 
     // When the protocol is recollateralizing, we need to give a discount of FXS to hit the new CR target
     // Thus, if the target collateral ratio is higher than the actual value of collateral, minters get FXS for adding collateral
     // This function simply rewards anyone that sends collateral to a pool with the same amount of FXS + the bonus rate
     // Anyone can call this function to recollateralize the protocol and take the extra FXS value from the bonus rate as an arb opportunity
-    function recollateralizeFrax(uint256 col_idx, uint256 collateral_amount, uint256 fxs_out_min) external collateralEnabled(col_idx) returns (uint256 collateral_units_precision, uint256 fxs_paid_back) {
+    function recollateralize(uint256 col_idx, uint256 collateral_amount, uint256 fxs_out_min) external collateralEnabled(col_idx) returns (uint256 fxs_out) {
         require(recollateralizePaused[col_idx] == false, "Recollat is paused");
         uint256 collateral_amount_d18 = collateral_amount * (10 ** missing_decimals[col_idx]);
-        uint256 fxs_price = FRAX.fxs_price();
-        uint256 collateral_units;
-        uint256 amount_to_recollat;
-        {
-            uint256 frax_total_supply = FRAX.totalSupply();
-            uint256 collat_value_attempted = collateral_amount_d18.mul(collateral_prices[col_idx]).div(PRICE_PRECISION);
-            uint256 effective_collateral_ratio = FRAX.globalCollateralValue().mul(PRICE_PRECISION).div(frax_total_supply); //returns it in 1e6
-            uint256 recollat_possible = (FRAX.global_collateral_ratio().mul(frax_total_supply).sub(frax_total_supply.mul(effective_collateral_ratio))).div(PRICE_PRECISION);
+        uint256 fxs_price = fxsUSDOracle.getFXSPrice();
 
-            if(collat_value_attempted <= recollat_possible){
-                amount_to_recollat = collat_value_attempted;
-            } else {
-                amount_to_recollat = recollat_possible;
-            }
+        // Get the amount of FXS actually available (accounts for throttling)
+        uint256 fxs_actually_available = recollatAvailableFxs();
 
-            collateral_units = amount_to_recollat.mul(PRICE_PRECISION).div(collateral_prices[col_idx]);
-        }
+        // Calculated the attempted amount of FXS
+        fxs_out = collateral_amount_d18.mul(PRICE_PRECISION.add(bonus_rate).sub(recollat_fee[col_idx])).div(fxs_price);
 
-        collateral_units_precision = collateral_units.div(10 ** missing_decimals[col_idx]); // In its natural decimals()
-        fxs_paid_back = amount_to_recollat.mul(PRICE_PRECISION.add(bonus_rate).sub(recollat_fee[col_idx])).div(fxs_price);
+        // Make sure there is FXS available
+        require(fxs_out <= fxs_actually_available, "Insuf FXS Avail For RCT");
 
         // Check slippage
-        require(fxs_out_min <= fxs_paid_back, "FXS slippage");
+        require(fxs_out >= fxs_out_min, "FXS slippage");
 
-        // Check pool ceiling
-        require(freeCollatBalance(col_idx).add(collateral_units_precision) <= pool_ceilings[col_idx], "Pool ceiling");
+        // Don't take in more collateral than the pool ceiling for this token allows
+        require(freeCollatBalance(col_idx).add(collateral_amount) <= pool_ceilings[col_idx], "Pool ceiling");
 
         // Take in the collateral and pay out the FXS
-        TransferHelper.safeTransferFrom(collateral_addresses[col_idx], msg.sender, address(this), collateral_units_precision);
-        FXS.pool_mint(msg.sender, fxs_paid_back);
+        TransferHelper.safeTransferFrom(collateral_addresses[col_idx], msg.sender, address(this), collateral_amount);
+        FXS.pool_mint(msg.sender, fxs_out);
+
+        // Increment the outbound FXS, in E18
+        // Used for recollat throttling
+        rctHourlyCum[curEpochHr()] += fxs_out;
     }
 
     // Bypasses the gassy mint->redeem cycle for AMOs to borrow collateral
     function amoMinterBorrow(uint256 collateral_amount) external onlyAMOMinters {
         // Checks the col_idx of the minter as an additional safety check
-        uint256 minter_col_idx = FraxAMOMinter(msg.sender).col_idx();
+        uint256 minter_col_idx = IFraxAMOMinter(msg.sender).col_idx();
 
         // Transfer
         TransferHelper.safeTransfer(collateral_addresses[minter_col_idx], msg.sender, collateral_amount);
@@ -470,28 +562,13 @@ contract FraxPoolV3 is Owned {
 
     /* ========== RESTRICTED FUNCTIONS, CUSTODIAN CAN CALL TOO ========== */
 
-    function toggleMinting(uint256 col_idx) external onlyByOwnGovCust {
-        mintPaused[col_idx] = !mintPaused[col_idx];
+    function toggleMRBR(uint256 col_idx, uint8 tog_idx) external onlyByOwnGovCust {
+        if (tog_idx == 0) mintPaused[col_idx] = !mintPaused[col_idx];
+        else if (tog_idx == 1) redeemPaused[col_idx] = !redeemPaused[col_idx];
+        else if (tog_idx == 2) buyBackPaused[col_idx] = !buyBackPaused[col_idx];
+        else if (tog_idx == 3) recollateralizePaused[col_idx] = !recollateralizePaused[col_idx];
 
-        emit MintingToggled(col_idx, mintPaused[col_idx]);
-    }
-
-    function toggleRedeeming(uint256 col_idx) external onlyByOwnGovCust {
-        redeemPaused[col_idx] = !redeemPaused[col_idx];
-
-        emit RedeemingToggled(col_idx, redeemPaused[col_idx]);
-    }
-
-    function toggleRecollateralize(uint256 col_idx) external onlyByOwnGovCust {
-        recollateralizePaused[col_idx] = !recollateralizePaused[col_idx];
-
-        emit RecollateralizeToggled(col_idx, recollateralizePaused[col_idx]);
-    }
-    
-    function toggleBuyBack(uint256 col_idx) external onlyByOwnGovCust {
-        buyBackPaused[col_idx] = !buyBackPaused[col_idx];
-
-        emit BuybackToggled(col_idx, buyBackPaused[col_idx]);
+        emit MRBRToggled(col_idx, tog_idx);
     }
 
     /* ========== RESTRICTED FUNCTIONS, GOVERNANCE ONLY ========== */
@@ -501,7 +578,7 @@ contract FraxPoolV3 is Owned {
         require(amo_minter_addr != address(0), "Zero address detected");
 
         // Make sure the AMO Minter has collatDollarBalance()
-        uint256 collat_val_e18 = FraxAMOMinter(amo_minter_addr).collatDollarBalance();
+        uint256 collat_val_e18 = IFraxAMOMinter(amo_minter_addr).collatDollarBalance();
         require(collat_val_e18 >= 0, "Invalid AMO");
 
         amo_minter_addresses[amo_minter_addr] = true;
@@ -522,11 +599,12 @@ contract FraxPoolV3 is Owned {
         emit CollateralPriceSet(col_idx, _new_price);
     }
 
-    function togglePool(uint256 col_idx) external onlyByOwnGov {
-        address pool_address = collateral_addresses[col_idx];
-        enabled_pools[pool_address] = !enabled_pools[pool_address];
+    // Could also be called toggleCollateral
+    function toggleCollateral(uint256 col_idx) external onlyByOwnGov {
+        address col_address = collateral_addresses[col_idx];
+        enabled_collaterals[col_address] = !enabled_collaterals[col_address];
 
-        emit PoolToggled(col_idx, enabled_pools[pool_address]);
+        emit CollateralToggled(col_idx, enabled_collaterals[col_address]);
     }
 
     function setPoolCeiling(uint256 col_idx, uint256 new_ceiling) external onlyByOwnGov {
@@ -556,6 +634,19 @@ contract FraxPoolV3 is Owned {
         emit PriceThresholdsSet(new_mint_price_threshold, new_redeem_price_threshold);
     }
 
+    function setBbkRctPerHour(uint256 _bbkMaxColE18OutPerHour, uint256 _rctMaxFxsOutPerHour) external onlyByOwnGov {
+        bbkMaxColE18OutPerHour = _bbkMaxColE18OutPerHour;
+        rctMaxFxsOutPerHour = _rctMaxFxsOutPerHour;
+        emit BbkRctPerHourSet(_bbkMaxColE18OutPerHour, _rctMaxFxsOutPerHour);
+    }
+
+    // Sets the FXS_USD Chainlink oracle wrapper
+    function setFXSUSDOracle(address _fxs_usd_oracle) external onlyByOwnGov {
+        fxsUSDOracle = FXSOracleWrapper(_fxs_usd_oracle);
+        
+        emit FXSUSDOracleSet(_fxs_usd_oracle);
+    }
+
     function setCustodian(address new_custodian) external onlyByOwnGov {
         custodian_address = new_custodian;
 
@@ -569,18 +660,17 @@ contract FraxPoolV3 is Owned {
     }
 
     /* ========== EVENTS ========== */
-    event PoolToggled(uint256 col_idx, bool new_state);
+    event CollateralToggled(uint256 col_idx, bool new_state);
     event PoolCeilingSet(uint256 col_idx, uint256 new_ceiling);
     event FeesSet(uint256 col_idx, uint256 new_mint_fee, uint256 new_redeem_fee, uint256 new_buyback_fee, uint256 new_recollat_fee);
     event PoolParametersSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
     event PriceThresholdsSet(uint256 new_bonus_rate, uint256 new_redemption_delay);
+    event BbkRctPerHourSet(uint256 bbkMaxColE18OutPerHour, uint256 rctMaxFxsOutPerHour);
     event AMOMinterAdded(address amo_minter_addr);
     event AMOMinterRemoved(address amo_minter_addr);
+    event FXSUSDOracleSet(address fxs_usd_oracle);
     event CustodianSet(address new_custodian);
     event TimelockSet(address new_timelock);
-    event MintingToggled(uint256 col_idx, bool toggled);
-    event RedeemingToggled(uint256 col_idx, bool toggled);
-    event RecollateralizeToggled(uint256 col_idx, bool toggled);
-    event BuybackToggled(uint256 col_idx, bool toggled);
+    event MRBRToggled(uint256 col_idx, uint8 tog_idx);
     event CollateralPriceSet(uint256 col_idx, uint256 new_price);
 }

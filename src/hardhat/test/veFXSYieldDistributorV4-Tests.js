@@ -36,7 +36,6 @@ const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPai
 const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
 const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
 
-
 // Chainlink Price Consumer
 const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
 
@@ -191,7 +190,7 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 		// Initialize pool instances
 		pool_instance_USDC = await Pool_USDC.deployed();
 		
-		// Initialize the Uniswap Factory Instance
+		// Initialize the Uniswap Factory instance
 		uniswapFactoryInstance = await IUniswapV2Factory.deployed();
 
 		// Initialize veFXS related instances
@@ -499,7 +498,7 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 		await veFXSYieldDistributor_instance.getYield({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		console.log("====================================================================");
-		console.log("Advance 2 years and try to collect past the expiration. Should get like a crumb reward");
+		console.log("Advance 2 years and try to collect past the expiration. Should get like a one-week crumb reward");
 
 		// Advance two weeks
 		await time.increase(2 * (365 * 86400));

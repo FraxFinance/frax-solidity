@@ -34,7 +34,7 @@ import "./cream/ICREAM_crFRAX.sol";
 
 contract FraxLendingAMO_V2 is AccessControl, Owned {
     using SafeMath for uint256;
-    // Solidity ^8.0.0 automatically reverts on int256 underflows/overflows
+    // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
 

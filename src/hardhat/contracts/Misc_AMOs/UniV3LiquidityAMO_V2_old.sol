@@ -42,7 +42,7 @@ import "../Uniswap_V3/periphery/interfaces/INonfungiblePositionManager.sol";
 import "../Uniswap_V3/IUniswapV3Pool.sol";
 import "../Uniswap_V3/ISwapRouter.sol";
 
-contract UniV3LiquidityAMO_V2 is Owned {
+contract UniV3LiquidityAMO_V2_old is Owned {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -164,12 +164,8 @@ contract UniV3LiquidityAMO_V2 is Owned {
 
     // Needed for the Frax contract to function 
     function collatDollarBalance() public view returns (uint256) {
-        // Get the allocations
-        uint256[4] memory allocations = showAllocations();
-
-        // Get the collateral and FRAX portions
-        uint256 collat_portion = allocations[1];
-        uint256 frax_portion = (allocations[0]).add(allocations[2]);
+        uint256 collat_portion = showAllocations()[1];
+        uint256 frax_portion = (showAllocations()[0]).add(showAllocations()[2]);
 
         // Assumes worst case scenario if FRAX slips out of range. 
         // Otherwise, it would only be half that is multiplied by the CR
@@ -202,15 +198,6 @@ contract UniV3LiquidityAMO_V2 is Owned {
 
         // Return the sum of all the positions' balances of FRAX, if the price fell off the range towards that side
         return frax_tally;
-    }
-
-    // Returns this contract's liquidity in a specific [FRAX]-[collateral] uni v3 pool
-    function liquidityInPool(address _collateral_address, int24 _tickLower, int24 _tickUpper, uint24 _fee) public view returns (uint128) {
-        IUniswapV3Pool get_pool = IUniswapV3Pool(univ3_factory.getPool(address(FRAX), _collateral_address, _fee));
-        
-        // goes into the pool's positions mapping, and grabs this address's liquidity
-        (uint128 liquidity, , , , ) = get_pool.positions(keccak256(abi.encodePacked(address(this), _tickLower, _tickUpper)));
-        return liquidity;
     }
 
     // Backwards compatibility
@@ -266,56 +253,134 @@ contract UniV3LiquidityAMO_V2 is Owned {
         }
     }
 
-    IUniswapV3Pool public current_uni_pool; // only used for mint callback; is set and accessed during execution of addLiquidity()
-    function addLiquidity(address _collateral_address, int24 _tickLower, int24 _tickUpper, uint24 _fee, uint128 _amountLiquidity, uint128 _maxToken0, uint128 _maxToken1) public onlyByOwnGov {
-        // getPool() [token0] or [token1] order doesn't matter
-        address pool_address = univ3_factory.getPool(address(FRAX), _collateral_address, _fee);
-
-        // set pool for callback
-        current_uni_pool = IUniswapV3Pool(pool_address);
-
-        bytes memory data = abi.encode(msg.sender, _maxToken0, _maxToken1);
-        IUniswapV3Pool uni_v3_pool = IUniswapV3Pool(pool_address);
-        uni_v3_pool.mint(
-            address(this),
-            _tickLower,
-            _tickUpper,
-            _amountLiquidity,
-            data
-        );
-    }
-
-    /*
-    **  callback from minting uniswap v3 range
-    */
-    function uniswapV3MintCallback(uint256 _amount0, uint256 _amount1, bytes calldata _data) public {
-        (address minter, uint128 maxToken0, uint128 maxToken1) = abi.decode(_data, (address,uint128,uint128));
-        require(_amount0 <= maxToken0, "maxToken0 exceeded");
-        require(_amount1 <= maxToken1, "maxToken1 exceeded");
-        require(address(current_uni_pool) == msg.sender, "only permissioned UniswapV3 pair can call");
-        if (_amount0 > 0) require(IERC20(current_uni_pool.token0()).transferFrom(minter, address(msg.sender), _amount0), "token0 transfer failed");
-        if (_amount1 > 0) require(IERC20(current_uni_pool.token1()).transferFrom(minter, address(msg.sender), _amount1), "token1 transfer failed");
-    }
-
-
-    /*
-    **  burn tokenAmount from the recipient and send tokens to the receipient
-    */
-    function removeLiquidity(address _collateral_address, int24 _tickLower, int24 _tickUpper, uint24 _fee, uint128 _amountLiquidity) public onlyByOwnGov {
-        address pool_address;
-        if(_collateral_address < address(FRAX)){
-            pool_address = univ3_factory.getPool(_collateral_address, address(FRAX), _fee);
+    // Mint NFT using collateral / FRAX already held
+    // If suboptimal liquidity taken, withdraw() and try again
+    // Will revert if the pool doesn't exist yet
+    function mint(address _collat_addr, uint256 _amountCollateral, uint256 _amountFrax, uint24 _fee_tier, int24 _tickLower, int24 _tickUpper) public onlyByOwnGov returns (uint256, uint128) {
+        // Make sure the collateral is allowed 
+        require(allowed_collaterals[_collat_addr], "Collateral not allowed");
+        
+        INonfungiblePositionManager.MintParams memory mint_params;
+        if(_collat_addr < address(FRAX)){
+            mint_params = INonfungiblePositionManager.MintParams(
+                _collat_addr,
+                address(FRAX),
+                _fee_tier,
+                _tickLower,
+                _tickUpper,
+                _amountCollateral,
+                _amountFrax,
+                0,
+                0,
+                address(this),
+                2105300114 // Expiration: a long time from now
+            );
         } else {
-            pool_address = univ3_factory.getPool(address(FRAX), _collateral_address, _fee);
+            mint_params = INonfungiblePositionManager.MintParams(
+                address(FRAX),
+                _collat_addr,
+                _fee_tier,
+                _tickLower,
+                _tickUpper,
+                _amountFrax,
+                _amountCollateral,
+                0,
+                0,
+                address(this),
+                2105300114 // Expiration: a long time from now
+            );
         }
 
-        IUniswapV3Pool uni_v3_pool = IUniswapV3Pool(pool_address);
-        (uint256 amount0, uint256 amount1) = uni_v3_pool.burn(_tickLower, _tickUpper, _amountLiquidity);
-        uni_v3_pool.collect(address(this), _tickLower, _tickUpper, uint128(amount0), uint128(amount1));
+        // Approvals
+        ERC20(_collat_addr).approve(address(univ3_positions), _amountCollateral);
+        ERC20(address(FRAX)).approve(address(univ3_positions), _amountFrax);
+
+        // Leave off amount0 and amount1 due to stack limit
+        (uint256 token_id, uint128 liquidity, , ) = univ3_positions.mint(mint_params);
+        
+        // Store new NFT in mapping and array
+        Position memory new_position = Position(token_id, _collat_addr, liquidity, _tickLower, _tickUpper, _fee_tier);
+        positions_mapping[token_id] = new_position;
+        positions_array.push(new_position);
+
+        return (token_id, liquidity);
     }
 
+    function withdrawAll(uint256 _token_id) public onlyByOwnGov returns (uint256, uint256) {
+        return removeLiquidity(_token_id, uint128(PRICE_PRECISION));
+    }
 
+    // Remove liquidity
+    // Example fract_to_rem_e6 = 500000 = 50% removal. 1000000 = 100% removal
+    function removeLiquidity(uint256 _token_id, uint128 fract_to_rem_e6) public onlyByOwnGov returns (uint256, uint256) {
+        Position memory current_position = positions_mapping[_token_id];
 
+        INonfungiblePositionManager.DecreaseLiquidityParams memory decrease_params = INonfungiblePositionManager.DecreaseLiquidityParams(
+            _token_id,
+            (current_position.liquidity * fract_to_rem_e6) / uint128(PRICE_PRECISION),
+            0,
+            0,
+            2105300114 // Expiration: a long time from now
+        );
+
+        univ3_positions.decreaseLiquidity(decrease_params);
+
+        (uint256 amount0, uint256 amount1) = univ3_positions.collect(INonfungiblePositionManager.CollectParams(
+            _token_id,
+            address(this),
+            type(uint128).max,
+            type(uint128).max
+        ));
+
+        // Burn the empty NFT
+        // univ3_positions.burn(_token_id);
+
+        // If the NFT has no liquidity, manage the arrays
+        if (fract_to_rem_e6 == uint128(PRICE_PRECISION)) {
+            // Delete from the mapping
+            delete positions_mapping[_token_id];
+
+            // Swap withdrawn position with last element and delete to avoid leaving a hole
+            for (uint i = 0; i < positions_array.length; i++){ 
+                if(positions_array[i].token_id == _token_id){
+                    positions_array[i] = positions_array[positions_array.length - 1];
+                    positions_array.pop();
+                }
+            }
+        }
+
+        return (amount0, amount1);
+    }
+
+    // Increase liquidity
+    function increaseLiquidity(uint256 _token_id, address _collat_addr, uint256 _amountCollateral, uint256 _amountFrax) public onlyByOwnGov returns (uint128, uint256, uint256) {
+        INonfungiblePositionManager.IncreaseLiquidityParams memory inc_liq_params;
+        if(_collat_addr < address(FRAX)){
+            inc_liq_params = INonfungiblePositionManager.IncreaseLiquidityParams(
+                _token_id,
+                _amountCollateral,
+                _amountFrax,
+                0,
+                0,
+                2105300114 // Expiration: a long time from now
+            );
+        } else {
+            inc_liq_params = INonfungiblePositionManager.IncreaseLiquidityParams(
+                _token_id,
+                _amountFrax,
+                _amountCollateral,
+                0,
+                0,
+                2105300114 // Expiration: a long time from now
+            );
+        }
+
+        // Approvals
+        TransferHelper.safeApprove(_collat_addr, address(univ3_positions), _amountCollateral);
+        TransferHelper.safeApprove(address(FRAX), address(univ3_positions), _amountFrax);
+
+        return univ3_positions.increaseLiquidity(inc_liq_params);
+    }
 
     // Swap tokenA into tokenB using univ3_router.ExactInputSingle()
     // Uni V3 only
