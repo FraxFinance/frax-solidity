@@ -34,7 +34,7 @@ import "../Staking/Owned.sol";
 
 contract FXS1559_AMO_V3 is Owned {
     using SafeMath for uint256;
-    // Solidity ^8.0.0 automatically reverts on int256 underflows/overflows
+    // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
 
@@ -85,7 +85,7 @@ contract FXS1559_AMO_V3 is Owned {
         UniRouterV2 = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         amo_minter = IFraxAMOMinter(_amo_minter_address);
 
-        max_slippage = 200000; // 20%
+        max_slippage = 50000; // 5%
         burn_fraction = 500000;
 
         // Get the custodian and timelock addresses from the minter

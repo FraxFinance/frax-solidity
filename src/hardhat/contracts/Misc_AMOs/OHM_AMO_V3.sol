@@ -46,7 +46,7 @@ import "../Staking/Owned.sol";
 
 contract OHM_AMO_V3 is Owned {
     using SafeMath for uint256;
-    // Solidity ^8.0.0 automatically reverts on int256 underflows/overflows
+    // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
 

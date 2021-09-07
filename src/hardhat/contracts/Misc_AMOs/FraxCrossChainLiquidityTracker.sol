@@ -21,6 +21,7 @@ pragma solidity >=0.8.0;
 // Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
+// Dennis: github.com/denett
 
 import "../Math/Math.sol";
 import "../Frax/Frax.sol";
