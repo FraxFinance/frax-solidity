@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.6.11;
+pragma solidity >=0.8.0;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -128,17 +128,17 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
 
     // Only positions with locked veFXS can accrue yield. Otherwise, expired-locked veFXS
     // is de-facto rewards for FXS.
-    function eligibleCurrentVeFXS(address account) public view returns (uint256 eligible_vefxs_bal, uint256 current_ending_timestamp) {
+    function eligibleCurrentVeFXS(address account) public view returns (uint256 eligible_vefxs_bal, uint256 stored_ending_timestamp) {
         uint256 curr_vefxs_bal = veFXS.balanceOf(account);
-        IveFXS.LockedBalance memory curr_locked_bal_pack = veFXS.locked(account);
         
-        current_ending_timestamp = curr_locked_bal_pack.end;
+        // Stored is used to prevent abuse
+        stored_ending_timestamp = userVeFXSEndpointCheckpointed[account];
 
         // Only unexpired veFXS should be eligible
-        if (userVeFXSEndpointCheckpointed[account] != 0 && (block.timestamp >= userVeFXSEndpointCheckpointed[account])){
+        if (stored_ending_timestamp != 0 && (block.timestamp >= stored_ending_timestamp)){
             eligible_vefxs_bal = 0;
         }
-        else if (block.timestamp >= current_ending_timestamp){
+        else if (block.timestamp >= stored_ending_timestamp){
             eligible_vefxs_bal = 0;
         }
         else {
@@ -226,13 +226,14 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
 
         // Get the old and the new veFXS balances
         uint256 old_vefxs_balance = userVeFXSCheckpointed[account];
-        (uint256 new_vefxs_balance, uint256 current_ending_timestamp) = eligibleCurrentVeFXS(account);
+        (uint256 new_vefxs_balance, ) = eligibleCurrentVeFXS(account);
 
         // Update the user's stored veFXS balance
         userVeFXSCheckpointed[account] = new_vefxs_balance;
 
         // Update the user's stored ending timestamp
-        userVeFXSEndpointCheckpointed[account] = current_ending_timestamp;
+        IveFXS.LockedBalance memory curr_locked_bal_pack = veFXS.locked(account);
+        userVeFXSEndpointCheckpointed[account] = curr_locked_bal_pack.end;
 
         // Update the total amount participating
         if (new_vefxs_balance >= old_vefxs_balance) {
