@@ -33,12 +33,11 @@ import "../Frax/Frax.sol";
 import "../Frax/IFraxAMOMinter.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/ERC20.sol";
-import "../FXS/FXS.sol";
 import "../Math/SafeMath.sol";
 import "../Proxy/Initializable.sol";
 import "../Staking/Owned.sol";
 
-contract Convex_AMO_V2 is AccessControl, Owned {
+contract Convex_AMO_V2 is Owned {
     using SafeMath for uint256;
     // SafeMath automatically included in Solidity >= 8.0.0
 
@@ -208,18 +207,14 @@ contract Convex_AMO_V2 is AccessControl, Owned {
         // Get the allocations
         uint256[11] memory allocations = showAllocations();
 
-        frax_val_e18 = (allocations[2]).add((allocations[5]).mul((10 ** missing_decimals)));
+        frax_val_e18 = (allocations[2]).add((allocations[3]).mul((10 ** missing_decimals)));
         collat_val_e18 = (allocations[6]).mul(10 ** missing_decimals);
     }
 
     function showRewards() public view returns (uint256[4] memory return_arr) {
-        // return_arr[0] = ERC20(0xD533a949740bb3306d119CC777fa900bA034cd52).balanceOf(address(this)); // CRV in contract
         return_arr[0] = convex_base_reward_pool.earned(address(this)); // CRV claimable
-        // return_arr[2] = cvx.balanceOf(address(this)); // CVX in contract
         return_arr[1] = 0; // CVX claimable. See https://docs.convexfinance.com/convexfinanceintegration/cvx-minting
-        // return_arr[4] = ERC20(0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7).balanceOf(address(this)); // cvxCRV in contract
         return_arr[2] = cvx_reward_pool.earned(address(this)); // cvxCRV claimable
-        // return_arr[6] = ERC20(fxs_address).balanceOf(address(this)); // FXS in contract
         return_arr[3] = convex_fxs_rewards_pool.earned(address(this)); // FXS claimable
     }
 
@@ -279,7 +274,12 @@ contract Convex_AMO_V2 is AccessControl, Owned {
 
     // Backwards compatibility
     function mintedBalance() public view returns (int256) {
-        return amo_minter.mint_balances(address(this));
+        return amo_minter.frax_mint_balances(address(this));
+    }
+
+    function usdValueInVault() public view returns (uint256) {
+        uint256 vault_balance = FRAX3CRVInVault();
+        return vault_balance.mul(frax3crv_metapool.get_virtual_price()).div(1e18);
     }
     
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -472,5 +472,15 @@ contract Convex_AMO_V2 is AccessControl, Owned {
         // Can only be triggered by owner or governance, not custodian
         // Tokens are sent to the custodian, as a sort of safeguard
         TransferHelper.safeTransfer(address(tokenAddress), msg.sender, tokenAmount);
+    }
+
+    // Generic proxy
+    function execute(
+        address _to,
+        uint256 _value,
+        bytes calldata _data
+    ) external onlyByOwnGov returns (bool, bytes memory) {
+        (bool success, bytes memory result) = _to.call{value:_value}(_data);
+        return (success, result);
     }
 }

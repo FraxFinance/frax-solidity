@@ -30,8 +30,9 @@ import "../ERC20/ERC20.sol";
 import "../ERC20/ERC20Permit/ERC20Permit.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../Staking/Owned.sol";
+import "../Utils/ReentrancyGuard.sol";
 
-contract CrossChainCanonical is ERC20Permit, Owned {
+contract CrossChainCanonical is ERC20Permit, Owned, ReentrancyGuard {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -71,6 +72,16 @@ contract CrossChainCanonical is ERC20Permit, Owned {
 
     modifier onlyMinters() {
        require(minters[msg.sender], "Not a minter");
+        _;
+    } 
+
+    modifier onlyMintersOwnGov() {
+       require(msg.sender == timelock_address || msg.sender == owner || minters[msg.sender], "Not minter, owner, or tlck");
+        _;
+    } 
+
+    modifier validOldToken(address token_address) {
+       require(old_tokens[token_address], "Invalid old token");
         _;
     } 
 
@@ -120,18 +131,34 @@ contract CrossChainCanonical is ERC20Permit, Owned {
     /* ========== PUBLIC FUNCTIONS ========== */
 
     // Exchange old tokens for these canonical tokens
-    function exchangeOldTokens(address old_token_address, uint256 old_token_amount) external {
+    function exchangeOldForCanonical(address old_token_address, uint256 token_amount) external nonReentrant validOldToken(old_token_address) {
         require(!exchangesPaused, "Exchanges paused");
-        require(old_tokens[old_token_address], "Invalid token");
 
-        // Pull in the old token
-        TransferHelper.safeTransferFrom(old_token_address, msg.sender, address(this), old_token_amount);
+        // Pull in the old tokens
+        TransferHelper.safeTransferFrom(old_token_address, msg.sender, address(this), token_amount);
 
         // Mint canonical tokens and give it to the sender
-        _mint_capped(msg.sender, old_token_amount);
+        _mint_capped(msg.sender, token_amount);
     }
 
-    /* ========== MINTER FUNCTIONS ========== */
+    /* ========== MINTERS OR GOVERNANCE FUNCTIONS ========== */
+
+    // Exchange canonical tokens for old tokens (used for bridging back to mainnet)
+    // Only minters or governance can do this
+    function exchangeCanonicalForOld(address old_token_address, uint256 token_amount) external onlyMintersOwnGov validOldToken(old_token_address) {
+        // Burn the new tokens
+        super._burn(msg.sender, token_amount);
+
+        // Give old tokens to the sender
+        TransferHelper.safeTransfer(old_token_address, msg.sender, token_amount);
+    }
+
+    // Collect old tokens so you can de-bridge them back on mainnet
+    function withdrawOldTokens(address old_token_address, uint256 old_token_amount) external onlyMintersOwnGov validOldToken(old_token_address) {
+        TransferHelper.safeTransfer(old_token_address, msg.sender, old_token_amount);
+    }
+
+    /* ========== MINTERS ONLY ========== */
 
     // This function is what other minters will call to mint new tokens 
     function minter_mint(address m_address, uint256 m_amount) external onlyMinters {
@@ -139,10 +166,10 @@ contract CrossChainCanonical is ERC20Permit, Owned {
         emit TokenMinted(msg.sender, m_address, m_amount);
     }
 
-    // Used by other minters to burn tokens
-    function minter_burn_from(address b_address, uint256 b_amount) external onlyMinters {
-        super._burnFrom(b_address, b_amount);
-        emit TokenBurned(b_address, msg.sender, b_amount);
+    // This function is what other minters will call to burn tokens
+    function minter_burn(uint256 amount) external onlyMinters {
+        super._burn(msg.sender, amount);
+        emit TokenBurned(msg.sender, amount);
     }
 
     /* ========== RESTRICTED FUNCTIONS, BUT CUSTODIAN CAN CALL TOO ========== */
@@ -152,13 +179,6 @@ contract CrossChainCanonical is ERC20Permit, Owned {
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
-
-    // Collect old tokens so you can manually de-bridge them back on mainnet
-    function withdrawOldTokens(address old_token_address, uint256 old_token_amount) external onlyByOwnGov {
-        require(old_tokens[old_token_address], "Invalid token");
-
-        TransferHelper.safeTransfer(old_token_address, msg.sender, old_token_amount);
-    }
 
     function addOldToken(address old_token_address) external onlyByOwnGov {
         // Make sure the token is not already present
@@ -232,13 +252,23 @@ contract CrossChainCanonical is ERC20Permit, Owned {
         emit CustodianSet(_custodian_address);
     }
 
-    // function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
-    //     TransferHelper.safeTransfer(address(tokenAddress), msg.sender, tokenAmount);
-    // }
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
+        TransferHelper.safeTransfer(address(tokenAddress), msg.sender, tokenAmount);
+    }
+
+    // Generic proxy
+    function execute(
+        address _to,
+        uint256 _value,
+        bytes calldata _data
+    ) external onlyByOwnGov returns (bool, bytes memory) {
+        (bool success, bytes memory result) = _to.call{value:_value}(_data);
+        return (success, result);
+    }
 
     /* ========== EVENTS ========== */
 
-    event TokenBurned(address indexed from, address indexed to, uint256 amount);
+    event TokenBurned(address indexed from, uint256 amount);
     event TokenMinted(address indexed from, address indexed to, uint256 amount);
     event OldTokenAdded(address indexed old_token_address);
     event OldTokenToggled(address indexed old_token_address, bool state);

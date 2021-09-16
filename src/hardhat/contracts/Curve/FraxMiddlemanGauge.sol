@@ -184,12 +184,22 @@ contract FraxMiddlemanGauge is Owned, ReentrancyGuard {
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
+    // Generic proxy
+    function execute(
+        address _to,
+        uint256 _value,
+        bytes calldata _data
+    ) external onlyByOwnGov returns (bool, bytes memory) {
+        (bool success, bytes memory result) = _to.call{value:_value}(_data);
+        return (success, result);
+    }
+
     function setTimelock(address _new_timelock) external onlyByOwnGov {
         timelock_address = _new_timelock;
     }
 
     function setBridgeInfo(address _bridge_address, uint256 _bridge_type, address _destination_address_override, string memory _non_evm_destination_address) external onlyByOwnGov {
-        _bridge_address = bridge_address;
+        bridge_address = _bridge_address;
         
         // 0: Avalanche
         // 1: BSC

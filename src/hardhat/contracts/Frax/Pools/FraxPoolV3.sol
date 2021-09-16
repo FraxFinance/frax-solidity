@@ -32,7 +32,7 @@ import '../../Uniswap/TransferHelper.sol';
 import "../../Staking/Owned.sol";
 import "../../FXS/IFxs.sol";
 import "../../Frax/IFrax.sol";
-import "../../Oracle/FXSOracleWrapper.sol";
+import "../../Oracle/AggregatorV3Interface.sol";
 import "../../Frax/IFraxAMOMinter.sol";
 import "../../ERC20/ERC20.sol";
 
@@ -48,7 +48,10 @@ contract FraxPoolV3 is Owned {
     IFrax private FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
     IFxs private FXS = IFxs(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
     mapping(address => bool) public amo_minter_addresses; // minter address -> is it enabled
-    FXSOracleWrapper public fxsUSDOracle = FXSOracleWrapper(0xeE0F15e5Ffc105EBb3d1368cf84F43b40caB3480);
+    AggregatorV3Interface public priceFeedFRAXUSD = AggregatorV3Interface(0xB9E1E3A9feFf48998E45Fa90847ed4D467E8BcfD);
+    AggregatorV3Interface public priceFeedFXSUSD = AggregatorV3Interface(0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f);
+    uint256 private chainlink_frax_usd_decimals;
+    uint256 private chainlink_fxs_usd_decimals;
 
     // Collateral
     address[] public collateral_addresses;
@@ -137,8 +140,8 @@ contract FraxPoolV3 is Owned {
             // For fast collateral address -> collateral idx lookups later
             collateralAddrToIdx[_collateral_addresses[i]] = i;
 
-            // Validate the collaterals
-            enabled_collaterals[_collateral_addresses[i]] = true;
+            // Set all of the collaterals initially to disabled
+            enabled_collaterals[_collateral_addresses[i]] = false;
 
             // Add in the missing decimals
             missing_decimals.push(uint256(18).sub(ERC20(_collateral_addresses[i]).decimals()));
@@ -167,6 +170,10 @@ contract FraxPoolV3 is Owned {
 
         // Pool ceiling
         pool_ceilings = _pool_ceilings;
+
+        // Set the decimals
+        chainlink_frax_usd_decimals = priceFeedFRAXUSD.decimals();
+        chainlink_fxs_usd_decimals = priceFeedFXSUSD.decimals();
     }
 
     /* ========== STRUCTS ========== */
@@ -221,6 +228,16 @@ contract FraxPoolV3 is Owned {
         return collateral_addresses;
     }
 
+    function getFRAXPrice() public view returns (uint256) {
+        ( , int price, , , ) = priceFeedFRAXUSD.latestRoundData();
+        return uint256(price).mul(PRICE_PRECISION).div(10 ** chainlink_frax_usd_decimals);
+    }
+
+    function getFXSPrice() public view returns (uint256) {
+        ( , int price, , , ) = priceFeedFXSUSD.latestRoundData();
+        return uint256(price).mul(PRICE_PRECISION).div(10 ** chainlink_fxs_usd_decimals);
+    }
+
     // Returns the FRAX value in collateral tokens
     function getFRAXInCollateral(uint256 col_idx, uint256 frax_amount) public view returns (uint256) {
         return frax_amount.mul(PRICE_PRECISION).div(10 ** missing_decimals[col_idx]).div(collateral_prices[col_idx]);
@@ -234,31 +251,12 @@ contract FraxPoolV3 is Owned {
     // Returns dollar value of collateral held in this Frax pool, in E18
     function collatDollarBalance() external view returns (uint256 balance_tally) {
         balance_tally = 0;
-        // Orig
-        // for (uint256 i = 0; i < collateral_addresses.length; i++){ 
-        //     if (enabled_collaterals[collateral_addresses[i]]){
-        //         ERC20 collat_token = ERC20(collateral_addresses[i]);
-        //         uint256 cur_bal = collat_token.balanceOf(address(this)).sub(unclaimedPoolCollateral[i]);
-        //         balance_tally += cur_bal.mul(10 ** missing_decimals[i]).mul(collateral_prices[i]).div(PRICE_PRECISION);
-        //     }
-        // }
 
         // Test 1
         for (uint256 i = 0; i < collateral_addresses.length; i++){ 
-            if (enabled_collaterals[collateral_addresses[i]]){
-                balance_tally += freeCollatBalance(i).mul(10 ** missing_decimals[i]).mul(collateral_prices[i]).div(PRICE_PRECISION);
-            }
+            balance_tally += freeCollatBalance(i).mul(10 ** missing_decimals[i]).mul(collateral_prices[i]).div(PRICE_PRECISION);
         }
 
-        // Test 2
-        // for (uint256 i = 0; i < collateral_addresses.length; i++){ 
-        //     address col_addr = collateral_addresses[i];
-        //     uint256 col_idx = collateralAddrToIdx[col_addr];
-        //     if (enabled_collaterals[col_addr]){
-        //         uint256 cur_bal = freeCollatBalance(col_idx);
-        //         balance_tally += cur_bal.mul(10 ** missing_decimals[col_idx]).mul(collateral_prices[col_idx]).div(PRICE_PRECISION);
-        //     }
-        // }
     }
 
     function comboCalcBbkRct(uint256 cur, uint256 max, uint256 theo) internal pure returns (uint256) {
@@ -323,7 +321,7 @@ contract FraxPoolV3 is Owned {
     // Returns the value of FXS available to be used for recollats
     // Also has throttling to avoid dumps during large price movements
     function recollatAvailableFxs() public view returns (uint256) {
-        uint256 fxs_price = fxsUSDOracle.getFXSPrice();
+        uint256 fxs_price = getFXSPrice();
 
         // Get the amount of collateral theoretically available
         uint256 recollat_theo_available_e18 = recollatTheoColAvailableE18();
@@ -358,7 +356,7 @@ contract FraxPoolV3 is Owned {
         require(mintPaused[col_idx] == false, "Minting is paused");
 
         // Prevent unneccessary mints
-        require(FRAX.frax_price() >= mint_price_threshold, "Frax price too low");
+        require(getFRAXPrice() >= mint_price_threshold, "Frax price too low");
 
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
 
@@ -369,13 +367,13 @@ contract FraxPoolV3 is Owned {
         } else if (global_collateral_ratio == 0) { 
             // Algorithmic
             collat_needed = 0;
-            fxs_needed = frax_amt.mul(PRICE_PRECISION).div(fxsUSDOracle.getFXSPrice());
+            fxs_needed = frax_amt.mul(PRICE_PRECISION).div(getFXSPrice());
         } else { 
             // Fractional
             uint256 frax_for_collat = frax_amt.mul(global_collateral_ratio).div(PRICE_PRECISION);
             uint256 frax_for_fxs = frax_amt.sub(frax_for_collat);
             collat_needed = getFRAXInCollateral(col_idx, frax_for_collat);
-            fxs_needed = frax_for_fxs.mul(PRICE_PRECISION).div(fxsUSDOracle.getFXSPrice());
+            fxs_needed = frax_for_fxs.mul(PRICE_PRECISION).div(getFXSPrice());
         }
 
         // Subtract the minting fee
@@ -405,7 +403,7 @@ contract FraxPoolV3 is Owned {
         require(redeemPaused[col_idx] == false, "Redeeming is paused");
 
         // Prevent unneccessary redemptions that could adversely affect the FXS price
-        require(FRAX.frax_price() <= redeem_price_threshold, "Frax price too high");
+        require(getFRAXPrice() <= redeem_price_threshold, "Frax price too high");
 
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
         uint256 frax_after_fee = (frax_amount.mul(PRICE_PRECISION.sub(redemption_fee[col_idx]))).div(PRICE_PRECISION);
@@ -421,7 +419,7 @@ contract FraxPoolV3 is Owned {
             // Algorithmic
             fxs_out = frax_after_fee
                             .mul(PRICE_PRECISION)
-                            .div(fxsUSDOracle.getFXSPrice());
+                            .div(getFXSPrice());
             collat_out = 0;
         } else { 
             // Fractional
@@ -431,7 +429,7 @@ contract FraxPoolV3 is Owned {
                             .div(10 ** (12 + missing_decimals[col_idx])); // PRICE_PRECISION ^2 + missing decimals
             fxs_out = frax_after_fee
                             .mul(PRICE_PRECISION.sub(global_collateral_ratio))
-                            .div(fxsUSDOracle.getFXSPrice()); // PRICE_PRECISIONS CANCEL OUT
+                            .div(getFXSPrice()); // PRICE_PRECISIONS CANCEL OUT
         }
 
         // Checks
@@ -489,7 +487,7 @@ contract FraxPoolV3 is Owned {
     // This can also happen if the collateral ratio > 1
     function buyBackFxs(uint256 col_idx, uint256 fxs_amount, uint256 col_out_min) external collateralEnabled(col_idx) returns (uint256 col_out) {
         require(buyBackPaused[col_idx] == false, "Buyback is paused");
-        uint256 fxs_price = fxsUSDOracle.getFXSPrice();
+        uint256 fxs_price = getFXSPrice();
         uint256 available_excess_collat_dv = buybackAvailableCollat();
 
         // If the total collateral value is higher than the amount required at the current collateral ratio then buy back up to the possible FXS with the desired collateral
@@ -525,7 +523,7 @@ contract FraxPoolV3 is Owned {
     function recollateralize(uint256 col_idx, uint256 collateral_amount, uint256 fxs_out_min) external collateralEnabled(col_idx) returns (uint256 fxs_out) {
         require(recollateralizePaused[col_idx] == false, "Recollat is paused");
         uint256 collateral_amount_d18 = collateral_amount * (10 ** missing_decimals[col_idx]);
-        uint256 fxs_price = fxsUSDOracle.getFXSPrice();
+        uint256 fxs_price = getFXSPrice();
 
         // Get the amount of FXS actually available (accounts for throttling)
         uint256 fxs_actually_available = recollatAvailableFxs();
@@ -640,11 +638,17 @@ contract FraxPoolV3 is Owned {
         emit BbkRctPerHourSet(_bbkMaxColE18OutPerHour, _rctMaxFxsOutPerHour);
     }
 
-    // Sets the FXS_USD Chainlink oracle wrapper
-    function setFXSUSDOracle(address _fxs_usd_oracle) external onlyByOwnGov {
-        fxsUSDOracle = FXSOracleWrapper(_fxs_usd_oracle);
+    // Set the Chainlink oracles
+    function setOracles(address _frax_usd_chainlink_addr, address _fxs_usd_chainlink_addr) external onlyByOwnGov {
+        // Set the instances
+        priceFeedFRAXUSD = AggregatorV3Interface(_frax_usd_chainlink_addr);
+        priceFeedFXSUSD = AggregatorV3Interface(_fxs_usd_chainlink_addr);
+
+        // Set the decimals
+        chainlink_frax_usd_decimals = priceFeedFRAXUSD.decimals();
+        chainlink_fxs_usd_decimals = priceFeedFXSUSD.decimals();
         
-        emit FXSUSDOracleSet(_fxs_usd_oracle);
+        emit OraclesSet(_frax_usd_chainlink_addr, _fxs_usd_chainlink_addr);
     }
 
     function setCustodian(address new_custodian) external onlyByOwnGov {
@@ -668,7 +672,7 @@ contract FraxPoolV3 is Owned {
     event BbkRctPerHourSet(uint256 bbkMaxColE18OutPerHour, uint256 rctMaxFxsOutPerHour);
     event AMOMinterAdded(address amo_minter_addr);
     event AMOMinterRemoved(address amo_minter_addr);
-    event FXSUSDOracleSet(address fxs_usd_oracle);
+    event OraclesSet(address frax_usd_chainlink_addr, address fxs_usd_chainlink_addr);
     event CustodianSet(address new_custodian);
     event TimelockSet(address new_timelock);
     event MRBRToggled(uint256 col_idx, uint8 tog_idx);

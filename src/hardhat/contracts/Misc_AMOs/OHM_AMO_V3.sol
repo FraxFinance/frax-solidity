@@ -21,10 +21,9 @@ pragma solidity >=0.8.0;
 // Sam Kazemian: https://github.com/samkazemian
 
 import "../Math/SafeMath.sol";
-import "../FXS/FXS.sol";
 import "../ERC20/ERC20.sol";
 import "../ERC20/Variants/Comp.sol";
-import "../Frax/Frax.sol";
+import "../Frax/IFrax.sol";
 import "../Frax/IFraxAMOMinter.sol";
 import "./olympus/IOlympusERC20Token.sol";
 import "./olympus/IsOlympus.sol";
@@ -51,7 +50,7 @@ contract OHM_AMO_V3 is Owned {
     /* ========== STATE VARIABLES ========== */
 
     // FRAX related
-    FRAXStablecoin private FRAX = FRAXStablecoin(0x853d955aCEf822Db058eb8505911ED77F175b99e);
+    IFrax private FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
     IFraxAMOMinter private amo_minter;
     address public timelock_address;
     address public custodian_address;
@@ -97,7 +96,7 @@ contract OHM_AMO_V3 is Owned {
         address _amo_minter_address
     ) Owned(_owner_address) {
         owner = _owner_address;
-        FRAX = FRAXStablecoin(0x853d955aCEf822Db058eb8505911ED77F175b99e);
+        FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
         amo_minter = IFraxAMOMinter(_amo_minter_address);
 
         // Assignments (must be done in initializer, so assignment gets stored in proxy address's storage instead of implementation address's storage)
@@ -163,7 +162,7 @@ contract OHM_AMO_V3 is Owned {
 
     // Backwards compatibility
     function mintedBalance() public view returns (int256) {
-        return amo_minter.mint_balances(address(this));
+        return amo_minter.frax_mint_balances(address(this));
     }
 
     // Backwards compatibility
@@ -300,5 +299,15 @@ contract OHM_AMO_V3 is Owned {
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         TransferHelper.safeTransfer(address(tokenAddress), msg.sender, tokenAmount);
+    }
+
+    // Generic proxy
+    function execute(
+        address _to,
+        uint256 _value,
+        bytes calldata _data
+    ) external onlyByOwnGov returns (bool, bytes memory) {
+        (bool success, bytes memory result) = _to.call{value:_value}(_data);
+        return (success, result);
     }
 }
