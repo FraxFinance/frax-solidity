@@ -21,10 +21,10 @@ pragma solidity >=0.8.0;
 // Sam Kazemian: https://github.com/samkazemian
 
 import "../Math/SafeMath.sol";
-import "../FXS/FXS.sol";
+import "../FXS/IFxs.sol";
 import "../ERC20/ERC20.sol";
 import "../ERC20/Variants/Comp.sol";
-import "../Frax/Frax.sol";
+import "../Frax/IFrax.sol";
 import "../Frax/IFraxAMOMinter.sol";
 import "../Oracle/UniswapPairOracle.sol";
 import "../Governance/AccessControl.sol";
@@ -38,15 +38,15 @@ import "./compound/IcUSDC_Partial.sol";
 import "../Staking/Owned.sol";
 import '../Uniswap/TransferHelper.sol';
 
-contract InvestorAMO_V3 is AccessControl, Owned {
+contract InvestorAMO_V3 is Owned {
     using SafeMath for uint256;
     // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
 
     ERC20 private collateral_token;
-    FRAXShares private FXS = FRAXShares(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
-    FRAXStablecoin private FRAX = FRAXStablecoin(0x853d955aCEf822Db058eb8505911ED77F175b99e);
+    IFxs private FXS = IFxs(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
+    IFrax private FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
     IFraxAMOMinter private amo_minter;
 
     // Pools and vaults
@@ -103,7 +103,6 @@ contract InvestorAMO_V3 is AccessControl, Owned {
     ) Owned(_owner_address) {
         collateral_token = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
         missing_decimals = uint(18).sub(collateral_token.decimals());
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
         // assignments (must be done in initializer, so assignment gets stored in proxy address's storage instead of implementation address's storage)
         yUSDC_V2 = IyUSDC_V2_Partial(0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9);
@@ -166,7 +165,7 @@ contract InvestorAMO_V3 is AccessControl, Owned {
 
     // Backwards compatibility
     function mintedBalance() public view returns (int256) {
-        return amo_minter.mint_balances(address(this));
+        return amo_minter.frax_mint_balances(address(this));
     }
     
     // Backwards compatibility
@@ -271,5 +270,15 @@ contract InvestorAMO_V3 is AccessControl, Owned {
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         TransferHelper.safeTransfer(address(tokenAddress), msg.sender, tokenAmount);
+    }
+
+    // Generic proxy
+    function execute(
+        address _to,
+        uint256 _value,
+        bytes calldata _data
+    ) external onlyByOwnGov returns (bool, bytes memory) {
+        (bool success, bytes memory result) = _to.call{value:_value}(_data);
+        return (success, result);
     }
 }

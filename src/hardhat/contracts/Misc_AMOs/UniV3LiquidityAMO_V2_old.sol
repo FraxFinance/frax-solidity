@@ -202,7 +202,7 @@ contract UniV3LiquidityAMO_V2_old is Owned {
 
     // Backwards compatibility
     function mintedBalance() public view returns (int256) {
-        return amo_minter.mint_balances(address(this));
+        return amo_minter.frax_mint_balances(address(this));
     }
 
     // Backwards compatibility
@@ -453,6 +453,16 @@ contract UniV3LiquidityAMO_V2_old is Owned {
         // INonfungiblePositionManager inherits IERC721 so the latter does not need to be imported
         INonfungiblePositionManager(tokenAddress).safeTransferFrom( address(this), custodian_address, token_id);
         emit RecoveredERC721(tokenAddress, token_id);
+    }
+
+    // Generic proxy
+    function execute(
+        address _to,
+        uint256 _value,
+        bytes calldata _data
+    ) external onlyByOwnGov returns (bool, bytes memory) {
+        (bool success, bytes memory result) = _to.call{value:_value}(_data);
+        return (success, result);
     }
 
     /* ========== EVENTS ========== */

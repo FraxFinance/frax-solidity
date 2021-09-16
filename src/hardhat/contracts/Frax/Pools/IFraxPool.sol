@@ -3,6 +3,7 @@ pragma solidity >=0.6.11;
 
 interface IFraxPool {
     function minting_fee() external returns (uint256);
+    function redeemCollateralBalances(address addr) external returns (uint256);
     function redemption_fee() external returns (uint256);
     function buyback_fee() external returns (uint256);
     function recollat_fee() external returns (uint256);

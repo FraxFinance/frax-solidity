@@ -29,12 +29,11 @@ import '../Uniswap/TransferHelper.sol';
 import "../ERC20/ERC20.sol";
 import "../Frax/Frax.sol";
 import "../Frax/IFraxAMOMinter.sol";
-import "../FXS/FXS.sol";
 import "../Math/SafeMath.sol";
 import "../Proxy/Initializable.sol";
 import "../Staking/Owned.sol";
 
-contract CurveAMO_V4 is AccessControl, Owned {
+contract CurveAMO_V4 is Owned {
     using SafeMath for uint256;
 
     /* ========== STATE VARIABLES ========== */
@@ -44,7 +43,6 @@ contract CurveAMO_V4 is AccessControl, Owned {
     IYearnVault private crvFRAX_vault;
     ERC20 private three_pool_erc20;
     FRAXStablecoin private FRAX;
-    FRAXShares private FXS;
     ERC20 private collateral_token;
     IFraxAMOMinter private amo_minter;
 
@@ -87,7 +85,6 @@ contract CurveAMO_V4 is AccessControl, Owned {
     ) Owned(_owner_address) {
         owner = _owner_address;
         FRAX = FRAXStablecoin(0x853d955aCEf822Db058eb8505911ED77F175b99e);
-        FXS = FRAXShares(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0);
         collateral_token = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
         crv_address = 0xD533a949740bb3306d119CC777fa900bA034cd52;
         missing_decimals = uint(18).sub(collateral_token.decimals());
@@ -255,7 +252,7 @@ contract CurveAMO_V4 is AccessControl, Owned {
 
     // Backwards compatibility
     function mintedBalance() public view returns (int256) {
-        return amo_minter.mint_balances(address(this));
+        return amo_minter.frax_mint_balances(address(this));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -436,5 +433,15 @@ contract CurveAMO_V4 is AccessControl, Owned {
         // Can only be triggered by owner or governance, not custodian
         // Tokens are sent to the custodian, as a sort of safeguard
         TransferHelper.safeTransfer(address(tokenAddress), msg.sender, tokenAmount);
+    }
+
+    // Generic proxy
+    function execute(
+        address _to,
+        uint256 _value,
+        bytes calldata _data
+    ) external onlyByOwnGov returns (bool, bytes memory) {
+        (bool success, bytes memory result) = _to.call{value:_value}(_data);
+        return (success, result);
     }
 }

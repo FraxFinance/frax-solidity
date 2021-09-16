@@ -236,4 +236,14 @@ contract FXS1559_AMO_V3 is Owned {
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         TransferHelper.safeTransfer(address(tokenAddress), msg.sender, tokenAmount);
     }
+
+    // Generic proxy
+    function execute(
+        address _to,
+        uint256 _value,
+        bytes calldata _data
+    ) external onlyByOwnGov returns (bool, bytes memory) {
+        (bool success, bytes memory result) = _to.call{value:_value}(_data);
+        return (success, result);
+    }
 }

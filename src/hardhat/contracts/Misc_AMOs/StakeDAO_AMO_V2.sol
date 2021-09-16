@@ -24,9 +24,8 @@ pragma solidity >=0.8.0;
 
 import "../Curve/IStableSwap3Pool.sol";
 import "../Curve/IMetaImplementationUSD.sol";
-import "../Frax/Frax.sol";
+import "../Frax/IFrax.sol";
 import "../Frax/IFraxAMOMinter.sol";
-import "../FXS/FXS.sol";
 import "../Misc_AMOs/stakedao/IStakeDaoVault.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/ERC20.sol";
@@ -34,7 +33,7 @@ import "../Math/SafeMath.sol";
 import "../Proxy/Initializable.sol";
 import "../Staking/Owned.sol";
 
-contract StakeDAO_AMO_V2 is AccessControl, Owned {
+contract StakeDAO_AMO_V2 is Owned {
     using SafeMath for uint256;
     // SafeMath automatically included in Solidity >= 8.0.0
 
@@ -44,7 +43,7 @@ contract StakeDAO_AMO_V2 is AccessControl, Owned {
     IStableSwap3Pool private three_pool;
     IStakeDaoVault private stakedao_vault;
     ERC20 private three_pool_erc20;
-    FRAXStablecoin private FRAX = FRAXStablecoin(0x853d955aCEf822Db058eb8505911ED77F175b99e);
+    IFrax private FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
     
     ERC20 private collateral_token;
     IFraxAMOMinter private amo_minter;
@@ -250,7 +249,7 @@ contract StakeDAO_AMO_V2 is AccessControl, Owned {
 
     // Backwards compatibility
     function mintedBalance() public view returns (int256) {
-        return amo_minter.mint_balances(address(this));
+        return amo_minter.frax_mint_balances(address(this));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -427,5 +426,15 @@ contract StakeDAO_AMO_V2 is AccessControl, Owned {
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         TransferHelper.safeTransfer(address(tokenAddress), custodian_address, tokenAmount);
+    }
+
+    // Generic proxy
+    function execute(
+        address _to,
+        uint256 _value,
+        bytes calldata _data
+    ) external onlyByOwnGov returns (bool, bytes memory) {
+        (bool success, bytes memory result) = _to.call{value:_value}(_data);
+        return (success, result);
     }
 }

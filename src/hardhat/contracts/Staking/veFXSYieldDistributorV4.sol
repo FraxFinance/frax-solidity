@@ -226,7 +226,7 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
 
         // Get the old and the new veFXS balances
         uint256 old_vefxs_balance = userVeFXSCheckpointed[account];
-        (uint256 new_vefxs_balance, ) = eligibleCurrentVeFXS(account);
+        uint256 new_vefxs_balance = veFXS.balanceOf(account);
 
         // Update the user's stored veFXS balance
         userVeFXSCheckpointed[account] = new_vefxs_balance;
