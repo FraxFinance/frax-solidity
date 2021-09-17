@@ -62,9 +62,7 @@ contract FraxLiquidityBridger is Owned {
     address public timelock_address;
 
     // Bridge related
-    address public frax_fxs_bridge_address;
-    address public collateral_bridge_address;
-    uint256 public bridge_id;
+    address[3] public bridge_addresses;
     address public destination_address_override;
     string public non_evm_destination_address;
 
@@ -92,9 +90,7 @@ contract FraxLiquidityBridger is Owned {
         address _owner,
         address _timelock_address,
         address _amo_minter_address,
-        address _frax_fxs_bridge_address,
-        address _collateral_bridge_address,
-        uint256 _bridge_id,
+        address[3] memory _bridge_addresses,
         address _destination_address_override,
         string memory _non_evm_destination_address,
         string memory _name
@@ -103,9 +99,7 @@ contract FraxLiquidityBridger is Owned {
         timelock_address = _timelock_address;
 
         // Bridge related
-        frax_fxs_bridge_address = _frax_fxs_bridge_address;
-        collateral_bridge_address = _collateral_bridge_address;
-        bridge_id = _bridge_id;
+        bridge_addresses = _bridge_addresses;
         destination_address_override = _destination_address_override;
         non_evm_destination_address = _non_evm_destination_address;
 
@@ -135,21 +129,30 @@ contract FraxLiquidityBridger is Owned {
         revert("getTokenType: Invalid token");
     }
 
+    function showTokenBalances() public view returns (uint256[3] memory tkn_bals) {
+        tkn_bals[0] = FRAX.balanceOf(address(this)); // FRAX
+        tkn_bals[1] = FXS.balanceOf(address(this)); // FXS
+        tkn_bals[2] = collateral_token.balanceOf(address(this)); // Collateral
+    }
+
     function showAllocations() public view returns (uint256[10] memory allocations) {
         // All numbers given are in FRAX unless otherwise stated
 
+        // Get some token balances
+        uint256[3] memory tkn_bals = showTokenBalances();
+
         // FRAX
-        allocations[0] = FRAX.balanceOf(address(this)); // Unbridged FRAX
+        allocations[0] = tkn_bals[0]; // Unbridged FRAX
         allocations[1] = frax_bridged; // Bridged FRAX
         allocations[2] = allocations[0] + allocations[1]; // Total FRAX
 
         // FXS
-        allocations[3] = FXS.balanceOf(address(this)); // Unbridged FXS
+        allocations[3] = tkn_bals[1]; // Unbridged FXS
         allocations[4] = fxs_bridged; // Bridged FXS
         allocations[5] = allocations[3] + allocations[4]; // Total FXS
 
         // Collateral
-        allocations[6] = collateral_token.balanceOf(address(this)) * (10 ** missing_decimals); // Unbridged Collateral, in E18
+        allocations[6] = tkn_bals[2] * (10 ** missing_decimals); // Unbridged Collateral, in E18
         allocations[7] = collat_bridged * (10 ** missing_decimals); // Bridged Collateral, in E18
         allocations[8] = allocations[6] + allocations[7]; // Total Collateral, in E18
     
@@ -192,32 +195,24 @@ contract FraxLiquidityBridger is Owned {
 
         if (destination_address_override != address(0)) address_to_send_to = destination_address_override;
 
-        if (bridge_id == 0) {
-            // [Avalanche]
-            if (token_type != 2){
-                // Anyswap / Multichain
-                // anyFRAX and anyFXS
-                TransferHelper.safeTransfer(token_address, frax_fxs_bridge_address, token_amount);
-            }
-            else {
-                // AEB / Official Avalanche Bridge
-                // [Ethereum side]: 0xE78388b4CE79068e89Bf8aA7f218eF6b9AB0e9d0
-
-                // NEED TO DO THIS
-            }
-        }
+        // Can be overridden
+        _bridgingLogic(token_type, address_to_send_to, token_amount);
         
-
         // Account for the bridged balances
-        if (token_address == address(FRAX)){
+        if (token_type == 0){
             frax_bridged += token_amount;
         }
-        else if (token_address == address(FXS)){
+        else if (token_type == 1){
             fxs_bridged += token_amount;
         }
         else {
             collat_bridged += token_amount;
         }
+    }
+
+    // Meant to be overriden
+    function _bridgingLogic(uint256 token_type, address address_to_send_to, uint256 token_amount) internal virtual {
+        revert("Need bridging logic");
     }
 
     /* ========== Burns and givebacks ========== */
@@ -263,29 +258,30 @@ contract FraxLiquidityBridger is Owned {
         timelock_address = _new_timelock;
     }
 
-    function setBridgeInfo(address _frax_fxs_bridge_address, address _collateral_bridge_address, uint256 _bridge_id, address _destination_address_override, string memory _non_evm_destination_address) external onlyByOwnGov {
+    function setBridgeInfo(
+        address _frax_bridge_address, 
+        address _fxs_bridge_address, 
+        address _collateral_bridge_address, 
+        address _destination_address_override, 
+        string memory _non_evm_destination_address
+    ) external onlyByOwnGov {
         // Make sure there are valid bridges
-        require(_frax_fxs_bridge_address != address(0) && _collateral_bridge_address != address(0), "Invalid bridge address");
-        
+        require(
+            _frax_bridge_address != address(0) && 
+            _fxs_bridge_address != address(0) &&
+            _collateral_bridge_address != address(0)
+        , "Invalid bridge address");
+
         // Set bridge addresses
-        frax_fxs_bridge_address = _frax_fxs_bridge_address;
-        collateral_bridge_address = _collateral_bridge_address;
-
-        // 0: Avalanche
-        // 1: BSC
-        // 2: Fantom
-        // 3: Polygon
-        // 4: Solana
-        // 5: Harmony
-        bridge_id = _bridge_id;
-
+        bridge_addresses = [_frax_bridge_address, _fxs_bridge_address, _collateral_bridge_address];
+        
         // Overridden cross-chain destination address
         destination_address_override = _destination_address_override;
 
         // Set bytes32 / non-EVM address on the other chain, if applicable
         non_evm_destination_address = _non_evm_destination_address;
         
-        emit BridgeInfoChanged(_frax_fxs_bridge_address, _collateral_bridge_address, _bridge_id, _destination_address_override, _non_evm_destination_address);
+        emit BridgeInfoChanged(_frax_bridge_address, _fxs_bridge_address, _collateral_bridge_address, _destination_address_override, _non_evm_destination_address);
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
@@ -307,5 +303,5 @@ contract FraxLiquidityBridger is Owned {
     /* ========== EVENTS ========== */
 
     event RecoveredERC20(address token, uint256 amount);
-    event BridgeInfoChanged(address frax_fxs_bridge_address, address _collateral_bridge_address, uint256 bridge_id, address destination_address_override, string non_evm_destination_address);
+    event BridgeInfoChanged(address frax_bridge_address, address fxs_bridge_address, address collateral_bridge_address, address destination_address_override, string non_evm_destination_address);
 }
