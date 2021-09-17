@@ -345,7 +345,7 @@ contract CrossChainBridgeBacker is Owned {
     }
 
 
-    /* ========== SWAPPING, MINTING, AND BURNING ========== */
+    /* ========== SWAPPING, GIVING, MINTING, AND BURNING ========== */
     
     // ----------------- SWAPPING -----------------
 
@@ -391,6 +391,22 @@ contract CrossChainBridgeBacker is Owned {
         }
     }
 
+    // ----------------- GIVING -----------------
+
+    // Give anyToken to the canToken contract
+    function giveAnyToCan(uint256 token_type, uint256 token_amount) external onlyByOwnGov {
+        if (token_type == 0) {
+            // FRAX
+            // Transfer
+            TransferHelper.safeTransfer(address(anyFRAX), address(canFRAX), token_amount);
+        }
+        else {
+            // FXS
+            // Transfer
+            TransferHelper.safeTransfer(address(anyFXS), address(canFXS), token_amount);
+        }
+    }
+
     // ----------------- FRAX -----------------
 
     function mintCanonicalFrax(uint256 frax_amount) external onlyByOwnGov {
@@ -414,12 +430,12 @@ contract CrossChainBridgeBacker is Owned {
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
 
-    function collectOldTokens(uint256 token_type, address old_token_address, uint256 token_amount) external onlyByOwnGov {
+    function collectBridgeTokens(uint256 token_type, address bridge_token_address, uint256 token_amount) external onlyByOwnGov {
         if (token_type == 0) {
-            canFRAX.withdrawOldTokens(old_token_address, token_amount);
+            canFRAX.withdrawBridgeTokens(bridge_token_address, token_amount);
         }
         else if (token_type == 1) {
-            canFXS.withdrawOldTokens(old_token_address, token_amount);
+            canFXS.withdrawBridgeTokens(bridge_token_address, token_amount);
         }
         else {
             revert("Invalid token_type");

@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "../CrossChainBridgeBacker.sol";
 import "./IBridgeToken.sol";
 
-contract CrossChainBridgeBacker_AVAX is CrossChainBridgeBacker {
+contract CrossChainBridgeBacker_AVAX_AnySwap is CrossChainBridgeBacker {
     constructor (
         address _owner,
         address _timelock_address,
@@ -25,13 +25,13 @@ contract CrossChainBridgeBacker_AVAX is CrossChainBridgeBacker {
         if (token_type == 0){
             // anyFRAX -> L1 FRAX
             // Swapout
-            // Anyswap Bridge
+            // AnySwap Bridge
             anyFRAX.Swapout(token_amount, address_to_send_to);
         }
         else if (token_type == 1) {
             // anyFXS -> L1 FXS
             // Swapout
-            // Anyswap Bridge
+            // AnySwap Bridge
             anyFXS.Swapout(token_amount, address_to_send_to);
         }
         else {
