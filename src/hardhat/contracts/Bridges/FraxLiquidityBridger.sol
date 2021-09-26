@@ -73,9 +73,6 @@ contract FraxLiquidityBridger is Owned {
 
     // Collateral balance related
     uint256 public missing_decimals;
-    uint256 public collatDollarBalanceStored = 0;
-    bool public override_collat_balance;
-    uint256 public override_collat_balance_amount;
 
     /* ========== MODIFIERS ========== */
 

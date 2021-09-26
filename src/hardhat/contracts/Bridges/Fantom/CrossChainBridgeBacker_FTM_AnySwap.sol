@@ -2,9 +2,9 @@
 pragma solidity >=0.8.0;
 
 import "../CrossChainBridgeBacker.sol";
-import "./IBridgeToken.sol";
+import "../../ERC20/__CROSSCHAIN/IAnyswapV4ERC20.sol";
 
-contract CrossChainBridgeBacker_AVAX_AnySwap is CrossChainBridgeBacker {
+contract CrossChainBridgeBacker_FTM_AnySwap is CrossChainBridgeBacker {
     constructor (
         address _owner,
         address _timelock_address,
@@ -20,7 +20,7 @@ contract CrossChainBridgeBacker_AVAX_AnySwap is CrossChainBridgeBacker {
 
     // Override with logic specific to this chain
     function _bridgingLogic(uint256 token_type, address address_to_send_to, uint256 token_amount) internal override {
-        // [Avalanche]
+        // [Fantom]
         if (token_type == 0){
             // anyFRAX -> L1 FRAX
             // Swapout
@@ -34,11 +34,10 @@ contract CrossChainBridgeBacker_AVAX_AnySwap is CrossChainBridgeBacker {
             anyFXS.Swapout(token_amount, address_to_send_to);
         }
         else {
-            // USDC.e -> L1 USDC
-            // Unwrap
-            // AEB / Official Avalanche Bridge
-            // NOTE: THIS WILL FAIL. THE AEB DOES NOT SUPPORT CONTRACT ADDRESSES
-            IBridgeToken(address(collateral_token)).unwrap(token_amount, 0);
+            // anyUSDC -> L1 USDC
+            // Swapout
+            // AnySwap Bridge
+            IAnyswapV4ERC20(address(collateral_token)).Swapout(token_amount, address_to_send_to);
         }
     }
 }

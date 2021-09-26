@@ -2,9 +2,9 @@
 pragma solidity >=0.8.0;
 
 import "../CrossChainBridgeBacker.sol";
-import "./IBridgeToken.sol";
+import "../../ERC20/__CROSSCHAIN/IUChildERC20.sol";
 
-contract CrossChainBridgeBacker_AVAX_AnySwap is CrossChainBridgeBacker {
+contract CrossChainBridgeBacker_POLY_MaticBridge is CrossChainBridgeBacker {
     constructor (
         address _owner,
         address _timelock_address,
@@ -20,25 +20,24 @@ contract CrossChainBridgeBacker_AVAX_AnySwap is CrossChainBridgeBacker {
 
     // Override with logic specific to this chain
     function _bridgingLogic(uint256 token_type, address address_to_send_to, uint256 token_amount) internal override {
-        // [Avalanche]
+        // [Polygon]
         if (token_type == 0){
-            // anyFRAX -> L1 FRAX
-            // Swapout
-            // AnySwap Bridge
-            anyFRAX.Swapout(token_amount, address_to_send_to);
+            // polyFRAX -> L1 FRAX
+            // IUChildERC20 withdraw
+            // MaticBridge Bridge
+            IUChildERC20(address(anyFRAX)).withdraw(token_amount);
         }
         else if (token_type == 1) {
-            // anyFXS -> L1 FXS
-            // Swapout
-            // AnySwap Bridge
-            anyFXS.Swapout(token_amount, address_to_send_to);
+            // polyFXS -> L1 FXS
+            // IUChildERC20 withdraw
+            // MaticBridge Bridge
+            IUChildERC20(address(anyFXS)).withdraw(token_amount);
         }
         else {
-            // USDC.e -> L1 USDC
-            // Unwrap
-            // AEB / Official Avalanche Bridge
-            // NOTE: THIS WILL FAIL. THE AEB DOES NOT SUPPORT CONTRACT ADDRESSES
-            IBridgeToken(address(collateral_token)).unwrap(token_amount, 0);
+            // anyUSDC -> L1 USDC
+            // IUChildERC20 withdraw
+            // MaticBridge Bridge
+            IUChildERC20(address(collateral_token)).withdraw(token_amount);
         }
     }
 }
