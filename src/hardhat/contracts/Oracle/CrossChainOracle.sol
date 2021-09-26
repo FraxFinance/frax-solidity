@@ -64,8 +64,17 @@ contract CrossChainOracle is Owned {
 
     /* ========== RESTRICTED FUNCTIONS, BUT BOT CAN SET ========== */
 
+    // Set the price for a token
     function setPrice(address token_address, uint256 price_e6) public onlyByOwnGovBot {
+        
         prices[token_address] = price_e6;
+    }
+
+    // Batch set prices for multiple tokens
+    function setMultiplePrices(address[] memory token_addresses, uint256[] memory prices_e6) public onlyByOwnGovBot {
+        for (uint i = 0; i < token_addresses.length; i++){ 
+            prices[token_addresses[i]] = prices_e6[i];
+        }
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */

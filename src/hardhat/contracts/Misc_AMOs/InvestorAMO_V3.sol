@@ -26,8 +26,6 @@ import "../ERC20/ERC20.sol";
 import "../ERC20/Variants/Comp.sol";
 import "../Frax/IFrax.sol";
 import "../Frax/IFraxAMOMinter.sol";
-import "../Oracle/UniswapPairOracle.sol";
-import "../Governance/AccessControl.sol";
 import "./yearn/IyUSDC_V2_Partial.sol";
 import "./aave/IAAVELendingPool_Partial.sol";
 import "./aave/IAAVE_aUSDC_Partial.sol";

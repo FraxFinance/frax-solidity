@@ -26,11 +26,11 @@ pragma solidity >=0.8.0;
 // Sam Kazemian: https://github.com/samkazemian
 // Dennis: github.com/denett
 
-import "../ERC20/ERC20.sol";
-import "../ERC20/ERC20Permit/ERC20Permit.sol";
-import '../Uniswap/TransferHelper.sol';
-import "../Staking/Owned.sol";
-import "../Utils/ReentrancyGuard.sol";
+import "../ERC20.sol";
+import "../ERC20Permit/ERC20Permit.sol";
+import '../../Uniswap/TransferHelper.sol';
+import "../../Staking/Owned.sol";
+import "../../Utils/ReentrancyGuard.sol";
 
 contract CrossChainCanonical is ERC20Permit, Owned, ReentrancyGuard {
     using SafeMath for uint256;

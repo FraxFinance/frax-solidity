@@ -25,8 +25,8 @@ pragma solidity >=0.8.0;
 // Sam Kazemian: https://github.com/samkazemian
 
 import "../Math/Math.sol";
-import "../ERC20/IAnyswapV4ERC20.sol";
-import "../ERC20/CrossChainCanonical.sol";
+import "../ERC20/__CROSSCHAIN/IAnyswapV4ERC20.sol";
+import "../ERC20/__CROSSCHAIN/CrossChainCanonical.sol";
 import "../Frax/FraxAMOMinter.sol";
 import "../ERC20/ERC20.sol";
 import "../ERC20/SafeERC20.sol";
@@ -106,7 +106,6 @@ contract CrossChainBridgeBacker is Owned {
             );
         _;
     }
-
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -238,33 +237,40 @@ contract CrossChainBridgeBacker is Owned {
     /* ========== BRIDGING / AMO FUNCTIONS ========== */
 
     // Used for crumbs and drop-ins sitting in this contract
-    function selfBridge(address canonical_token_address, uint256 token_amount) external validCanonicalToken(canonical_token_address) onlyByOwnGov {
-        _receiveBack(address(this), canonical_token_address, token_amount, true);
+    // Can also manually bridge back anyFRAX
+    // If do_swap is true, it will swap out canTokens in this contract for anyTokens in the canToken contracts
+    function selfBridge(uint256 token_type, uint256 token_amount, bool do_swap) external onlyByOwnGov {
+        require(token_type == 0 || token_type == 1 || token_type == 2, 'Invalid token type');
+
+        _receiveBack(address(this), token_type, token_amount, true, do_swap);
     }
 
+    // AMOs should only be giving back canonical tokens
     function receiveBackViaAMO(address canonical_token_address, uint256 token_amount, bool do_bridging) external validCanonicalToken(canonical_token_address) validAMO(msg.sender) {
-        // Pull in the tokens first
+        // Pull in the tokens from the AMO
         TransferHelper.safeTransferFrom(canonical_token_address, msg.sender, address(this), token_amount);
 
-        _receiveBack(msg.sender, canonical_token_address, token_amount, do_bridging);
+        // Get the token type
+        uint256 token_type = getTokenType(canonical_token_address); 
+
+        _receiveBack(msg.sender, token_type, token_amount, do_bridging, true);
     }
 
     // Optionally bridge
-    function _receiveBack(address from_address, address canonical_token_address, uint256 token_amount, bool do_bridging) internal {
-        // Get the token type
-        uint256 token_type = getTokenType(canonical_token_address); 
+    function _receiveBack(address from_address, uint256 token_type, uint256 token_amount, bool do_bridging, bool do_swap) internal {
+
 
         if (do_bridging) {
             // Swap canTokens for bridgeable anyTokens, if necessary
             if (token_type == 0) {
                 // FRAX
                 // Swap the canonical tokens out for bridgeable anyTokens
-                _swapCanonicalForAny(0, token_amount);
+                if (do_swap) _swapCanonicalForAny(0, token_amount);
             }
             else if (token_type == 1){
                 // FXS
                 // Swap the canonical tokens out for bridgeable anyTokens
-                _swapCanonicalForAny(1, token_amount);
+                if (do_swap) _swapCanonicalForAny(1, token_amount);
             }
 
             // Defaults to sending to this contract's address on the other side

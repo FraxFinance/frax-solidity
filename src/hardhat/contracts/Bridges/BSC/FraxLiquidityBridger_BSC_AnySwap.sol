@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "../FraxLiquidityBridger.sol";
 
-contract FraxLiquidityBridger_AVAX_AnySwap is FraxLiquidityBridger {
+contract FraxLiquidityBridger_BSC_AnySwap is FraxLiquidityBridger {
     constructor (
         address _owner,
         address _timelock_address,
@@ -18,7 +18,7 @@ contract FraxLiquidityBridger_AVAX_AnySwap is FraxLiquidityBridger {
 
     // Override with logic specific to this chain
     function _bridgingLogic(uint256 token_type, address address_to_send_to, uint256 token_amount) internal override {
-        // [Avalanche]
+        // [BSC]
         if (token_type == 0){
             // L1 FRAX -> anyFRAX
             // Simple dump in / CREATE2
@@ -26,16 +26,12 @@ contract FraxLiquidityBridger_AVAX_AnySwap is FraxLiquidityBridger {
             TransferHelper.safeTransfer(address(FRAX), bridge_addresses[token_type], token_amount);
         }
         else if (token_type == 1) {
-            // L1 FXS -> anyFXS
-            // Simple dump in / CREATE2
-            // AnySwap Bridge
-            TransferHelper.safeTransfer(address(FXS), bridge_addresses[token_type], token_amount);
+            // Binance Bridge
+            revert("FXS bridging disabled");
         }
         else {
-            // L1 USDC -> USDC.e
-            // Simple dump in / CREATE2
-            // AEB / Official Avalanche Bridge
-            TransferHelper.safeTransfer(address(collateral_token), bridge_addresses[token_type], token_amount);
+            // Binance Bridge
+            revert("Collateral bridging disabled");
         }
     }
 
