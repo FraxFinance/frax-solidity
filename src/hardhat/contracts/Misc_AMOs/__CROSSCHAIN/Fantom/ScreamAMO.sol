@@ -98,7 +98,7 @@ contract ScreamAMO is Owned {
         allocations[0] = canFRAX.balanceOf(address(this)); // Free FRAX
         allocations[1] = scFRAX.balanceOf(address(this)); // Free scFRAX, E8
         allocations[2] = allocations[1] * (10 ** missing_decimals); // Free scFRAX, E18
-        allocations[3] = (allocations[2] * scFRAX.exchangeRateStored()) / 1e18; // scFRAX USD value, E18
+        allocations[3] = (allocations[2] * scFRAX.exchangeRateStored()) / (10 ** (18 + missing_decimals)); // scFRAX USD value, E18
         allocations[4] = allocations[0] + allocations[3]; // USD Value, E18
     }
 
@@ -119,7 +119,7 @@ contract ScreamAMO is Owned {
         return (allocations[4], 0, 0, allocations[4]);
     }
 
-    function showRewards() external view returns (uint256[4] memory rewards) {
+    function showRewards() external view returns (uint256[5] memory rewards) {
         // SCREAM
         rewards[0] = SCREAM.balanceOf(address(this)); // Free SCREAM
         rewards[1] = CompController.compAccrued(address(this)); // Unclaimed SCREAM
@@ -127,6 +127,9 @@ contract ScreamAMO is Owned {
         // xSCREAM
         rewards[2] = xSCREAM.balanceOf(address(this)); // Free xSCREAM
         rewards[3] = (rewards[2] * xSCREAM.getShareValue()) / 1e18; // SCREAM value of xSCREAM
+
+        // Total SCREAM equivalents
+        rewards[4] = rewards[0] + rewards[1] + rewards[3];
     }
 
     function dollarBalances() public view returns (uint256 frax_val_e18, uint256 collat_val_e18) {
@@ -139,7 +142,6 @@ contract ScreamAMO is Owned {
     }
     
 
-   
     /* ========== scFRAX ========== */
 
     function depositFRAX(uint256 frax_amount) public onlyByOwnGovCust {
@@ -157,12 +159,6 @@ contract ScreamAMO is Owned {
         scFRAX.redeemUnderlying(frax_amount_e18);
     }
 
-    function collectSCREAM() public onlyByOwnGovCust {
-        address[] memory scTokens = new address[](1);
-        scTokens[0] = address(scFRAX);
-        CompController.claimComp(address(this), scTokens);
-    }
-
     /* ========== SCREAM staking (xSCREAM) ========== */
 
     // SCREAM -> xSCREAM
@@ -174,11 +170,15 @@ contract ScreamAMO is Owned {
 
     // xSCREAM -> SCREAM
     // Unstake xSCREAM for SCREAM
-    function unstakeSCREAM(uint256 xscream_amount) public onlyByOwnGovCust {
+    function unstakeXSCREAM(uint256 xscream_amount) public onlyByOwnGovCust {
         xSCREAM.withdraw(xscream_amount);
     }
 
     /* ========== Rewards ========== */
+
+    function collectSCREAM() public onlyByOwnGovCust {
+        CompController.claimComp(address(this));
+    }
 
     function withdrawRewards() public onlyByOwnGovCust {
         SCREAM.transfer(msg.sender, SCREAM.balanceOf(address(this)));

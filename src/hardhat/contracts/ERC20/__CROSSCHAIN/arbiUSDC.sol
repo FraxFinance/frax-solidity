@@ -2,7 +2,7 @@
 pragma solidity >=0.8.0;
 import "../ERC20.sol";
 
-// Mock polyUSDC token
-contract polyUSDC is ERC20("Polygon USDC", "polyUSDC") {
+// Mock arbiUSDC token
+contract arbiUSDC is ERC20("USD Coin (Arb1)", "USDC") {
     // Nothing here
 }
