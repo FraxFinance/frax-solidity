@@ -28,8 +28,10 @@ contract CrossChainBridgeBacker_BSC_AnySwap is CrossChainBridgeBacker {
             anyFRAX.Swapout(token_amount, address_to_send_to);
         }
         else if (token_type == 1) {
-            // Binance Bridge
-            revert("FXS bridging disabled");
+            // anyFXS -> L1 FXS
+            // Swapout
+            // AnySwap Bridge
+            anyFXS.Swapout(token_amount, address_to_send_to);
         }
         else {
             // Binance Bridge

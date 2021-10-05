@@ -9,7 +9,7 @@ pragma solidity >=0.8.0;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================= PangolinLiquidityAMO ======================
+// ==================== SushiSwapLiquidityAMO_ARBI ====================
 // ====================================================================
 // Provides Uniswap V2-style liquidity
 // Frax Finance: https://github.com/FraxFinance
@@ -22,15 +22,16 @@ pragma solidity >=0.8.0;
 // Sam Kazemian: https://github.com/samkazemian
 
 import "../../../ERC20/ERC20.sol";
+import "../../../ERC20/__CROSSCHAIN/IArbFiatToken.sol";
 import "../../../ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol";
 import "../../../ERC20/__CROSSCHAIN/CrossChainCanonicalFXS.sol";
-import "../../../Bridges/Avalanche/CrossChainBridgeBacker_AVAX_AnySwap.sol";
-import "../../pangolin/IPangolinPair.sol";
-import "../../pangolin/IPangolinRouter.sol";
+import "../../../Bridges/Arbitrum/CrossChainBridgeBacker_ARBI_AnySwap.sol";
+import "../../../Uniswap/Interfaces/IUniswapV2Pair.sol";
+import "../../../Uniswap/Interfaces/IUniswapV2Router02.sol";
 import "../../../Staking/Owned.sol";
 import '../../../Uniswap/TransferHelper.sol';
 
-contract PangolinLiquidityAMO is Owned {
+contract SushiSwapLiquidityAMO_ARBI is Owned {
     // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
@@ -38,18 +39,18 @@ contract PangolinLiquidityAMO is Owned {
     // Core
     CrossChainCanonicalFRAX private canFRAX;
     CrossChainCanonicalFXS private canFXS;
-    CrossChainBridgeBacker_AVAX_AnySwap public cc_bridge_backer;
-    ERC20 private collateral_token;
+    CrossChainBridgeBacker_ARBI_AnySwap public cc_bridge_backer;
+    IArbFiatToken private arbiCollateral;
     address public canonical_frax_address;
     address public canonical_fxs_address;
-    address public collateral_token_address;
+    address public arbi_collateral_address;
 
     // Important addresses
     address public timelock_address;
     address public custodian_address;
 
     // Router
-    IPangolinRouter public router = IPangolinRouter(0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106);
+    IUniswapV2Router02 public router = IUniswapV2Router02(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506);
 
     // Positions
     address[] public frax_fxs_pair_addresses_array;
@@ -81,20 +82,20 @@ contract PangolinLiquidityAMO is Owned {
         address _custodian_address,
         address _canonical_frax_address,
         address _canonical_fxs_address,
-        address _collateral_token_address,
+        address _arbi_collateral_address,
         address _cc_bridge_backer_address,
         address[] memory _initial_pairs
     ) Owned(_owner_address) {
         // Core addresses
         canonical_frax_address = _canonical_frax_address;
         canonical_fxs_address = _canonical_fxs_address;
-        collateral_token_address = _collateral_token_address;
+        arbi_collateral_address = _arbi_collateral_address;
 
         // Core instances
         canFRAX = CrossChainCanonicalFRAX(_canonical_frax_address);
         canFXS = CrossChainCanonicalFXS(_canonical_fxs_address);
-        collateral_token = ERC20(_collateral_token_address);
-        cc_bridge_backer = CrossChainBridgeBacker_AVAX_AnySwap(_cc_bridge_backer_address);
+        arbiCollateral = IArbFiatToken(_arbi_collateral_address);
+        cc_bridge_backer = CrossChainBridgeBacker_ARBI_AnySwap(_cc_bridge_backer_address);
 
         // Set the custodian
         custodian_address = _custodian_address;
@@ -103,7 +104,7 @@ contract PangolinLiquidityAMO is Owned {
         timelock_address = cc_bridge_backer.timelock_address();
 
         // Get the missing decimals for the collateral
-        missing_decimals = uint(18) - collateral_token.decimals();
+        missing_decimals = uint(18) - arbiCollateral.decimals();
 
         // Set the initial pairs
         for (uint256 i = 0; i < _initial_pairs.length; i++){ 
@@ -123,7 +124,7 @@ contract PangolinLiquidityAMO is Owned {
             address pair_address = frax_fxs_pair_addresses_array[i];
             if (frax_fxs_pair_addresses_allowed[pair_address]) {
                 // Instantiate the pair
-                IPangolinPair the_pair = IPangolinPair(pair_address);
+                IUniswapV2Pair the_pair = IUniswapV2Pair(pair_address);
 
                 // Get the pair info
                 uint256[4] memory lp_info_pack = lpTokenInfo(pair_address);
@@ -168,7 +169,7 @@ contract PangolinLiquidityAMO is Owned {
         allocations[8] = allocations[4] + allocations[6]; // Total FXS USD Value
 
         // Collateral
-        allocations[9] = collateral_token.balanceOf(address(this)); // Free Collateral, native precision
+        allocations[9] = arbiCollateral.balanceOf(address(this)); // Free Collateral, native precision
         allocations[10] = (allocations[9] * (10 ** missing_decimals)); // Free Collateral USD value
         allocations[11] = lp_tallies[2]; // Collateral in LP, native precision
         allocations[12] = (allocations[11] * (10 ** missing_decimals)); // Collateral in LP USD value
@@ -185,7 +186,7 @@ contract PangolinLiquidityAMO is Owned {
     function showTokenBalances() public view returns (uint256[3] memory tkn_bals) {
         tkn_bals[0] = canFRAX.balanceOf(address(this)); // canFRAX
         tkn_bals[1] = canFXS.balanceOf(address(this)); // canFXS
-        tkn_bals[2] = collateral_token.balanceOf(address(this)); // collateral_token
+        tkn_bals[2] = arbiCollateral.balanceOf(address(this)); // arbiCollateral
     }
     
     // [0] = FRAX per LP token
@@ -194,7 +195,7 @@ contract PangolinLiquidityAMO is Owned {
     // [3] = pair_type
     function lpTokenInfo(address pair_address) public view returns (uint256[4] memory return_info) {
         // Instantiate the pair
-        IPangolinPair the_pair = IPangolinPair(pair_address);
+        IUniswapV2Pair the_pair = IUniswapV2Pair(pair_address);
 
         // Get the reserves
         uint256[] memory reserve_pack = new uint256[](3); // [0] = FRAX, [1] = FXS, [2] = Collateral
@@ -207,12 +208,12 @@ contract PangolinLiquidityAMO is Owned {
             // Test token0
             if (token0 == canonical_frax_address) reserve_pack[0] = reserve0;
             else if (token0 == canonical_fxs_address) reserve_pack[1] = reserve0;
-            else if (token0 == collateral_token_address) reserve_pack[2] = reserve0;
+            else if (token0 == arbi_collateral_address) reserve_pack[2] = reserve0;
 
             // Test token1
             if (token1 == canonical_frax_address) reserve_pack[0] = reserve1;
             else if (token1 == canonical_fxs_address) reserve_pack[1] = reserve1;
-            else if (token1 == collateral_token_address) reserve_pack[2] = reserve1;
+            else if (token1 == arbi_collateral_address) reserve_pack[2] = reserve1;
         }
 
         // Get the token rates
@@ -270,7 +271,7 @@ contract PangolinLiquidityAMO is Owned {
     // token_there_is_one_of means you want the return amount to be (X other token) per 1 token;
     function pair_reserve_ratio_E18(address pair_address, address token_there_is_one_of) public view returns (uint256) {
         // Instantiate the pair
-        IPangolinPair the_pair = IPangolinPair(pair_address);
+        IUniswapV2Pair the_pair = IUniswapV2Pair(pair_address);
 
         // Get the token addresses
         address token0 = the_pair.token0();
@@ -385,8 +386,8 @@ contract PangolinLiquidityAMO is Owned {
         ERC20(lp_token_address).approve(address(router), lp_token_in);
 
         // Get the token addresses
-        address tokenA = IPangolinPair(lp_token_address).token0();
-        address tokenB = IPangolinPair(lp_token_address).token1();
+        address tokenA = IUniswapV2Pair(lp_token_address).token0();
+        address tokenB = IUniswapV2Pair(lp_token_address).token1();
 
         // Remove liquidity
         (amountA, amountB) = router.removeLiquidity(
@@ -413,8 +414,8 @@ contract PangolinLiquidityAMO is Owned {
     }
 
     function giveCollatBack(uint256 collat_amount, bool do_bridging) external onlyByOwnGov {
-        collateral_token.approve(address(cc_bridge_backer), collat_amount);
-        cc_bridge_backer.receiveBackViaAMO(collateral_token_address, collat_amount, do_bridging);
+        arbiCollateral.approve(address(cc_bridge_backer), collat_amount);
+        cc_bridge_backer.receiveBackViaAMO(arbi_collateral_address, collat_amount, do_bridging);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -422,7 +423,7 @@ contract PangolinLiquidityAMO is Owned {
     // Any pairs with FRAX and/or FXS must be whitelisted first before adding liquidity
     function _addTrackedLP(address pair_address) internal {
         // Instantiate the pair
-        IPangolinPair the_pair = IPangolinPair(pair_address);
+        IUniswapV2Pair the_pair = IUniswapV2Pair(pair_address);
 
         // Make sure either FRAX or FXS is present
         bool frax_present = (the_pair.token0() == canonical_frax_address || the_pair.token1() == canonical_frax_address);
@@ -455,7 +456,7 @@ contract PangolinLiquidityAMO is Owned {
     }
 
     function setAMOMinter(address _cc_bridge_backer_address) external onlyByOwnGov {
-        cc_bridge_backer = CrossChainBridgeBacker_AVAX_AnySwap(_cc_bridge_backer_address);
+        cc_bridge_backer = CrossChainBridgeBacker_ARBI_AnySwap(_cc_bridge_backer_address);
 
         // Get the timelock addresses from the minter
         timelock_address = cc_bridge_backer.timelock_address();

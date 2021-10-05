@@ -146,6 +146,7 @@ contract SpiritSwapLiquidityAMO is Owned {
                 // Get the USD value
                 if (lp_info_pack[3] == 0 || lp_info_pack[3] == 2){
                     // If FRAX is in the pair, just double the FRAX balance since it is 50/50
+                    // This assumes sufficient liquidity
                     lp_tallies[3] += (frax_amt * 2);
                 }
                 else {
@@ -181,7 +182,7 @@ contract SpiritSwapLiquidityAMO is Owned {
         allocations[15] = lp_tallies[3]; // Total USD value in all LPs
 
         // Totals
-        allocations[16] = allocations[0] + allocations[4] + allocations[10] + allocations[9]; // Total USD value in entire AMO, including FXS
+        allocations[16] = allocations[2] + allocations[8] + allocations[14]; // Total USD value in entire AMO, including FXS
     }
 
     function showTokenBalances() public view returns (uint256[3] memory tkn_bals) {
@@ -247,6 +248,26 @@ contract SpiritSwapLiquidityAMO is Owned {
     
     function borrowed_fxs() public view returns (uint256) {
         return cc_bridge_backer.fxs_lent_balances(address(this));
+    }
+
+    function borrowed_collat() public view returns (uint256) {
+        return cc_bridge_backer.collat_lent_balances(address(this));
+    }
+
+    function total_profit() public view returns (int256 profit) {
+        // Get the FXS price
+        uint256 fxs_price = cc_bridge_backer.cross_chain_oracle().getPrice(canonical_fxs_address);
+
+        uint256[17] memory allocations = showAllocations();
+
+        // Handle FRAX
+        profit = int256(allocations[2]) - int256(borrowed_frax());
+
+        // Handle FXS
+        profit +=  ((int256(allocations[7]) - int256(borrowed_fxs())) * int256(fxs_price)) / int256(PRICE_PRECISION);
+
+        // Handle Collat
+        profit += (int256(allocations[13]) - int256(borrowed_collat())) * int256(10 ** missing_decimals);
     }
 
     // token_there_is_one_of means you want the return amount to be (X other token) per 1 token;

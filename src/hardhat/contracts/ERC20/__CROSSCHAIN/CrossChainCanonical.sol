@@ -298,18 +298,21 @@ contract CrossChainCanonical is ERC20Permit, Owned, ReentrancyGuard {
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
+        require(!bridge_tokens[tokenAddress], "Cannot withdraw bridge tokens");
+        require(tokenAddress != address(this), "Cannot withdraw these tokens");
+
         TransferHelper.safeTransfer(address(tokenAddress), msg.sender, tokenAmount);
     }
 
-    // Generic proxy
-    function execute(
-        address _to,
-        uint256 _value,
-        bytes calldata _data
-    ) external onlyByOwnGov returns (bool, bytes memory) {
-        (bool success, bytes memory result) = _to.call{value:_value}(_data);
-        return (success, result);
-    }
+    // // Generic proxy
+    // function execute(
+    //     address _to,
+    //     uint256 _value,
+    //     bytes calldata _data
+    // ) external onlyByOwnGov returns (bool, bytes memory) {
+    //     (bool success, bytes memory result) = _to.call{value:_value}(_data);
+    //     return (success, result);
+    // }
 
     /* ========== EVENTS ========== */
 

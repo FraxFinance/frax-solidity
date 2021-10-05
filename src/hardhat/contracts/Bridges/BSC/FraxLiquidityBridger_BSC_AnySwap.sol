@@ -26,8 +26,10 @@ contract FraxLiquidityBridger_BSC_AnySwap is FraxLiquidityBridger {
             TransferHelper.safeTransfer(address(FRAX), bridge_addresses[token_type], token_amount);
         }
         else if (token_type == 1) {
-            // Binance Bridge
-            revert("FXS bridging disabled");
+            // L1 FXS -> anyFXS
+            // Simple dump in / CREATE2
+            // AnySwap Bridge
+            TransferHelper.safeTransfer(address(FXS), bridge_addresses[token_type], token_amount);
         }
         else {
             // Binance Bridge
