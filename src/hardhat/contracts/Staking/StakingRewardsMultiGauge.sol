@@ -47,11 +47,14 @@ import '../Uniswap/TransferHelper.sol';
 // import '../Misc_AMOs/mstable/IFeederPool.sol';
 
 // StakeDAO
-import '../Misc_AMOs/stakedao/IStakeDaoVault.sol';
+//import '../Misc_AMOs/stakedao/IStakeDaoVault.sol';
 // import '../Curve/IMetaImplementationUSD.sol';
 
 // Uniswap V2
 // import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
+
+// G-UNI
+import "../Gelato/IGuniPool.sol";
 
 // ------------------------------------------------
 
@@ -77,10 +80,13 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     // IFeederPool public stakingToken;
 
     // StakeDAO Vault
-    IStakeDaoVault public stakingToken;
+    // IStakeDaoVault public stakingToken;
     
     // Uniswap V2
     // IUniswapV2Pair public stakingToken;
+
+    // G-UNI
+    IGUniPool public stakingToken;
 
     // ------------------------------------------------
 
@@ -137,7 +143,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     // Stakers set which migrator(s) they want to use
     mapping(address => mapping(address => bool)) public staker_allowed_migrators;
 
-    // Uniswap V2 ONLY
+    // Uniswap V2 (or G-UNI) ONLY
     bool frax_is_token0;
 
     // Stake tracking
@@ -209,13 +215,18 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         // stakingToken = IFeederPool(_stakingToken);
 
         // StakeDAO
-        stakingToken = IStakeDaoVault(_stakingToken);
+        //stakingToken = IStakeDaoVault(_stakingToken);
 
         // Uniswap V2
         // stakingToken = IUniswapV2Pair(_stakingToken);
         // address token0 = stakingToken.token0();
         // if (token0 == frax_address) frax_is_token0 = true;
         // else frax_is_token0 = false;
+
+        // G-UNI
+        stakingToken = IGUniPool(_stakingToken);
+        address token0 = address(stakingToken.token0());
+        frax_is_token0 = token0 == frax_address;
         // ------------------------------------------------
 
         rewards_distributor = IFraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
@@ -300,11 +311,19 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
         // StakeDAO
         // ============================================
-        {
-            uint256 frax3crv_held = stakingToken.balance();
+        // {
+        //    uint256 frax3crv_held = stakingToken.balance();
+        // 
+        //    // Optimistically assume 50/50 FRAX/3CRV ratio in the metapool to save gas
+        //    frax_per_lp_token = frax3crv_held.mul(1e18).div(stakingToken.totalSupply()) / 2;
+        // }
 
-            // Optimistically assume 50/50 FRAX/3CRV ratio in the metapool to save gas
-            frax_per_lp_token = frax3crv_held.mul(1e18).div(stakingToken.totalSupply()) / 2;
+        // G-UNI
+        {
+            (uint256 reserve0, uint256 reserve1) = stakingToken.getUnderlyingBalances();
+            uint256 total_frax_reserves = frax_is_token0 ? reserve0 : reserve1;
+
+            frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
         }
 
         return frax_per_lp_token;
