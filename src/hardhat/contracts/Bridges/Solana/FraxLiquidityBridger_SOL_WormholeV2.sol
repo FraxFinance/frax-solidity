@@ -42,6 +42,8 @@ contract FraxLiquidityBridger_SOL_WormholeV2 is FraxLiquidityBridger {
     }
 
     // Override with logic specific to this chain
+    // NOTE [FOR SOLANA]: After transferring, you have to go here https://wormholebridge.com/#/transfer
+    // and manually submit the transaction to be processed
     function _bridgingLogic(uint256 token_type, address address_to_send_to, uint256 token_amount) internal override {
         // [Solana]
         // Bridge V2 is 0x3ee18B2214AFF97000D974cf647E7C347E8fa585

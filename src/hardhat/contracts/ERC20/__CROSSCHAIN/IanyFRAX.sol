@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.0;
 
-interface IanyFRAX_FTM {
+interface IanyFRAX {
   function DOMAIN_SEPARATOR() external view returns (bytes32);
   function PERMIT_TYPEHASH() external view returns (bytes32);
   function Swapin(bytes32 txhash, address account, uint256 amount) external returns (bool);
