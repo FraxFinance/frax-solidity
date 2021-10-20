@@ -9,7 +9,7 @@ pragma solidity >=0.8.0;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ============================ ScreamAMO =============================
+// ======================== SpiritOlaLendingAMO =======================
 // ====================================================================
 // Lends FRAX
 // Frax Finance: https://github.com/FraxFinance
@@ -26,12 +26,11 @@ import "../../../ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol";
 import "../../../Bridges/Fantom/CrossChainBridgeBacker_FTM_AnySwap.sol";
 import "../../rari/ICErc20Delegator.sol";
 import "../../scream/IScreamComptroller.sol";
-import "../../scream/ISCREAM.sol";
-import "../../scream/IxSCREAM.sol";
+import "../../spiritswap/ISpirit.sol";
 import "../../../Staking/Owned.sol";
 import '../../../Uniswap/TransferHelper.sol';
 
-contract ScreamAMO is Owned {
+contract SpiritOlaLendingAMO is Owned {
     // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
@@ -44,11 +43,10 @@ contract ScreamAMO is Owned {
 
     // Pools and vaults
     IScreamComptroller public CompController = IScreamComptroller(0x260E596DAbE3AFc463e75B6CC05d8c46aCAcFB09);
-    ICErc20Delegator public scFRAX;
+    ICErc20Delegator public oFRAX;
 
     // Reward Tokens
-    ISCREAM public SCREAM = ISCREAM(0xe0654C8e6fd4D733349ac7E09f6f23DA256bF475);
-    IxSCREAM public xSCREAM = IxSCREAM(0xe3D17C7e840ec140a7A51ACA351a482231760824);
+    ISpirit public SPIRIT = ISpirit(0x5Cc61A78F164885776AA610fb0FE1257df78E59B);
     
     // Constants
     uint256 public missing_decimals;
@@ -73,16 +71,16 @@ contract ScreamAMO is Owned {
         address _owner_address,
         address _custodian_address,
         address _canonical_frax_address,
-        address _scfrax_address,
+        address _ofrax_address,
         address _cc_bridge_backer_address
     ) Owned(_owner_address) {
         // Core
         canFRAX = CrossChainCanonicalFRAX(_canonical_frax_address);
-        scFRAX = ICErc20Delegator(_scfrax_address);
+        oFRAX = ICErc20Delegator(_ofrax_address);
         cc_bridge_backer = CrossChainBridgeBacker_FTM_AnySwap(_cc_bridge_backer_address);
 
         // Missing decimals
-        missing_decimals = uint(18) - scFRAX.decimals();
+        missing_decimals = uint(18) - oFRAX.decimals();
 
         // Set the custodian
         custodian_address = _custodian_address;
@@ -94,17 +92,17 @@ contract ScreamAMO is Owned {
     /* ========== VIEWS ========== */
 
     function showAllocations() public view returns (uint256[5] memory allocations) {
-        // FRAX and scFRAX
+        // FRAX and oFRAX
         allocations[0] = canFRAX.balanceOf(address(this)); // Free FRAX
-        allocations[1] = scFRAX.balanceOf(address(this)); // Free scFRAX, E8
-        allocations[2] = allocations[1] * (10 ** missing_decimals); // Free scFRAX, E18
-        allocations[3] = (allocations[2] * scFRAX.exchangeRateStored()) / (10 ** (18 + missing_decimals)); // scFRAX USD value, E18
+        allocations[1] = oFRAX.balanceOf(address(this)); // Free oFRAX, E8
+        allocations[2] = allocations[1] * (10 ** missing_decimals); // Free oFRAX, E18
+        allocations[3] = (allocations[2] * oFRAX.exchangeRateStored()) / (10 ** (18 + missing_decimals)); // oFRAX USD value, E18
         allocations[4] = allocations[0] + allocations[3]; // USD Value, E18
     }
 
     function showTokenBalances() public view returns (uint256[2] memory tkn_bals) {
         tkn_bals[0] = canFRAX.balanceOf(address(this)); // FRAX
-        tkn_bals[1] = scFRAX.balanceOf(address(this)); // scFRAX
+        tkn_bals[1] = oFRAX.balanceOf(address(this)); // oFRAX
     }
 
     // Needed by CrossChainBridgeBacker
@@ -120,16 +118,13 @@ contract ScreamAMO is Owned {
     }
 
     function showRewards() external view returns (uint256[5] memory rewards) {
-        // SCREAM
-        rewards[0] = SCREAM.balanceOf(address(this)); // Free SCREAM
-        rewards[1] = CompController.compAccrued(address(this)); // Unclaimed SCREAM
+        // SPIRIT
+        rewards[0] = SPIRIT.balanceOf(address(this)); // Free SPIRIT
+        rewards[1] = CompController.compAccrued(address(this)); // Unclaimed SPIRIT
 
-        // xSCREAM
-        rewards[2] = xSCREAM.balanceOf(address(this)); // Free xSCREAM
-        rewards[3] = (rewards[2] * xSCREAM.getShareValue()) / 1e18; // SCREAM value of xSCREAM
 
-        // Total SCREAM equivalents
-        rewards[4] = rewards[0] + rewards[1] + rewards[3];
+        // Total SPIRIT equivalents
+        rewards[2] = rewards[0] + rewards[1];
     }
 
     function dollarBalances() public view returns (uint256 frax_val_e18, uint256 collat_val_e18) {
@@ -148,47 +143,33 @@ contract ScreamAMO is Owned {
         profit = int256(allocations[4]) - int256(borrowed_frax());
     }
 
-    /* ========== scFRAX ========== */
+    /* ========== oFRAX ========== */
 
     function depositFRAX(uint256 frax_amount) public onlyByOwnGovCust {
-        canFRAX.approve(address(scFRAX), frax_amount);
-        scFRAX.mint(frax_amount);
+        canFRAX.approve(address(oFRAX), frax_amount);
+        oFRAX.mint(frax_amount);
     }
 
-    function redeem_scFRAX(uint256 scFRAX_amount_e8) public onlyByOwnGovCust {
-        // NOTE that scFRAX is E8, NOT E6
-        scFRAX.redeem(scFRAX_amount_e8);
+    function redeem_oFRAX(uint256 oFRAX_amount_e8) public onlyByOwnGovCust {
+        // NOTE that oFRAX is E8, NOT E6
+        oFRAX.redeem(oFRAX_amount_e8);
     }
 
-    function redeemUnderlying_scFRAX(uint256 frax_amount_e18) public onlyByOwnGovCust {
-        // Same as redeem(), but input is FRAX, not scFRAX
-        scFRAX.redeemUnderlying(frax_amount_e18);
+    function redeemUnderlying_oFRAX(uint256 frax_amount_e18) public onlyByOwnGovCust {
+        // Same as redeem(), but input is FRAX, not oFRAX
+        oFRAX.redeemUnderlying(frax_amount_e18);
     }
 
-    /* ========== SCREAM staking (xSCREAM) ========== */
-
-    // SCREAM -> xSCREAM
-    // Stake SCREAM for xSCREAM
-    function stakeSCREAM(uint256 scream_amount) public onlyByOwnGovCust {
-        SCREAM.approve(address(xSCREAM), scream_amount);
-        xSCREAM.deposit(scream_amount);
-    }
-
-    // xSCREAM -> SCREAM
-    // Unstake xSCREAM for SCREAM
-    function unstakeXSCREAM(uint256 xscream_amount) public onlyByOwnGovCust {
-        xSCREAM.withdraw(xscream_amount);
-    }
+    /* ========== SPIRIT staking (inSPIRIT) ========== */
 
     /* ========== Rewards ========== */
 
-    function collectSCREAM() public onlyByOwnGovCust {
+    function collectSPIRIT() public onlyByOwnGovCust {
         CompController.claimComp(address(this));
     }
 
     function withdrawRewards() public onlyByOwnGovCust {
-        SCREAM.transfer(msg.sender, SCREAM.balanceOf(address(this)));
-        xSCREAM.transfer(msg.sender, xSCREAM.balanceOf(address(this)));
+        SPIRIT.transfer(msg.sender, SPIRIT.balanceOf(address(this)));
     }
 
     /* ========== Burns and givebacks ========== */

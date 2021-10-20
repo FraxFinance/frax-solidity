@@ -30,6 +30,7 @@ pragma experimental ABIEncoderV2;
 // Fei Team: https://github.com/fei-protocol
 // Alchemix Team: https://github.com/alchemix-finance
 // Liquity Team: https://github.com/liquity
+// Gelato Team (kassandraoftroy): https://github.com/gelatodigital
 
 // Originally inspired by Synthetix.io, but heavily modified by the Frax team
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
@@ -47,14 +48,14 @@ import '../Uniswap/TransferHelper.sol';
 // import '../Misc_AMOs/mstable/IFeederPool.sol';
 
 // StakeDAO
-//import '../Misc_AMOs/stakedao/IStakeDaoVault.sol';
+// import '../Misc_AMOs/stakedao/IStakeDaoVault.sol';
 // import '../Curve/IMetaImplementationUSD.sol';
 
 // Uniswap V2
 // import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
 
 // G-UNI
-import "../Gelato/IGuniPool.sol";
+import "../Misc_AMOs/gelato/IGUniPool.sol";
 
 // ------------------------------------------------
 
@@ -215,7 +216,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         // stakingToken = IFeederPool(_stakingToken);
 
         // StakeDAO
-        //stakingToken = IStakeDaoVault(_stakingToken);
+        // stakingToken = IStakeDaoVault(_stakingToken);
 
         // Uniswap V2
         // stakingToken = IUniswapV2Pair(_stakingToken);
