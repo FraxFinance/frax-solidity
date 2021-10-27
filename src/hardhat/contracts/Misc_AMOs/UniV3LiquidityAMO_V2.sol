@@ -42,6 +42,10 @@ import "../Uniswap_V3/periphery/interfaces/INonfungiblePositionManager.sol";
 import "../Uniswap_V3/IUniswapV3Pool.sol";
 import "../Uniswap_V3/ISwapRouter.sol";
 
+abstract contract OracleLike {
+    function read() external virtual view returns (uint);
+}
+
 contract UniV3LiquidityAMO_V2 is Owned {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
@@ -84,11 +88,13 @@ contract UniV3LiquidityAMO_V2 is Owned {
     address[] public collateral_addresses;
     mapping(address => bool) public allowed_collaterals; // Mapping is also used for faster verification
 
+    mapping(address => OracleLike) public oracles; // Mapping of oracles (if oracle == address(0) the collateral is assumed to be pegged to 1usd)
+
     // Map token_id to Position
     mapping(uint256 => Position) public positions_mapping;
 
     /* ========== CONSTRUCTOR ========== */
-    
+
     constructor(
         address _creator_address,
         address _giveback_collateral_address,
@@ -142,9 +148,9 @@ contract UniV3LiquidityAMO_V2 is Owned {
 
         // Unallocated Collateral Dollar Value (E18)
         allocations[1] = freeColDolVal();
-        
+
         // Sum of Uni v3 Positions liquidity, if it was all in FRAX
-        allocations[2] = TotalLiquidityFrax(); 
+        allocations[2] = TotalLiquidityFrax();
 
         // Total Value
         allocations[3] = allocations[0].add(allocations[1]).add(allocations[2]);
@@ -153,16 +159,23 @@ contract UniV3LiquidityAMO_V2 is Owned {
     // E18 Collateral dollar value
     function freeColDolVal() public view returns (uint256) {
         uint256 value_tally_e18 = 0;
-        for (uint i = 0; i < collateral_addresses.length; i++){ 
+        for (uint i = 0; i < collateral_addresses.length; i++){
             ERC20 thisCollateral = ERC20(collateral_addresses[i]);
             uint256 missing_decs = uint256(18).sub(thisCollateral.decimals());
             uint256 col_bal_e18 = thisCollateral.balanceOf(address(this)).mul(10 ** missing_decs);
-            value_tally_e18 = value_tally_e18.add(col_bal_e18);
+            uint256 col_usd_value_e18 = collatDolarValue(oracles[collateral_addresses[i]], col_bal_e18);
+            value_tally_e18 = value_tally_e18.add(col_usd_value_e18);
         }
         return value_tally_e18;
     }
 
-    // Needed for the Frax contract to function 
+    // Convert collateral to dolar. If no oracle assumes pegged to 1USD. Both oracle, balance and return are E18
+    function collatDolarValue(OracleLike oracle, uint256 balance) public view returns (uint256) {
+        if (address(oracle) == address(0)) return balance;
+        return (balance * oracle.read()) / 1 ether;
+    }
+
+    // Needed for the Frax contract to function
     function collatDollarBalance() public view returns (uint256) {
         // Get the allocations
         uint256[4] memory allocations = showAllocations();
@@ -171,7 +184,7 @@ contract UniV3LiquidityAMO_V2 is Owned {
         uint256 collat_portion = allocations[1];
         uint256 frax_portion = (allocations[0]).add(allocations[2]);
 
-        // Assumes worst case scenario if FRAX slips out of range. 
+        // Assumes worst case scenario if FRAX slips out of range.
         // Otherwise, it would only be half that is multiplied by the CR
         frax_portion = frax_portion.mul(FRAX.global_collateral_ratio()).div(PRICE_PRECISION);
         return (collat_portion).add(frax_portion);
@@ -207,7 +220,7 @@ contract UniV3LiquidityAMO_V2 is Owned {
     // Returns this contract's liquidity in a specific [FRAX]-[collateral] uni v3 pool
     function liquidityInPool(address _collateral_address, int24 _tickLower, int24 _tickUpper, uint24 _fee) public view returns (uint128) {
         IUniswapV3Pool get_pool = IUniswapV3Pool(univ3_factory.getPool(address(FRAX), _collateral_address, _fee));
-        
+
         // goes into the pool's positions mapping, and grabs this address's liquidity
         (uint128 liquidity, , , , ) = get_pool.positions(keccak256(abi.encodePacked(address(this), _tickLower, _tickUpper)));
         return liquidity;
@@ -227,7 +240,7 @@ contract UniV3LiquidityAMO_V2 is Owned {
     function numPositions() public view returns (uint256) {
         return positions_array.length;
     }
-    
+
     function allCollateralAddresses() external view returns (address[] memory) {
         return collateral_addresses;
     }
@@ -236,7 +249,7 @@ contract UniV3LiquidityAMO_V2 is Owned {
 
     // Iterate through all positions and collect fees accumulated
     function collectFees() external onlyByOwnGovCust {
-        for (uint i = 0; i < positions_array.length; i++){ 
+        for (uint i = 0; i < positions_array.length; i++){
             Position memory current_position = positions_array[i];
             INonfungiblePositionManager.CollectParams memory collect_params = INonfungiblePositionManager.CollectParams(
                 current_position.token_id,
@@ -320,7 +333,7 @@ contract UniV3LiquidityAMO_V2 is Owned {
     // Swap tokenA into tokenB using univ3_router.ExactInputSingle()
     // Uni V3 only
     function swap(address _tokenA, address _tokenB, uint24 _fee_tier, uint256 _amountAtoB, uint256 _amountOutMinimum, uint160 _sqrtPriceLimitX96) public onlyByOwnGov returns (uint256) {
-        // Make sure the collateral is allowed 
+        // Make sure the collateral is allowed
         require(allowed_collaterals[_tokenA] || _tokenA == address(FRAX), "TokenA not allowed");
         require(allowed_collaterals[_tokenB] || _tokenB == address(FRAX), "TokenB not allowed");
 
@@ -355,7 +368,7 @@ contract UniV3LiquidityAMO_V2 is Owned {
         FRAX.approve(address(amo_minter), frax_amount);
         amo_minter.burnFraxFromAMO(frax_amount);
     }
-   
+
     // Burn unneeded FXS. Goes through the minter
     function burnFXS(uint256 fxs_amount) public onlyByOwnGovCust {
         FXS.approve(address(amo_minter), fxs_amount);
@@ -363,7 +376,7 @@ contract UniV3LiquidityAMO_V2 is Owned {
     }
 
     /* ========== OWNER / GOVERNANCE FUNCTIONS ONLY ========== */
-    // Only owner or timelock can call, to limit risk 
+    // Only owner or timelock can call, to limit risk
 
     // Adds collateral addresses supported. Needed to make sure dollarBalances is correct
     function addCollateral(address collat_addr) public onlyByOwnGov {
@@ -371,19 +384,27 @@ contract UniV3LiquidityAMO_V2 is Owned {
         require(collat_addr != address(FRAX), "FRAX is not collateral");
 
         require(allowed_collaterals[collat_addr] == false, "Address already exists");
-        allowed_collaterals[collat_addr] = true; 
+        allowed_collaterals[collat_addr] = true;
         collateral_addresses.push(collat_addr);
+    }
+
+    // Adds oracle for collateral. Optional for 1usd pegged coins.
+    function addOracle(address collat_addr, address oracle) public onlyByOwnGov {
+        require(collat_addr != address(0), "Zero address detected");
+        require(collat_addr != address(FRAX), "FRAX is not collateral");
+
+        oracles[collat_addr] = OracleLike(oracle);
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
         // Can only be triggered by owner or governance, not custodian
         // Tokens are sent to the custodian, as a sort of safeguard
         TransferHelper.safeTransfer(tokenAddress, custodian_address, tokenAmount);
-        
+
         emit RecoveredERC20(tokenAddress, tokenAmount);
     }
 
-    function recoverERC721(address tokenAddress, uint256 token_id) external onlyByOwnGov {        
+    function recoverERC721(address tokenAddress, uint256 token_id) external onlyByOwnGov {
         // Only the owner address can ever receive the recovery withdrawal
         // INonfungiblePositionManager inherits IERC721 so the latter does not need to be imported
         INonfungiblePositionManager(tokenAddress).safeTransferFrom( address(this), custodian_address, token_id);
