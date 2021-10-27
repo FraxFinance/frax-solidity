@@ -172,7 +172,7 @@ contract UniV3LiquidityAMO_V2 is Owned {
     // Convert collateral to dolar. If no oracle assumes pegged to 1USD. Both oracle, balance and return are E18
     function collatDolarValue(OracleLike oracle, uint256 balance) public view returns (uint256) {
         if (address(oracle) == address(0)) return balance;
-        return (balance * oracle.read()) / 1 ether;
+        return balance.mul(oracle.read()).div(1 ether);
     }
 
     // Needed for the Frax contract to function
