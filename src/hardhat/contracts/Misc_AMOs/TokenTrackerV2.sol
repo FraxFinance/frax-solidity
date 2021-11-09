@@ -25,6 +25,7 @@ pragma solidity >=0.8.0;
 
 import "../Math/SafeMath.sol";
 import "../Oracle/ComboOracle.sol";
+import "../Frax/IFrax.sol";
 import "../Frax/IFraxAMOMinter.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/ERC20.sol";
@@ -36,6 +37,7 @@ contract TokenTrackerV2 is Owned {
 
     /* ========== STATE VARIABLES ========== */
 
+    IFrax public IFRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
     IFraxAMOMinter public amo_minter;
     ComboOracle public ethUSDOracle;
 
@@ -45,25 +47,29 @@ contract TokenTrackerV2 is Owned {
     mapping(address => address[]) public tokens_for_address; // tracked address => tokens to track
 
     // Oracle related
-    mapping(address => address) public oracle_addresses; // token address => oracle_address
+    mapping(address => OracleCRInfo) public oracle_cr_infos; // token address => oracle_address
     uint256 public chainlink_eth_usd_decimals;
 
     address public timelock_address;
     address public custodian_address;
 
     uint256 public PRICE_PRECISION = 1e6;
-    uint256 public PRECISE_PRICE_PRECISION = 1e12;
+    uint256 public PRECISE_PRICE_PRECISION = 1e18;
 
+    bool public use_stored_cr = true;
+    uint256 public stored_cr;
+    
     /* ========== STRUCTS ========== */
 
-    struct TrackingTokenConstruct {
+    struct TrackingTokensBatch {
         address tracked_address;
         address[] token_addresses;
     }
     
-    struct OracleInfo {
+    struct OracleCRInfo {
         address token_address;
         address oracle_address;
+        bool use_cr;
     }
 
     /* ========== CONSTRUCTOR ========== */
@@ -72,9 +78,7 @@ contract TokenTrackerV2 is Owned {
         address _owner_address,
         address _amo_minter_address,
         address _eth_oracle_address,
-        address[] memory _initial_tracked_addresses,
-        // TrackingTokenConstruct[] memory _initial_tracked_tokens,
-        OracleInfo[] memory _initial_token_oracles
+        address[] memory _initial_tracked_addresses
     ) Owned(_owner_address) {
         amo_minter = IFraxAMOMinter(_amo_minter_address);
         ethUSDOracle = ComboOracle(_eth_oracle_address);
@@ -83,6 +87,9 @@ contract TokenTrackerV2 is Owned {
         custodian_address = amo_minter.custodian_address();
         timelock_address = amo_minter.timelock_address();
 
+        // Refresh the stored CR
+        stored_cr = IFRAX.global_collateral_ratio();
+
         // Set the initial tracked addresses
         for (uint256 i = 0; i < _initial_tracked_addresses.length; i++){ 
             address tracked_addr = _initial_tracked_addresses[i];
@@ -90,15 +97,15 @@ contract TokenTrackerV2 is Owned {
             is_address_tracked[tracked_addr] = true;
         }
 
-        // Add the oracle information for each token
-        for (uint256 i = 0; i < _initial_token_oracles.length; i++){ 
-            OracleInfo memory thisOracleInfo = _initial_token_oracles[i];
-            oracle_addresses[thisOracleInfo.token_address] = thisOracleInfo.oracle_address;
-        }
+        // // Add the oracle information for each token
+        // for (uint256 i = 0; i < _initial_token_oracles.length; i++){ 
+        //     OracleCRInfo memory thisOracleCRInfo = _initial_token_oracles[i];
+        //     oracle_cr_infos[thisOracleCRInfo.token_address] = thisOracleCRInfo;
+        // }
 
         // // Add the tracked tokens for each tracked address
         // for (uint256 i = 0; i < _initial_tracked_tokens.length; i++){ 
-        //     TrackingTokenConstruct memory thisTrackingConstruct = _initial_tracked_tokens[i];
+        //     TrackingTokensBatch memory thisTrackingConstruct = _initial_tracked_tokens[i];
         //     for (uint256 j = 0; j < thisTrackingConstruct.token_addresses.length; j++){ 
         //         tokens_for_address[thisTrackingConstruct.tracked_address].push(thisTrackingConstruct.token_addresses[j]);
         //     }
@@ -125,12 +132,12 @@ contract TokenTrackerV2 is Owned {
     /* ========== VIEWS ========== */
 
     function showAllocations() public view returns (uint256[1] memory allocations) {
-        allocations[0] = getTotalValue(); // Total Value
+        allocations[0] = getTotalValue(false); // Total Value
     }
 
     function dollarBalances() public view returns (uint256 frax_val_e18, uint256 collat_val_e18) {
-        frax_val_e18 = getTotalValue();
-        collat_val_e18 = frax_val_e18;
+        frax_val_e18 = getTotalValue(false); // Ignores CR logic
+        collat_val_e18 = getTotalValue(true); // Uses CR logic
     }
 
     // Backwards compatibility
@@ -146,51 +153,69 @@ contract TokenTrackerV2 is Owned {
         return tokens_for_address[tracked_address];
     }
 
+    function getCR() public view returns (uint256) {
+        if (use_stored_cr) return stored_cr;
+        else {
+            return IFRAX.global_collateral_ratio();
+        }
+    }
+
     // In USD
-    function getTokenValueInAddress(address tracked_address, address token_address) public view returns (uint256 value_usd_e18) {
+    // Gets value of a single token in an address
+    function getTokenValueInAddress(address tracked_address, address token_address, bool use_cr_logic) public view returns (uint256 value_usd_e18) {
         require(is_address_tracked[tracked_address], "Address not being tracked");
+        OracleCRInfo memory thisOracleCRInfo = oracle_cr_infos[token_address];
 
         // Get value of raw ETH first
         if (token_address == address(0)){
             value_usd_e18 = (tracked_address.balance * ethUSDOracle.getETHPricePrecise()) / PRECISE_PRICE_PRECISION;
         }
         else {
-            ( uint256 precise_price, ) = ComboOracle(oracle_addresses[token_address]).getTokenPrice(token_address);
+            ( uint256 precise_price, ) = ComboOracle(thisOracleCRInfo.oracle_address).getTokenPrice(token_address);
             uint256 missing_decimals = uint256(18) - ERC20(token_address).decimals();
-            value_usd_e18 += (((ERC20(token_address).balanceOf(tracked_address) * (10 ** missing_decimals)) * precise_price) / (PRECISE_PRICE_PRECISION));
+
+            // Scale up to E18
+            uint256 value_to_add = (((ERC20(token_address).balanceOf(tracked_address) * (10 ** missing_decimals)) * precise_price) / (PRECISE_PRICE_PRECISION));
+            
+            // If applicable, multiply by the CR. Used for dollarBalances and collatDollarBalance tracking
+            if (use_cr_logic && thisOracleCRInfo.use_cr){
+                value_to_add = (value_to_add * getCR()) / PRICE_PRECISION;
+            }
+
+            value_usd_e18 += value_to_add;
         }
     }
 
     // In USD
-    function getValueInAddress(address tracked_address) public view returns (uint256 value_usd_e18) {
+    // Gets value of all the ETH and tracked tokens in an address
+    function getValueInAddress(address tracked_address, bool use_cr_logic) public view returns (uint256 value_usd_e18) {
         require(is_address_tracked[tracked_address], "Address not being tracked");
-
-        // Get value of raw ETH first
-        value_usd_e18 = (tracked_address.balance * ethUSDOracle.getETHPricePrecise()) / PRECISE_PRICE_PRECISION;
 
         // Get token values
         address[] memory tracked_token_arr = tokens_for_address[tracked_address];
         for (uint i = 0; i < tracked_token_arr.length; i++){ 
             address the_token_addr = tracked_token_arr[i];
-            if (the_token_addr != address(0)) {
-                ( uint256 precise_price, ) = ComboOracle(oracle_addresses[the_token_addr]).getTokenPrice(the_token_addr);
-                uint256 missing_decimals = uint256(18) - ERC20(the_token_addr).decimals();
-                value_usd_e18 += (((ERC20(the_token_addr).balanceOf(tracked_address) * (10 ** missing_decimals)) * precise_price) / (PRECISE_PRICE_PRECISION));
-            }
+            value_usd_e18 += getTokenValueInAddress(tracked_address, the_token_addr, use_cr_logic);
         }
     }
 
     // In USD
-    function getTotalValue() public view returns (uint256 value_usd_e18) {
+    function getTotalValue(bool use_cr_logic) public view returns (uint256 value_usd_e18) {
         // Initialize
         value_usd_e18 = 0;
 
         // Loop through all of the tracked addresses
         for (uint i = 0; i < tracked_addresses.length; i++){ 
             if (tracked_addresses[i] != address(0)) {
-                value_usd_e18 += getValueInAddress(tracked_addresses[i]);
+                value_usd_e18 += getValueInAddress(tracked_addresses[i], use_cr_logic);
             }
         }
+    }
+
+    /* ========== PUBLICALLY CALLABLE ========== */
+
+    function refreshCR() public {
+        stored_cr = IFRAX.global_collateral_ratio();
     }
    
     /* ========== RESTRICTED GOVERNANCE FUNCTIONS ========== */
@@ -204,6 +229,29 @@ contract TokenTrackerV2 is Owned {
 
         // Make sure the new addresses are not address(0)
         require(custodian_address != address(0) && timelock_address != address(0), "Invalid custodian or timelock");
+    }
+
+    function toggleUseStoredCR() external onlyByOwnGovCust {
+        use_stored_cr = !use_stored_cr;
+    }
+
+    // ---------------- Oracle Related ----------------
+
+    function setTokenOracleCRInfo(address token_address, address oracle_address, bool use_cr) public onlyByOwnGov {
+        // Make sure the oracle is valid
+        ( uint256 precise_price, ) = ComboOracle(oracle_address).getTokenPrice(token_address);
+        require(precise_price > 0, "Invalid Oracle");
+
+        oracle_cr_infos[token_address].token_address = token_address;
+        oracle_cr_infos[token_address].oracle_address = oracle_address;
+        oracle_cr_infos[token_address].use_cr = use_cr;
+    }
+
+    function batchSetTokenOracleCRInfo(OracleCRInfo[] memory _oracle_cr_infos) public onlyByOwnGov {
+        for (uint256 i = 0; i < _oracle_cr_infos.length; i++){ 
+            OracleCRInfo memory thisOracle = _oracle_cr_infos[i];
+            setTokenOracleCRInfo(thisOracle.token_address, thisOracle.oracle_address, thisOracle.use_cr);
+        }
     }
 
     // ---------------- Tracked Address Related ----------------
@@ -241,9 +289,15 @@ contract TokenTrackerV2 is Owned {
 
     // ---------------- Token Related ----------------
 
+    function batchAddTokensForAddress(address tracked_address, address[] memory token_addresses) public onlyByOwnGov {
+        for (uint i = 0; i < token_addresses.length; i++){ 
+            addTokenForAddress(tracked_address, token_addresses[i]);
+        }
+    }
+
     function addTokenForAddress(address tracked_address, address token_address) public onlyByOwnGov {
         // Make sure the oracle info is present already
-        require(oracle_addresses[token_address] != address(0), "Add Oracle info first");
+        require(oracle_cr_infos[token_address].oracle_address != address(0), "Add Oracle info first");
 
         address[] memory tracked_token_arr = tokens_for_address[tracked_address];
         for (uint i = 0; i < tracked_token_arr.length; i++){ 

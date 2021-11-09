@@ -9,7 +9,7 @@ pragma solidity >=0.8.0;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ====================== SpiritSwapLiquidityAMO ======================
+// ====================== ApeSwapLiquidityAMO_V2 ======================
 // ====================================================================
 // Provides Uniswap V2-style liquidity
 // Frax Finance: https://github.com/FraxFinance
@@ -22,17 +22,16 @@ pragma solidity >=0.8.0;
 // Sam Kazemian: https://github.com/samkazemian
 
 import "../../../ERC20/ERC20.sol";
-import "../../../ERC20/__CROSSCHAIN/IAnyswapV4ERC20.sol";
 import "../../../ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol";
 import "../../../ERC20/__CROSSCHAIN/CrossChainCanonicalFXS.sol";
-import "../../../Bridges/Fantom/CrossChainBridgeBacker_FTM_AnySwap.sol";
-import "../../spiritswap/IPancakePair.sol";
-import "../../spiritswap/ISpiritRouter.sol";
-import "../../spiritswap/IZap.sol";
+import "../../../Bridges/BSC/CrossChainBridgeBacker_BSC_AnySwap.sol";
+import "../../apeswap/IApePair.sol";
+import "../../apeswap/IApeRouter.sol";
+import "../../apeswap/IMasterApe.sol";
 import "../../../Staking/Owned.sol";
 import '../../../Uniswap/TransferHelper.sol';
 
-contract SpiritSwapLiquidityAMO is Owned {
+contract ApeSwapLiquidityAMO_V2 is Owned {
     // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
@@ -40,18 +39,24 @@ contract SpiritSwapLiquidityAMO is Owned {
     // Core
     CrossChainCanonicalFRAX private canFRAX;
     CrossChainCanonicalFXS private canFXS;
-    CrossChainBridgeBacker_FTM_AnySwap public cc_bridge_backer;
-    IAnyswapV4ERC20 private anyCollateral;
+    CrossChainBridgeBacker_BSC_AnySwap public cc_bridge_backer;
+    ERC20 private collateral_token;
     address public canonical_frax_address;
     address public canonical_fxs_address;
-    address public any_collateral_address;
+    address public collateral_token_address;
 
+    // Important addresses
     address public timelock_address;
     address public custodian_address;
 
-    // Router
-    ISpiritRouter public router = ISpiritRouter(0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52);
-    IZap public zapper = IZap(0xF0ff07d19f310abab54724a8876Eee71E338c82F);
+    // Reward / Governance tokens
+    ERC20 public BANANA = ERC20(0x603c7f932ED1fc6575303D8Fb018fDCBb0f39a95);
+    // uint256 public banana_pool_pid;
+
+    // Liquidity Platform
+    IApeRouter public router = IApeRouter(0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7);
+    IMasterApe public master_chef = IMasterApe(0x5c8D727b265DBAfaba67E050f2f739cAeEB4A6F9);
+    mapping(address => uint256) public farming_pair_pids;
 
     // Positions
     address[] public frax_fxs_pair_addresses_array;
@@ -83,20 +88,20 @@ contract SpiritSwapLiquidityAMO is Owned {
         address _custodian_address,
         address _canonical_frax_address,
         address _canonical_fxs_address,
-        address _any_collateral_address,
+        address _collateral_token_address,
         address _cc_bridge_backer_address,
         address[] memory _initial_pairs
     ) Owned(_owner_address) {
         // Core addresses
         canonical_frax_address = _canonical_frax_address;
         canonical_fxs_address = _canonical_fxs_address;
-        any_collateral_address = _any_collateral_address;
+        collateral_token_address = _collateral_token_address;
 
         // Core instances
         canFRAX = CrossChainCanonicalFRAX(_canonical_frax_address);
         canFXS = CrossChainCanonicalFXS(_canonical_fxs_address);
-        anyCollateral = IAnyswapV4ERC20(_any_collateral_address);
-        cc_bridge_backer = CrossChainBridgeBacker_FTM_AnySwap(_cc_bridge_backer_address);
+        collateral_token = ERC20(_collateral_token_address);
+        cc_bridge_backer = CrossChainBridgeBacker_BSC_AnySwap(_cc_bridge_backer_address);
 
         // Set the custodian
         custodian_address = _custodian_address;
@@ -105,7 +110,7 @@ contract SpiritSwapLiquidityAMO is Owned {
         timelock_address = cc_bridge_backer.timelock_address();
 
         // Get the missing decimals for the collateral
-        missing_decimals = uint(18) - anyCollateral.decimals();
+        missing_decimals = uint(18) - collateral_token.decimals();
 
         // Set the initial pairs
         for (uint256 i = 0; i < _initial_pairs.length; i++){ 
@@ -125,7 +130,7 @@ contract SpiritSwapLiquidityAMO is Owned {
             address pair_address = frax_fxs_pair_addresses_array[i];
             if (frax_fxs_pair_addresses_allowed[pair_address]) {
                 // Instantiate the pair
-                IPancakePair the_pair = IPancakePair(pair_address);
+                IApePair the_pair = IApePair(pair_address);
 
                 // Get the pair info
                 uint256[4] memory lp_info_pack = lpTokenInfo(pair_address);
@@ -146,7 +151,6 @@ contract SpiritSwapLiquidityAMO is Owned {
                 // Get the USD value
                 if (lp_info_pack[3] == 0 || lp_info_pack[3] == 2){
                     // If FRAX is in the pair, just double the FRAX balance since it is 50/50
-                    // This assumes sufficient liquidity
                     lp_tallies[3] += (frax_amt * 2);
                 }
                 else {
@@ -171,7 +175,7 @@ contract SpiritSwapLiquidityAMO is Owned {
         allocations[8] = allocations[4] + allocations[6]; // Total FXS USD Value
 
         // Collateral
-        allocations[9] = anyCollateral.balanceOf(address(this)); // Free Collateral, native precision
+        allocations[9] = collateral_token.balanceOf(address(this)); // Free Collateral, native precision
         allocations[10] = (allocations[9] * (10 ** missing_decimals)); // Free Collateral USD value
         allocations[11] = lp_tallies[2]; // Collateral in LP, native precision
         allocations[12] = (allocations[11] * (10 ** missing_decimals)); // Collateral in LP USD value
@@ -188,8 +192,12 @@ contract SpiritSwapLiquidityAMO is Owned {
     function showTokenBalances() public view returns (uint256[3] memory tkn_bals) {
         tkn_bals[0] = canFRAX.balanceOf(address(this)); // canFRAX
         tkn_bals[1] = canFXS.balanceOf(address(this)); // canFXS
-        tkn_bals[2] = anyCollateral.balanceOf(address(this)); // anyCollateral
+        tkn_bals[2] = collateral_token.balanceOf(address(this)); // collateral_token
     }
+
+    // function showRewards() external view returns (uint256[0] memory rewards) {
+    //     // Will be tracked off-chain
+    // }
     
     // [0] = FRAX per LP token
     // [1] = FXS per LP token
@@ -197,7 +205,7 @@ contract SpiritSwapLiquidityAMO is Owned {
     // [3] = pair_type
     function lpTokenInfo(address pair_address) public view returns (uint256[4] memory return_info) {
         // Instantiate the pair
-        IPancakePair the_pair = IPancakePair(pair_address);
+        IApePair the_pair = IApePair(pair_address);
 
         // Get the reserves
         uint256[] memory reserve_pack = new uint256[](3); // [0] = FRAX, [1] = FXS, [2] = Collateral
@@ -210,12 +218,12 @@ contract SpiritSwapLiquidityAMO is Owned {
             // Test token0
             if (token0 == canonical_frax_address) reserve_pack[0] = reserve0;
             else if (token0 == canonical_fxs_address) reserve_pack[1] = reserve0;
-            else if (token0 == any_collateral_address) reserve_pack[2] = reserve0;
+            else if (token0 == collateral_token_address) reserve_pack[2] = reserve0;
 
             // Test token1
             if (token1 == canonical_frax_address) reserve_pack[0] = reserve1;
             else if (token1 == canonical_fxs_address) reserve_pack[1] = reserve1;
-            else if (token1 == any_collateral_address) reserve_pack[2] = reserve1;
+            else if (token1 == collateral_token_address) reserve_pack[2] = reserve1;
         }
 
         // Get the token rates
@@ -264,7 +272,7 @@ contract SpiritSwapLiquidityAMO is Owned {
         profit = int256(allocations[2]) - int256(borrowed_frax());
 
         // Handle FXS
-        profit += ((int256(allocations[7]) - int256(borrowed_fxs())) * int256(fxs_price)) / int256(PRICE_PRECISION);
+        profit +=  ((int256(allocations[7]) - int256(borrowed_fxs())) * int256(fxs_price)) / int256(PRICE_PRECISION);
 
         // Handle Collat
         profit += (int256(allocations[13]) - int256(borrowed_collat())) * int256(10 ** missing_decimals);
@@ -273,7 +281,7 @@ contract SpiritSwapLiquidityAMO is Owned {
     // token_there_is_one_of means you want the return amount to be (X other token) per 1 token;
     function pair_reserve_ratio_E18(address pair_address, address token_there_is_one_of) public view returns (uint256) {
         // Instantiate the pair
-        IPancakePair the_pair = IPancakePair(pair_address);
+        IApePair the_pair = IApePair(pair_address);
 
         // Get the token addresses
         address token0 = the_pair.token0();
@@ -388,8 +396,8 @@ contract SpiritSwapLiquidityAMO is Owned {
         ERC20(lp_token_address).approve(address(router), lp_token_in);
 
         // Get the token addresses
-        address tokenA = IPancakePair(lp_token_address).token0();
-        address tokenB = IPancakePair(lp_token_address).token1();
+        address tokenA = IApePair(lp_token_address).token0();
+        address tokenB = IApePair(lp_token_address).token1();
 
         // Remove liquidity
         (amountA, amountB) = router.removeLiquidity(
@@ -401,6 +409,43 @@ contract SpiritSwapLiquidityAMO is Owned {
             address(this), 
             2105300114 // Expiration: a long time from now
         );
+    }
+
+    /* ========== Farm LP ========== */
+
+    function depositLP(address lp_token_address, uint256 lp_token_in) public onlyByOwnGov {
+        IApePair(lp_token_address).approve(address(master_chef), lp_token_in);
+        master_chef.deposit(farming_pair_pids[lp_token_address], lp_token_in);
+    }
+
+    function collectLPRewards(address lp_token_address) public onlyByOwnGovCust {
+        master_chef.deposit(farming_pair_pids[lp_token_address], 0);
+    }
+
+    function withdrawLP(address lp_token_address, uint256 lp_token_out) public onlyByOwnGov {
+        master_chef.deposit(farming_pair_pids[lp_token_address], lp_token_out);
+    }
+
+    /* ========== Single Asset Pools ========== */
+
+    // BANANA -> BANANA Single Asset Staking
+
+    function depositBANANA(uint256 amt_in) public onlyByOwnGov {
+        BANANA.approve(address(master_chef), amt_in);
+        master_chef.enterStaking(amt_in);
+    }
+
+    function collectStakingRewards() public onlyByOwnGovCust {
+        master_chef.enterStaking(0);
+    }
+
+    function withdrawStakingBANANA(uint256 amt_out) public onlyByOwnGov {
+        master_chef.leaveStaking(amt_out);
+    }
+
+    /* ========== Transfer Out Rewards ========== */
+    function withdrawRewards(uint256 amt_out) public onlyByOwnGovCust {
+        BANANA.transfer(msg.sender, amt_out);
     }
 
     /* ========== Burns and givebacks ========== */
@@ -416,8 +461,8 @@ contract SpiritSwapLiquidityAMO is Owned {
     }
 
     function giveCollatBack(uint256 collat_amount, bool do_bridging) external onlyByOwnGov {
-        anyCollateral.approve(address(cc_bridge_backer), collat_amount);
-        cc_bridge_backer.receiveBackViaAMO(any_collateral_address, collat_amount, do_bridging);
+        collateral_token.approve(address(cc_bridge_backer), collat_amount);
+        cc_bridge_backer.receiveBackViaAMO(collateral_token_address, collat_amount, do_bridging);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -425,7 +470,7 @@ contract SpiritSwapLiquidityAMO is Owned {
     // Any pairs with FRAX and/or FXS must be whitelisted first before adding liquidity
     function _addTrackedLP(address pair_address) internal {
         // Instantiate the pair
-        IPancakePair the_pair = IPancakePair(pair_address);
+        IApePair the_pair = IApePair(pair_address);
 
         // Make sure either FRAX or FXS is present
         bool frax_present = (the_pair.token0() == canonical_frax_address || the_pair.token1() == canonical_frax_address);
@@ -438,8 +483,20 @@ contract SpiritSwapLiquidityAMO is Owned {
         frax_fxs_pair_addresses_array.push(pair_address);
     }
 
+    // function setBANANAPoolPID(uint256 pid) public onlyByOwnGov {
+    //     banana_pool_pid = pid;
+    // }
+
     function addTrackedLP(address pair_address) public onlyByOwnGov {
         _addTrackedLP(pair_address);
+    }
+
+    function addFarmingPairPID(address pair_address, uint256 pid) public onlyByOwnGov {
+        farming_pair_pids[pair_address] = pid;
+
+        // Verify the pid is correct
+        (address lpToken, , , ) = master_chef.poolInfo(pid);
+        require(lpToken == pair_address, "Wrong pid");
     }
 
     // Remove FRAX and FXS related pairs
@@ -458,7 +515,7 @@ contract SpiritSwapLiquidityAMO is Owned {
     }
 
     function setCCBridgeBacker(address _cc_bridge_backer_address) external onlyByOwnGov {
-        cc_bridge_backer = CrossChainBridgeBacker_FTM_AnySwap(_cc_bridge_backer_address);
+        cc_bridge_backer = CrossChainBridgeBacker_BSC_AnySwap(_cc_bridge_backer_address);
 
         // Get the timelock addresses from the minter
         timelock_address = cc_bridge_backer.timelock_address();

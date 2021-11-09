@@ -9,8 +9,9 @@ pragma solidity >=0.8.0;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================== RariFuseLendingAMO_V2 ========================
+// ======================= MarketXYZLendingAMO ========================
 // ====================================================================
+// Lends FRAX
 // Frax Finance: https://github.com/FraxFinance
 
 // Primary Author(s)
@@ -20,24 +21,22 @@ pragma solidity >=0.8.0;
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
 
-import "../Math/SafeMath.sol";
-import "../Frax/IFrax.sol";
-import "../Frax/IFraxAMOMinter.sol";
-import "../ERC20/ERC20.sol";
-import "../Staking/Owned.sol";
-import '../Uniswap/TransferHelper.sol';
-import "./rari/ICErc20Delegator.sol";
-import "./rari/IRariComptroller.sol";
+import "../../../ERC20/ERC20.sol";
+import "../../../ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol";
+import "../../../Bridges/Polygon/CrossChainBridgeBacker_POLY_MaticBridge.sol";
+import "../../rari/ICErc20Delegator.sol";
+import "../../rari/IRariComptroller.sol";
+import "../../../Staking/Owned.sol";
+import '../../../Uniswap/TransferHelper.sol';
 
-contract RariFuseLendingAMO_V2 is Owned {
-    using SafeMath for uint256;
+contract MarketXYZLendingAMO is Owned {
     // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
 
     // Core
-    IFrax private FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
-    IFraxAMOMinter private amo_minter;
+    CrossChainCanonicalFRAX public canFRAX = CrossChainCanonicalFRAX(0x45c32fA6DF82ead1e2EF74d17b76547EDdFaFF89);
+    CrossChainBridgeBacker_POLY_MaticBridge public cc_bridge_backer;
     address public timelock_address;
     address public custodian_address;
 
@@ -46,35 +45,7 @@ contract RariFuseLendingAMO_V2 is Owned {
     mapping(address => bool) public fuse_pools; // Mapping is also used for faster verification
 
     // Price constants
-    uint256 private constant PRICE_PRECISION = 1e6;
-
-    /* ========== CONSTRUCTOR ========== */
-    
-    constructor (
-        address _owner_address,
-        address[] memory _initial_unitrollers,
-        address[] memory _initial_fuse_pools,
-        address _amo_minter_address
-    ) Owned(_owner_address) {
-        FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
-        amo_minter = IFraxAMOMinter(_amo_minter_address);
-
-        // Set the initial pools and enter markets
-        fuse_pools_array = _initial_fuse_pools;
-        for (uint256 i = 0; i < fuse_pools_array.length; i++){ 
-            // Set the pools as valid
-            fuse_pools[_initial_fuse_pools[i]] = true;
-
-            // Enter markets
-            address[] memory cTokens = new address[](1);
-            cTokens[0] = fuse_pools_array[i];
-            IRariComptroller(_initial_unitrollers[i]).enterMarkets(cTokens);
-        }
-
-        // Get the custodian and timelock addresses from the minter
-        custodian_address = amo_minter.custodian_address();
-        timelock_address = amo_minter.timelock_address();
-    }
+    uint256 public constant PRICE_PRECISION = 1e6;
 
     /* ========== MODIFIERS ========== */
 
@@ -93,28 +64,67 @@ contract RariFuseLendingAMO_V2 is Owned {
         _;
     }
 
+    /* ========== CONSTRUCTOR ========== */
+    
+    constructor (
+        address _owner_address,
+        address[] memory _initial_unitrollers,
+        address[] memory _initial_fuse_pools,
+        address _cc_bridge_backer_address
+    ) Owned(_owner_address) {
+        cc_bridge_backer = CrossChainBridgeBacker_POLY_MaticBridge(_cc_bridge_backer_address);
+
+        // Set the initial pools and enter markets
+        fuse_pools_array = _initial_fuse_pools;
+        for (uint256 i = 0; i < fuse_pools_array.length; i++){ 
+            // Set the pools as valid
+            fuse_pools[_initial_fuse_pools[i]] = true;
+
+            // Enter markets
+            address[] memory cTokens = new address[](1);
+            cTokens[0] = fuse_pools_array[i];
+            IRariComptroller(_initial_unitrollers[i]).enterMarkets(cTokens);
+        }
+
+        // Get the custodian and timelock addresses from the minter
+        timelock_address = cc_bridge_backer.timelock_address();
+    }
+
     /* ========== VIEWS ========== */
 
     function showAllocations() public view returns (uint256[3] memory allocations) {
         // All numbers given are in FRAX unless otherwise stated
-        allocations[0] = FRAX.balanceOf(address(this)); // Unallocated FRAX
+        allocations[0] = canFRAX.balanceOf(address(this)); // Unallocated FRAX
     
         uint256 sum_fuse_pool_tally = 0;
         for (uint i = 0; i < fuse_pools_array.length; i++){ 
             // Make sure the pool is enabled first
             address pool_address = fuse_pools_array[i];
             if (fuse_pools[pool_address]){
-                sum_fuse_pool_tally = sum_fuse_pool_tally.add(fraxInPoolByPoolIdx(i));
+                sum_fuse_pool_tally = sum_fuse_pool_tally + fraxInPoolByPoolIdx(i);
             }
         }
         allocations[1] = sum_fuse_pool_tally;
 
-        allocations[2] = allocations[0].add(allocations[1]); // Total FRAX value
+        allocations[2] = allocations[0] + allocations[1]; // Total FRAX value
+    }
+
+    // Needed by CrossChainBridgeBacker
+    function allDollarBalances() public view returns (
+        uint256 frax_ttl, 
+        uint256 fxs_ttl,
+        uint256 col_ttl, // in native decimals()
+        uint256 ttl_val_usd_e18
+    ) {
+
+        uint256[3] memory allocations = showAllocations();
+
+        return (allocations[2], 0, 0, allocations[2]);
     }
 
     function dollarBalances() public view returns (uint256 frax_val_e18, uint256 collat_val_e18) {
         frax_val_e18 = showAllocations()[2];
-        collat_val_e18 = (frax_val_e18).mul(FRAX.global_collateral_ratio()).div(PRICE_PRECISION);
+        collat_val_e18 = frax_val_e18;
     }
 
     // Helpful for UIs
@@ -139,22 +149,23 @@ contract RariFuseLendingAMO_V2 is Owned {
     function fraxInPoolByPoolIdx(uint256 pool_idx) public view returns (uint256) {
         ICErc20Delegator delegator = ICErc20Delegator(fuse_pools_array[pool_idx]);
         uint256 cToken_bal = delegator.balanceOf(address(this));
-        return cToken_bal.mul(delegator.exchangeRateStored()).div(1e18);
+        return (cToken_bal * delegator.exchangeRateStored()) / 1e18;
     }
 
     function fraxInPoolByPoolAddr(address pool_address) public view returns (uint256) {
         uint256 pool_idx = poolAddrToIdx(pool_address);
         return fraxInPoolByPoolIdx(pool_idx);
     }
-        
-    // Backwards compatibility
-    function mintedBalance() public view returns (int256) {
-        return amo_minter.frax_mint_balances(address(this));
-    }
 
-    // Backwards compatibility
-    function accumulatedProfit() public view returns (int256) {
-        return int256(showAllocations()[2]) - mintedBalance();
+    function borrowed_frax() public view returns (uint256) {
+        return cc_bridge_backer.frax_lent_balances(address(this));
+    }
+    
+    function total_profit() public view returns (int256 profit) {
+        uint256[3] memory allocations = showAllocations();
+
+        // Handle FRAX
+        profit = int256(allocations[2]) - int256(borrowed_frax());
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -173,7 +184,7 @@ contract RariFuseLendingAMO_V2 is Owned {
     // E18
     function lendToPool(address pool_address, uint256 lend_amount) validPool(pool_address) public onlyByOwnGovCust {
         uint256 pool_idx = poolAddrToIdx(pool_address);
-        FRAX.approve(pool_address, lend_amount);
+        canFRAX.approve(pool_address, lend_amount);
         ICErc20Delegator(fuse_pools_array[pool_idx]).mint(lend_amount);
     }
 
@@ -196,14 +207,22 @@ contract RariFuseLendingAMO_V2 is Owned {
 
     /* ========== Burns and givebacks ========== */
 
-    // Burn unneeded or excess FRAX. Goes through the minter
-    function burnFRAX(uint256 frax_amount) public onlyByOwnGovCust {
-        FRAX.approve(address(amo_minter), frax_amount);
-        amo_minter.burnFraxFromAMO(frax_amount);
+    function giveFRAXBack(uint256 frax_amount, bool do_bridging) external onlyByOwnGov {
+        canFRAX.approve(address(cc_bridge_backer), frax_amount);
+        cc_bridge_backer.receiveBackViaAMO(address(canFRAX), frax_amount, do_bridging);
     }
 
-    /* ========== OWNER / GOVERNANCE FUNCTIONS ONLY ========== */
-    // Only owner or timelock can call, to limit risk 
+    /* ========== RESTRICTED FUNCTIONS ========== */
+
+    function setCCBridgeBacker(address _cc_bridge_backer_address) external onlyByOwnGov {
+        cc_bridge_backer = CrossChainBridgeBacker_POLY_MaticBridge(_cc_bridge_backer_address);
+
+        // Get the timelock addresses from the minter
+        timelock_address = cc_bridge_backer.timelock_address();
+
+        // Make sure the new addresse is not address(0)
+        require(timelock_address != address(0), "Invalid timelock");
+    }
 
     // Adds fuse pools 
     function addFusePool(address pool_address) public onlyByOwnGov {
@@ -235,15 +254,9 @@ contract RariFuseLendingAMO_V2 is Owned {
         emit FusePoolRemoved(pool_address);
     }
 
-    function setAMOMinter(address _amo_minter_address) external onlyByOwnGov {
-        amo_minter = IFraxAMOMinter(_amo_minter_address);
-
-        // Get the custodian and timelock addresses from the minter
-        custodian_address = amo_minter.custodian_address();
-        timelock_address = amo_minter.timelock_address();
-
-        // Make sure the new addresses are not address(0)
-        require(custodian_address != address(0) && timelock_address != address(0), "Invalid custodian or timelock");
+    function setCustodian(address _custodian_address) external onlyByOwnGov {
+        require(_custodian_address != address(0), "Zero address detected");
+        custodian_address = _custodian_address;
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {
@@ -260,9 +273,8 @@ contract RariFuseLendingAMO_V2 is Owned {
         return (success, result);
     }
 
-    /* ========== EVENTS ========== */
+        /* ========== EVENTS ========== */
 
     event FusePoolAdded(address token);
     event FusePoolRemoved(address token);
-    event Recovered(address token, uint256 amount);
 }

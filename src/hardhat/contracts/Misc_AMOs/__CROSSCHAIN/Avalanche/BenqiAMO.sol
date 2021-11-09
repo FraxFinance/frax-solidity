@@ -146,7 +146,7 @@ contract BenqiAMO is Owned {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function setAMOMinter(address _cc_bridge_backer_address) external onlyByOwnGov {
+    function setCCBridgeBacker(address _cc_bridge_backer_address) external onlyByOwnGov {
         cc_bridge_backer = CrossChainBridgeBacker_AVAX_AnySwap(_cc_bridge_backer_address);
 
         // Get the timelock addresses from the minter

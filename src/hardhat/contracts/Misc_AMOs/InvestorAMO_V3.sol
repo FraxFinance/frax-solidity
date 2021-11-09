@@ -31,7 +31,7 @@ import "./aave/IAAVELendingPool_Partial.sol";
 import "./aave/IAAVE_aUSDC_Partial.sol";
 import "./aave/IStakedAave.sol";
 import "./aave/IAaveIncentivesControllerPartial.sol";
-import "./compound/ICompComptrollerPartial.sol";
+import "./compound/IComptroller.sol";
 import "./compound/IcUSDC_Partial.sol";
 import "../Staking/Owned.sol";
 import '../Uniswap/TransferHelper.sol';
@@ -57,7 +57,7 @@ contract InvestorAMO_V3 is Owned {
     Comp private COMP;
     ERC20 private AAVE;
     IStakedAave private stkAAVE;
-    ICompComptrollerPartial private CompController;
+    IComptroller private CompController;
     IAaveIncentivesControllerPartial private AAVEIncentivesController;
 
     address private constant collateral_address = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -111,7 +111,7 @@ contract InvestorAMO_V3 is Owned {
         COMP = Comp(0xc00e94Cb662C3520282E6f5717214004A7f26888);
         AAVE = ERC20(0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9);
         stkAAVE = IStakedAave(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
-        CompController = ICompComptrollerPartial(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+        CompController = IComptroller(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
         AAVEIncentivesController = IAaveIncentivesControllerPartial(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5);
         amo_minter = IFraxAMOMinter(_amo_minter_address);
 
