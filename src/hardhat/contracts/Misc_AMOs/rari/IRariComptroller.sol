@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.6.11;
 
-interface IComptroller {
+interface IRariComptroller {
   function _become(address unitroller) external;
   function _borrowGuardianPaused() external view returns(bool);
   function _mintGuardianPaused() external view returns(bool);

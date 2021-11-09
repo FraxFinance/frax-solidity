@@ -21,16 +21,17 @@ pragma solidity >=0.8.0;
 // Sam Kazemian: https://github.com/samkazemian
 
 import "../Math/SafeMath.sol";
-import "../FXS/FXS.sol";
+import "../FXS/IFxs.sol";
 import "../ERC20/ERC20.sol";
-import "../Frax/Frax.sol";
+import "../Frax/IFrax.sol";
 import "../Frax/IFraxAMOMinter.sol";
+import "../Frax/Pools/FraxPoolV3.sol";
 import "../Oracle/UniswapPairOracle.sol";
 import '../Uniswap/TransferHelper.sol';
-import '../Misc_AMOs/InvestorAMO_V3.sol';
 import '../Uniswap/Interfaces/IUniswapV2Router02.sol';
 import "../Proxy/Initializable.sol";
 import "../Staking/Owned.sol";
+import "../Staking/veFXSYieldDistributorV4.sol";
 
 contract FXS1559_AMO_V3 is Owned {
     using SafeMath for uint256;
@@ -39,21 +40,19 @@ contract FXS1559_AMO_V3 is Owned {
     /* ========== STATE VARIABLES ========== */
 
     ERC20 private collateral_token;
-    FRAXStablecoin private FRAX;
-    FRAXShares private FXS;
-    InvestorAMO_V3 private InvestorAMO;
+    IFrax private FRAX;
+    IFxs private FXS;
     IUniswapV2Router02 private UniRouterV2;
-    IFraxAMOMinter private amo_minter;
+    IFraxAMOMinter public amo_minter;
+    FraxPoolV3 public pool = FraxPoolV3(0x2fE065e6FFEf9ac95ab39E5042744d695F560729);
+    veFXSYieldDistributorV4 public yieldDistributor;
     
     address private constant collateral_address = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public timelock_address;
     address public custodian_address;
     address private constant frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
     address private constant fxs_address = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
-    address public yield_distributor_address;
     address payable public constant UNISWAP_ROUTER_ADDRESS = payable(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-    address private constant investor_amo_address = 0xEE5825d5185a1D512706f9068E69146A54B6e076;
-    address private constant investor_amo_v2_address = 0xB8315Af919729c823B2d996B1A6DDE381E7444f1;
     address public amo_minter_address;
 
     uint256 private missing_decimals;
@@ -64,7 +63,7 @@ contract FXS1559_AMO_V3 is Owned {
     uint256 public max_slippage;
 
     // Burned vs given to yield distributor
-    uint256 burn_fraction; // E6. Fraction of FXS burned vs transferred to the yield distributor
+    uint256 public burn_fraction; // E6. Fraction of FXS burned vs transferred to the yield distributor
 
     /* ========== CONSTRUCTOR ========== */
     
@@ -74,19 +73,18 @@ contract FXS1559_AMO_V3 is Owned {
         address _amo_minter_address
     ) Owned(_owner_address) {
         owner = _owner_address;
-        FRAX = FRAXStablecoin(frax_address);
-        FXS = FRAXShares(fxs_address);
+        FRAX = IFrax(frax_address);
+        FXS = IFxs(fxs_address);
         collateral_token = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-        InvestorAMO = InvestorAMO_V3(investor_amo_v2_address);
         missing_decimals = uint(18).sub(collateral_token.decimals());
-        yield_distributor_address = _yield_distributor_address;
+        yieldDistributor = veFXSYieldDistributorV4(_yield_distributor_address);
         
         // Initializations
         UniRouterV2 = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         amo_minter = IFraxAMOMinter(_amo_minter_address);
 
         max_slippage = 50000; // 5%
-        burn_fraction = 500000;
+        burn_fraction = 0; // Give all to veFXS initially
 
         // Get the custodian and timelock addresses from the minter
         custodian_address = amo_minter.custodian_address();
@@ -112,43 +110,16 @@ contract FXS1559_AMO_V3 is Owned {
 
     /* ========== VIEWS ========== */
 
-    function cr_info() public view returns (
-            uint256 effective_collateral_ratio, 
-            uint256 global_collateral_ratio, 
-            uint256 excess_collateral_e18,
-            uint256 frax_mintable
-    ) {
-        global_collateral_ratio = FRAX.global_collateral_ratio();
-
-        uint256 frax_total_supply = FRAX.totalSupply();
-        uint256 global_collat_value = FRAX.globalCollateralValue();
-        effective_collateral_ratio = global_collat_value.mul(1e6).div(frax_total_supply); //returns it in 1e6
-
-        // Same as availableExcessCollatDV() in FraxPool
-        if (global_collateral_ratio > COLLATERAL_RATIO_PRECISION) global_collateral_ratio = COLLATERAL_RATIO_PRECISION; // Handles an overcollateralized contract with CR > 1
-        uint256 required_collat_dollar_value_d18 = (frax_total_supply.mul(global_collateral_ratio)).div(COLLATERAL_RATIO_PRECISION); // Calculates collateral needed to back each 1 FRAX with $1 of collateral at current collat ratio
-        if (global_collat_value > required_collat_dollar_value_d18) {
-            excess_collateral_e18 = global_collat_value.sub(required_collat_dollar_value_d18);
-            frax_mintable = excess_collateral_e18.mul(COLLATERAL_RATIO_PRECISION).div(global_collateral_ratio);
-        }
-        else {
-            excess_collateral_e18 = 0;
-            frax_mintable = 0;
-        }
-    }
-
-    /* ========== PUBLIC FUNCTIONS ========== */
-
     function dollarBalances() public view returns (uint256 frax_val_e18, uint256 collat_val_e18) {
-        frax_val_e18 = 1e18;
-        collat_val_e18 = 1e18;
+        frax_val_e18 = FRAX.balanceOf(address(this));
+        collat_val_e18 = frax_val_e18.mul(COLLATERAL_RATIO_PRECISION).div(FRAX.global_collateral_ratio());
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     function _swapFRAXforFXS(uint256 frax_amount) internal returns (uint256 frax_spent, uint256 fxs_received) {
         // Get the FXS price
-        uint256 fxs_price = FRAX.fxs_price();
+        uint256 fxs_price = pool.getFXSPrice(); 
 
         // Approve the FRAX for the router
         FRAX.approve(UNISWAP_ROUTER_ADDRESS, frax_amount);
@@ -173,13 +144,14 @@ contract FXS1559_AMO_V3 is Owned {
 
 
     // Burn unneeded or excess FRAX
-    function swapBurn(uint256 override_USDC_amount, bool use_override) public onlyByOwnGov {
+    function swapBurn(uint256 override_frax_amount, bool use_override) public onlyByOwnGov {
         uint256 mintable_frax;
         if (use_override){
-            mintable_frax = override_USDC_amount.mul(10 ** missing_decimals).mul(COLLATERAL_RATIO_PRECISION).div(FRAX.global_collateral_ratio());
+            // mintable_frax = override_USDC_amount.mul(10 ** missing_decimals).mul(COLLATERAL_RATIO_PRECISION).div(FRAX.global_collateral_ratio());
+            mintable_frax = override_frax_amount;
         }
         else {
-            (, , , mintable_frax) = cr_info();
+            mintable_frax = pool.buybackAvailableCollat();
         }
 
         (, uint256 fxs_received ) = _swapFRAXforFXS(mintable_frax);
@@ -192,7 +164,8 @@ contract FXS1559_AMO_V3 is Owned {
         burnFXS(amt_to_burn);
 
         // Give the rest to the yield distributor
-        TransferHelper.safeTransfer(address(FXS), yield_distributor_address, amt_to_yield_distributor);
+        FXS.approve(address(yieldDistributor), amt_to_yield_distributor);
+        yieldDistributor.notifyRewardAmount(amt_to_yield_distributor);
     }
 
     /* ========== Burns and givebacks ========== */
@@ -215,6 +188,10 @@ contract FXS1559_AMO_V3 is Owned {
         burn_fraction = _burn_fraction;
     }
 
+    function setFraxPool(address _frax_pool_address) external onlyByOwnGov {
+        pool = FraxPoolV3(_frax_pool_address);
+    }
+
     function setAMOMinter(address _amo_minter_address) external onlyByOwnGov {
         amo_minter = IFraxAMOMinter(_amo_minter_address);
 
@@ -230,7 +207,7 @@ contract FXS1559_AMO_V3 is Owned {
     }
 
     function setYieldDistributor(address _yield_distributor_address) external onlyByOwnGov {
-        yield_distributor_address = _yield_distributor_address;
+        yieldDistributor = veFXSYieldDistributorV4(_yield_distributor_address);
     }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyByOwnGov {

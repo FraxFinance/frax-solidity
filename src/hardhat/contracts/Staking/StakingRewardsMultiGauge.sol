@@ -44,18 +44,20 @@ import '../Uniswap/TransferHelper.sol';
 
 // -------------------- VARIES --------------------
 
+// G-UNI
+import "../Misc_AMOs/gelato/IGUniPool.sol";
+
 // mStable
 // import '../Misc_AMOs/mstable/IFeederPool.sol';
 
-// StakeDAO
+// StakeDAO sdETH-FraxPut
+import '../Misc_AMOs/stakedao/IOpynPerpVault.sol';
+
+// StakeDAO Vault
 // import '../Misc_AMOs/stakedao/IStakeDaoVault.sol';
-// import '../Curve/IMetaImplementationUSD.sol';
 
 // Uniswap V2
 // import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
-
-// G-UNI
-import "../Misc_AMOs/gelato/IGUniPool.sol";
 
 // ------------------------------------------------
 
@@ -76,18 +78,21 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     IveFXS private veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
 
     // -------------------- VARIES --------------------
+
+    // G-UNI
+    // IGUniPool public stakingToken;
     
     // mStable
     // IFeederPool public stakingToken;
 
+    // sdETH-FraxPut Vault
+    IOpynPerpVault public stakingToken;
+
     // StakeDAO Vault
     // IStakeDaoVault public stakingToken;
-    
+
     // Uniswap V2
     // IUniswapV2Pair public stakingToken;
-
-    // G-UNI
-    IGUniPool public stakingToken;
 
     // ------------------------------------------------
 
@@ -212,10 +217,18 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
     ) Owned(_owner){
 
         // -------------------- VARIES --------------------
+        // G-UNI
+        // stakingToken = IGUniPool(_stakingToken);
+        // address token0 = address(stakingToken.token0());
+        // frax_is_token0 = token0 == frax_address;
+
         // mStable
         // stakingToken = IFeederPool(_stakingToken);
 
-        // StakeDAO
+        // StakeDAO sdETH-FraxPut Vault
+        stakingToken = IOpynPerpVault(_stakingToken);
+
+        // StakeDAO Vault
         // stakingToken = IStakeDaoVault(_stakingToken);
 
         // Uniswap V2
@@ -223,11 +236,6 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         // address token0 = stakingToken.token0();
         // if (token0 == frax_address) frax_is_token0 = true;
         // else frax_is_token0 = false;
-
-        // G-UNI
-        stakingToken = IGUniPool(_stakingToken);
-        address token0 = address(stakingToken.token0());
-        frax_is_token0 = token0 == frax_address;
         // ------------------------------------------------
 
         rewards_distributor = IFraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
@@ -290,8 +298,44 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
-        // // Uniswap V2
-        // // ============================================
+        // G-UNI
+        // ============================================
+        // {
+        //     (uint256 reserve0, uint256 reserve1) = stakingToken.getUnderlyingBalances();
+        //     uint256 total_frax_reserves = frax_is_token0 ? reserve0 : reserve1;
+
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        // }
+
+        // mStable
+        // ============================================
+        // {
+        //     uint256 total_frax_reserves;
+        //     (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
+        //     total_frax_reserves = uint256(vaultData.vaultBalance);
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        // }
+
+        // StakeDAO sdETH-FraxPut Vault
+        // ============================================
+        {
+           uint256 frax3crv_held = stakingToken.totalUnderlyingControlled();
+        
+           // Optimistically assume 50/50 FRAX/3CRV ratio in the metapool to save gas
+           frax_per_lp_token = (frax3crv_held.mul(1e18).div(stakingToken.totalSupply())) / 2;
+        }
+
+        // StakeDAO Vault
+        // ============================================
+        // {
+        //    uint256 frax3crv_held = stakingToken.balance();
+        // 
+        //    // Optimistically assume 50/50 FRAX/3CRV ratio in the metapool to save gas
+        //    frax_per_lp_token = (frax3crv_held.mul(1e18).div(stakingToken.totalSupply())) / 2;
+        // }
+
+        // Uniswap V2
+        // ============================================
         // {
         //     uint256 total_frax_reserves;
         //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
@@ -300,32 +344,6 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
 
         //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
         // }
-
-        // // mStable
-        // // ============================================
-        // {
-        //     uint256 total_frax_reserves;
-        //     (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
-        //     total_frax_reserves = uint256(vaultData.vaultBalance);
-        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
-        // }
-
-        // StakeDAO
-        // ============================================
-        // {
-        //    uint256 frax3crv_held = stakingToken.balance();
-        // 
-        //    // Optimistically assume 50/50 FRAX/3CRV ratio in the metapool to save gas
-        //    frax_per_lp_token = frax3crv_held.mul(1e18).div(stakingToken.totalSupply()) / 2;
-        // }
-
-        // G-UNI
-        {
-            (uint256 reserve0, uint256 reserve1) = stakingToken.getUnderlyingBalances();
-            uint256 total_frax_reserves = frax_is_token0 ? reserve0 : reserve1;
-
-            frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
-        }
 
         return frax_per_lp_token;
     }

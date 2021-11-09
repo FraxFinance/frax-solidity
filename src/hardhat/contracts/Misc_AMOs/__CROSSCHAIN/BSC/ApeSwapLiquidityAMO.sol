@@ -9,7 +9,7 @@ pragma solidity >=0.8.0;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ============================ ApeSwapLiquidityAMO ============================
+// ======================== ApeSwapLiquidityAMO =======================
 // ====================================================================
 // Provides Uniswap V2-style liquidity
 // Frax Finance: https://github.com/FraxFinance
@@ -454,7 +454,7 @@ contract ApeSwapLiquidityAMO is Owned {
         }
     }
 
-    function setAMOMinter(address _cc_bridge_backer_address) external onlyByOwnGov {
+    function setCCBridgeBacker(address _cc_bridge_backer_address) external onlyByOwnGov {
         cc_bridge_backer = CrossChainBridgeBacker_BSC_AnySwap(_cc_bridge_backer_address);
 
         // Get the timelock addresses from the minter

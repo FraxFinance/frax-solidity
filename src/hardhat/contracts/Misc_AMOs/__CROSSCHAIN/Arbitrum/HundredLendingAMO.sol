@@ -9,7 +9,7 @@ pragma solidity >=0.8.0;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ============================ ScreamAMO =============================
+// ========================= HundredLendingAMO ========================
 // ====================================================================
 // Lends FRAX
 // Frax Finance: https://github.com/FraxFinance
@@ -23,37 +23,33 @@ pragma solidity >=0.8.0;
 
 import "../../../ERC20/ERC20.sol";
 import "../../../ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol";
-import "../../../Bridges/Fantom/CrossChainBridgeBacker_FTM_AnySwap.sol";
+import "../../../Bridges/Arbitrum/CrossChainBridgeBacker_ARBI_AnySwap.sol";
 import "../../rari/ICErc20Delegator.sol";
-import "../../scream/IScreamComptroller.sol";
-import "../../scream/ISCREAM.sol";
-import "../../scream/IxSCREAM.sol";
+import "../../compound/IComptroller.sol";
+import "../../hundred/IHundred.sol";
 import "../../../Staking/Owned.sol";
 import '../../../Uniswap/TransferHelper.sol';
 
-contract ScreamAMO is Owned {
+contract HundredLendingAMO is Owned {
     // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
 
     // Core
     CrossChainCanonicalFRAX public canFRAX;
-    CrossChainBridgeBacker_FTM_AnySwap public cc_bridge_backer;
+    CrossChainBridgeBacker_ARBI_AnySwap public cc_bridge_backer;
     address public timelock_address;
     address public custodian_address;
 
     // Pools and vaults
-    IScreamComptroller public CompController = IScreamComptroller(0x260E596DAbE3AFc463e75B6CC05d8c46aCAcFB09);
-    ICErc20Delegator public scFRAX;
+    IComptroller public comptroller = IComptroller(0x0F390559F258eB8591C8e31Cf0905E97cf36ACE2);
+    ICErc20Delegator public hFRAX = ICErc20Delegator(address(0));
 
     // Reward Tokens
-    ISCREAM public SCREAM = ISCREAM(0xe0654C8e6fd4D733349ac7E09f6f23DA256bF475);
-    IxSCREAM public xSCREAM = IxSCREAM(0xe3D17C7e840ec140a7A51ACA351a482231760824);
+    IHundred public HND = IHundred(0x10010078a54396F62c96dF8532dc2B4847d47ED3);
     
     // Constants
     uint256 public missing_decimals;
-    uint256 private PRICE_PRECISION = 1e6;
-    uint256 public MAX_UINT256 = type(uint256).max;
 
     /* ========== MODIFIERS ========== */
 
@@ -73,16 +69,14 @@ contract ScreamAMO is Owned {
         address _owner_address,
         address _custodian_address,
         address _canonical_frax_address,
-        address _scfrax_address,
         address _cc_bridge_backer_address
     ) Owned(_owner_address) {
         // Core
         canFRAX = CrossChainCanonicalFRAX(_canonical_frax_address);
-        scFRAX = ICErc20Delegator(_scfrax_address);
-        cc_bridge_backer = CrossChainBridgeBacker_FTM_AnySwap(_cc_bridge_backer_address);
+        cc_bridge_backer = CrossChainBridgeBacker_ARBI_AnySwap(_cc_bridge_backer_address);
 
         // Missing decimals
-        missing_decimals = uint(18) - scFRAX.decimals();
+        missing_decimals = uint(18) - hFRAX.decimals();
 
         // Set the custodian
         custodian_address = _custodian_address;
@@ -94,17 +88,17 @@ contract ScreamAMO is Owned {
     /* ========== VIEWS ========== */
 
     function showAllocations() public view returns (uint256[5] memory allocations) {
-        // FRAX and scFRAX
+        // FRAX and hFRAX
         allocations[0] = canFRAX.balanceOf(address(this)); // Free FRAX
-        allocations[1] = scFRAX.balanceOf(address(this)); // Free scFRAX, E8
-        allocations[2] = allocations[1] * (10 ** missing_decimals); // Free scFRAX, E18
-        allocations[3] = (allocations[2] * scFRAX.exchangeRateStored()) / (10 ** (18 + missing_decimals)); // scFRAX USD value, E18
+        allocations[1] = hFRAX.balanceOf(address(this)); // Free hFRAX, E8
+        allocations[2] = allocations[1] * (10 ** missing_decimals); // Free hFRAX, E18
+        allocations[3] = (allocations[2] * hFRAX.exchangeRateStored()) / (10 ** (18 + missing_decimals)); // hFRAX USD value, E18
         allocations[4] = allocations[0] + allocations[3]; // USD Value, E18
     }
 
     function showTokenBalances() public view returns (uint256[2] memory tkn_bals) {
         tkn_bals[0] = canFRAX.balanceOf(address(this)); // FRAX
-        tkn_bals[1] = scFRAX.balanceOf(address(this)); // scFRAX
+        tkn_bals[1] = hFRAX.balanceOf(address(this)); // hFRAX
     }
 
     // Needed by CrossChainBridgeBacker
@@ -120,16 +114,12 @@ contract ScreamAMO is Owned {
     }
 
     function showRewards() external view returns (uint256[5] memory rewards) {
-        // SCREAM
-        rewards[0] = SCREAM.balanceOf(address(this)); // Free SCREAM
-        rewards[1] = CompController.compAccrued(address(this)); // Unclaimed SCREAM
+        // HND
+        rewards[0] = HND.balanceOf(address(this)); // Free HND
+        rewards[1] = comptroller.compAccrued(address(this)); // Unclaimed HND
 
-        // xSCREAM
-        rewards[2] = xSCREAM.balanceOf(address(this)); // Free xSCREAM
-        rewards[3] = (rewards[2] * xSCREAM.getShareValue()) / 1e18; // SCREAM value of xSCREAM
-
-        // Total SCREAM equivalents
-        rewards[4] = rewards[0] + rewards[1] + rewards[3];
+        // Total HND equivalents
+        rewards[2] = rewards[0] + rewards[1];
     }
 
     function dollarBalances() public view returns (uint256 frax_val_e18, uint256 collat_val_e18) {
@@ -148,47 +138,31 @@ contract ScreamAMO is Owned {
         profit = int256(allocations[4]) - int256(borrowed_frax());
     }
 
-    /* ========== scFRAX ========== */
+    /* ========== hFRAX ========== */
 
     function depositFRAX(uint256 frax_amount) public onlyByOwnGovCust {
-        canFRAX.approve(address(scFRAX), frax_amount);
-        scFRAX.mint(frax_amount);
+        canFRAX.approve(address(hFRAX), frax_amount);
+        hFRAX.mint(frax_amount);
     }
 
-    function redeem_scFRAX(uint256 scFRAX_amount_e8) public onlyByOwnGovCust {
-        // NOTE that scFRAX is E8, NOT E6
-        scFRAX.redeem(scFRAX_amount_e8);
+    function redeem_hFRAX(uint256 hFRAX_amount_e8) public onlyByOwnGovCust {
+        // NOTE that hFRAX is E8, NOT E6
+        hFRAX.redeem(hFRAX_amount_e8);
     }
 
-    function redeemUnderlying_scFRAX(uint256 frax_amount_e18) public onlyByOwnGovCust {
-        // Same as redeem(), but input is FRAX, not scFRAX
-        scFRAX.redeemUnderlying(frax_amount_e18);
-    }
-
-    /* ========== SCREAM staking (xSCREAM) ========== */
-
-    // SCREAM -> xSCREAM
-    // Stake SCREAM for xSCREAM
-    function stakeSCREAM(uint256 scream_amount) public onlyByOwnGovCust {
-        SCREAM.approve(address(xSCREAM), scream_amount);
-        xSCREAM.deposit(scream_amount);
-    }
-
-    // xSCREAM -> SCREAM
-    // Unstake xSCREAM for SCREAM
-    function unstakeXSCREAM(uint256 xscream_amount) public onlyByOwnGovCust {
-        xSCREAM.withdraw(xscream_amount);
+    function redeemUnderlying_hFRAX(uint256 frax_amount_e18) public onlyByOwnGovCust {
+        // Same as redeem(), but input is FRAX, not hFRAX
+        hFRAX.redeemUnderlying(frax_amount_e18);
     }
 
     /* ========== Rewards ========== */
 
-    function collectSCREAM() public onlyByOwnGovCust {
-        CompController.claimComp(address(this));
+    function collectHND() public onlyByOwnGovCust {
+        comptroller.claimComp(address(this));
     }
 
     function withdrawRewards() public onlyByOwnGovCust {
-        SCREAM.transfer(msg.sender, SCREAM.balanceOf(address(this)));
-        xSCREAM.transfer(msg.sender, xSCREAM.balanceOf(address(this)));
+        HND.transfer(msg.sender, HND.balanceOf(address(this)));
     }
 
     /* ========== Burns and givebacks ========== */
@@ -202,7 +176,7 @@ contract ScreamAMO is Owned {
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     function setCCBridgeBacker(address _cc_bridge_backer_address) external onlyByOwnGov {
-        cc_bridge_backer = CrossChainBridgeBacker_FTM_AnySwap(_cc_bridge_backer_address);
+        cc_bridge_backer = CrossChainBridgeBacker_ARBI_AnySwap(_cc_bridge_backer_address);
 
         // Get the timelock addresses from the minter
         timelock_address = cc_bridge_backer.timelock_address();

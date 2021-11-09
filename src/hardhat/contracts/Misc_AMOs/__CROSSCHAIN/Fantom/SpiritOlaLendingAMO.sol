@@ -25,7 +25,7 @@ import "../../../ERC20/ERC20.sol";
 import "../../../ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol";
 import "../../../Bridges/Fantom/CrossChainBridgeBacker_FTM_AnySwap.sol";
 import "../../rari/ICErc20Delegator.sol";
-import "../../scream/IScreamComptroller.sol";
+import "../../spiritswap/IRainMaker.sol";
 import "../../spiritswap/ISpirit.sol";
 import "../../../Staking/Owned.sol";
 import '../../../Uniswap/TransferHelper.sol';
@@ -42,16 +42,14 @@ contract SpiritOlaLendingAMO is Owned {
     address public custodian_address;
 
     // Pools and vaults
-    IScreamComptroller public CompController = IScreamComptroller(0x260E596DAbE3AFc463e75B6CC05d8c46aCAcFB09);
-    ICErc20Delegator public oFRAX;
+    IRainMaker public RainMaker = IRainMaker(0x0f77A0b80C781500d34aa013570e1206b8710bD7);
+    ICErc20Delegator public oFRAX = ICErc20Delegator(0x88c05534566f3bD6b6D704c9259408fF1F1a3F00);
 
     // Reward Tokens
     ISpirit public SPIRIT = ISpirit(0x5Cc61A78F164885776AA610fb0FE1257df78E59B);
     
     // Constants
     uint256 public missing_decimals;
-    uint256 private PRICE_PRECISION = 1e6;
-    uint256 public MAX_UINT256 = type(uint256).max;
 
     /* ========== MODIFIERS ========== */
 
@@ -71,12 +69,10 @@ contract SpiritOlaLendingAMO is Owned {
         address _owner_address,
         address _custodian_address,
         address _canonical_frax_address,
-        address _ofrax_address,
         address _cc_bridge_backer_address
     ) Owned(_owner_address) {
         // Core
         canFRAX = CrossChainCanonicalFRAX(_canonical_frax_address);
-        oFRAX = ICErc20Delegator(_ofrax_address);
         cc_bridge_backer = CrossChainBridgeBacker_FTM_AnySwap(_cc_bridge_backer_address);
 
         // Missing decimals
@@ -120,8 +116,7 @@ contract SpiritOlaLendingAMO is Owned {
     function showRewards() external view returns (uint256[5] memory rewards) {
         // SPIRIT
         rewards[0] = SPIRIT.balanceOf(address(this)); // Free SPIRIT
-        rewards[1] = CompController.compAccrued(address(this)); // Unclaimed SPIRIT
-
+        rewards[1] = RainMaker.compAccrued(address(this)); // Unclaimed SPIRIT
 
         // Total SPIRIT equivalents
         rewards[2] = rewards[0] + rewards[1];
@@ -160,12 +155,10 @@ contract SpiritOlaLendingAMO is Owned {
         oFRAX.redeemUnderlying(frax_amount_e18);
     }
 
-    /* ========== SPIRIT staking (inSPIRIT) ========== */
-
     /* ========== Rewards ========== */
 
     function collectSPIRIT() public onlyByOwnGovCust {
-        CompController.claimComp(address(this));
+        RainMaker.claimComp(address(this));
     }
 
     function withdrawRewards() public onlyByOwnGovCust {
@@ -182,7 +175,7 @@ contract SpiritOlaLendingAMO is Owned {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function setAMOMinter(address _cc_bridge_backer_address) external onlyByOwnGov {
+    function setCCBridgeBacker(address _cc_bridge_backer_address) external onlyByOwnGov {
         cc_bridge_backer = CrossChainBridgeBacker_FTM_AnySwap(_cc_bridge_backer_address);
 
         // Get the timelock addresses from the minter

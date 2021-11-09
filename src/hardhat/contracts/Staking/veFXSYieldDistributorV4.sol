@@ -24,7 +24,7 @@ pragma solidity >=0.8.0;
 // Sam Kazemian: https://github.com/samkazemian
 
 // Originally inspired by Synthetix.io, but heavily modified by the Frax team (veFXS portion)
-// https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingYield.sol
+// https://github.com/Synthetixio/synthetix/blob/develop/contracts/StakingRewards.sol
 
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
@@ -59,6 +59,7 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
     uint256 public lastUpdateTime;
     uint256 public yieldRate;
     uint256 public yieldDuration = 604800; // 7 * 86400  (7 days)
+    mapping(address => bool) public reward_notifiers;
 
     // Yield tracking
     uint256 public yieldPerVeFXSStored = 0;
@@ -116,8 +117,7 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
         lastUpdateTime = block.timestamp;
         timelock_address = _timelock_address;
 
-        // 1 FXS a day at initialization
-        yieldRate = (uint256(365e18)).div(365 * 86400);
+        reward_notifiers[_owner] = true;
     }
 
     /* ========== VIEWS ========== */
@@ -286,45 +286,39 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
         lastRewardClaimTime[msg.sender] = block.timestamp;
     }
 
-    // If the period expired, renew it
-    function retroCatchUp() internal {
-        // Failsafe check
-        require(block.timestamp > periodFinish, "Period has not expired yet!");
-
-        // Ensure the provided yield amount is not more than the balance in the contract.
-        // This keeps the yield rate in the right range, preventing overflows due to
-        // very high values of yieldRate in the earned and yieldPerToken functions;
-        // Yield + leftover must be less than 2^256 / 10^18 to avoid overflow.
-        uint256 num_periods_elapsed = uint256(block.timestamp.sub(periodFinish)) / yieldDuration; // Floor division to the nearest period
-        uint256 balance0 = emittedToken.balanceOf(address(this));
-        require(
-            yieldRate.mul(yieldDuration).mul(num_periods_elapsed + 1) <=
-                balance0,
-            "Not enough emittedToken available for yield distribution!"
-        );
-
-        periodFinish = periodFinish.add(
-            (num_periods_elapsed.add(1)).mul(yieldDuration)
-        );
-
-        uint256 yield0 = yieldPerVeFXS();
-        yieldPerVeFXSStored = yield0;
-        lastUpdateTime = lastTimeYieldApplicable();
-
-        emit YieldPeriodRenewed(emitted_token_address, yieldRate);
-    }
 
     function sync() public {
         // Update the total veFXS supply
+        yieldPerVeFXSStored = yieldPerVeFXS();
         totalVeFXSSupplyStored = veFXS.totalSupply();
+        lastUpdateTime = lastTimeYieldApplicable();
+    }
 
-        if (block.timestamp > periodFinish) {
-            retroCatchUp();
+    function notifyRewardAmount(uint256 amount) external {
+        // Only whitelisted addresses can notify rewards
+        require(reward_notifiers[msg.sender], "Sender not whitelisted");
+
+        // Handle the transfer of emission tokens via `transferFrom` to reduce the number
+        // of transactions required and ensure correctness of the smission amount
+        emittedToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        // Update some values beforehand
+        sync();
+
+        // Update the new yieldRate
+        if (block.timestamp >= periodFinish) {
+            yieldRate = amount.div(yieldDuration);
         } else {
-            uint256 yield0 = yieldPerVeFXS();
-            yieldPerVeFXSStored = yield0;
-            lastUpdateTime = lastTimeYieldApplicable();
+            uint256 remaining = periodFinish.sub(block.timestamp);
+            uint256 leftover = remaining.mul(yieldRate);
+            yieldRate = amount.add(leftover).div(yieldDuration);
         }
+        
+        // Update duration-related info
+        lastUpdateTime = block.timestamp;
+        periodFinish = block.timestamp.add(yieldDuration);
+
+        emit RewardAdded(amount, yieldRate);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -342,17 +336,13 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
         emit YieldDurationUpdated(yieldDuration);
     }
 
-    function initializeDefault() external onlyByOwnGov {
-        lastUpdateTime = block.timestamp;
-        periodFinish = block.timestamp.add(yieldDuration);
-        totalVeFXSSupplyStored = veFXS.totalSupply();
-        emit DefaultInitialization();
-    }
-
     function greylistAddress(address _address) external onlyByOwnGov {
         greylist[_address] = !(greylist[_address]);
     }
 
+    function toggleRewardNotifier(address notifier_addr) external onlyByOwnGov {
+        reward_notifiers[notifier_addr] = !reward_notifiers[notifier_addr];
+    }
 
     function setPauses(bool _yieldCollectionPaused) external onlyByOwnGov {
         yieldCollectionPaused = _yieldCollectionPaused;
@@ -372,6 +362,8 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
 
     /* ========== EVENTS ========== */
 
+    event RewardAdded(uint256 reward, uint256 yieldRate);
+    event OldYieldCollected(address indexed user, uint256 yield, address token_address);
     event YieldCollected(address indexed user, uint256 yield, address token_address);
     event YieldDurationUpdated(uint256 newDuration);
     event RecoveredERC20(address token, uint256 amount);
