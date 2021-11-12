@@ -24,26 +24,27 @@ pragma experimental ABIEncoderV2;
 // Sam Kazemian: https://github.com/samkazemian
 // Travis Moore: https://github.com/FortisFortuna
 
-import "../Frax/Frax.sol";
-import "../Frax/Pools/FraxPool.sol";
-import "../Frax/IFraxAMOMinter.sol";
-import "../FXS/FXS.sol";
-import "../Math/Math.sol";
-import "../Math/SafeMath.sol";
-import "../ERC20/ERC20.sol";
-import "../ERC20/SafeERC20.sol";
-import '../Uniswap/TransferHelper.sol';
-import "../Staking/Owned.sol";
+import "./Frax/Frax.sol";
+import "./Frax/Pools/FraxPool.sol";
+import "./Frax/IFraxAMOMinter.sol";
+import "./FXS/FXS.sol";
+import "./Math/Math.sol";
+import "./Math/SafeMath.sol";
+import "./ERC20/ERC20.sol";
+import "./ERC20/SafeERC20.sol";
+import './Uniswap/TransferHelper.sol';
+import "./Staking/Owned.sol";
 
-import "../Uniswap_V3/IUniswapV3Factory.sol";
-import "../Uniswap_V3/libraries/TickMath.sol";
-import "../Uniswap_V3/libraries/LiquidityAmounts.sol";
-import "../Uniswap_V3/periphery/interfaces/INonfungiblePositionManager.sol";
-import "../Uniswap_V3/IUniswapV3Pool.sol";
-import "../Uniswap_V3/ISwapRouter.sol";
+import "./Uniswap_V3/IUniswapV3Factory.sol";
+import "./Uniswap_V3/libraries/TickMath.sol";
+import "./Uniswap_V3/libraries/LiquidityAmounts.sol";
+import "./Uniswap_V3/periphery/interfaces/INonfungiblePositionManager.sol";
+import "./Uniswap_V3/IUniswapV3Pool.sol";
+import "./Uniswap_V3/ISwapRouter.sol";
 
 abstract contract OracleLike {
     function read() external virtual view returns (uint);
+    function uniswapPool() external virtual view returns (address);
 }
 
 contract UniV3LiquidityAMO_V2 is Owned {
@@ -279,56 +280,69 @@ contract UniV3LiquidityAMO_V2 is Owned {
         }
     }
 
-    IUniswapV3Pool public current_uni_pool; // only used for mint callback; is set and accessed during execution of addLiquidity()
-    function addLiquidity(address _collateral_address, int24 _tickLower, int24 _tickUpper, uint24 _fee, uint128 _amountLiquidity, uint128 _maxToken0, uint128 _maxToken1) public onlyByOwnGov {
-        // getPool() [token0] or [token1] order doesn't matter
-        address pool_address = univ3_factory.getPool(address(FRAX), _collateral_address, _fee);
+    // IUniswapV3Pool public current_uni_pool; // only used for mint callback; is set and accessed during execution of addLiquidity()
+    function addLiquidity(address _tokenA, address _tokenB, int24 _tickLower, int24 _tickUpper, uint24 _fee, uint256 _amount0Desired, uint256 _amount1Desired, uint256 _amount0Min, uint256 _amount1Min) public onlyByOwnGov {
+        // Make sure the collateral is allowed
+        require(allowed_collaterals[_tokenA] || _tokenA == address(FRAX), "TokenA not allowed");
+        require(allowed_collaterals[_tokenB] || _tokenB == address(FRAX), "TokenB not allowed");
 
-        // set pool for callback
-        current_uni_pool = IUniswapV3Pool(pool_address);
+        ERC20(_tokenA).transferFrom(msg.sender, address(this), _amount0Desired);
+        ERC20(_tokenB).transferFrom(msg.sender, address(this), _amount1Desired);
+        ERC20(_tokenA).approve(address(univ3_positions), _amount0Desired);
+        ERC20(_tokenB).approve(address(univ3_positions), _amount1Desired);
 
-        bytes memory data = abi.encode(msg.sender, _maxToken0, _maxToken1);
-        IUniswapV3Pool uni_v3_pool = IUniswapV3Pool(pool_address);
-        uni_v3_pool.mint(
-            address(this),
+        INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams(
+            _tokenA,
+            _tokenB,
+            _fee,
             _tickLower,
             _tickUpper,
-            _amountLiquidity,
-            data
+            _amount0Desired,
+            _amount1Desired,
+            _amount0Min,
+            _amount1Min,
+            address(this),
+            block.timestamp
         );
-    }
 
-    /*
-    **  callback from minting uniswap v3 range
-    */
-    function uniswapV3MintCallback(uint256 _amount0, uint256 _amount1, bytes calldata _data) public {
-        (address minter, uint128 maxToken0, uint128 maxToken1) = abi.decode(_data, (address,uint128,uint128));
-        require(_amount0 <= maxToken0, "maxToken0 exceeded");
-        require(_amount1 <= maxToken1, "maxToken1 exceeded");
-        require(address(current_uni_pool) == msg.sender, "only permissioned UniswapV3 pair can call");
-        if (_amount0 > 0) require(IERC20(current_uni_pool.token0()).transferFrom(minter, address(msg.sender), _amount0), "token0 transfer failed");
-        if (_amount1 > 0) require(IERC20(current_uni_pool.token1()).transferFrom(minter, address(msg.sender), _amount1), "token1 transfer failed");
-    }
+        (uint256 tokenId, uint128 amountLiquidity,,) = univ3_positions.mint(params);
 
+        Position memory pos = Position(
+            tokenId,
+            _tokenA == address(FRAX) ? _tokenB : _tokenA,
+            amountLiquidity,
+            _tickLower,
+            _tickUpper,
+            _fee
+        );
+
+        positions_array.push(pos);
+        positions_mapping[tokenId] = pos;
+    }
 
     /*
     **  burn tokenAmount from the recipient and send tokens to the receipient
     */
-    function removeLiquidity(address _collateral_address, int24 _tickLower, int24 _tickUpper, uint24 _fee, uint128 _amountLiquidity) public onlyByOwnGov {
-        address pool_address;
-        if(_collateral_address < address(FRAX)){
-            pool_address = univ3_factory.getPool(_collateral_address, address(FRAX), _fee);
-        } else {
-            pool_address = univ3_factory.getPool(address(FRAX), _collateral_address, _fee);
-        }
+    event log(uint);
+    function removeLiquidity(uint256 positionIndex) public onlyByOwnGov {
+            Position memory pos = positions_array[positionIndex];
+            INonfungiblePositionManager.CollectParams memory collect_params = INonfungiblePositionManager.CollectParams(
+                pos.token_id,
+                custodian_address,
+                type(uint128).max,
+                type(uint128).max
+            );
 
-        IUniswapV3Pool uni_v3_pool = IUniswapV3Pool(pool_address);
-        (uint256 amount0, uint256 amount1) = uni_v3_pool.burn(_tickLower, _tickUpper, _amountLiquidity);
-        uni_v3_pool.collect(address(this), _tickLower, _tickUpper, uint128(amount0), uint128(amount1));
+            univ3_positions.collect(collect_params);
+            univ3_positions.burn(pos.token_id);
+
+            positions_array[positionIndex] = positions_array[positions_array.length -1];
+            positions_array.pop();
+            delete positions_mapping[pos.token_id];
+
+            emit log(positions_array.length);
+            emit log(positions_mapping[pos.token_id].token_id);
     }
-
-
-
 
     // Swap tokenA into tokenB using univ3_router.ExactInputSingle()
     // Uni V3 only
