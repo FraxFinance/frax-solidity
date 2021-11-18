@@ -50,16 +50,16 @@ module.exports = {
 			gasPrice: 32000000000,
 			gasMultiplier: 1.2
 		},
-		bsc: {
-			url: process.env.BSC_NETWORK_ENDPOINT,
-			accounts: {
-				mnemonic: process.env.BSC_MNEMONIC_PHRASE
-			},
-			chainId: 56,
-			gas: "auto",
-			gasPrice: 8000000000, // 8 Gwei
-			gasMultiplier: 1.2
-		},
+		// bsc: {
+		// 	url: process.env.BSC_NETWORK_ENDPOINT,
+		// 	accounts: {
+		// 		mnemonic: process.env.BSC_MNEMONIC_PHRASE
+		// 	},
+		// 	chainId: 56,
+		// 	gas: "auto",
+		// 	gasPrice: 8000000000, // 8 Gwei
+		// 	gasMultiplier: 1.2
+		// },
 		// fantom: {
 		// 	url: process.env.FANTOM_NETWORK_ENDPOINT,
 		// 	accounts: {
