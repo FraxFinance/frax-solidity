@@ -24,23 +24,23 @@ pragma experimental ABIEncoderV2;
 // Sam Kazemian: https://github.com/samkazemian
 // Travis Moore: https://github.com/FortisFortuna
 
-import "./Frax/Frax.sol";
-import "./Frax/Pools/FraxPool.sol";
-import "./Frax/IFraxAMOMinter.sol";
-import "./FXS/FXS.sol";
-import "./Math/Math.sol";
-import "./Math/SafeMath.sol";
-import "./ERC20/ERC20.sol";
-import "./ERC20/SafeERC20.sol";
-import './Uniswap/TransferHelper.sol';
-import "./Staking/Owned.sol";
+import "../Frax/Frax.sol";
+import "../Frax/Pools/FraxPool.sol";
+import "../Frax/IFraxAMOMinter.sol";
+import "../FXS/FXS.sol";
+import "../Math/Math.sol";
+import "../Math/SafeMath.sol";
+import "../ERC20/ERC20.sol";
+import "../ERC20/SafeERC20.sol";
+import '../Uniswap/TransferHelper.sol';
+import "../Staking/Owned.sol";
 
-import "./Uniswap_V3/IUniswapV3Factory.sol";
-import "./Uniswap_V3/libraries/TickMath.sol";
-import "./Uniswap_V3/libraries/LiquidityAmounts.sol";
-import "./Uniswap_V3/periphery/interfaces/INonfungiblePositionManager.sol";
-import "./Uniswap_V3/IUniswapV3Pool.sol";
-import "./Uniswap_V3/ISwapRouter.sol";
+import "../Uniswap_V3/IUniswapV3Factory.sol";
+import "../Uniswap_V3/libraries/TickMath.sol";
+import "../Uniswap_V3/libraries/LiquidityAmounts.sol";
+import "../Uniswap_V3/periphery/interfaces/INonfungiblePositionManager.sol";
+import "../Uniswap_V3/IUniswapV3Pool.sol";
+import "../Uniswap_V3/ISwapRouter.sol";
 
 abstract contract OracleLike {
     function read() external virtual view returns (uint);

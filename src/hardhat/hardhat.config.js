@@ -60,36 +60,36 @@ module.exports = {
 			gasPrice: 8000000000, // 8 Gwei
 			gasMultiplier: 1.2
 		},
-		fantom: {
-			url: process.env.FANTOM_NETWORK_ENDPOINT,
-			accounts: {
-				mnemonic: process.env.FANTOM_MNEMONIC_PHRASE
-			},
-			chainId: 250,
-			gas: "auto",
-			gasPrice: 80000000000, // XX Gwei
-			gasMultiplier: 1.2
-		},
-		harmony: {
-			url: process.env.HARMONY_NETWORK_ENDPOINT,
-			accounts: {
-				mnemonic: process.env.HARMONY_MNEMONIC_PHRASE
-			},
-			chainId: 1666600000,
-			gas: "auto",
-			gasPrice: 5000000000, // 5 Gwei
-			gasMultiplier: 1.2
-		},
-		polygon: {
-			url: `${process.env.POLYGON_NETWORK_ENDPOINT}${process.env.INFURA_PROJECT_ID}`,
-			accounts: {
-				mnemonic: process.env.POLYGON_MNEMONIC_PHRASE
-			},
-			chainId: 137,
-			gas: "auto",
-			gasPrice: 8000000000, // 8 Gwei
-			gasMultiplier: 1.2
-		},
+		// fantom: {
+		// 	url: process.env.FANTOM_NETWORK_ENDPOINT,
+		// 	accounts: {
+		// 		mnemonic: process.env.FANTOM_MNEMONIC_PHRASE
+		// 	},
+		// 	chainId: 250,
+		// 	gas: "auto",
+		// 	gasPrice: 80000000000, // XX Gwei
+		// 	gasMultiplier: 1.2
+		// },
+		// harmony: {
+		// 	url: process.env.HARMONY_NETWORK_ENDPOINT,
+		// 	accounts: {
+		// 		mnemonic: process.env.HARMONY_MNEMONIC_PHRASE
+		// 	},
+		// 	chainId: 1666600000,
+		// 	gas: "auto",
+		// 	gasPrice: 5000000000, // 5 Gwei
+		// 	gasMultiplier: 1.2
+		// },
+		// polygon: {
+		// 	url: `${process.env.POLYGON_NETWORK_ENDPOINT}${process.env.INFURA_PROJECT_ID}`,
+		// 	accounts: {
+		// 		mnemonic: process.env.POLYGON_MNEMONIC_PHRASE
+		// 	},
+		// 	chainId: 137,
+		// 	gas: "auto",
+		// 	gasPrice: 8000000000, // 8 Gwei
+		// 	gasMultiplier: 1.2
+		// },
 		ropsten: {
 			url:`https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
 			accounts: {
