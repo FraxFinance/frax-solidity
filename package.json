@@ -67,6 +67,7 @@
     "node-telegram-bot-api": "^0.53.0",
     "nodemon": "^2.0.7",
     "path": "^0.12.7",
+    "prb-math": "^2.4.1",
     "randomcolor": "^0.6.2",
     "require-from-string": "^2.0.2",
     "seedrandom": "^3.0.5",
