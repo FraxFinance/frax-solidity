@@ -3,10 +3,11 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol"; 
 import "../Utils/LongTermOrders.sol";
 
 ///@notice TWAMM -- https://www.paradigm.xyz/2021/07/twamm/
-contract TWAMM is ERC20 {
+contract TWAMM is ERC20, Ownable{
     using LongTermOrdersLib for LongTermOrdersLib.LongTermOrders;
     using PRBMathUD60x18 for uint256;
 
@@ -30,6 +31,9 @@ contract TWAMM is ERC20 {
 
     ///@notice interval between blocks that are eligible for order expiry 
     uint256 public orderBlockInterval;
+
+    ///@notice false when longTermOrders are permissioned 
+    bool public whitelistDisabled;
 
     ///@notice data structure to handle long term orders  
     LongTermOrdersLib.LongTermOrders internal longTermOrders;
@@ -77,7 +81,20 @@ contract TWAMM is ERC20 {
         tokenB = _tokenB;
         orderBlockInterval = _orderBlockInterval;
         longTermOrders.initialize(_tokenA, _tokenB, block.number, _orderBlockInterval);
+        whitelistDisabled = false;
 
+    }
+
+    // EC5: Whitelist has not been disabled
+    modifier onlyWhitelist() {
+        if(!whitelistDisabled)
+            require(msg.sender == owner(), 'EC5');
+        _;
+    }
+
+    ///@notice opens longTermOrders to all users
+    function disableWhitelist() public onlyOwner{
+        whitelistDisabled = true;
     }
 
     // EC4: liquidity has already been provided, need to call provideLiquidity
@@ -155,7 +172,7 @@ contract TWAMM is ERC20 {
     ///@notice create a long term order to swap from tokenA 
     ///@param amountAIn total amount of token A to swap 
     ///@param numberOfBlockIntervals number of block intervals over which to execute long term order
-    function longTermSwapFromAToB(uint256 amountAIn, uint256 numberOfBlockIntervals) external {
+    function longTermSwapFromAToB(uint256 amountAIn, uint256 numberOfBlockIntervals) external onlyWhitelist {
         uint256 orderId =  longTermOrders.longTermSwapFromAToB(amountAIn, numberOfBlockIntervals, reserveMap);
         emit LongTermSwapAToB(msg.sender, amountAIn, orderId);
     }
@@ -169,19 +186,19 @@ contract TWAMM is ERC20 {
     ///@notice create a long term order to swap from tokenB 
     ///@param amountBIn total amount of tokenB to swap 
     ///@param numberOfBlockIntervals number of block intervals over which to execute long term order
-    function longTermSwapFromBToA(uint256 amountBIn, uint256 numberOfBlockIntervals) external {
+    function longTermSwapFromBToA(uint256 amountBIn, uint256 numberOfBlockIntervals) external onlyWhitelist{
         uint256 orderId = longTermOrders.longTermSwapFromBToA(amountBIn, numberOfBlockIntervals, reserveMap);
         emit LongTermSwapBToA(msg.sender, amountBIn, orderId);
     }
 
     ///@notice stop the execution of a long term order 
-    function cancelLongTermSwap(uint256 orderId) external {
+    function cancelLongTermSwap(uint256 orderId) external onlyWhitelist{
         longTermOrders.cancelLongTermSwap(orderId, reserveMap);
         emit CancelLongTermOrder(msg.sender, orderId);
     }
 
     ///@notice withdraw proceeds from a long term swap 
-    function withdrawProceedsFromLongTermSwap(uint256 orderId) external {
+    function withdrawProceedsFromLongTermSwap(uint256 orderId) external onlyWhitelist {
         longTermOrders.withdrawProceedsFromLongTermSwap(orderId, reserveMap);
         //emit WithdrawProceedsFromLongTermOrder(msg.sender, orderId);
     }
@@ -218,7 +235,7 @@ contract TWAMM is ERC20 {
 
     ///@notice convenience function to execute virtual orders. Note that this already happens
     ///before most interactions with the AMM 
-    function executeVirtualOrders() public {
+    function executeVirtualOrders() public onlyWhitelist {
         longTermOrders.executeVirtualOrdersUntilCurrentBlock(reserveMap);
     }
 
