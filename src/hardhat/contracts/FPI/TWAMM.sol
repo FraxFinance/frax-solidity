@@ -3,13 +3,14 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol"; 
 import "../Utils/LongTermOrders.sol";
 
 ///@notice TWAMM -- https://www.paradigm.xyz/2021/07/twamm/
 contract TWAMM is ERC20, Ownable{
     using LongTermOrdersLib for LongTermOrdersLib.LongTermOrders;
     using PRBMathUD60x18 for uint256;
+
+    address public owner_address;
 
     /// ---------------------------
     /// ------ AMM Parameters -----
@@ -75,6 +76,7 @@ contract TWAMM is ERC20, Ownable{
                 ,address _tokenA
                 ,address _tokenB
                 ,uint256 _orderBlockInterval
+                ,address _owner_address
     ) ERC20(_name, _symbol) {
         
         tokenA = _tokenA;
@@ -82,18 +84,20 @@ contract TWAMM is ERC20, Ownable{
         orderBlockInterval = _orderBlockInterval;
         longTermOrders.initialize(_tokenA, _tokenB, block.number, _orderBlockInterval);
         whitelistDisabled = false;
+        owner_address = _owner_address;
 
     }
 
     // EC5: Whitelist has not been disabled
     modifier onlyWhitelist() {
         if(!whitelistDisabled)
-            require(msg.sender == owner(), 'EC5');
+            require(msg.sender == owner_address, 'EC5');
         _;
     }
 
     ///@notice opens longTermOrders to all users
-    function disableWhitelist() public onlyOwner{
+    function disableWhitelist() public {
+        require(msg.sender == owner_address);
         whitelistDisabled = true;
     }
 
