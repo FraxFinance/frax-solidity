@@ -9,7 +9,7 @@ require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-etherscan");
 require('@openzeppelin/hardhat-upgrades');
-require("@nomiclabs/hardhat-vyper");
+//require("@nomiclabs/hardhat-vyper");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -190,8 +190,8 @@ module.exports = {
 		runOnCompile: true,
 		disambiguatePaths: false,
 	},
-    vyper: {
-		version: "0.2.12"
-    }
+    // vyper: {
+	// 	version: "0.2.12"
+    // }
 };
 
