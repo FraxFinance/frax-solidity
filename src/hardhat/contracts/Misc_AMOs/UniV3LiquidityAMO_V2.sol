@@ -286,8 +286,9 @@ contract UniV3LiquidityAMO_V2 is Owned {
         require(allowed_collaterals[_tokenA] || _tokenA == address(FRAX), "TokenA not allowed");
         require(allowed_collaterals[_tokenB] || _tokenB == address(FRAX), "TokenB not allowed");
 
-        ERC20(_tokenA).transferFrom(msg.sender, address(this), _amount0Desired);
-        ERC20(_tokenB).transferFrom(msg.sender, address(this), _amount1Desired);
+        // assume tokens are already sitting inside of AMO
+        // ERC20(_tokenA).transferFrom(msg.sender, address(this), _amount0Desired);
+        // ERC20(_tokenB).transferFrom(msg.sender, address(this), _amount1Desired);
         ERC20(_tokenA).approve(address(univ3_positions), _amount0Desired);
         ERC20(_tokenB).approve(address(univ3_positions), _amount1Desired);
 
