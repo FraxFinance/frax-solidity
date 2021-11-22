@@ -381,7 +381,7 @@ contract CrossChainBridgeBacker is Owned {
         _swapCanonicalForAny(token_type, token_amount);
     }
 
-    // Swap anyToken for canToken [INTERNAL]
+    // Swap canToken for anyToken [INTERNAL]
     function _swapCanonicalForAny(uint256 token_type, uint256 token_amount) internal {
         if (token_type == 0) {
             // FRAX

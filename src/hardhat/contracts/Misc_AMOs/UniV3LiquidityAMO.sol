@@ -306,7 +306,7 @@ contract UniV3LiquidityAMO is Owned {
                 0,
                 0,
                 address(this),
-                2105300114 // Expiration: a long time from now
+                block.timestamp + 604800 // Expiration: 7 days from now
             );
         } else {
             mint_params = INonfungiblePositionManager.MintParams(
@@ -320,7 +320,7 @@ contract UniV3LiquidityAMO is Owned {
                 0,
                 0,
                 address(this),
-                2105300114 // Expiration: a long time from now
+                block.timestamp + 604800 // Expiration: 7 days from now
             );
         }
 
@@ -349,7 +349,7 @@ contract UniV3LiquidityAMO is Owned {
             current_position.liquidity,
             0,
             0,
-            2105300114 // Expiration: a long time from now
+            block.timestamp + 604800 // Expiration: 7 days from now
         );
 
         univ3_positions.decreaseLiquidity(decrease_params);

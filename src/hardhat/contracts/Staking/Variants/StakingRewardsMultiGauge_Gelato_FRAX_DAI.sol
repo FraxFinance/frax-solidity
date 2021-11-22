@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.6.11;
+pragma solidity >=0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "../StakingRewardsMultiGauge.sol";
+import "../StakingRewardsMultiGaugeV2.sol";
 
-contract StakingRewardsMultiGauge_Gelato_FRAX_DAI is StakingRewardsMultiGauge {
+contract StakingRewardsMultiGauge_Gelato_FRAX_DAI is StakingRewardsMultiGaugeV2 {
     constructor (
         address _owner,
         address _stakingToken, 
@@ -15,6 +15,6 @@ contract StakingRewardsMultiGauge_Gelato_FRAX_DAI is StakingRewardsMultiGauge {
         uint256[] memory _rewardRates,
         address[] memory _gaugeControllers
     ) 
-    StakingRewardsMultiGauge(_owner, _stakingToken, _rewards_distributor_address, _rewardSymbols, _rewardTokens, _rewardManagers, _rewardRates, _gaugeControllers)
+    StakingRewardsMultiGaugeV2(_owner, _stakingToken, _rewards_distributor_address, _rewardSymbols, _rewardTokens, _rewardManagers, _rewardRates, _gaugeControllers)
     {}
 }

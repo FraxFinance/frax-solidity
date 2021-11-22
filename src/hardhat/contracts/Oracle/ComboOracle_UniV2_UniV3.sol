@@ -102,6 +102,9 @@ contract ComboOracle_UniV2_UniV3 is Owned {
         int24 tickLower;
         int24 tickUpper;
         uint128 liquidity;
+        uint256 token0_decimals; 
+        uint256 token1_decimals; 
+        uint256 lowest_decimals; 
     }
 
     struct UniV3NFTValueInfo {
@@ -220,13 +223,20 @@ contract ComboOracle_UniV2_UniV3 is Owned {
             // [11]
         ) = univ3_positions.positions(token_id);
 
+        // Get decimals
+        uint256 tkn0_dec = ERC20(token0).decimals();
+        uint256 tkn1_dec = ERC20(token1).decimals();
+
         return UniV3NFTBasicInfo(
             token0, // [0]
             token1, // [1]
             fee, // [2]
             tickLower, // [3]
             tickUpper, // [4]
-            liquidity // [5]
+            liquidity, // [5]
+            tkn0_dec,  // [6]
+            tkn1_dec,  // [7]
+            (tkn0_dec < tkn1_dec) ? tkn0_dec : tkn1_dec // [8]
         );
     }
 
@@ -251,12 +261,12 @@ contract ComboOracle_UniV2_UniV3 is Owned {
             uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(lp_basic_info.tickUpper);
 
             // Get amount of each token for 0.1% liquidity movement in each direction (1 per mille)
-            uint256 liq_pricing_divisor = 1000;
+            uint256 liq_pricing_divisor = (10 ** lp_basic_info.lowest_decimals);
             (uint256 token0_1pm_amt, uint256 token1_1pm_amt) = LiquidityAmounts.getAmountsForLiquidity(sqrtPriceX96, sqrtRatioAX96, sqrtRatioBX96, uint128(lp_basic_info.liquidity / liq_pricing_divisor));
 
             // Get missing decimals
-            uint256 token0_miss_dec_mult = 10 ** (uint(18) - ERC20(lp_basic_info.token0).decimals());
-            uint256 token1_miss_dec_mult = 10 ** (uint(18) - ERC20(lp_basic_info.token1).decimals());
+            uint256 token0_miss_dec_mult = 10 ** (uint(18) - lp_basic_info.token0_decimals);
+            uint256 token1_miss_dec_mult = 10 ** (uint(18) - lp_basic_info.token1_decimals);
 
             // Get token prices
             // Will revert if ComboOracle doesn't have a price for both token0 and token1
@@ -264,7 +274,7 @@ contract ComboOracle_UniV2_UniV3 is Owned {
             (uint256 token1_precise_price, ) = combo_oracle.getTokenPrice(lp_basic_info.token1);
 
             // Get the value of each portion
-            // Multiply by 1000 to account for the 0.1% pricing
+            // Multiply by liq_pricing_divisor as well
             token0_val_usd = (token0_1pm_amt * liq_pricing_divisor * token0_precise_price * token0_miss_dec_mult) / PRECISE_PRICE_PRECISION;
             token1_val_usd = (token1_1pm_amt * liq_pricing_divisor * token1_precise_price * token1_miss_dec_mult) / PRECISE_PRICE_PRECISION;
         }
