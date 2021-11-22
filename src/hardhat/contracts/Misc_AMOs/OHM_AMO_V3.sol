@@ -253,7 +253,7 @@ contract OHM_AMO_V3 is Owned {
             min_ohm_out,
             FRAX_OHM_PATH,
             address(this),
-            2105300114 // Expiration: a long time from now
+            block.timestamp + 604800 // Expiration: 7 days from now
         );
         return (amounts[0], amounts[1]);
     }
@@ -273,7 +273,7 @@ contract OHM_AMO_V3 is Owned {
             min_frax_out,
             OHM_FRAX_PATH,
             address(this),
-            2105300114 // Expiration: a long time from now
+            block.timestamp + 604800 // Expiration: 7 days from now
         );
         return (amounts[0], amounts[1]);
     }

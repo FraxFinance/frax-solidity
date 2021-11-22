@@ -99,7 +99,7 @@ contract ApeSwapLiquidityAMO is Owned {
         // Set the custodian
         custodian_address = _custodian_address;
 
-        // Get the timelock addresse from the minter
+        // Get the timelock address from the minter
         timelock_address = cc_bridge_backer.timelock_address();
 
         // Get the missing decimals for the collateral
@@ -323,7 +323,7 @@ contract ApeSwapLiquidityAMO is Owned {
             to_token_out_min, 
             the_path, 
             address(this), 
-            2105300114 // Expiration: a long time from now
+            block.timestamp + 604800 // Expiration: 7 days from now
         );
     }
 
@@ -343,7 +343,7 @@ contract ApeSwapLiquidityAMO is Owned {
             end_token_out_min, 
             path, 
             address(this), 
-            2105300114 // Expiration: a long time from now
+            block.timestamp + 604800 // Expiration: 7 days from now
         );
     }
 
@@ -371,7 +371,7 @@ contract ApeSwapLiquidityAMO is Owned {
             tokenA_amt - ((tokenA_amt * add_rem_liq_slippage) / PRICE_PRECISION), 
             tokenB_amt - ((tokenB_amt * add_rem_liq_slippage) / PRICE_PRECISION), 
             address(this), 
-            2105300114 // Expiration: a long time from now
+            block.timestamp + 604800 // Expiration: 7 days from now
         );
     }
 
@@ -396,7 +396,7 @@ contract ApeSwapLiquidityAMO is Owned {
             0, 
             0, 
             address(this), 
-            2105300114 // Expiration: a long time from now
+            block.timestamp + 604800 // Expiration: 7 days from now
         );
     }
 

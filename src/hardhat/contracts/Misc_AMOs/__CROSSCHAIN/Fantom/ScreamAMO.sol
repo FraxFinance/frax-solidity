@@ -87,7 +87,7 @@ contract ScreamAMO is Owned {
         // Set the custodian
         custodian_address = _custodian_address;
 
-        // Get the timelock addresse from the minter
+        // Get the timelock address from the minter
         timelock_address = cc_bridge_backer.timelock_address();
     }
 

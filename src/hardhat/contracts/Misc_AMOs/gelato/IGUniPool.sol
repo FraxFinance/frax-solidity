@@ -19,23 +19,17 @@ interface IGUniPool {
             uint256 amount1,
             uint128 liquidityBurned
         );
-    
+        
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
     function token0() external view returns (IERC20);
-
     function token1() external view returns (IERC20);
-
     function upperTick() external view returns (int24);
-
     function lowerTick() external view returns (int24);
-
     function pool() external view returns (IUniswapV3Pool);
-
     function decimals() external view returns (uint256);
-
     function totalSupply() external view returns (uint256);
-
     function balanceOf(address account) external view returns (uint256);
-
     function transfer(address recipient, uint256 amount) external returns (bool);
 
     function getMintAmounts(uint256 amount0Max, uint256 amount1Max)

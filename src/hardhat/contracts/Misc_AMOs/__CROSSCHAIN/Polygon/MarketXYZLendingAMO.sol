@@ -175,27 +175,27 @@ contract MarketXYZLendingAMO is Owned {
     /* ---------------------------------------------------- */
 
     // IRariComptroller can vary
-    function enterMarkets(address comptroller_address, address pool_address) validPool(pool_address) public onlyByOwnGovCust {
+    function enterMarkets(address comptroller_address, address pool_address) validPool(pool_address) public onlyByOwnGov {
         address[] memory cTokens = new address[](1);
         cTokens[0] = pool_address;
         IRariComptroller(comptroller_address).enterMarkets(cTokens);
     }
 
     // E18
-    function lendToPool(address pool_address, uint256 lend_amount) validPool(pool_address) public onlyByOwnGovCust {
+    function lendToPool(address pool_address, uint256 lend_amount) validPool(pool_address) public onlyByOwnGov {
         uint256 pool_idx = poolAddrToIdx(pool_address);
         canFRAX.approve(pool_address, lend_amount);
         ICErc20Delegator(fuse_pools_array[pool_idx]).mint(lend_amount);
     }
 
     // E18
-    function redeemFromPool(address pool_address, uint256 redeem_amount) validPool(pool_address) public onlyByOwnGovCust {
+    function redeemFromPool(address pool_address, uint256 redeem_amount) validPool(pool_address) public onlyByOwnGov {
         uint256 pool_idx = poolAddrToIdx(pool_address);
         ICErc20Delegator(fuse_pools_array[pool_idx]).redeemUnderlying(redeem_amount);
     }
 
     // Auto compounds interest
-    function accrueInterest() public onlyByOwnGovCust {
+    function accrueInterest() public onlyByOwnGov {
         for (uint i = 0; i < fuse_pools_array.length; i++){ 
             // Make sure the pool is enabled first
             address pool_address = fuse_pools_array[i];
