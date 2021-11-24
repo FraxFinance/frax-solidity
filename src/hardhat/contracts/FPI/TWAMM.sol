@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../Utils/LongTermOrders.sol";
 
 ///@notice TWAMM -- https://www.paradigm.xyz/2021/07/twamm/
-contract TWAMM is ERC20, Ownable{
+contract TWAMM is ERC20 {
     using LongTermOrdersLib for LongTermOrdersLib.LongTermOrders;
     using PRBMathUD60x18 for uint256;
 
