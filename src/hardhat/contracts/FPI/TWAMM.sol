@@ -90,8 +90,7 @@ contract TWAMM is ERC20 {
 
     // EC5: Whitelist has not been disabled
     modifier onlyWhitelist() {
-        if(!whitelistDisabled)
-            require(msg.sender == owner_address, 'EC5');
+        require(whitelistDisabled || msg.sender == owner_address, 'EC5');
         _;
     }
 
