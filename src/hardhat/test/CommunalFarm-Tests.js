@@ -22,12 +22,8 @@ const hre = require("hardhat");
 const e = require('express');
 
 // Uniswap related
-const SwapToPrice = artifacts.require("Uniswap/SwapToPrice");
-const IUniswapV2ERC20 = artifacts.require("Uniswap/Interfaces/IUniswapV2ERC20");
 const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
-const UniswapV2Library = artifacts.require("Uniswap/UniswapV2Library");
-const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary");
-const ERC20 = artifacts.require("ERC20/ERC20");
+const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
 const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
 
@@ -37,28 +33,19 @@ const IUniswapV3PositionsNFT = artifacts.require("Uniswap_V3/IUniswapV3Positions
 // Saddle related
 const ISaddleD4_LP = artifacts.require("Misc_AMOs/saddle/ISaddleD4_LP");
 
-// Collateral
-const WETH = artifacts.require("ERC20/WETH");
-
 // Collateral Pools
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 
 // Oracles
-const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_WETH");
-const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDC");
-const UniswapPairOracle_FRAX_FXS = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_FXS");
-
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
 const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
-
 const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
-
 
 // Chainlink Price Consumer
 const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
 
 // FRAX core
-const FRAXStablecoin = artifacts.require("Frax/FRAXStablecoin");
+const FRAXStablecoin = artifacts.require("Frax/IFrax");
 const FRAXShares = artifacts.require("FXS/FRAXShares");
 
 // Staking contracts
@@ -71,7 +58,6 @@ const SushiToken = artifacts.require("ERC20/Variants/SushiToken");
 const IQToken = artifacts.require("ERC20/Variants/IQToken");
 // const FRAX3CRV_Mock = artifacts.require("ERC20/Variants/FRAX3CRV_Mock");
 const FRAX3CRV_V2_Mock = artifacts.require("ERC20/Variants/FRAX3CRV_V2_Mock");
-const CRV_DAO_ERC20_Mock = artifacts.require("ERC20/Variants/CRV_DAO_ERC20_Mock");
 
 // Token vesting
 const TokenVesting = artifacts.require("FXS/TokenVesting.sol");
@@ -83,12 +69,6 @@ const Timelock = artifacts.require("Governance/Timelock");
 // veFXS related
 const veFXS = artifacts.require("Curve/IveFXS");
 
-const ONE_MILLION_DEC18 = new BigNumber(1000000e18);
-const COLLATERAL_SEED_DEC18 = new BigNumber(508500e18);
-const COLLATERAL_SEED_DEC6 = new BigNumber(508500e6);
-const ONE_THOUSAND_DEC18 = new BigNumber(1000e18);
-const THREE_THOUSAND_DEC18 = new BigNumber(3000e18);
-const THREE_THOUSAND_DEC6 = new BigNumber(3000e6);
 const BIG6 = new BigNumber("1e6");
 const BIG18 = new BigNumber("1e18");
 const TIMELOCK_DELAY = 86400 * 2; // 2 days
@@ -128,9 +108,6 @@ contract('CommunalFarm-Tests', async (accounts) => {
 	let frax_instance;
 	let fxs_instance;
 
-	// Initialize vesting instances
-	let vestingInstance;
-
 	// Initialize collateral instances
 	let wethInstance;
 	let usdc_instance;
@@ -140,12 +117,11 @@ contract('CommunalFarm-Tests', async (accounts) => {
 	let alcx_instance;
 	let lqty_instance;
 	let mockFRAX3CRVInstance;
-	let mockCRVDAOInstance;
 	
-	// Initialize the Uniswap Router Instance
+	// Initialize the Uniswap Router instance
 	let routerInstance; 
 
-	// Initialize the Uniswap Factory Instance
+	// Initialize the Uniswap Factory instance
 	let factoryInstance; 
 
 	// Initialize the Uniswap Libraries
@@ -162,22 +138,12 @@ contract('CommunalFarm-Tests', async (accounts) => {
 	let swapToPriceInstance;
 
 	// Initialize oracle instances
-	let oracle_instance_FRAX_WETH;
-	let oracle_instance_FRAX_USDC;
-	let oracle_instance_FRAX_FXS;
 	
 	let oracle_instance_FXS_WETH;
 	let oracle_instance_FXS_USDC;
 
-	// Initialize ETH-USD Chainlink Oracle too
-	let oracle_chainlink_ETH_USD;
-
-	// Initialize the governance contract
-	let governanceInstance;
-
 	// Initialize pool instances
 	let pool_instance_USDC;
-	let pool_instance_USDC_vAMM;
 	
 	// Initialize pair addresses
 	let pair_addr_FRAX_WETH;
@@ -241,7 +207,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		// Fill core contract instances
 		frax_instance = await FRAXStablecoin.deployed();
 		fxs_instance = await FRAXShares.deployed();
-		wethInstance = await WETH.deployed();
+		wethInstance = await ERC20.at("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 		usdc_instance = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
 		iq_instance = await IQToken.deployed();
 		tribe_instance = await ERC20.at("0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B");
@@ -257,16 +223,13 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		// Fill oracle instances
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
 		
-		// Initialize ETH-USD Chainlink Oracle too
-		oracle_chainlink_ETH_USD = await ChainlinkETHUSDPriceConsumer.deployed();
-
 		// Initialize the governance contract
 		governanceInstance = await GovernorAlpha.deployed();
 
 		// Initialize pool instances
 		pool_instance_USDC = await Pool_USDC.deployed();
 		
-		// Initialize the Uniswap Factory Instance
+		// Initialize the Uniswap Factory instance
 		uniswapFactoryInstance = await IUniswapV2Factory.deployed(); 
 
 		// Initialize the Uniswap Libraries
@@ -280,20 +243,12 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		// swapToPriceInstance = await SwapToPrice.deployed(); 
 
 		// Get instances of the Uniswap pairs
-		pair_instance_FRAX_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/WETH"]);
-		pair_instance_FRAX_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/USDC"]);
-		pair_instance_FXS_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/FXS"]);
-		pair_instance_FRAX_IQ = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/IQ"]);
-		pair_instance_Saddle_D4 = await ISaddleD4_LP.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Saddle alUSD/FEI/FRAX/LUSD"]);
-		// pair_instance_FXS_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FXS/USDC"]);
-
-		// Get the mock CRVDAO Instance
-		mockCRVDAOInstance = await CRV_DAO_ERC20_Mock.deployed();
-
-		// Get the mock FRAX3CRV Instance
-		// uniswapV3PositionsNFTInstance = await FRAX3CRV_Mock.deployed(); 
-
-		
+		pair_instance_FRAX_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FRAX/WETH"]);
+		pair_instance_FRAX_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FRAX/USDC"]);
+		pair_instance_FXS_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FRAX/FXS"]);
+		pair_instance_FRAX_IQ = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FRAX/IQ"]);
+		pair_instance_Saddle_D4 = await ISaddleD4_LP.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Saddle alUSD/FEI/FRAX/LUSD"]);
+		// pair_instance_FXS_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FXS/USDC"]);
 
 		// Fill the staking rewards instances
 		// stakingInstanceDualV5_FRAX_OHM = await StakingRewardsDualV5_FRAX_OHM.deployed();
@@ -723,13 +678,13 @@ contract('CommunalFarm-Tests', async (accounts) => {
 			console.log("Try to set the reward rate with the wrong manager [SHOULD FAIL]");
 			await expectRevert(
 				communalFarmInstance_Saddle_D4.setRewardRate(staking_reward_tokens_addresses[0], 0, true, { from: accounts[9] }),
-				"You are not the owner or the correct token manager"
+				"Not owner or tkn mgr"
 			);
 
 			console.log("Try to change the token manager with the wrong account [SHOULD FAIL]");
 			await expectRevert(
 				communalFarmInstance_Saddle_D4.changeTokenManager(staking_reward_tokens_addresses[0], COLLATERAL_FRAX_AND_FXS_OWNER, { from: accounts[9] }),
-				"You are not the owner or the correct token manager"
+				"Not owner or tkn mgr"
 			);
 
 			await hre.network.provider.request({
@@ -761,7 +716,7 @@ contract('CommunalFarm-Tests', async (accounts) => {
 		console.log("---------TRY TO ERC20 RECOVER WHILE NOT AN OWNER [SHOULD FAIL]---------");
 		await expectRevert(
 			communalFarmInstance_Saddle_D4.recoverERC20(pair_instance_Saddle_D4.address, test_amount_1, { from: INVESTOR_CUSTODIAN_ADDRESS }),
-			"You are not the owner or the correct token manager"
+			"Not owner or tkn mgr"
 		);
 
 		console.log("---------TRY TO ERC20 RECOVER LP TOKENS [SHOULD FAIL]---------");

@@ -68,12 +68,6 @@ const Timelock = artifacts.require("Governance/Timelock");
 // veFXS related
 const veFXS = artifacts.require("Curve/IveFXS");
 
-const ONE_MILLION_DEC18 = new BigNumber(1000000e18);
-const COLLATERAL_SEED_DEC18 = new BigNumber(508500e18);
-const COLLATERAL_SEED_DEC6 = new BigNumber(508500e6);
-const ONE_THOUSAND_DEC18 = new BigNumber(1000e18);
-const THREE_THOUSAND_DEC18 = new BigNumber(3000e18);
-const THREE_THOUSAND_DEC6 = new BigNumber(3000e6);
 const BIG6 = new BigNumber("1e6");
 const BIG18 = new BigNumber("1e18");
 const TIMELOCK_DELAY = 86400 * 2; // 2 days
@@ -116,10 +110,10 @@ contract('FraxCrossChainFarm-Tests', async (accounts) => {
 	let iq_instance;
 	let mockFRAX3CRVInstance;
 	
-	// Initialize the Uniswap Router Instance
+	// Initialize the Uniswap Router instance
 	let routerInstance; 
 
-	// Initialize the Uniswap Factory Instance
+	// Initialize the Uniswap Factory instance
 	let factoryInstance; 
 
 	// Initialize the Uniswap Libraries
@@ -225,7 +219,7 @@ contract('FraxCrossChainFarm-Tests', async (accounts) => {
 		// Initialize pool instances
 		pool_instance_USDC = await Pool_USDC.deployed();
 		
-		// Initialize the Uniswap Factory Instance
+		// Initialize the Uniswap Factory instance
 		uniswapFactoryInstance = await IUniswapV2Factory.deployed(); 
 
 		// Initialize the Uniswap Libraries
