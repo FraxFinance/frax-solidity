@@ -149,11 +149,11 @@ contract CrossChainCanonical is ERC20Permit, Owned, ReentrancyGuard {
 
     /* ========== PUBLIC FUNCTIONS ========== */
 
-    // Exchange old tokens for these canonical tokens
+    // Exchange old or bridge tokens for these canonical tokens
     function exchangeOldForCanonical(address bridge_token_address, uint256 token_amount) external nonReentrant validBridgeToken(bridge_token_address) returns (uint256 canonical_tokens_out) {
         require(!exchangesPaused && canSwap[bridge_token_address], "Exchanges paused");
 
-        // Pull in the old tokens
+        // Pull in the old / bridge tokens
         TransferHelper.safeTransferFrom(bridge_token_address, msg.sender, address(this), token_amount);
 
         // Handle the fee, if applicable
@@ -166,7 +166,7 @@ contract CrossChainCanonical is ERC20Permit, Owned, ReentrancyGuard {
         _mint_capped(msg.sender, canonical_tokens_out);
     }
 
-    // Exchange canonical tokens for old tokens
+    // Exchange canonical tokens for old or bridge tokens
     function exchangeCanonicalForOld(address bridge_token_address, uint256 token_amount) external nonReentrant validBridgeToken(bridge_token_address) returns (uint256 bridge_tokens_out) {
         require(!exchangesPaused && canSwap[bridge_token_address], "Exchanges paused");
         
@@ -179,13 +179,13 @@ contract CrossChainCanonical is ERC20Permit, Owned, ReentrancyGuard {
             bridge_tokens_out -= ((bridge_tokens_out * swap_fees[bridge_token_address][1]) / PRICE_PRECISION);
         }
 
-        // Give old tokens to the sender
+        // Give old / bridge tokens to the sender
         TransferHelper.safeTransfer(bridge_token_address, msg.sender, bridge_tokens_out);
     }
 
     /* ========== MINTERS OR GOVERNANCE FUNCTIONS ========== */
 
-    // Collect old tokens so you can de-bridge them back on mainnet
+    // Collect old / bridge tokens so you can de-bridge them back on mainnet
     function withdrawBridgeTokens(address bridge_token_address, uint256 bridge_token_amount) external onlyMintersOwnGov validBridgeToken(bridge_token_address) {
         TransferHelper.safeTransfer(bridge_token_address, msg.sender, bridge_token_amount);
     }

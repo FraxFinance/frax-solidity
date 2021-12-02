@@ -1,6 +1,6 @@
 const path = require('path');
 const Table = require('cli-table');
-const envPath = path.join(__dirname, '../../.env');
+const envPath = path.join(__dirname, '../../../.env');
 require('dotenv').config({ path: envPath });
 
 const BigNumber = require('bignumber.js');
@@ -20,45 +20,18 @@ global.web3 = web3;
 
 const hre = require("hardhat");
 const e = require('express');
-
-// const Address = artifacts.require("Utils/Address");
-// const BlockMiner = artifacts.require("Utils/BlockMiner");
-// const Math = artifacts.require("Math/Math");
-// const SafeMath = artifacts.require("Math/SafeMath");
-// const Babylonian = artifacts.require("Math/Babylonian");
-// const FixedPoint = artifacts.require("Math/FixedPoint");
-// const UQ112x112 = artifacts.require("Math/UQ112x112");
-// const Owned = artifacts.require("Staking/Owned");
-const ERC20 = artifacts.require("ERC20/ERC20");
-// const ERC20Custom = artifacts.require("ERC20/ERC20Custom");
-// const SafeERC20 = artifacts.require("ERC20/SafeERC20");
+const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 
 // Uniswap related
-// const TransferHelper = artifacts.require("Uniswap/TransferHelper");
-const SwapToPrice = artifacts.require("Uniswap/SwapToPrice");
-const UniswapV2ERC20 = artifacts.require("Uniswap/UniswapV2ERC20");
-const UniswapV2Factory = artifacts.require("Uniswap/UniswapV2Factory");
-const UniswapV2Library = artifacts.require("Uniswap/UniswapV2Library");
-const UniswapV2OracleLibrary = artifacts.require("Uniswap/UniswapV2OracleLibrary");
-const UniswapV2Pair = artifacts.require("Uniswap/UniswapV2Pair");
-const UniswapV2Router02 = artifacts.require("Uniswap/UniswapV2Router02");
-
-// Collateral
-const WETH = artifacts.require("ERC20/WETH");
-const FakeCollateral_USDC = artifacts.require("FakeCollateral/FakeCollateral_USDC");
-
+const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
+const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
+const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
 
 // Collateral Pools
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
-const PoolvAMM_USDC = artifacts.require("Frax/Pools/PoolvAMM_USDC");
 
 // Oracles
-const UniswapPairOracle_FRAX_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_WETH");
-const UniswapPairOracle_FRAX_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_USDC");
-const UniswapPairOracle_FRAX_FXS = artifacts.require("Oracle/Variants/UniswapPairOracle_FRAX_FXS");
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
-const UniswapPairOracle_FXS_USDC = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_USDC");
-const UniswapPairOracle_USDC_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_USDC_WETH");
 const PIDController = artifacts.require("Oracle/PIDController.sol");
 const ReserveTracker = artifacts.require("Oracle/ReserveTracker.sol");
 
@@ -66,11 +39,8 @@ const ReserveTracker = artifacts.require("Oracle/ReserveTracker.sol");
 const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
 
 // FRAX core
-const FRAXStablecoin = artifacts.require("Frax/FRAXStablecoin");
+const FRAXStablecoin = artifacts.require("Frax/IFrax");
 const FRAXShares = artifacts.require("FXS/FRAXShares");
-const StakingRewards_FRAX_WETH = artifacts.require("Staking/Variants/Stake_FRAX_WETH.sol");
-const StakingRewards_FRAX_USDC = artifacts.require("Staking/Variants/Stake_FRAX_USDC.sol");
-const StakingRewards_FRAX_FXS = artifacts.require("Staking/Variants/Stake_FRAX_FXS.sol");
 
 // Token vesting
 const TokenVesting = artifacts.require("FXS/TokenVesting.sol");
@@ -80,21 +50,15 @@ const Timelock = artifacts.require("Governance/Timelock");
 
 // Curve Metapool
 const CurveFactory = artifacts.require("Curve/Factory");
-const MetaImplementationUSD = artifacts.require("Curve/MetaImplementationUSD");
-const LiquidityGaugeV2 = artifacts.require("Curve/LiquidityGaugeV2");
-const StableSwap3Pool = artifacts.require("Curve/StableSwap3Pool");
+const MetaImplementationUSD = artifacts.require("Curve/IMetaImplementationUSD");
+const LiquidityGaugeV2 = artifacts.require("Curve/ILiquidityGaugeV2");
+const StableSwap3Pool = artifacts.require("Curve/IStableSwap3Pool");
 const GaugeController = artifacts.require("Curve/GaugeController");
-const CurveAMO_V3 = artifacts.require("Curve/CurveAMO_V3.sol");
+const CurveAMO_V4 = artifacts.require("Curve/CurveAMO_V4.sol");
 
 // veFXS
-const veFXS = artifacts.require("Curve/veFXS");
+const veFXS = artifacts.require("Curve/IveFXS");
 
-const ONE_MILLION_DEC18 = new BigNumber(1000000e18);
-const COLLATERAL_SEED_DEC18 = new BigNumber(508500e18);
-const COLLATERAL_SEED_DEC6 = new BigNumber(508500e6);
-const ONE_THOUSAND_DEC18 = new BigNumber(1000e18);
-const THREE_THOUSAND_DEC18 = new BigNumber(3000e18);
-const THREE_THOUSAND_DEC6 = new BigNumber(3000e6);
 const BIG6 = new BigNumber("1e6");
 const BIG12 = new BigNumber("1e12");
 const BIG18 = new BigNumber("1e18");
@@ -112,9 +76,6 @@ let globalCollateralValue;
 
 contract('veFXS Tests', async (accounts) => {
 	CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
-	
-	// console.log("accounts[0] in vAMM-Tests: ", accounts[0]);
-	console.log("All accounts", accounts);
 
 	// Constants
 	let ORIGINAL_FRAX_ONE_ADDRESS;
@@ -127,14 +88,13 @@ contract('veFXS Tests', async (accounts) => {
 	let STAKING_REWARDS_DISTRIBUTOR;
 	let INVESTOR_CUSTODIAN_ADDRESS;
 	const ADDRESS_WITH_ETH = '0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B'; // Vitalik's Vb
-	const ADDRESS_WITH_FRAX = '0xeb7AE9d125442A5b4ed57FE7C4Cbc87512B02ADA';
-	const ADDRESS_WITH_FXS = '0x8a97a178408d7027355a7ef144fdf13277cea776';
+	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
+	const ADDRESS_WITH_FXS = '0xF977814e90dA44bFA03b6295A0616a897441aceC';
 	const ADDRESS_WITH_3CRV = '0x99739fa525c0a98384430235d278fd08938997f9';
 	const ADDRESS_WITH_DAI = '0xf977814e90da44bfa03b6295a0616a897441acec';
-	const ADDRESS_WITH_USDC = '0xf977814e90da44bfa03b6295a0616a897441acec';
+	const ADDRESS_WITH_USDC = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503';
 	const ADDRESS_WITH_USDC_2 = '0xAe2D4617c862309A3d75A0fFB358c7a5009c673F';
 	const ADDRESS_WITH_USDC_3 = '0x55FE002aefF02F77364de339a1292923A15844B8';
-
 	// Curve Metapool
 	let crv3Instance;
 	let frax_3crv_metapool_instance;
@@ -148,51 +108,21 @@ contract('veFXS Tests', async (accounts) => {
 	let gauge_controller_instance;
 
 	// Initialize core contract instances
-	let fraxInstance;
-	let fxsInstance;
-
-	// Initialize vesting instances
-	let vestingInstance;
+	let frax_instance;
+	let fxs_instance;
 
 	// Initialize collateral instances
 	let wethInstance;
-	let col_instance_USDC;
-	
-	// Initialize the Uniswap Router Instance
-	let routerInstance; 
-
-	// Initialize the Uniswap Factory Instance
-	let factoryInstance; 
-
-	// Initialize the Uniswap Libraries
-	let uniswapLibraryInstance;
-	let uniswapOracleLibraryInstance;
-
-	// Initialize the Timelock instance
-	let timelockInstance; 
-
-	// Initialize the swap to price contract
-	let swapToPriceInstance;
+	let usdc_instance;
 
 	// Initialize oracle instances
-	let oracle_instance_FRAX_WETH;
-	let oracle_instance_FRAX_USDC;
-	let oracle_instance_FRAX_FXS;
 	let oracle_instance_FXS_WETH;
-	let oracle_instance_FXS_USDC;
 
 	let pid_controller_instance;
     let reserve_tracker_instance;
 
-	// Initialize ETH-USD Chainlink Oracle too
-	let oracle_chainlink_ETH_USD;
-
-	// Initialize the governance contract
-	let governanceInstance;
-
 	// Initialize pool instances
 	let pool_instance_USDC;
-	let pool_instance_USDC_vAMM;
 	
 	// Initialize pair addresses
 	let pair_addr_FRAX_WETH;
@@ -257,78 +187,51 @@ contract('veFXS Tests', async (accounts) => {
 		frax_3crv_metapool_instance = await MetaImplementationUSD.deployed();
 		stableswap3pool_instance = await StableSwap3Pool.at('0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7');
 		gauge_controller_instance = await GaugeController.at("0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB");
-		curve_amo_v3_instance = await CurveAMO_V3.deployed();
+		curve_amo_v3_instance = await CurveAMO_V4.deployed();
 		liquidity_gauge_instance = await LiquidityGaugeV2.deployed();
 
 		// Fill core contract instances
-		fraxInstance = await FRAXStablecoin.deployed();
-		fxsInstance = await FRAXShares.deployed();
-
-		// vestingInstance = await TokenVesting.deployed();
-
-		// Fill collateral instances
-		wethInstance = await WETH.deployed();
-		col_instance_USDC = await FakeCollateral_USDC.deployed(); 
+		frax_instance = await FRAXStablecoin.deployed();
+		fxs_instance = await FRAXShares.deployed();
+		wethInstance = await ERC20.at("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
+		usdc_instance = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"); 
 
 		// Fill the Uniswap Router Instance
-		routerInstance = await UniswapV2Router02.deployed(); 
+		routerInstance = await IUniswapV2Router02.deployed(); 
 
 		// Fill the Timelock instance
 		timelockInstance = await Timelock.deployed(); 
 
 		// Fill oracle instances
-		oracle_instance_FRAX_WETH = await UniswapPairOracle_FRAX_WETH.deployed();
-		oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.deployed(); 
-		oracle_instance_FRAX_FXS = await UniswapPairOracle_FRAX_FXS.deployed(); 
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
-		oracle_instance_FXS_USDC = await UniswapPairOracle_FXS_USDC.deployed();
-		oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.deployed();
 
 		pid_controller_instance = await PIDController.deployed(); 
 		reserve_tracker_instance = await ReserveTracker.deployed();
-
-		// Initialize ETH-USD Chainlink Oracle too
-		oracle_chainlink_ETH_USD = await ChainlinkETHUSDPriceConsumer.deployed();
 
 		// Initialize the governance contract
 		governanceInstance = await GovernorAlpha.deployed();
 
 		// Initialize pool instances
 		pool_instance_USDC = await Pool_USDC.deployed();
-		// pool_instance_USDC_vAMM = await PoolvAMM_USDC.deployed();
 		
-		// Initialize the Uniswap Factory Instance
-		uniswapFactoryInstance = await UniswapV2Factory.deployed(); 
+		// Initialize the Uniswap Factory instance
+		uniswapFactoryInstance = await IUniswapV2Factory.deployed(); 
 
 		// Initialize the Uniswap Libraries
 		// uniswapLibraryInstance = await UniswapV2OracleLibrary.deployed(); 
 		// uniswapOracleLibraryInstance = await UniswapV2Library.deployed(); 
 
-		// Initialize the swap to price contract
-		swapToPriceInstance = await SwapToPrice.deployed(); 
-
 		// Get instances of the Uniswap pairs
-		pair_instance_FRAX_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/WETH"]);
-		pair_instance_FRAX_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FRAX/USDC"]);
-		pair_instance_FXS_WETH = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FXS/WETH"]);
-		//pair_instance_FXS_USDC = await UniswapV2Pair.at(CONTRACT_ADDRESSES.mainnet.pair_tokens["Uniswap FXS/USDC"]);
+		pair_instance_FRAX_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FRAX/WETH"]);
+		pair_instance_FRAX_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FRAX/USDC"]);
+		pair_instance_FXS_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FXS/WETH"]);
+		//pair_instance_FXS_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FXS/USDC"]);
 
 		
 
-		// Get the pair order results
-		isToken0Frax_FRAX_WETH = await oracle_instance_FRAX_WETH.token0();
-		isToken0Frax_FRAX_USDC = await oracle_instance_FRAX_USDC.token0();
-		isToken0Fxs_FXS_WETH = await oracle_instance_FXS_WETH.token0();
-		isToken0Fxs_FXS_USDC = await oracle_instance_FXS_USDC.token0();
-
-		isToken0Frax_FRAX_WETH = fraxInstance.address == isToken0Frax_FRAX_WETH;
-		isToken0Frax_FRAX_USDC = fraxInstance.address == isToken0Frax_FRAX_USDC;
-		isToken0Fxs_FXS_WETH = fxsInstance.address == isToken0Fxs_FXS_WETH;
-		isToken0Fxs_FXS_USDC = fxsInstance.address == isToken0Fxs_FXS_USDC;
+		
 
 		// Fill the staking rewards instances
-		stakingInstance_FRAX_WETH = await StakingRewards_FRAX_WETH.deployed();
-		stakingInstance_FRAX_USDC = await StakingRewards_FRAX_USDC.deployed();
 		// stakingInstance_FXS_WETH = await StakingRewards_FXS_WETH.deployed();
 
 		// console.log("=========================Proxy Deployments=========================");
@@ -338,7 +241,7 @@ contract('veFXS Tests', async (accounts) => {
 		// const veFXS_Implementation = await hre.ethers.ContractFactory.fromSolidity(veFXS);
 		// console.log(veFXS_Implementation)
 		// const proxy_obj = await hre.upgrades.deployProxy(veFXS_Implementation, [
-		// 	fxsInstance.address, 
+		// 	fxs_instance.address, 
 		// 	"veFXS",
 		// 	"veFXS",
 		// 	"veFXS_1.0.0"
@@ -376,10 +279,10 @@ contract('veFXS Tests', async (accounts) => {
 		// // Get the prices
 		// // Price is in collateral needed for 1 FRAX
 		// let frax_price_from_FRAX_WETH = (new BigNumber(await oracle_instance_FRAX_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
-		// let frax_price_from_FRAX_USDC = (new BigNumber(await oracle_instance_FRAX_USDC.consult.call(fraxInstance.address, new BigNumber("1e18")))).div(BIG6);
+		// let frax_price_from_FRAX_USDC = (new BigNumber(await oracle_instance_FRAX_USDC.consult.call(frax_instance.address, new BigNumber("1e18")))).div(BIG6);
 
 		// let fxs_price_from_FXS_WETH = (new BigNumber(await oracle_instance_FXS_WETH.consult.call(wethInstance.address, 1e6))).div(BIG6).toNumber();
-		// let fxs_price_from_FXS_USDC = (new BigNumber(await oracle_instance_FXS_USDC.consult.call(fxsInstance.address, new BigNumber("1e18")))).div(BIG6);
+		// let fxs_price_from_FXS_USDC = (new BigNumber(await oracle_instance_FXS_USDC.consult.call(fxs_instance.address, new BigNumber("1e18")))).div(BIG6);
 		
 		// let USDC_price_from_USDC_WETH = (new BigNumber(await oracle_instance_USDC_WETH.consult.call(wethInstance.address, new BigNumber("1e18")))).div(BIG6);
 
@@ -390,9 +293,9 @@ contract('veFXS Tests', async (accounts) => {
 		);
 
 		// Give the COLLATERAL_FRAX_AND_FXS_OWNER address some FXS
-		await fxsInstance.transfer(STAKING_OWNER, new BigNumber("1000000e18"), { from: ADDRESS_WITH_FXS });
-		await fxsInstance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000000e18"), { from: ADDRESS_WITH_FXS });
-		await fxsInstance.transfer(INVESTOR_CUSTODIAN_ADDRESS, new BigNumber("1000000e18"), { from: ADDRESS_WITH_FXS });
+		await fxs_instance.transfer(STAKING_OWNER, new BigNumber("1000000e18"), { from: ADDRESS_WITH_FXS });
+		await fxs_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000000e18"), { from: ADDRESS_WITH_FXS });
+		await fxs_instance.transfer(INVESTOR_CUSTODIAN_ADDRESS, new BigNumber("1000000e18"), { from: ADDRESS_WITH_FXS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -405,7 +308,7 @@ contract('veFXS Tests', async (accounts) => {
 		// );
 
 		// // Give the COLLATERAL_FRAX_AND_FXS_OWNER address some FRAX
-		// await fraxInstance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000e18"), { from: ADDRESS_WITH_FRAX });
+		// await frax_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000e18"), { from: ADDRESS_WITH_FRAX });
 
 		// await hre.network.provider.request({
 		// 	method: "hardhat_stopImpersonatingAccount",
@@ -539,9 +442,9 @@ contract('veFXS Tests', async (accounts) => {
 		// ])
 
 		// // Print the new prices
-		// console.log("ETH-USD price from Chainlink:", (new BigNumber((await fraxInstance.frax_info.call())['7'])).div(1e6).toString() , "USD = 1 ETH");
+		// console.log("ETH-USD price from Chainlink:", (new BigNumber((await frax_instance.frax_info.call())['7'])).div(1e6).toString() , "USD = 1 ETH");
 		// console.log("frax_price_from_FRAX_WETH: ", frax_price_from_FRAX_WETH.toString(), "FRAX = 1 WETH");
-		// console.log("FRAX-USD price from Chainlink, Uniswap:", (new BigNumber(await fraxInstance.frax_price.call())).div(1e6).toString(), "FRAX = 1 USD",);
+		// console.log("FRAX-USD price from Chainlink, Uniswap:", (new BigNumber(await frax_instance.frax_price.call())).div(1e6).toString(), "FRAX = 1 USD",);
 		// console.log("frax_price_from_FRAX_USDC: ", frax_price_from_FRAX_USDC.toString(), "USDC = 1 FRAX");
 		// console.log("fxs_price_from_FXS_WETH: ", fxs_price_from_FXS_WETH.toString(), "FXS = 1 WETH");
 		// console.log("USDC_price_from_USDC_WETH: ", USDC_price_from_USDC_WETH.toString(), "USDC = 1 WETH");
@@ -574,7 +477,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		let block_time_current_4_yr = (await time.latest()).toNumber();
 		const deposit_quick_timestamp_4_yr = block_time_current_4_yr + ((deposit_quick_days_4_yr * 86400) + 1);
-		await fxsInstance.approve(veFXS_instance.address, deposit_amount_quick_e18_4_yr, { from: STAKING_OWNER });
+		await fxs_instance.approve(veFXS_instance.address, deposit_amount_quick_e18_4_yr, { from: STAKING_OWNER });
 		await veFXS_instance.create_lock(deposit_amount_quick_e18_4_yr, deposit_quick_timestamp_4_yr, { from: STAKING_OWNER });
 
 		// await veFXS_instance.checkpoint();
@@ -591,7 +494,7 @@ contract('veFXS Tests', async (accounts) => {
 			await time.advanceBlock();
 			await veFXS_instance.checkpoint();
 
-			// await fxsInstance.approve(veFXS_instance.address, deposit_amount_increment_e18_4_yr, { from: STAKING_OWNER });
+			// await fxs_instance.approve(veFXS_instance.address, deposit_amount_increment_e18_4_yr, { from: STAKING_OWNER });
 			// await veFXS_instance.increase_amount(deposit_amount_increment_e18_4_yr, { from: STAKING_OWNER });
 		}
 
@@ -621,7 +524,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		let block_time_current_30_days_0 = (await time.latest()).toNumber();
 		const deposit_quick_timestamp_30_days_0 = block_time_current_30_days_0 + ((deposit_quick_days_30_days * 86400) + 1);
-		await fxsInstance.approve(veFXS_instance.address, deposit_amount_quick_e18_30_days, { from: STAKING_OWNER });
+		await fxs_instance.approve(veFXS_instance.address, deposit_amount_quick_e18_30_days, { from: STAKING_OWNER });
 		await veFXS_instance.create_lock(deposit_amount_quick_e18_30_days, deposit_quick_timestamp_30_days_0, { from: STAKING_OWNER });
 
 		// await veFXS_instance.checkpoint();
@@ -638,7 +541,7 @@ contract('veFXS Tests', async (accounts) => {
 			await time.advanceBlock();
 			await veFXS_instance.checkpoint();
 
-			// await fxsInstance.approve(veFXS_instance.address, deposit_amount_increment_e18, { from: STAKING_OWNER });
+			// await fxs_instance.approve(veFXS_instance.address, deposit_amount_increment_e18, { from: STAKING_OWNER });
 			// await veFXS_instance.increase_amount(deposit_amount_increment_e18, { from: STAKING_OWNER });
 		}
 
@@ -652,7 +555,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		let block_time_current_30_days_1 = (await time.latest()).toNumber();
 		const deposit_quick_timestamp_30_days_1 = block_time_current_30_days_1 + ((deposit_quick_days_30_days * 86400) + 1);
-		await fxsInstance.approve(veFXS_instance.address, deposit_amount_quick_e18_30_days, { from: STAKING_OWNER });
+		await fxs_instance.approve(veFXS_instance.address, deposit_amount_quick_e18_30_days, { from: STAKING_OWNER });
 		await veFXS_instance.create_lock(deposit_amount_quick_e18_30_days, deposit_quick_timestamp_30_days_1, { from: STAKING_OWNER });
 
 		// await veFXS_instance.checkpoint();
@@ -669,7 +572,7 @@ contract('veFXS Tests', async (accounts) => {
 			await time.advanceBlock();
 			await veFXS_instance.checkpoint();
 
-			// await fxsInstance.approve(veFXS_instance.address, deposit_amount_increment_e18, { from: STAKING_OWNER });
+			// await fxs_instance.approve(veFXS_instance.address, deposit_amount_increment_e18, { from: STAKING_OWNER });
 			// await veFXS_instance.increase_amount(deposit_amount_increment_e18, { from: STAKING_OWNER });
 		}
 
@@ -694,8 +597,8 @@ contract('veFXS Tests', async (accounts) => {
 		console.log(`Once for COLLATERAL_FRAX_AND_FXS_OWNER, another for INVESTOR_CUSTODIAN_ADDRESS`);
 		block_time_current = (await time.latest()).toNumber();
 		let staking_end_time = block_time_current + ((deposit_days * 86400) + 1);
-		await fxsInstance.approve(veFXS_instance.address, deposit_amount_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await fxsInstance.approve(veFXS_instance.address, deposit_amount_e18, { from: INVESTOR_CUSTODIAN_ADDRESS });
+		await fxs_instance.approve(veFXS_instance.address, deposit_amount_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await fxs_instance.approve(veFXS_instance.address, deposit_amount_e18, { from: INVESTOR_CUSTODIAN_ADDRESS });
 		await veFXS_instance.create_lock(deposit_amount_e18, staking_end_time, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await veFXS_instance.create_lock(deposit_amount_e18, staking_end_time, { from: INVESTOR_CUSTODIAN_ADDRESS });
 
@@ -713,7 +616,7 @@ contract('veFXS Tests', async (accounts) => {
 		const deposit_amount_2_e18 = new BigNumber(`${deposit_amount_2}e18`);
 
 		console.log(`Add ${deposit_amount_2} more FXS`);
-		await fxsInstance.approve(veFXS_instance.address, deposit_amount_2_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await fxs_instance.approve(veFXS_instance.address, deposit_amount_2_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await veFXS_instance.increase_amount(deposit_amount_2_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		const veFXS_after_adding_more = new BigNumber(await veFXS_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
@@ -762,7 +665,7 @@ contract('veFXS Tests', async (accounts) => {
 		await veFXS_instance.toggleEmergencyUnlock({ from: DEPLOYER_ADDRESS });
 
 		console.log("Get FXS and veFXS balances before");
-		const pre_withdrawal_FXS_2 = new BigNumber(await fxsInstance.balanceOf(INVESTOR_CUSTODIAN_ADDRESS)).div(BIG18).toNumber();
+		const pre_withdrawal_FXS_2 = new BigNumber(await fxs_instance.balanceOf(INVESTOR_CUSTODIAN_ADDRESS)).div(BIG18).toNumber();
 		const pre_withdrawal_veFXS_2 = new BigNumber(await veFXS_instance.balanceOf(INVESTOR_CUSTODIAN_ADDRESS)).div(BIG18).toNumber();
 		console.log("pre_withdrawal_FXS_2:", pre_withdrawal_FXS_2);
 		console.log("pre_withdrawal_veFXS_2:", pre_withdrawal_veFXS_2);
@@ -771,7 +674,7 @@ contract('veFXS Tests', async (accounts) => {
 		await veFXS_instance.withdraw({ from: INVESTOR_CUSTODIAN_ADDRESS });
 
 		console.log("Get FXS and veFXS balances after");
-		const post_withdrawal_FXS_2 = new BigNumber(await fxsInstance.balanceOf(INVESTOR_CUSTODIAN_ADDRESS)).div(BIG18).toNumber();
+		const post_withdrawal_FXS_2 = new BigNumber(await fxs_instance.balanceOf(INVESTOR_CUSTODIAN_ADDRESS)).div(BIG18).toNumber();
 		const post_withdrawal_veFXS_2 = new BigNumber(await veFXS_instance.balanceOf(INVESTOR_CUSTODIAN_ADDRESS)).div(BIG18).toNumber();
 
 		console.log(`post_withdrawal_FXS_2: ${post_withdrawal_FXS_2} (change: ${post_withdrawal_FXS_2 - pre_withdrawal_FXS_2})`);
@@ -851,7 +754,7 @@ contract('veFXS Tests', async (accounts) => {
 		await time.advanceBlock();
 
 		console.log("Get FXS and veFXS balances before");
-		const pre_withdrawal_FXS = new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const pre_withdrawal_FXS = new BigNumber(await fxs_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
 		const pre_withdrawal_veFXS = new BigNumber(await veFXS_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
 		console.log("pre_withdrawal_FXS:", pre_withdrawal_FXS);
 		console.log("pre_withdrawal_veFXS:", pre_withdrawal_veFXS);
@@ -860,7 +763,7 @@ contract('veFXS Tests', async (accounts) => {
 		await veFXS_instance.withdraw({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		console.log("Get FXS and veFXS balances after");
-		const post_withdrawal_FXS = new BigNumber(await fxsInstance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const post_withdrawal_FXS = new BigNumber(await fxs_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
 		const post_withdrawal_veFXS = new BigNumber(await veFXS_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
 		console.log(`post_withdrawal_FXS: ${post_withdrawal_FXS} (change: ${post_withdrawal_FXS - pre_withdrawal_FXS})`);
 		console.log(`post_withdrawal_veFXS: ${post_withdrawal_veFXS} (change: ${post_withdrawal_veFXS - pre_withdrawal_veFXS})`);
@@ -898,7 +801,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		const pre_deposit_3pool_usdc_only = new BigNumber(await crv3Instance.balanceOf(curve_amo_v3_instance.address)).div(BIG18).toNumber();
 		console.log("pre-deposit Curve AMO 3pool LP balance:", pre_deposit_3pool_usdc_only);
-		console.log("pre-deposit Curve AMO USDC balance:", new BigNumber(await col_instance_USDC.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
+		console.log("pre-deposit Curve AMO USDC balance:", new BigNumber(await usdc_instance.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
 		console.log("");
 
 		console.log("Depositing 10k USDC into the metapool");
@@ -909,19 +812,19 @@ contract('veFXS Tests', async (accounts) => {
 		console.log("post-deposit Curve AMO metapool LP balance:", post_deposit_metapool_usdc_only);
 		const post_deposit_3pool_usdc_only = new BigNumber(await crv3Instance.balanceOf(curve_amo_v3_instance.address)).div(BIG18).toNumber();
 		console.log("post-deposit Curve AMO 3pool LP balance:", post_deposit_3pool_usdc_only);
-		console.log("post-deposit Curve AMO USDC balance:", new BigNumber(await col_instance_USDC.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
+		console.log("post-deposit Curve AMO USDC balance:", new BigNumber(await usdc_instance.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
 
 		console.log("");
 		console.log("metapool LP total supply:", new BigNumber(await frax_3crv_metapool_instance.totalSupply()).div(BIG18).toNumber());
 		console.log("metapool 3CRV balance:", new BigNumber(await crv3Instance.balanceOf(frax_3crv_metapool_instance.address)).div(BIG18).toNumber());
-		console.log("metapool FRAX balance:", new BigNumber(await fraxInstance.balanceOf(frax_3crv_metapool_instance.address)).div(BIG18).toNumber());
+		console.log("metapool FRAX balance:", new BigNumber(await frax_instance.balanceOf(frax_3crv_metapool_instance.address)).div(BIG18).toNumber());
 
 		console.log("");
 		console.log("Curve AMO collatDollarBalance():", new BigNumber(await curve_amo_v3_instance.collatDollarBalance()).div(BIG18).toNumber());
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
 		console.log("=====================DEPOSIT [FRAX ONLY]=====================");
 		console.log("Deposit into the metapool");
@@ -929,7 +832,7 @@ contract('veFXS Tests', async (accounts) => {
 		console.log("pre-deposit Curve AMO metapool LP balance:", pre_deposit_metapool_frax_only);
 		const pre_deposit_3pool_frax_only = new BigNumber(await crv3Instance.balanceOf(curve_amo_v3_instance.address)).div(BIG18).toNumber();
 		console.log("pre-deposit Curve AMO 3pool LP balance:", pre_deposit_3pool_frax_only);
-		console.log("pre-deposit Curve AMO USDC balance:", new BigNumber(await col_instance_USDC.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
+		console.log("pre-deposit Curve AMO USDC balance:", new BigNumber(await usdc_instance.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
 		console.log("");
 
 		console.log("Depositing 100k FRAX into the metapool")
@@ -940,19 +843,19 @@ contract('veFXS Tests', async (accounts) => {
 		console.log("post-deposit Curve AMO metapool LP balance:", post_deposit_metapool_frax_only);
 		const post_deposit_3pool_frax_only = new BigNumber(await crv3Instance.balanceOf(curve_amo_v3_instance.address)).div(BIG18).toNumber();
 		console.log("post-deposit Curve AMO 3pool LP balance:", post_deposit_3pool_frax_only);
-		console.log("post-deposit Curve AMO USDC balance:", new BigNumber(await col_instance_USDC.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
+		console.log("post-deposit Curve AMO USDC balance:", new BigNumber(await usdc_instance.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
 
 		console.log("");
 		console.log("metapool LP total supply:", new BigNumber(await frax_3crv_metapool_instance.totalSupply()).div(BIG18).toNumber());
 		console.log("metapool 3CRV balance:", new BigNumber(await crv3Instance.balanceOf(frax_3crv_metapool_instance.address)).div(BIG18).toNumber());
-		console.log("metapool FRAX balance:", new BigNumber(await fraxInstance.balanceOf(frax_3crv_metapool_instance.address)).div(BIG18).toNumber());
+		console.log("metapool FRAX balance:", new BigNumber(await frax_instance.balanceOf(frax_3crv_metapool_instance.address)).div(BIG18).toNumber());
 
 		console.log("");
 		console.log("Curve AMO collatDollarBalance():", new BigNumber(await curve_amo_v3_instance.collatDollarBalance()).div(BIG18).toNumber());
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
 		console.log("=====================DEPOSIT [FRAX AND USDC]=====================");
 		console.log("Deposit into the metapool");
@@ -960,7 +863,7 @@ contract('veFXS Tests', async (accounts) => {
 		console.log("pre-deposit Curve AMO metapool LP balance:", pre_deposit_metapool_both);
 		const pre_deposit_3pool_both = new BigNumber(await crv3Instance.balanceOf(curve_amo_v3_instance.address)).div(BIG18).toNumber();
 		console.log("pre-deposit Curve AMO 3pool LP balance:", pre_deposit_3pool_both);
-		console.log("pre-deposit Curve AMO USDC balance:", new BigNumber(await col_instance_USDC.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
+		console.log("pre-deposit Curve AMO USDC balance:", new BigNumber(await usdc_instance.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
 		console.log("");
 
 		console.log("Depositing 5k FRAX and 5k USDC into the metapool")
@@ -971,19 +874,19 @@ contract('veFXS Tests', async (accounts) => {
 		console.log("post-deposit Curve AMO metapool LP balance:", post_deposit_metapool_both);
 		const post_deposit_3pool_both = new BigNumber(await crv3Instance.balanceOf(curve_amo_v3_instance.address)).div(BIG18).toNumber();
 		console.log("post-deposit Curve AMO 3pool LP balance:", post_deposit_3pool_both);
-		console.log("post-deposit Curve AMO USDC balance:", new BigNumber(await col_instance_USDC.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
+		console.log("post-deposit Curve AMO USDC balance:", new BigNumber(await usdc_instance.balanceOf(curve_amo_v3_instance.address)).div(BIG6).toNumber());
 
 		console.log("");
 		console.log("metapool LP total supply:", new BigNumber(await frax_3crv_metapool_instance.totalSupply()).div(BIG18).toNumber());
 		console.log("metapool 3CRV balance:", new BigNumber(await crv3Instance.balanceOf(frax_3crv_metapool_instance.address)).div(BIG18).toNumber());
-		console.log("metapool FRAX balance:", new BigNumber(await fraxInstance.balanceOf(frax_3crv_metapool_instance.address)).div(BIG18).toNumber());
+		console.log("metapool FRAX balance:", new BigNumber(await frax_instance.balanceOf(frax_3crv_metapool_instance.address)).div(BIG18).toNumber());
 
 		console.log("");
 		console.log("Curve AMO collatDollarBalance():", new BigNumber(await curve_amo_v3_instance.collatDollarBalance()).div(BIG18).toNumber());
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
 		console.log("=====================WITHDRAW FRAX FROM THE METAPOOL=====================");
 		const test_amt_frax = new BigNumber("7000e18");
@@ -992,7 +895,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
 		console.log("=====================WITHDRAW 3POOL FROM THE METAPOOL=====================");
 		const test_amt_3pool = new BigNumber("3000e18");
@@ -1001,7 +904,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
 
 		console.log("=====================CONVERT 3POOL TO USDC=====================");
@@ -1011,7 +914,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
 		console.log("=====================WITHDRAW 3POOL AND USDC FROM THE METAPOOL AT THE SAME TIME=====================");
 		const test_amt_3pool_both = new BigNumber("5000e18");
@@ -1020,7 +923,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
 		console.log("=====================WITHDRAW 3POOL AND FRAX FROM THE METAPOOL AT THE CURRENT BALANCE=====================");
 		const test_amt_frax_usdc = new BigNumber("5000e18");
@@ -1029,7 +932,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
 		// GAUGE NEEDS TO BE LIVE FIRST!!!
 
@@ -1039,7 +942,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
 		// Do some gauge and gauge controller checkpoints
 		await gauge_controller_instance.checkpoint();
@@ -1067,7 +970,7 @@ contract('veFXS Tests', async (accounts) => {
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
 		console.log("=====================WITHDRAW FROM THE GAUGE=====================");
 		console.log("Withdraw some of the LP from the gauge");
@@ -1075,16 +978,16 @@ contract('veFXS Tests', async (accounts) => {
 
 		console.log("Print some info");
 		the_allocations = await curve_amo_v3_instance.showAllocations.call();
-    	utilities.printAllocations('CurveAMO_V3', the_allocations);
+    	utilities.printAllocations('CurveAMO_V4', the_allocations);
 
-		const fxs_balance_after = new BigNumber(await fxsInstance.balanceOf.call(curve_amo_v3_instance.address)).div(BIG18);
-		const usdc_balance_after = new BigNumber(await col_instance_USDC.balanceOf.call(curve_amo_v3_instance.address)).div(BIG6);
+		const fxs_balance_after = new BigNumber(await fxs_instance.balanceOf.call(curve_amo_v3_instance.address)).div(BIG18);
+		const usdc_balance_after = new BigNumber(await usdc_instance.balanceOf.call(curve_amo_v3_instance.address)).div(BIG6);
 		const borrowed_balance = new BigNumber(await curve_amo_v3_instance.collateralBalance.call()).div(BIG6);
 		console.log("FXS after: ", fxs_balance_after.toNumber());
 		console.log("USDC after: ", usdc_balance_after.toNumber());
 		console.log("collateral balance: ", borrowed_balance.toNumber());
-		//console.log("Frax CR:", new BigNumber(await fraxInstance.global_collateral_ratio()).toNumber());
-	    console.log("CurveAMO_V3 collatDollarBalance():", new BigNumber(await curve_amo_v3_instance.collatDollarBalance()).div(BIG18).toNumber());
+		//console.log("Frax CR:", new BigNumber(await frax_instance.global_collateral_ratio()).toNumber());
+	    console.log("CurveAMO_V4 collatDollarBalance():", new BigNumber(await curve_amo_v3_instance.collatDollarBalance()).div(BIG18).toNumber());
 		
 		console.log("=====================TEST get_D() AND get_D_and_iterations()=====================");
 

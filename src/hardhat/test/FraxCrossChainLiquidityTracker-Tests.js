@@ -20,7 +20,7 @@ global.web3 = web3;
 const hre = require("hardhat");
 const e = require('express');
 
-const ERC20 = artifacts.require("ERC20/ERC20");
+const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 
 // Uniswap related
 const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
@@ -57,16 +57,11 @@ const StableSwap3Pool = artifacts.require("Curve/IStableSwap3Pool");
 const OHM_AMO = artifacts.require("Misc_AMOs/OHM_AMO_V3.sol");
 const RariFuseLendingAMO_V2 = artifacts.require("Misc_AMOs/RariFuseLendingAMO_V2.sol");
 const ICErc20Delegator = artifacts.require("Misc_AMOs/rari/ICErc20Delegator.sol");
-const IComptroller = artifacts.require("Misc_AMOs/rari/IComptroller.sol");
+const IComptroller = artifacts.require("Misc_AMOs/rari/IRariComptroller.sol");
 const FraxAMOMinter = artifacts.require("Frax/FraxAMOMinter");
 const FraxCrossChainLiquidityTracker = artifacts.require("Misc_AMOs/FraxCrossChainLiquidityTracker");
 
-const ONE_MILLION_DEC18 = new BigNumber(1000000e18);
-const COLLATERAL_SEED_DEC18 = new BigNumber(508500e18);
-const COLLATERAL_SEED_DEC6 = new BigNumber(508500e6);
-const ONE_THOUSAND_DEC18 = new BigNumber(1000e18);
-const THREE_THOUSAND_DEC18 = new BigNumber(3000e18);
-const THREE_THOUSAND_DEC6 = new BigNumber(3000e6);
+// Constants
 const BIG2 = new BigNumber("1e2");
 const BIG6 = new BigNumber("1e6");
 const BIG9 = new BigNumber("1e9");
@@ -98,7 +93,7 @@ contract('FraxCrossChainLiquidityTracker-Tests', async (accounts) => {
 	let STAKING_REWARDS_DISTRIBUTOR;
 	let INVESTOR_CUSTODIAN_ADDRESS;
 	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
-	const ADDRESS_WITH_USDC = '0xf977814e90da44bfa03b6295a0616a897441acec';
+	const ADDRESS_WITH_USDC = '0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503';
 
 	// Curve Metapool
 	let crv3Instance;
@@ -268,8 +263,18 @@ contract('FraxCrossChainLiquidityTracker-Tests', async (accounts) => {
 		const usdc_balance_before_redeem = new BigNumber(await usdc_instance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG6);
 
 		// Redeem threshold
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [process.env.POOL_OWNER_ADDRESS]
+		});
+	
 		console.log("Set the redeem threshold to $1.01 now so redeems work");
-		await pool_instance_V3.setPriceThresholds(1030000, 1010000, { from: POOL_CREATOR }); 
+		await pool_instance_V3.setPriceThresholds(1030000, 1010000, { from: process.env.POOL_OWNER_ADDRESS }); 
+	
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [process.env.POOL_OWNER_ADDRESS]
+		});
 
 		// Do a redeem
 		const redeem_amount = new BigNumber("1000e18");
@@ -392,10 +397,11 @@ contract('FraxCrossChainLiquidityTracker-Tests', async (accounts) => {
 		console.log("Tracker collatDollarBalance:", new BigNumber((await frax_cc_liq_tracker_instance.dollarBalances.call())[1]).div(BIG18).toNumber());
 		console.log("FraxPoolV3 collatDollarBalance:", new BigNumber(await pool_instance_V3.collatDollarBalance.call()).div(BIG18).toNumber());
 		console.log("Minter collatDollarBalance:", new BigNumber(await frax_amo_minter_instance.collatDollarBalance.call()).div(BIG18).toNumber());
-		console.log("Global Profit:", new BigNumber(await frax_amo_minter_instance.unspentProfitGlobal.call()).div(BIG18).toNumber());
-		console.log("AMO Profit:", new BigNumber(await frax_amo_minter_instance.amoProfit.call(frax_cc_liq_tracker_instance.address)).div(BIG18).toNumber());
+		console.log("Global Profit:", new BigNumber(await frax_amo_minter_instance.fraxTrackedGlobal.call()).div(BIG18).toNumber());
+		console.log("AMO Profit:", new BigNumber(await frax_amo_minter_instance.fraxTrackedAMO.call(frax_cc_liq_tracker_instance.address)).div(BIG18).toNumber());
 		console.log("fraxDollarBalanceStored:", new BigNumber(await frax_amo_minter_instance.fraxDollarBalanceStored.call()).div(BIG18).toNumber());
-		console.log("mint_sum:", new BigNumber(await frax_amo_minter_instance.mint_sum.call()).div(BIG18).toNumber());
+		console.log("frax_mint_sum:", new BigNumber(await frax_amo_minter_instance.frax_mint_sum.call()).div(BIG18).toNumber());
+		console.log("fxs_mint_sum:", new BigNumber(await frax_amo_minter_instance.fxs_mint_sum.call()).div(BIG18).toNumber());
 		console.log("collat_borrowed_sum:", new BigNumber(await frax_amo_minter_instance.collat_borrowed_sum.call()).div(BIG6).toNumber());
 		console.log("allAMOAddresses:", await frax_amo_minter_instance.allAMOAddresses.call());
 		console.log("allAMOsLength:", new BigNumber(await frax_amo_minter_instance.allAMOsLength.call()).toNumber());

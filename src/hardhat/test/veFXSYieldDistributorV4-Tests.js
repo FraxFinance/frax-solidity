@@ -21,7 +21,7 @@ const hre = require("hardhat");
 const e = require('express');
 
 // Core
-const ERC20 = artifacts.require("ERC20/ERC20");
+const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 
 // Uniswap related
 const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
@@ -59,12 +59,6 @@ const Timelock = artifacts.require("Governance/Timelock");
 const veFXS = artifacts.require("Curve/IveFXS");
 const veFXSYieldDistributor = artifacts.require("Staking/veFXSYieldDistributorV4");
 
-const ONE_MILLION_DEC18 = new BigNumber(1000000e18);
-const COLLATERAL_SEED_DEC18 = new BigNumber(508500e18);
-const COLLATERAL_SEED_DEC6 = new BigNumber(508500e6);
-const ONE_THOUSAND_DEC18 = new BigNumber(1000e18);
-const THREE_THOUSAND_DEC18 = new BigNumber(3000e18);
-const THREE_THOUSAND_DEC6 = new BigNumber(3000e6);
 const BIG6 = new BigNumber("1e6");
 const BIG18 = new BigNumber("1e18");
 const TIMELOCK_DELAY = 86400 * 2; // 2 days
@@ -222,14 +216,14 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 		console.log("----------------------------");
 
 		// Fake move in some FXS
-		console.log("Seed the distributor with FXS");
+		console.log("Seed some accounts with FXS");
 
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
 			params: [ADDRESS_WITH_FXS]
 		});
 
-		await fxs_instance.transfer(veFXSYieldDistributor_instance.address, new BigNumber("1000000e18"), { from: ADDRESS_WITH_FXS });
+		// await fxs_instance.transfer(veFXSYieldDistributor_instance.address, new BigNumber("500000e18"), { from: ADDRESS_WITH_FXS });
 		await fxs_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("250000e18"), { from: ADDRESS_WITH_FXS });
 		await fxs_instance.transfer(accounts[9], new BigNumber("10000e18"), { from: ADDRESS_WITH_FXS });
 
@@ -255,8 +249,23 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 		await veFXS_instance.create_lock(deposit_amount_1_e18, veFXS_deposit_end_timestamp, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await veFXS_instance.create_lock(deposit_amount_9_e18, veFXS_deposit_end_timestamp, { from: accounts[9] });
 		
-		console.log("Initializing Contract");
-		await veFXSYieldDistributor_instance.initializeDefault({ from: STAKING_OWNER });
+		// console.log("Initializing Contract");
+		// await veFXSYieldDistributor_instance.initializeDefault({ from: STAKING_OWNER });
+
+		console.log("Allow COLLATERAL_FRAX_AND_FXS_OWNER as a reward notifier");
+		await veFXSYieldDistributor_instance.toggleRewardNotifier(COLLATERAL_FRAX_AND_FXS_OWNER, { from: STAKING_OWNER });
+
+		console.log("----------Notify first half of 1st week's reward----------");
+		const yield_week_1 = 3.5;
+		const yield_week_1_e18 = new BigNumber(`${yield_week_1}e18`);
+		await fxs_instance.approve(veFXSYieldDistributor_instance.address, yield_week_1_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await veFXSYieldDistributor_instance.notifyRewardAmount(yield_week_1_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("1st week Yield Rate (1st half): ", new BigNumber(await veFXSYieldDistributor_instance.getYieldForDuration.call()).div(BIG18).toNumber());
+
+		console.log("----------Notify second half of 1st week's reward----------");
+		await fxs_instance.approve(veFXSYieldDistributor_instance.address, yield_week_1_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await veFXSYieldDistributor_instance.notifyRewardAmount(yield_week_1_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("1st week Yield Rate (2nd half): ", new BigNumber(await veFXSYieldDistributor_instance.getYieldForDuration.call()).div(BIG18).toNumber());
 	});
 
 	it('Normal yield', async () => {
@@ -271,10 +280,10 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 
 		await veFXSYieldDistributor_instance.getYield({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		console.log("accounts[1] at first getYield");
-		console.log("accounts[1] veFXS balance:", vefxs_at_1st_checkpoint_1.toString());
-		console.log("accounts[1] FXS balance:", fxs_at_1st_checkpoint_1.toString());
-		console.log("accounts[1] FXS in veFXS:", fxs_in_vefxs_at_1st_checkpoint_1.toString());
-		console.log("accounts[1] staking yields() [FXS]:", yield_at_1st_checkpoint_1_FXS.toString());
+		console.log("accounts[1] veFXS balance:", vefxs_at_1st_checkpoint_1.toNumber());
+		console.log("accounts[1] FXS balance:", fxs_at_1st_checkpoint_1.toNumber());
+		console.log("accounts[1] FXS in veFXS:", fxs_in_vefxs_at_1st_checkpoint_1.toNumber());
+		console.log("accounts[1] staking yields() [FXS]:", yield_at_1st_checkpoint_1_FXS.toNumber());
 		console.log("accounts[1] userVeFXSCheckpointed:", (new BigNumber(await veFXSYieldDistributor_instance.userVeFXSCheckpointed(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
 		console.log("");
 
@@ -286,9 +295,9 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 
 		await veFXSYieldDistributor_instance.getYield({ from: accounts[9] });
 		console.log("accounts[9] at first getYield");
-		console.log("accounts[9] veFXS balance:", vefxs_at_1st_checkpoint_9.toString());
-		console.log("accounts[9] FXS balance:", fxs_at_1st_checkpoint_9.toString());
-		console.log("accounts[9] staking yields() [FXS]:", yield_at_1st_checkpoint_9_FXS.toString());
+		console.log("accounts[9] veFXS balance:", vefxs_at_1st_checkpoint_9.toNumber());
+		console.log("accounts[9] FXS balance:", fxs_at_1st_checkpoint_9.toNumber());
+		console.log("accounts[9] staking yields() [FXS]:", yield_at_1st_checkpoint_9_FXS.toNumber());
 		console.log("accounts[9] userVeFXSCheckpointed:", (new BigNumber(await veFXSYieldDistributor_instance.userVeFXSCheckpointed(accounts[9]))).div(BIG18).toNumber());
 		console.log("");
 
@@ -298,15 +307,15 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 
 		// Note the total lastUpdateTime
 		let distributor_lastUpdateTime = new BigNumber(await veFXSYieldDistributor_instance.lastUpdateTime.call());
-		console.log("Distributor lastUpdateTime:", distributor_lastUpdateTime.toString());
+		console.log("Distributor lastUpdateTime:", distributor_lastUpdateTime.toNumber());
 
 		// Note the total periodFinish
 		let distributor_periodFinish = new BigNumber(await veFXSYieldDistributor_instance.periodFinish.call());
-		console.log("Distributor periodFinish:", distributor_periodFinish.toString());
+		console.log("Distributor periodFinish:", distributor_periodFinish.toNumber());
 
 		// Note the total lastTimeYieldApplicable
 		let distributor_lastTimeYieldApplicable = new BigNumber(await veFXSYieldDistributor_instance.lastTimeYieldApplicable.call());
-		console.log("Distributor lastTimeYieldApplicable():", distributor_lastTimeYieldApplicable.toString());
+		console.log("Distributor lastTimeYieldApplicable():", distributor_lastTimeYieldApplicable.toNumber());
 
 		console.log("====================================================================");
 		console.log("advance one week (one yieldDuration period)");
@@ -325,19 +334,19 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 
 		// Note the total lastUpdateTime
 		distributor_lastUpdateTime = new BigNumber(await veFXSYieldDistributor_instance.lastUpdateTime.call());
-		console.log("Distributor lastUpdateTime:", distributor_lastUpdateTime.toString());
+		console.log("Distributor lastUpdateTime:", distributor_lastUpdateTime.toNumber());
 
 		// Note the total periodFinish
 		distributor_periodFinish = new BigNumber(await veFXSYieldDistributor_instance.periodFinish.call());
-		console.log("Distributor periodFinish:", distributor_periodFinish.toString());
+		console.log("Distributor periodFinish:", distributor_periodFinish.toNumber());
 
 		// Note the total lastTimeYieldApplicable
 		distributor_lastTimeYieldApplicable = new BigNumber(await veFXSYieldDistributor_instance.lastTimeYieldApplicable.call());
-		console.log("Distributor lastTimeYieldApplicable():", distributor_lastTimeYieldApplicable.toString());
+		console.log("Distributor lastTimeYieldApplicable():", distributor_lastTimeYieldApplicable.toNumber());
 		
 		// Note the total veFXS supply stored
 		const distributor_total_vefxs_supply_Stored = new BigNumber(await veFXSYieldDistributor_instance.totalVeFXSSupplyStored.call()).div(BIG18);
-		console.log("Distributor totalVeFXSSupplyStored():", distributor_total_vefxs_supply_Stored.toString());
+		console.log("Distributor totalVeFXSSupplyStored():", distributor_total_vefxs_supply_Stored.toNumber());
 
 		// Quick checkpoint
 		await veFXSYieldDistributor_instance.checkpoint({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -350,58 +359,46 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 		const account_9_earned = await veFXSYieldDistributor_instance.earned.call(accounts[9]);
 		const staking_wk1_earned_9_fxs = new BigNumber(account_9_earned).div(BIG18);
 
-		console.log("accounts[1] earnings after 1 week [FXS]:", staking_wk1_earned_1_fxs.toString());
-		console.log("accounts[9] earnings after 1 week [FXS]:", staking_wk1_earned_9_fxs.toString());
+		console.log("accounts[1] earnings after 1 week [FXS]:", staking_wk1_earned_1_fxs.toNumber());
+		console.log("accounts[9] earnings after 1 week [FXS]:", staking_wk1_earned_9_fxs.toNumber());
 		const yield_week_1_fxs = (staking_wk1_earned_1_fxs).plus(staking_wk1_earned_9_fxs);
-		const effective_yearly_yield_at_week_1_fxs = yield_week_1_fxs.multipliedBy(52.1429)
-		console.log("Effective weekly yield at week 1 [FXS]: ", yield_week_1_fxs.toString());
-		console.log("Effective yearly yield at week 1 [FXS]: ", effective_yearly_yield_at_week_1_fxs.toString());
+		const effective_weekly_yield_at_week_1_fxs = yield_week_1_fxs;
+		console.log("Effective weekly yield at week 1 [FXS]: ", yield_week_1_fxs.toNumber());
 
 		const duration_yield = await veFXSYieldDistributor_instance.getYieldForDuration.call();
 		const fractionParticipating = new BigNumber(await veFXSYieldDistributor_instance.fractionParticipating.call()).div(BIG6).toNumber();
 		const pct_participating = fractionParticipating * 100;
 		const duration_yield_1_fxs = new BigNumber(duration_yield).div(BIG18);
-		console.log("Expected yearly yield [FXS]: ", duration_yield_1_fxs.multipliedBy(52.1429).toString());
-		const expected_yearly_1 = duration_yield_1_fxs.multipliedBy(52.1429).multipliedBy(fractionParticipating);
-		console.log(`Expected yearly yield [FXS], accounting for ${pct_participating}% participation: `, expected_yearly_1.toString());
+		console.log("Expected weekly yield [FXS]: ", duration_yield_1_fxs.toNumber());
+		const expected_weekly_1 = duration_yield_1_fxs.multipliedBy(fractionParticipating);
+		console.log(`Expected weekly yield [FXS], accounting for ${pct_participating}% participation: `, expected_weekly_1.toNumber());
 
 		// Check to make the sure the yields are within expected values
-		assert(effective_yearly_yield_at_week_1_fxs.toNumber() >= (expected_yearly_1.toNumber() * .995), 'Effective yearly yield < expected yearly yield [underemission]');
-		assert(effective_yearly_yield_at_week_1_fxs.toNumber() <= (expected_yearly_1.toNumber() * 1.005), 'Effective yearly yield > Expected yearly yield [overemission]');
+		assert(effective_weekly_yield_at_week_1_fxs.toNumber() >= (expected_weekly_1.toNumber() * .99), 'Effective weekly yield < expected weekly yield [underemission]');
+		assert(effective_weekly_yield_at_week_1_fxs.toNumber() <= (expected_weekly_1.toNumber() * 1.01), 'Effective weekly yield > Expected weekly yield [overemission]');
 
+		console.log("accounts[1] claim yield");
+		console.log("accounts[9] will not claim");
 		await veFXSYieldDistributor_instance.getYield({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Note the veFXS and FXS amounts after the yield
 		const veFXS_post_yield_1 = new BigNumber(await veFXS_instance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const fxs_post_yield_1 = new BigNumber(await fxs_instance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		console.log("accounts[1] veFXS balance:", veFXS_post_yield_1.toString());
-		console.log("accounts[1] FXS balance:", fxs_post_yield_1.toString());
+		console.log("accounts[1] veFXS balance:", veFXS_post_yield_1.toNumber());
+		console.log("accounts[1] FXS balance:", fxs_post_yield_1.toNumber());
 
 		console.log("====================================================================");
-		console.log("accounts[1] claim yield");
-		console.log("accounts[9] will not claim");
-		console.log("");
-		await time.advanceBlock();
-		const veFXS_balance_1 = new BigNumber(await veFXS_instance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		
-		const staking_ew_earned_1 = await veFXSYieldDistributor_instance.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		const staking_ew_earned_1_fxs = new BigNumber(staking_ew_earned_1).div(BIG18);
-		
-		console.log("accounts[1] veFXS balance:", veFXS_balance_1.toString());
-		console.log("accounts[1] staking earned() [FXS]:", staking_ew_earned_1_fxs.toString());
-		console.log("");
 
-		console.log("accounts[1] claims getYield()");
-		await veFXSYieldDistributor_instance.getYield({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await time.advanceBlock();
+		console.log("Notify 2nd week's reward");
+		const yield_week_2 = 70;
+		const yield_week_2_e18 = new BigNumber(`${yield_week_2}e18`);
+		await fxs_instance.approve(veFXSYieldDistributor_instance.address, yield_week_2_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await veFXSYieldDistributor_instance.notifyRewardAmount(yield_week_2_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("2nd week Yield Rate: ", new BigNumber(await veFXSYieldDistributor_instance.getYieldForDuration.call()).div(BIG18).toNumber());
 
-		const fxs_after_withdraw_0 = (new BigNumber(await fxs_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18);
-		console.log("accounts[1] FXS balance change:", (fxs_after_withdraw_0).minus(fxs_at_1st_checkpoint_1).toNumber());
-		console.log("accounts[1] vote balance:", new BigNumber(await fxs_instance.getCurrentVotes(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
-		console.log("accounts[1] FXS balance:", new BigNumber(await fxs_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
 		console.log("====================================================================");
 
-		console.log("wait two weeks so accounts[9] can earn more");
+		console.log("wait two weeks to earn more");
 		// Advance a few days
 		await time.increase(2 * (7 * 86400) + 1);
 		await time.advanceBlock();
@@ -415,15 +412,15 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 
 		// Note the total lastUpdateTime
 		distributor_lastUpdateTime = new BigNumber(await veFXSYieldDistributor_instance.lastUpdateTime.call());
-		console.log("Distributor lastUpdateTime:", distributor_lastUpdateTime.toString());
+		console.log("Distributor lastUpdateTime:", distributor_lastUpdateTime.toNumber());
 
 		// Note the total periodFinish
-		distributor_periodFinish = new BigNumber(await veFXSYieldDistributor_instance.periodFinish.call()).toNumber();
-		console.log("Distributor periodFinish: ", distributor_periodFinish.toString());
+		distributor_periodFinish = new BigNumber(await veFXSYieldDistributor_instance.periodFinish.call());
+		console.log("Distributor periodFinish: ", distributor_periodFinish.toNumber());
 
 		// Note the total lastTimeYieldApplicable
-		distributor_lastTimeYieldApplicable = new BigNumber(await veFXSYieldDistributor_instance.lastTimeYieldApplicable.call()).toNumber();
-		console.log("Distributor lastTimeYieldApplicable: ", distributor_lastTimeYieldApplicable.toString());
+		distributor_lastTimeYieldApplicable = new BigNumber(await veFXSYieldDistributor_instance.lastTimeYieldApplicable.call());
+		console.log("Distributor lastTimeYieldApplicable: ", distributor_lastTimeYieldApplicable.toNumber());
 
 		// Quick checkpoint
 		await veFXSYieldDistributor_instance.checkpoint({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -436,8 +433,10 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 		const staking_part2_earned_9 = await veFXSYieldDistributor_instance.earned.call(accounts[9]);
 		const staking_part2_earned_9_fxs = new BigNumber(staking_part2_earned_9).div(BIG18);
 
-		console.log("accounts[1] staking earned() [FXS]:", staking_part2_earned_1_fxs.toString());
-		console.log("accounts[9] staking earned() [FXS]:", staking_part2_earned_9_fxs.toString());
+		console.log("accounts[1] staking earned() [FXS]:", staking_part2_earned_1_fxs.toNumber());
+		console.log("accounts[9] staking earned() (CARRYOVER) [FXS]:", staking_wk1_earned_9_fxs.toNumber());
+		console.log("accounts[9] staking earned() (THIS WEEK) [FXS]:", staking_part2_earned_9_fxs.toNumber() - staking_wk1_earned_9_fxs.toNumber());
+		console.log("accounts[9] staking earned() (TOTAL) [FXS]:", staking_part2_earned_9_fxs.toNumber());
 		console.log("");
 
 		const veFXS_2nd_time_balance_1 = new BigNumber(await veFXS_instance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
@@ -445,32 +444,31 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 		
 		const yield_earned_2nd_time_1 = await veFXSYieldDistributor_instance.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER)
 		const yield_earned_2nd_time_1_fxs = new BigNumber(yield_earned_2nd_time_1).div(BIG18);
-		console.log("accounts[1] veFXS balance:", veFXS_2nd_time_balance_1.toString());
-		console.log("accounts[1] FXS balance:", fxs_2nd_time_balance_1.toString());
-		console.log("accounts[1] earned() [FXS]:", yield_earned_2nd_time_1_fxs.toString());
+		console.log("accounts[1] veFXS balance:", veFXS_2nd_time_balance_1.toNumber());
+		console.log("accounts[1] FXS balance:", fxs_2nd_time_balance_1.toNumber());
+		console.log("accounts[1] earned() [FXS]:", yield_earned_2nd_time_1_fxs.toNumber());
 		console.log("");
+
+		// const sum_yield_week_3_fxs = ((staking_part2_earned_1_fxs).plus(staking_part2_earned_9_fxs)).plus(staking_wk1_earned_1_fxs);
+		// const effective_yearly_yield_at_week_3_fxs  = sum_yield_week_3_fxs.multipliedBy(52.1429 / 3.0); // Total over 3 weeks
+		// const fractionParticipating_week_3 = new BigNumber(await veFXSYieldDistributor_instance.fractionParticipating.call()).div(BIG6).toNumber();
+		// const pct_participating_week_3 = fractionParticipating_week_3 * 100;
+		// console.log("Effective weekly yield at week 3 [FXS]: ", sum_yield_week_3_fxs.div(3).toNumber()); // Total over 3 weeks
+		
+		// const duration_yield_3 = await veFXSYieldDistributor_instance.getYieldForDuration.call();
+		// const duration_yield_3_fxs = new BigNumber(duration_yield_3).div(BIG18);
+		// console.log("Expected yearly yield: [FXS]", duration_yield_3_fxs.multipliedBy(52.1429).toNumber());
+		// const expected_yearly_3 = duration_yield_3_fxs.multipliedBy(52.1429).multipliedBy(fractionParticipating_week_3);
+		// console.log(`Expected yearly yield [FXS], accounting for ${pct_participating_week_3}% participation: `, expected_yearly_3.toNumber());
+
+		// // Check to make the sure the yields are within expected values
+		// assert(effective_yearly_yield_at_week_3_fxs.toNumber() >= (expected_yearly_3.toNumber() * .99), 'Effective yearly yield < expected yearly yield [underemission]');
+		// assert(effective_yearly_yield_at_week_3_fxs.toNumber() <= (expected_yearly_3.toNumber() * 1.01), 'Effective yearly yield > Expected yearly yield [overemission]');
 
 		console.log("accounts[9] getYield()");
 		await veFXSYieldDistributor_instance.getYield({ from: accounts[9] });
 
 		await time.advanceBlock();
-
-		const sum_yield_week_3_fxs = ((staking_part2_earned_1_fxs).plus(staking_part2_earned_9_fxs)).plus(staking_wk1_earned_1_fxs);
-		const effective_yearly_yield_at_week_3_fxs  = sum_yield_week_3_fxs.multipliedBy(52.1429 / 3.0); // Total over 3 weeks
-		const fractionParticipating_week_3 = new BigNumber(await veFXSYieldDistributor_instance.fractionParticipating.call()).div(BIG6).toNumber();
-		const pct_participating_week_3 = fractionParticipating_week_3 * 100;
-		console.log("Effective weekly yield at week 3 [FXS]: ", sum_yield_week_3_fxs.div(3).toString()); // Total over 3 weeks
-		console.log("Effective yearly yield at week 3 [FXS]:", effective_yearly_yield_at_week_3_fxs.toString());
-		
-		const duration_yield_3 = await veFXSYieldDistributor_instance.getYieldForDuration.call();
-		const duration_yield_3_fxs = new BigNumber(duration_yield_3).div(BIG18);
-		console.log("Expected yearly yield: [FXS]", duration_yield_3_fxs.multipliedBy(52.1429).toString());
-		const expected_yearly_3 = duration_yield_3_fxs.multipliedBy(52.1429).multipliedBy(fractionParticipating_week_3);
-		console.log(`Expected yearly yield [FXS], accounting for ${pct_participating_week_3}% participation: `, expected_yearly_3.toString());
-
-		// Check to make the sure the yields are within expected values
-		assert(effective_yearly_yield_at_week_3_fxs.toNumber() >= (expected_yearly_3.toNumber() * .995), 'Effective yearly yield < expected yearly yield [underemission]');
-		assert(effective_yearly_yield_at_week_3_fxs.toNumber() <= (expected_yearly_3.toNumber() * 1.005), 'Effective yearly yield > Expected yearly yield [overemission]');
 
 		const acc_9_FXS_balance_after = (new BigNumber(await fxs_instance.balanceOf(accounts[9]))).div(BIG18);
 		console.log("accounts[9] FXS balance change:", acc_9_FXS_balance_after.minus(fxs_at_1st_checkpoint_9).toNumber());
@@ -489,16 +487,27 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 		const fxs_in_vefxs_3rd_time_balance_1 = new BigNumber((await veFXS_instance.locked.call(COLLATERAL_FRAX_AND_FXS_OWNER)).amount).div(BIG18);
 		const yield_earned_3rd_time_1 = await veFXSYieldDistributor_instance.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER)
 		const yield_earned_3rd_time_1_fxs = new BigNumber(yield_earned_3rd_time_1).div(BIG18);
-		console.log("accounts[1] veFXS balance:", veFXS_3rd_time_balance_1.toString());
-		console.log("accounts[1] FXS balance:", fxs_3rd_time_balance_1.toString());
-		console.log("accounts[1] FXS in veFXS balance:", fxs_in_vefxs_3rd_time_balance_1.toString());
-		console.log("accounts[1] earned() [FXS]:", yield_earned_3rd_time_1_fxs.toString());
+		console.log("accounts[1] veFXS balance:", veFXS_3rd_time_balance_1.toNumber());
+		console.log("accounts[1] FXS balance:", fxs_3rd_time_balance_1.toNumber());
+		console.log("accounts[1] FXS in veFXS balance:", fxs_in_vefxs_3rd_time_balance_1.toNumber());
+		console.log("accounts[1] earned() (CARRYOVER) [FXS]:", yield_earned_3rd_time_1_fxs.toNumber());
 		console.log("");
+
+		assert(yield_earned_3rd_time_1_fxs.toNumber() == staking_part2_earned_1_fxs.toNumber(), 'Should not have accrued extra FXS');
 
 		await veFXSYieldDistributor_instance.getYield({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		console.log("====================================================================");
-		console.log("Advance 2 years and try to collect past the expiration. Should get like a one-week crumb reward");
+
+		console.log("Notify last week's reward");
+		const yield_week_last = 700;
+		const yield_week_last_e18 = new BigNumber(`${yield_week_last}e18`);
+		await fxs_instance.approve(veFXSYieldDistributor_instance.address, yield_week_last_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await veFXSYieldDistributor_instance.notifyRewardAmount(yield_week_last_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("Last week Yield Rate: ", new BigNumber(await veFXSYieldDistributor_instance.getYieldForDuration.call()).div(BIG18).toNumber());
+
+		console.log("====================================================================");
+		console.log("Advance 2 years and try to collect past the veFXS expiration.");
 
 		// Advance two weeks
 		await time.increase(2 * (365 * 86400));
@@ -509,10 +518,10 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 		const fxs_in_vefxs_4th_time_balance_1 = new BigNumber((await veFXS_instance.locked.call(COLLATERAL_FRAX_AND_FXS_OWNER)).amount).div(BIG18);
 		const yield_earned_4th_time_1 = await veFXSYieldDistributor_instance.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER)
 		const yield_earned_4th_time_1_fxs = new BigNumber(yield_earned_4th_time_1).div(BIG18);
-		console.log("accounts[1] veFXS balance:", veFXS_4th_time_balance_1.toString());
-		console.log("accounts[1] FXS balance:", fxs_4th_time_balance_1.toString());
-		console.log("accounts[1] FXS in veFXS balance:", fxs_in_vefxs_4th_time_balance_1.toString());
-		console.log("accounts[1] earned() [FXS]:", yield_earned_4th_time_1_fxs.toString());
+		console.log("accounts[1] veFXS balance:", veFXS_4th_time_balance_1.toNumber());
+		console.log("accounts[1] FXS balance:", fxs_4th_time_balance_1.toNumber());
+		console.log("accounts[1] FXS in veFXS balance:", fxs_in_vefxs_4th_time_balance_1.toNumber());
+		console.log("accounts[1] earned() [FXS]:", yield_earned_4th_time_1_fxs.toNumber());
 		console.log("");
 
 		await veFXSYieldDistributor_instance.getYield({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -529,10 +538,10 @@ contract('veFXSYieldDistributorV4-Tests', async (accounts) => {
 		const fxs_in_vefxs_5th_time_balance_1 = new BigNumber((await veFXS_instance.locked.call(COLLATERAL_FRAX_AND_FXS_OWNER)).amount).div(BIG18);
 		const yield_earned_5th_time_1 = await veFXSYieldDistributor_instance.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER)
 		const yield_earned_5th_time_1_fxs = new BigNumber(yield_earned_5th_time_1).div(BIG18);
-		console.log("accounts[1] veFXS balance:", veFXS_5th_time_balance_1.toString());
-		console.log("accounts[1] FXS balance:", fxs_5th_time_balance_1.toString());
-		console.log("accounts[1] FXS in veFXS balance:", fxs_in_vefxs_5th_time_balance_1.toString());
-		console.log("accounts[1] earned() [FXS]:", yield_earned_5th_time_1_fxs.toString());
+		console.log("accounts[1] veFXS balance:", veFXS_5th_time_balance_1.toNumber());
+		console.log("accounts[1] FXS balance:", fxs_5th_time_balance_1.toNumber());
+		console.log("accounts[1] FXS in veFXS balance:", fxs_in_vefxs_5th_time_balance_1.toNumber());
+		console.log("accounts[1] earned() [FXS]:", yield_earned_5th_time_1_fxs.toNumber());
 		console.log("");
 
 		// Make sure no yield was earned

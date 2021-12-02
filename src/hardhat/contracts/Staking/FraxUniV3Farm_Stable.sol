@@ -191,7 +191,7 @@ contract FraxUniV3Farm_Stable is Owned, ReentrancyGuard {
         ideal_tick = _uni_ideal_tick;
 
         // Manual reward rate
-        reward_rate_manual = 0; // (uint256(365e17)).div(365 * 86400); // 0.1 FXS per day
+        reward_rate_manual = 0; // (uint256(365e17)).div(365 * 86400); // 0.1 FXS per day (1157407407407e0)
 
         // Initialize
         lastUpdateTime = block.timestamp;
