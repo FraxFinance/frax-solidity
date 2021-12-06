@@ -1854,7 +1854,9 @@ export const CONTRACT_ADDRESSES = {
       synFRAX: "0xE96AC70907ffF3Efee79f502C985A7A21Bce407d"
     },
     collaterals: {
-      anyUSDC: "0xE3F5a90F9cb311505cd691a46596599aA1A0AD7D"
+      // MIM: "0x0caE51e1032e8461f4806e26332c030E34De3aDb",
+      anyUSDC: "0xE3F5a90F9cb311505cd691a46596599aA1A0AD7D",
+      USDT: "0xB44a9B6905aF7c801311e8F4E76932ee959c663C"
     },
     bridges: {
       anyFRAX: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
@@ -1865,20 +1867,26 @@ export const CONTRACT_ADDRESSES = {
       anySwap: "0xc7F48Fb6Dbb6F8A3Eed90553017cDf5725Dc44ac"
     },
     oracles: {
-      single_assets: {},
+      single_assets: {
+        FXS: "0x1BeF261C4718D0dcCBA707bF191B821067231a53"
+      },
       cross_chain_oracle: "0xBCe6f81b8D154B8DF09D287d05826F2B34b71bE4"
     },
     oracles_other: {
-      combo_oracle: "",
-      combo_oracle_univ2_univ3: "", 
+      combo_oracle: "0xAB3d2a00c6FaCB1cdB3f39Aa9E6519e808808F41",
+      combo_oracle_univ2_univ3: "0x02d03DA641DD18FD9A0624CB2b4377e6Ebedee83", 
     },
     uniswap: {
-      v2_router: "",
+      v2_router: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
       v3_factory: "0x0000000000000000000000000000000000000000",
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
     },
+    multisigs: {
+      "Comptrollers": "0x2bBbE751E8C36CD6c92767776067f8Dd3A21941f",
+    },
     amos: {
+      one_to_one_amm: "0x915BCaA2D1DE2a65aeeF66F4dDf20E3C48B01705",
       sushiswap_liquidity: "0xB63E6D5143bba8F2CEe95308c3CE4791B4d280f9"
     },
     reward_tokens: {
@@ -2045,6 +2053,12 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Lent Collateral", big_base: BIG6, symbol: 'Collat' },
     { title: "Total Collateral", big_base: BIG6, symbol: 'Collat' },
     { title: "Total Collateral [USD VALUE]", big_base: BIG18, symbol: 'USD' },
+    { title: "Total USD Value", big_base: BIG18, symbol: 'USD' },
+  ],
+  'CCFrax1to1AMM': [
+    { title: "Free FRAX", big_base: BIG18, symbol: 'canFRAX' },
+    { title: "Free collat, native precision", big_base: BIG6, symbol: 'Collat' },
+    { title: "Free collat, E18", big_base: BIG18, symbol: 'Collat' },
     { title: "Total USD Value", big_base: BIG18, symbol: 'USD' },
   ],
   'Curve_AMO': [
