@@ -18,7 +18,6 @@ global.artifacts = artifacts;
 global.web3 = web3;
 
 const hre = require("hardhat");
-const e = require('express');
 
 // Core
 const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");

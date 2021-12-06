@@ -19,7 +19,6 @@ global.artifacts = artifacts;
 global.web3 = web3;
 
 const hre = require("hardhat");
-const e = require('express');
 const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants');
 
 // Uniswap related

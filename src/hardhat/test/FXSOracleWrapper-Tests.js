@@ -17,7 +17,6 @@ global.artifacts = artifacts;
 global.web3 = web3;
 
 const hre = require("hardhat");
-const e = require('express');
 
 // Uniswap related
 const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
