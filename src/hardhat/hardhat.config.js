@@ -37,11 +37,11 @@ module.exports = {
 				// url: `${process.env.AVALANCHE_FORKING_NETWORK_ENDPOINT}`, // Avalanche
 				// url: `${process.env.BOBA_NETWORK_ENDPOINT}`, // Boba
 				// url: `${process.env.BSC_NETWORK_ENDPOINT}`, // BSC
-				// url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}${process.env.INFURA_PROJECT_ID}`, // Ethereum
+				url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}`, // Ethereum
 				// url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}` // Ethereum (alternate)
 				// url: `${process.env.FANTOM_FORKING_NETWORK_ENDPOINT}`, // Fantom
 				// url: `${process.env.HARMONY_NETWORK_ENDPOINT}`, // Harmony
-				url: `${process.env.MOONRIVER_NETWORK_ENDPOINT}`, // Moonriver
+				// url: `${process.env.MOONRIVER_NETWORK_ENDPOINT}`, // Moonriver
 				// url: `${process.env.POLYGON_NETWORK_ENDPOINT}`, // Polygon
 				
 			},
@@ -100,7 +100,7 @@ module.exports = {
 			gasMultiplier: 1.2
 		},
 		ethereum: {
-			url:`${process.env.ETHEREUM_NETWORK_ENDPOINT}${process.env.INFURA_PROJECT_ID}`,
+			url:`${process.env.ETHEREUM_NETWORK_ENDPOINT}`,
 			accounts: {
 				mnemonic: process.env.MNEMONIC_PHRASE
 			},
