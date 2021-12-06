@@ -1,0 +1,29 @@
+{
+	"compilerOptions": {
+		"baseUrl": ".",
+		"outDir": "./dist",
+		"module": "commonjs",
+		"declaration": false,
+		"noImplicitAny": false,
+		"removeComments": true,
+		"esModuleInterop": true,
+		"noLib": false,
+		"importHelpers": true,
+		"lib": ["es6", "es7", "dom", "es2015", "es2016", "es2017"],
+		"allowSyntheticDefaultImports": true,
+		"emitDecoratorMetadata": true,
+		"noEmitOnError": false,
+		"noFallthroughCasesInSwitch": true,
+		"skipLibCheck": true,
+		"strict": false,
+		"downlevelIteration": true,
+		"noImplicitReturns": false,
+		"experimentalDecorators": true,
+		"target": "es6",
+		"types": ["node"],
+		"resolveJsonModule": true,
+		"sourceMap": true
+	},
+	"exclude": ["dist", "out", "node_modules"],
+	"include": ["**/*.ts", "**/*.tsx"]
+}
