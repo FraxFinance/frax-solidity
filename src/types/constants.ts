@@ -1138,7 +1138,7 @@ export const CONTRACT_ADDRESSES = {
           anySwap: "0xBA5478A712b5EA898AF03206ab4c7E0608C3e69D" // Old: 0x1c2eFc27f7E892c2A36B7dE78958F83a231b52f1
         },
         boba: {
-
+          bobaGateway: "0x4828D4496Ff8dA2f5c1E7217Dc282b5C69B83263"
         },
         bsc: {
           anySwap: "0x4572B68296A23B4C66696FAd177c50CBc35c532F"

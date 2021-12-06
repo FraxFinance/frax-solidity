@@ -15,16 +15,19 @@ const CrossChainCanonicalFXS = artifacts.require("ERC20/__CROSSCHAIN/CrossChainC
 const anyUSDC = artifacts.require("ERC20/__CROSSCHAIN/anyUSDC");
 
 // Bridges
-const CrossChainBridgeBacker_MOON_AnySwap = artifacts.require("Bridges/Fantom/CrossChainBridgeBacker_MOON_AnySwap");
+const CrossChainBridgeBacker_MOON_AnySwap = artifacts.require("Bridges/Moonriver/CrossChainBridgeBacker_MOON_AnySwap");
 
 // Oracles
 const CrossChainOracle = artifacts.require("Oracle/CrossChainOracle");
+const ComboOracle = artifacts.require("Oracle/ComboOracle");
+const ComboOracle_UniV2_UniV3 = artifacts.require("Oracle/ComboOracle_UniV2_UniV3");
 
 // Staking contracts
 // const FraxCrossChainFarm_FRAX_FXS_Spirit = artifacts.require("Staking/Variants/FraxCrossChainFarm_FRAX_FXS_Spirit");
 
 // AMOs
-// const ScreamAMO = artifacts.require("Misc_AMOs/__CROSSCHAIN/Fantom/ScreamAMO.sol");
+// const ScreamAMO = artifacts.require("Misc_AMOs/__CROSSCHAIN/Moonriver/ScreamAMO.sol");
+const CCFrax1to1AMM = artifacts.require("Misc_AMOs/__CROSSCHAIN/Moonriver/CCFrax1to1AMM.sol");
 const SushiSwapLiquidityAMO_MOON = artifacts.require("Misc_AMOs/__CROSSCHAIN/Moonriver/SushiSwapLiquidityAMO_MOON.sol");
 
 module.exports = async (deployer) => {
@@ -45,16 +48,20 @@ module.exports = async (deployer) => {
 
     // Oracles
     let cross_chain_oracle_instance;
+    let combo_oracle_instance;
+    let combo_oracle_univ2_univ3_instance;
     
 	// Staking
     let staking_instance_frax_fxs_spirit;
     
     // AMOs
+    let ccfrax_1to1_amm_instance;
     let SushiSwapLiquidityAMO_MOON_instance;
 
     // Assign live contract addresses
     CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
-
+    const MULTISIG_ADDRESS = CONTRACT_ADDRESSES.moonriver.multisigs["Comptrollers"];
+    
     // Core
     anyFRAX_instance = await IanyFRAX.at(CONTRACT_ADDRESSES.moonriver.bridge_tokens.anyFRAX);
     anyFXS_instance = await IanyFXS.at(CONTRACT_ADDRESSES.moonriver.bridge_tokens.anyFXS);
@@ -66,8 +73,10 @@ module.exports = async (deployer) => {
     cross_chain_bridge_backer_instance = await CrossChainBridgeBacker_MOON_AnySwap.at(CONTRACT_ADDRESSES.moonriver.bridge_backers.anySwap);
 
     // Oracles
-    cross_chain_oracle_instance = await CrossChainOracle.at(CONTRACT_ADDRESSES.moonriver.oracles.cross_chain_oracle); 
-    
+    cross_chain_oracle_instance = await CrossChainOracle.at(CONTRACT_ADDRESSES.moonriver.oracles.cross_chain_oracle);
+    combo_oracle_instance = await ComboOracle.at(CONTRACT_ADDRESSES.moonriver.oracles_other.combo_oracle); 
+    combo_oracle_univ2_univ3_instance = await ComboOracle_UniV2_UniV3.at(CONTRACT_ADDRESSES.moonriver.oracles_other.combo_oracle_univ2_univ3); 
+
     // Staking
     // staking_instance_frax_fxs_spirit = await FraxCrossChainFarm_FRAX_FXS_Spirit.at(CONTRACT_ADDRESSES.moonriver.staking_contracts["SpiritSwap FRAX/FXS"]);
 
@@ -134,44 +143,56 @@ module.exports = async (deployer) => {
     //     "FRAX Avalanche AnySwap CrossChainBridgeBacker",
     // );
 
-    // console.log(chalk.yellow("========== ScreamAMO =========="));
-    // scream_amo_instance = await ScreamAMO.new(
+
+    // // console.log(chalk.yellow("========== SushiSwapLiquidityAMO_MOON =========="));
+    // SushiSwapLiquidityAMO_MOON_instance = await SushiSwapLiquidityAMO_MOON.new(
     //     THE_ACCOUNTS[1],
     //     THE_ACCOUNTS[10],
     //     cross_chain_canonical_frax_instance.address,
-    //     "0x4E6854EA84884330207fB557D1555961D85Fc17E",
+    //     cross_chain_canonical_fxs_instance.address,
+    //     CONTRACT_ADDRESSES.moonriver.collaterals.anyUSDC,
     //     cross_chain_bridge_backer_instance.address,
+    //     [
+	// 		CONTRACT_ADDRESSES.moonriver.pair_tokens["Sushi canFRAX/canFXS"],
+	// 		CONTRACT_ADDRESSES.moonriver.pair_tokens["Sushi canFRAX/anyUSDC"],
+    //         CONTRACT_ADDRESSES.moonriver.pair_tokens["Sushi canFRAX/MOVR"],
+	// 		CONTRACT_ADDRESSES.moonriver.pair_tokens["Sushi canFXS/anyUSDC"],
+	// 	]
     // );
 
-    // console.log(chalk.yellow("========== SushiSwapLiquidityAMO_MOON =========="));
-    SushiSwapLiquidityAMO_MOON_instance = await SushiSwapLiquidityAMO_MOON.new(
+    // console.log(chalk.yellow("========== CCFrax1to1AMM =========="));
+    ccfrax_1to1_amm_instance = await CCFrax1to1AMM.new(
         THE_ACCOUNTS[1],
         THE_ACCOUNTS[10],
         cross_chain_canonical_frax_instance.address,
-        cross_chain_canonical_fxs_instance.address,
-        CONTRACT_ADDRESSES.moonriver.collaterals.anyUSDC,
+        combo_oracle_instance.address,
         cross_chain_bridge_backer_instance.address,
         [
-			CONTRACT_ADDRESSES.moonriver.pair_tokens["Sushi canFRAX/canFXS"],
-			CONTRACT_ADDRESSES.moonriver.pair_tokens["Sushi canFRAX/anyUSDC"],
-            CONTRACT_ADDRESSES.moonriver.pair_tokens["Sushi canFRAX/MOVR"],
-			CONTRACT_ADDRESSES.moonriver.pair_tokens["Sushi canFXS/anyUSDC"],
-		]
+            // CONTRACT_ADDRESSES.moonriver.collaterals.MIM,
+            // CONTRACT_ADDRESSES.moonriver.collaterals.anyUSDC,
+            CONTRACT_ADDRESSES.moonriver.collaterals.USDT,
+        ],
+        [
+            // "100000000000000000000000",
+            // "100000000000",
+            "100000000000",
+        ]
     );
-    
+
     // ----------------------------------------------
     await hre.network.provider.request({
         method: "hardhat_impersonateAccount",
-        params: [process.env.MOONRIVER_ONE_ADDRESS]
+        params: [MULTISIG_ADDRESS]
     });    
 
     console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_MOON_AnySwap  =========='));
-    // await cross_chain_bridge_backer_instance.addAMO(scream_amo_instance.address, false, { from: process.env.MOONRIVER_ONE_ADDRESS });
-    await cross_chain_bridge_backer_instance.addAMO(SushiSwapLiquidityAMO_MOON_instance.address, false, { from: process.env.MOONRIVER_ONE_ADDRESS });
+    // await cross_chain_bridge_backer_instance.addAMO(SushiSwapLiquidityAMO_MOON_instance.address, false, { from: MULTISIG_ADDRESS });
+    await cross_chain_bridge_backer_instance.addAMO(ccfrax_1to1_amm_instance.address, false, { from: MULTISIG_ADDRESS });
+
 
     await hre.network.provider.request({
         method: "hardhat_stopImpersonatingAccount",
-        params: [process.env.MOONRIVER_ONE_ADDRESS]
+        params: [MULTISIG_ADDRESS]
     });
 
     // ----------------------------------------------
@@ -180,9 +201,10 @@ module.exports = async (deployer) => {
     IanyFRAX.setAsDeployed(anyFRAX_instance);
     IanyFXS.setAsDeployed(anyFXS_instance);
     anyUSDC.setAsDeployed(anyUSDC_instance);
-    CrossChainBridgeBacker_MOON_AnySwap.setAsDeployed(cross_chain_bridge_backer_instance)
-    CrossChainOracle.setAsDeployed(cross_chain_oracle_instance)
-    FraxCrossChainFarm_FRAX_FXS_Spirit.setAsDeployed(staking_instance_frax_fxs_spirit);
-    // ScreamAMO.setAsDeployed(scream_amo_instance);
+    CrossChainBridgeBacker_MOON_AnySwap.setAsDeployed(cross_chain_bridge_backer_instance);
+    CrossChainOracle.setAsDeployed(cross_chain_oracle_instance);
+    ComboOracle.setAsDeployed(combo_oracle_instance);
+    ComboOracle_UniV2_UniV3.setAsDeployed(combo_oracle_univ2_univ3_instance);
     SushiSwapLiquidityAMO_MOON.setAsDeployed(SushiSwapLiquidityAMO_MOON_instance);
+    CCFrax1to1AMM.setAsDeployed(ccfrax_1to1_amm_instance);
 }
