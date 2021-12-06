@@ -18,7 +18,6 @@ global.artifacts = artifacts;
 global.web3 = web3;
 
 const hre = require("hardhat");
-const e = require('express');
 const { ERC1820 } = require('@openzeppelin/test-helpers/src/makeInterfaceId');
 
 // Uniswap related

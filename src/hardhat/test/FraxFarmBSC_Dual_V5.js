@@ -18,7 +18,6 @@ global.artifacts = artifacts;
 global.web3 = web3;
 
 const hre = require("hardhat");
-const e = require('express');
 
 // Impossible Finance related
 const IImpossiblePair = artifacts.require("__BSC/PancakeSwap/IImpossiblePair");
