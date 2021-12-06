@@ -30,17 +30,3 @@ Fully on-chain oracles – Frax v1 uses Uniswap (ETH, USDT, USDC time-weighted a
   * <b>Swap-based Monetary Policy</b> – Frax uses principles from automated market makers like Uniswap to create swap-based price discovery and real-time stabilization incentives through arbitrage.
   
 
-## Hardhat
-**---Testing---**
-cd ./src/hardhat
-npx hardhat compile
-npx hardhat test ./test/vAMM-Tests.js
-npx hardhat test --no-compile ./test/StakingRewardsDualV3_FRAX_IQ-Tests.js
-
-**---Deploying---**
-cd ./src/hardhat
-npx hardhat test --no-compile ./test/StakingRewardsDualV3_FRAX_IQ-Tests.js
-
-**---Verifying---**
-cd ./src/hardhat
-npx hardhat verify --network mainnet --contract contracts/Staking/veFXSYieldDistributorV2.sol:veFXSYieldDistributorV2 --constructor-args veFXSYieldDistributor_arguments.js 0x62C4cf364078C98fA08AfDB4D3d8D87e780Ebd45
