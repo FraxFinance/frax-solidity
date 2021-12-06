@@ -212,7 +212,7 @@ contract CrossChainCanonical is ERC20Permit, Owned, ReentrancyGuard {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function addBridgeToken(address bridge_token_address) external onlyByOwnGov {
+    function addBridgeToken(address bridge_token_address, uint256 _brdg_to_can_fee, uint256 _can_to_brdg_fee) external onlyByOwnGov {
         // Make sure the token is not already present
         for (uint i = 0; i < bridge_tokens_array.length; i++){ 
             if (bridge_tokens_array[i] == bridge_token_address){
@@ -227,10 +227,25 @@ contract CrossChainCanonical is ERC20Permit, Owned, ReentrancyGuard {
         // Turn swapping on
         canSwap[bridge_token_address] = true;
 
+        // Set the fees
+        swap_fees[bridge_token_address][0] = _brdg_to_can_fee;
+        swap_fees[bridge_token_address][1] = _can_to_brdg_fee;
+
         emit BridgeTokenAdded(bridge_token_address);
     }
 
     function toggleBridgeToken(address bridge_token_address) external onlyByOwnGov {
+        // Make sure the token is already present in the array
+        bool bridge_tkn_found;
+        for (uint i = 0; i < bridge_tokens_array.length; i++){ 
+            if (bridge_tokens_array[i] == bridge_token_address){
+                bridge_tkn_found = true;
+                break;
+            }
+        }
+        require(bridge_tkn_found, "Bridge tkn not in array");
+
+        // Toggle the token
         bridge_tokens[bridge_token_address] = !bridge_tokens[bridge_token_address];
 
         // Toggle swapping
@@ -320,7 +335,6 @@ contract CrossChainCanonical is ERC20Permit, Owned, ReentrancyGuard {
     event TokenMinted(address indexed from, address indexed to, uint256 amount);
     event BridgeTokenAdded(address indexed bridge_token_address);
     event BridgeTokenToggled(address indexed bridge_token_address, bool state);
-    event CollateralRatioRefreshed(uint256 global_collateral_ratio);
     event MinterAdded(address pool_address);
     event MinterRemoved(address pool_address);
     event MintCapSet(uint256 new_mint_cap);
