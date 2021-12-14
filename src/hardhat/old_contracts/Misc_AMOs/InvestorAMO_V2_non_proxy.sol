@@ -34,7 +34,7 @@ import "./aave/IAAVELendingPool_Partial.sol";
 import "./aave/IAAVE_aUSDC_Partial.sol";
 import "./aave/IStakedAave.sol";
 import "./aave/IAaveIncentivesControllerPartial.sol";
-import "./compound/ICompComptrollerPartial.sol";
+import "./compound/IComptroller.sol";
 import "./compound/IcUSDC_Partial.sol";
 
 // Lower APY: yearn, AAVE, Compound
@@ -60,7 +60,7 @@ contract InvestorAMO_V3_non_proxy is AccessControl {
     Comp private COMP = Comp(0xc00e94Cb662C3520282E6f5717214004A7f26888);
     ERC20 private AAVE = ERC20(0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9);
     IStakedAave private stkAAVE = IStakedAave(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
-    ICompComptrollerPartial private CompController = ICompComptrollerPartial(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+    IComptroller private CompController = IComptroller(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
     IAaveIncentivesControllerPartial private AAVEIncentivesController = IAaveIncentivesControllerPartial(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5);
 
     address public collateral_address;
@@ -190,11 +190,6 @@ contract InvestorAMO_V3_non_proxy is AccessControl {
         }
     }
 
-    // This is basically a workaround to transfer USDC from the FraxPool to this investor contract
-    // This contract is essentially marked as a 'pool' so it can call OnlyPools functions like pool_mint and pool_burn_from
-    // on the main FRAX contract
-    // It mints FRAX from nothing, and redeems it on the target pool for collateral and FXS
-    // The burn can be called separately later on
     function mintRedeemPart1(uint256 frax_amount) public onlyByOwnGov {
         require(allow_yearn || allow_aave || allow_compound, 'All strategies are currently off');
         uint256 redemption_fee = pool.redemption_fee();
