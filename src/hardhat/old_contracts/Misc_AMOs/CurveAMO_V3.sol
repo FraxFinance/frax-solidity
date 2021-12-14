@@ -20,7 +20,7 @@ pragma experimental ABIEncoderV2;
 
 // Reviewer(s) / Contributor(s)
 // Sam Kazemian: https://github.com/samkazemian
-// github.com/denett
+// Dennis: github.com/denett
 
 
 import "./IStableSwap3Pool.sol";
@@ -305,11 +305,6 @@ contract CurveAMO_V4 is AccessControl, Initializable {
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    // This is basically a workaround to transfer USDC from the FraxPool to this investor contract
-    // This contract is essentially marked as a 'pool' so it can call OnlyPools functions like pool_mint and pool_burn_from
-    // on the main FRAX contract
-    // It mints FRAX from nothing, and redeems it on the target pool for collateral and FXS
-    // The burn can be called separately later on
     function mintRedeemPart1(uint256 frax_amount) external onlyByOwnGov {
         //require(allow_yearn || allow_aave || allow_compound, 'All strategies are currently off');
         uint256 redemption_fee = pool.redemption_fee();

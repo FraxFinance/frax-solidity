@@ -32,7 +32,7 @@ import "../Governance/AccessControl.sol";
 import "./yearn/IyUSDC_V2_Partial.sol";
 import "./aave/IAAVELendingPool_Partial.sol";
 import "./aave/IAAVE_aUSDC_Partial.sol";
-import "./compound/ICompComptrollerPartial.sol";
+import "./compound/IComptroller.sol";
 import "./compound/IcUSDC_Partial.sol";
 import "../Staking/Owned.sol";
 import '../Uniswap/TransferHelper.sol';
@@ -42,7 +42,7 @@ import '../Uniswap/TransferHelper.sol';
 
 contract FraxPoolInvestorForV2 is AccessControl, Owned {
     using SafeMath for uint256;
-    // Solidity ^8.0.0 automatically reverts on int256 underflows/overflows
+    // SafeMath automatically included in Solidity >= 8.0.0
 
     /* ========== STATE VARIABLES ========== */
 
@@ -60,7 +60,7 @@ contract FraxPoolInvestorForV2 is AccessControl, Owned {
 
     // Reward Tokens
     Comp private COMP = Comp(0xc00e94Cb662C3520282E6f5717214004A7f26888);
-    ICompComptrollerPartial private CompController = ICompComptrollerPartial(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+    IComptroller private CompController = IComptroller(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
 
     address public collateral_address;
     address public pool_address;
@@ -167,11 +167,6 @@ contract FraxPoolInvestorForV2 is AccessControl, Owned {
         }
     }
 
-    // This is basically a workaround to transfer USDC from the FraxPool to this investor contract
-    // This contract is essentially marked as a 'pool' so it can call OnlyPools functions like pool_mint and pool_burn_from
-    // on the main FRAX contract
-    // It mints FRAX from nothing, and redeems it on the target pool for collateral and FXS
-    // The burn can be called separately later on
     function mintRedeemPart1(uint256 frax_amount) public onlyByOwnGov {
         require(allow_yearn || allow_aave || allow_compound, 'All strategies are currently off');
         uint256 redemption_fee = pool.redemption_fee();

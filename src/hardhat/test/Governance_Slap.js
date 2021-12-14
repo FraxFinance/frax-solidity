@@ -6,7 +6,7 @@ const constants = require(path.join(__dirname, '../../../dist/types/constants'))
 
 const BigNumber = require('bignumber.js');
 require('@openzeppelin/test-helpers/configure')({
-	provider: process.env.NETWORK_ENDPOINT,
+	provider: process.env.ETHEREUM_NETWORK_ENDPOINT,
 });
 
 const { expectEvent, send, shouldFail, time } = require('@openzeppelin/test-helpers');

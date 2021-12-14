@@ -53,7 +53,7 @@ contract CCFrax1to1AMM is Owned, ReentrancyGuard {
     mapping(address => uint256) public swap_token_cap;
 
     // Misc
-    uint256 public price_tolerance = 50000; // E6. 5000 = .995 to 1.005
+    uint256 public price_tolerance = 5000; // E6. 5000 = .995 to 1.005
     mapping(address => bool) public fee_exempt_list; // Smart contract addresses exempt from swap fees
 
     // Constants for various precisions

@@ -199,7 +199,7 @@ contract FXS1559_AMO is AccessControl {
             min_fxs_out,
             FRAX_FXS_PATH,
             address(this),
-            2105300114 // Expiration: a long time from now
+            block.timestamp + 604800 // Expiration: 7 days from now
         );
         return (amounts[0], amounts[1]);
     }
