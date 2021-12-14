@@ -1138,7 +1138,7 @@ export const CONTRACT_ADDRESSES = {
           anySwap: "0xBA5478A712b5EA898AF03206ab4c7E0608C3e69D" // Old: 0x1c2eFc27f7E892c2A36B7dE78958F83a231b52f1
         },
         boba: {
-          bobaGateway: "0x4828D4496Ff8dA2f5c1E7217Dc282b5C69B83263"
+
         },
         bsc: {
           anySwap: "0x4572B68296A23B4C66696FAd177c50CBc35c532F"
@@ -1147,7 +1147,7 @@ export const CONTRACT_ADDRESSES = {
           anySwap: "0x8575FFE80b94fe58c8e0c735E11658A760109f53"
         },
         harmony: {
-          
+          harmony_bridge: "0xF3A60f85CB6C560188A434e8F2a134f3E967d8b8"
         },
         moonriver: {
           anySwap: "0xc7F48Fb6Dbb6F8A3Eed90553017cDf5725Dc44ac"
@@ -1616,7 +1616,7 @@ export const CONTRACT_ADDRESSES = {
       v3_router: "0x0000000000000000000000000000000000000000",
     },
     amos: {
-
+      oolongswap_liquidity: "0x7bF8C4FBEFB2Ea482ad04D956b92CfD2322608CF"
     },
     reward_tokens: {
 
@@ -1798,7 +1798,9 @@ export const CONTRACT_ADDRESSES = {
       "1FXS": "0x775d7816afbef935ea9c21a3ac9972f269a39004",
     },
     collaterals: {
-      "1USDC": "0x985458e523db3d53125813ed68c274899e9dfab4"
+      "1DAI": "0xef977d2f931c1978db5f6747666fa1eacb0d0339",
+      "1USDC": "0x985458e523db3d53125813ed68c274899e9dfab4",
+      "1USDT": "0x3c2b8be99c50593081eaa2a724f0b8285f5aba8f",
     },
     bridges: {
       "1FRAX": "0x2fbbcef71544c461edfc311f42e3583d5f9675d1", // Horizon Bridge
@@ -1809,15 +1811,21 @@ export const CONTRACT_ADDRESSES = {
       harmony_bridge: "0xF3A60f85CB6C560188A434e8F2a134f3E967d8b8"
     },
     oracles: {
-      single_assets: {},
+      single_assets: {
+        FRAX: "0x840ce205c638A5f62C9B62ca6fad792d3BdcB4bf",
+        FXS: "0xaba2941c12F0b920d772681A3995fe851Ac21701"
+      },
       cross_chain_oracle: "0x564C2244eE788054570386294A920133E0605d02"
     },
     oracles_other: {
-      combo_oracle: "",
-      combo_oracle_univ2_univ3: "", 
+      combo_oracle: "0x81FA3Af21e3EF42050eceC643cceC05d0f286680", // Old: "0x2E98E02B43f1EBcCe36a44A512FbCD5ea1e2e8E2",
+      combo_oracle_univ2_univ3: "0x37E6E21E8B09B53DA8732b8b521d6F494795a5AB", 
+    },
+    multisigs: {
+      "Comptrollers": "0x5D91bA85cfbC0A3673F312f3FD0BA75a85AD73e6",
     },
     uniswap: {
-      v2_router: "",
+      v2_router: "0x1b02da8cb0d097eb8d57a175b88c7d8b47997506",
       v3_factory: "0x0000000000000000000000000000000000000000",
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
@@ -1832,7 +1840,8 @@ export const CONTRACT_ADDRESSES = {
     pair_tokens: {
       "Sushi FRAX/FXS [Harmony]": "0x944e4e8bbd2877678a0c8ffe3dd82d7ecee72f4f",
 		  "Sushi canFRAX/canFXS": "0x9eee8923c021c6d40e8643b1abc2ec316602cecc",
-		  "Sushi canFRAX/1USDC": "0x29fc6e830ca8586a68dff325f6d2349fb58be951",
+      "Sushi canFRAX/1USDC": "0x29fc6e830ca8586a68dff325f6d2349fb58be951",
+		  "Sushi canFRAX/WONE": "0xc7cb6f2135a4910cc204ef6e8cfc60085f1240e6",
 		  "Sushi canFXS/1USDC": "0x08a96238149a0baf6afafe7af57c2359c9bb8a73",
     },
     staking_contracts: {

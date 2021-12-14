@@ -108,8 +108,9 @@ contract('FraxFarmERC20_V2-Tests', async (accounts) => {
 	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
 	const ADDRESS_WITH_LP_TOKENS = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
 	const ADDRESS_WITH_FXS = '0xF977814e90dA44bFA03b6295A0616a897441aceC';
-	const ADDRESS_WITH_GEL = '0x5180db0237291A6449DdA9ed33aD90a38787621c';
+	const ADDRESS_WITH_GEL = '0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27';
 	const ADDRESS_WITH_VEFXS = '0xfF5B4BCbf765FE363269114e1c765229a29eDeFD';
+	const ADDRESS_VEFXS_WHALE = '0xb55794c3bef4651b6cBc78b64a2Ef6c5c67837C3';
 
 	// Initialize core contract instances
 	let frax_instance;
@@ -311,82 +312,82 @@ contract('FraxFarmERC20_V2-Tests', async (accounts) => {
 		});
 	})
 
-	it("Tests veFXSBoosts", async () => {
-		console.log(chalk.hex("#ff8b3d").bold("=========================veFXSBoost Tests========================="));
+	// it("Tests veFXSBoosts", async () => {
+	// 	console.log(chalk.hex("#ff8b3d").bold("=========================veFXSBoost Tests========================="));
 
-		console.log("---------- CREATE BOOST ----------");
-		// Note adjusted veFXS balances before
-		let veFXSBoost_before_1 = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		let veFXSBoost_before_whale = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(ADDRESS_WITH_VEFXS);
-		console.log("veFXSBoost_before_1:", new BigNumber(veFXSBoost_before_1).div(BIG18).toNumber());
-		console.log("veFXSBoost_before_whale:", new BigNumber(veFXSBoost_before_whale).div(BIG18).toNumber());
+	// 	console.log("---------- CREATE BOOST ----------");
+	// 	// Note adjusted veFXS balances before
+	// 	let veFXSBoost_before_1 = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+	// 	let veFXSBoost_before_whale = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(ADDRESS_WITH_VEFXS);
+	// 	console.log("veFXSBoost_before_1:", new BigNumber(veFXSBoost_before_1).div(BIG18).toNumber());
+	// 	console.log("veFXSBoost_before_whale:", new BigNumber(veFXSBoost_before_whale).div(BIG18).toNumber());
 		
-		await hre.network.provider.request({
-			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_VEFXS]
-		});
+	// 	await hre.network.provider.request({
+	// 		method: "hardhat_impersonateAccount",
+	// 		params: [ADDRESS_WITH_VEFXS]
+	// 	});
 
-		// Whale creates a boost for [1]
-		let curr_ts = (new BigNumber(await time.latest())).toNumber();
-		await vefxs_boost_instance.create_boost(
-			ADDRESS_WITH_VEFXS, 
-			COLLATERAL_FRAX_AND_FXS_OWNER, 
-			1000, 
-			0, 
-			curr_ts + (365 * 86400), 
-			0,
-			{ from: ADDRESS_WITH_VEFXS }
-		);
+	// 	// Whale creates a boost for [1]
+	// 	let curr_ts = (new BigNumber(await time.latest())).toNumber();
+	// 	await vefxs_boost_instance.create_boost(
+	// 		ADDRESS_WITH_VEFXS, 
+	// 		COLLATERAL_FRAX_AND_FXS_OWNER, 
+	// 		1000, 
+	// 		0, 
+	// 		curr_ts + (365 * 86400), 
+	// 		0,
+	// 		{ from: ADDRESS_WITH_VEFXS }
+	// 	);
 
-		await hre.network.provider.request({
-			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_VEFXS]
-		});
+	// 	await hre.network.provider.request({
+	// 		method: "hardhat_stopImpersonatingAccount",
+	// 		params: [ADDRESS_WITH_VEFXS]
+	// 	});
 
-		// Note adjusted veFXS balances after
-		let veFXSBoost_after_1 = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		let veFXSBoost_after_whale = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(ADDRESS_WITH_VEFXS);
-		console.log("veFXSBoost_after_1:", new BigNumber(veFXSBoost_after_1).div(BIG18).toNumber());
-		console.log("veFXSBoost_after_whale:", new BigNumber(veFXSBoost_after_whale).div(BIG18).toNumber());
+	// 	// Note adjusted veFXS balances after
+	// 	let veFXSBoost_after_1 = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+	// 	let veFXSBoost_after_whale = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(ADDRESS_WITH_VEFXS);
+	// 	console.log("veFXSBoost_after_1:", new BigNumber(veFXSBoost_after_1).div(BIG18).toNumber());
+	// 	console.log("veFXSBoost_after_whale:", new BigNumber(veFXSBoost_after_whale).div(BIG18).toNumber());
 
 
-		console.log("---------- EXTEND BOOST ----------");
-		// Note adjusted veFXS balances before
-		veFXSBoost_before_1 = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		veFXSBoost_before_whale = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(ADDRESS_WITH_VEFXS);
-		console.log("veFXSBoost_before_1:", new BigNumber(veFXSBoost_before_1).div(BIG18).toNumber());
-		console.log("veFXSBoost_before_whale:", new BigNumber(veFXSBoost_before_whale).div(BIG18).toNumber());
+	// 	console.log("---------- EXTEND BOOST ----------");
+	// 	// Note adjusted veFXS balances before
+	// 	veFXSBoost_before_1 = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+	// 	veFXSBoost_before_whale = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(ADDRESS_WITH_VEFXS);
+	// 	console.log("veFXSBoost_before_1:", new BigNumber(veFXSBoost_before_1).div(BIG18).toNumber());
+	// 	console.log("veFXSBoost_before_whale:", new BigNumber(veFXSBoost_before_whale).div(BIG18).toNumber());
 
-		// Get the token ID
-		const token_id = await vefxs_boost_instance.get_token_id.call(ADDRESS_WITH_VEFXS, 0);
-		console.log("token_id: ", new BigNumber(token_id).toString());
+	// 	// Get the token ID
+	// 	const token_id = await vefxs_boost_instance.get_token_id.call(ADDRESS_WITH_VEFXS, 0);
+	// 	console.log("token_id: ", new BigNumber(token_id).toString());
 		
-		await hre.network.provider.request({
-			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_VEFXS]
-		});
+	// 	await hre.network.provider.request({
+	// 		method: "hardhat_impersonateAccount",
+	// 		params: [ADDRESS_WITH_VEFXS]
+	// 	});
 
-		// Extend the boost
-		curr_ts = (new BigNumber(await time.latest())).toNumber();
-		await vefxs_boost_instance.extend_boost(
-			token_id,
-			1000,
-			curr_ts + (500 * 86400),
-			0,
-			{ from: ADDRESS_WITH_VEFXS }
-		);
+	// 	// Extend the boost
+	// 	curr_ts = (new BigNumber(await time.latest())).toNumber();
+	// 	await vefxs_boost_instance.extend_boost(
+	// 		token_id,
+	// 		1000,
+	// 		curr_ts + (500 * 86400),
+	// 		0,
+	// 		{ from: ADDRESS_WITH_VEFXS }
+	// 	);
 
-		await hre.network.provider.request({
-			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_VEFXS]
-		});
+	// 	await hre.network.provider.request({
+	// 		method: "hardhat_stopImpersonatingAccount",
+	// 		params: [ADDRESS_WITH_VEFXS]
+	// 	});
 
-		// Note adjusted veFXS balances after
-		veFXSBoost_after_1 = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		veFXSBoost_after_whale = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(ADDRESS_WITH_VEFXS);
-		console.log("veFXSBoost_after_1:", new BigNumber(veFXSBoost_after_1).div(BIG18).toNumber());
-		console.log("veFXSBoost_after_whale:", new BigNumber(veFXSBoost_after_whale).div(BIG18).toNumber());
-	});
+	// 	// Note adjusted veFXS balances after
+	// 	veFXSBoost_after_1 = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+	// 	veFXSBoost_after_whale = await vefxs_boost_deleg_proxy_instance.adjusted_balance_of.call(ADDRESS_WITH_VEFXS);
+	// 	console.log("veFXSBoost_after_1:", new BigNumber(veFXSBoost_after_1).div(BIG18).toNumber());
+	// 	console.log("veFXSBoost_after_whale:", new BigNumber(veFXSBoost_after_whale).div(BIG18).toNumber());
+	// });
 
 
 	it('Main test', async () => {
@@ -960,8 +961,59 @@ contract('FraxFarmERC20_V2-Tests', async (accounts) => {
 		console.log("account[9] FXS difference: ", ending_bal_fxs_9 - starting_bal_fxs_9);
 
 
-		console.log(chalk.yellow("===================================================================="));
-		console.log("Extend a lock");
+		console.log(chalk.yellow.bold("===================================================================="));
+		console.log(chalk.yellow.bold("Proxy test"));
+
+		const vefxs_multiplier_9_pre_proxy = new BigNumber(await staking_instance.veFXSMultiplier.call(accounts[9])).div(BIG18);
+		console.log("veFXS multiplier [9]: ", vefxs_multiplier_9_pre_proxy.toString());
+
+		console.log(chalk.yellow("Add the veFXS whale as a valid proxy"));
+		await staking_instance.toggleValidVeFXSProxy(ADDRESS_VEFXS_WHALE, { from: STAKING_OWNER });
+
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [ADDRESS_VEFXS_WHALE]
+		});
+
+		console.log(chalk.yellow("veFXS whale allows accounts[9] as a proxy-ee"));
+		await staking_instance.proxyToggleStaker(accounts[9], { from: ADDRESS_VEFXS_WHALE });
+
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [ADDRESS_VEFXS_WHALE]
+		});
+
+		console.log(chalk.yellow("Staker uses veFXS whale as proxy"));
+		await staking_instance.stakerSetVeFXSProxy(ADDRESS_VEFXS_WHALE, { from: accounts[9] });
+
+		const vefxs_multiplier_9_post_proxy = new BigNumber(await staking_instance.veFXSMultiplier.call(accounts[9])).div(BIG18);
+		console.log("veFXS multiplier [9]: ", vefxs_multiplier_9_post_proxy.toString());
+
+		// Make sure the weight is higher now
+		assert(vefxs_multiplier_9_post_proxy.isGreaterThan(vefxs_multiplier_9_pre_proxy), `Proxing should have boosted the weight`);
+
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [ADDRESS_VEFXS_WHALE]
+		});
+
+		console.log(chalk.yellow("veFXS whale disallows accounts[9] as a proxy-ee"));
+		await staking_instance.proxyToggleStaker(accounts[9], { from: ADDRESS_VEFXS_WHALE });
+
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [ADDRESS_VEFXS_WHALE]
+		});
+
+		const vefxs_multiplier_9_post_proxy_disallow = new BigNumber(await staking_instance.veFXSMultiplier.call(accounts[9])).div(BIG18);
+		console.log("veFXS multiplier [9]: ", vefxs_multiplier_9_post_proxy_disallow.toString());
+
+		// Make sure the weight went back to what it was before
+		assert(vefxs_multiplier_9_post_proxy_disallow.isEqualTo(vefxs_multiplier_9_pre_proxy), `Weight should be back to normal`);
+
+
+		console.log(chalk.yellow.bold("===================================================================="));
+		console.log(chalk.yellow.bold("Extend a lock"));
 
 		// Show the stake structs
 		let stake_2_info = await staking_instance.lockedStakes.call(COLLATERAL_FRAX_AND_FXS_OWNER, 2);
@@ -981,8 +1033,9 @@ contract('FraxFarmERC20_V2-Tests', async (accounts) => {
 		stake_2_info = await staking_instance.lockedStakes.call(COLLATERAL_FRAX_AND_FXS_OWNER, 2);
 		console.log("stake_2_info: ", utilities.cleanLockedStake(stake_2_info));
 
-		console.log(chalk.yellow("===================================================================="));
-		console.log("Add more to a lock");
+
+		console.log(chalk.yellow.bold("===================================================================="));
+		console.log(chalk.yellow.bold("Add more to a lock"));
 
 		// Add 1 more LP token to the lock
 		await pair_instance.approve(staking_instance.address, uni_pool_lock_boundary_check_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -1242,6 +1295,43 @@ contract('FraxFarmERC20_V2-Tests', async (accounts) => {
 		await expectRevert(
 			staking_instance.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[2].kek_id, { from: MIGRATOR_ADDRESS }),
 			"Mig. invalid or unapproved"
+		);
+	});
+
+	it("Proxy Tests", async () => {
+		console.log(chalk.hex("#ff8b3d").bold("==============Proxy Tests=============="));
+
+		console.log(chalk.blue("=============TEST WITH NO PROXIES [SHOULD FAIL]============="));
+
+		console.log("--------- TRY ADD A PROXY NOT AS GOVERNANCE ---------");
+		await expectRevert(
+			staking_instance.toggleValidVeFXSProxy(ADDRESS_VEFXS_WHALE, { from: accounts[9] }),
+			"Not owner or timelock"
+		);
+
+		console.log("--------- TRY ALLOWING A STAKER FOR AN INVALID PROXY ---------");
+		await expectRevert(
+			staking_instance.proxyToggleStaker(accounts[9], { from: MIGRATOR_ADDRESS }),
+			"Invalid proxy"
+		);
+
+		console.log("--------- TRY ALLOWING A INVALID PROXY FOR A STAKER ---------");
+		await expectRevert(
+			staking_instance.stakerSetVeFXSProxy(MIGRATOR_ADDRESS, { from: accounts[9] }),
+			"Invalid proxy"
+		);
+
+
+		console.log(chalk.blue("=============TEST WITH PROXIES [SHOULD FAIL]============="));
+
+		// Set a real proxy now
+		staking_instance.toggleValidVeFXSProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: STAKING_OWNER }),
+
+
+		console.log("--------- TRY ALLOWING A VALID PROXY FOR A STAKER BEFORE THE PROXY TOGGLED THEM FIRST ---------");
+		await expectRevert(
+			staking_instance.stakerSetVeFXSProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: accounts[9] }),
+			"Proxy has not allowed you yet"
 		);
 	});
 

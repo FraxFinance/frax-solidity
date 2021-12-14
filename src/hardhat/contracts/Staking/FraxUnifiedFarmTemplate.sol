@@ -17,7 +17,7 @@ pragma experimental ABIEncoderV2;
 // New for V2
 //      - Two reward tokens possible
 //      - Can extend or add to existing locked stakes
-//      - Contract is aware of boosted veFXS (veFXSBoost)
+//      - Contract is aware of proxied veFXS
 //      - veFXS multiplier formula changed
 //      - Contract uses only 1 (large) NFT
 // Apes together strong
@@ -39,7 +39,6 @@ pragma experimental ABIEncoderV2;
 
 import "../Math/Math.sol";
 import "../Curve/IveFXS.sol";
-import "../Curve/IDelegationProxy.sol";
 import "../Curve/IFraxGaugeController.sol";
 import "../Curve/IFraxGaugeFXSRewardsDistributor.sol";
 import "../ERC20/ERC20.sol";
@@ -55,16 +54,15 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // Instances
     IveFXS private veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
-    IDelegationProxy private veFXSBoostDlgPxy = IDelegationProxy(0xb4EB45443D525149410Ee69400c0956A7e89b82e);
     IFraxGaugeFXSRewardsDistributor private rewards_distributor = IFraxGaugeFXSRewardsDistributor(0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34);
 
     // Frax related
-    address public frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
-    bool public frax_is_token0;
+    address internal frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
+    bool internal frax_is_token0;
     uint256 private fraxPerLPStored;
 
     // Constant for various precisions
-    uint256 public constant MULTIPLIER_PRECISION = 1e18;
+    uint256 internal constant MULTIPLIER_PRECISION = 1e18;
 
     // Time tracking
     uint256 public periodFinish;
@@ -79,14 +77,15 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     uint256 public vefxs_boost_scale_factor = uint256(4e18); // E18. 4x = 4e18; 100 / scale_factor = % vefxs supply needed for max boost
     uint256 public vefxs_max_multiplier = uint256(2e18); // E18. 1x = 1e18
     uint256 public vefxs_per_frax_for_max_boost = uint256(2e18); // E18. 2e18 means 2 veFXS must be held by the staker per 1 FRAX
-    mapping(address => uint256) public _vefxsMultiplierStored;
+    mapping(address => uint256) internal _vefxsMultiplierStored;
+    mapping(address => bool) internal valid_vefxs_proxies;
+    mapping(address => mapping(address => bool)) internal proxy_allowed_stakers;
 
     // Reward addresses, gauge addresses, reward rates, and reward managers
     mapping(address => address) public rewardManagers; // token addr -> manager addr
-    address[] public rewardTokens;
-    address[] public gaugeControllers;
-    uint256[] public rewardRatesManual;
-    string[] public rewardSymbols;
+    address[] internal rewardTokens;
+    address[] internal gaugeControllers;
+    uint256[] internal rewardRatesManual;
     mapping(address => uint256) public rewardTokenAddrToIdx; // token addr -> token index
     
     // Reward period
@@ -96,33 +95,34 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     uint256[] private rewardsPerTokenStored;
     mapping(address => mapping(uint256 => uint256)) private userRewardsPerTokenPaid; // staker addr -> token id -> paid amount
     mapping(address => mapping(uint256 => uint256)) private rewards; // staker addr -> token id -> reward amount
-    mapping(address => uint256) public lastRewardClaimTime; // staker addr -> timestamp
+    mapping(address => uint256) internal lastRewardClaimTime; // staker addr -> timestamp
     
     // Gauge tracking
     uint256[] private last_gauge_relative_weights;
     uint256[] private last_gauge_time_totals;
 
     // Balance tracking
-    uint256 public _total_liquidity_locked;
-    uint256 public _total_combined_weight;
-    mapping(address => uint256) public _locked_liquidity;
-    mapping(address => uint256) public _combined_weights;
+    uint256 internal _total_liquidity_locked;
+    uint256 internal _total_combined_weight;
+    mapping(address => uint256) internal _locked_liquidity;
+    mapping(address => uint256) internal _combined_weights;
 
     // List of valid migrators (set by governance)
-    mapping(address => bool) public valid_migrators;
+    mapping(address => bool) internal valid_migrators;
 
     // Stakers set which migrator(s) they want to use
-    mapping(address => mapping(address => bool)) public staker_allowed_migrators;
+    mapping(address => mapping(address => bool)) internal staker_allowed_migrators;
+    mapping(address => address) public staker_designated_proxies; // Keep public so users can see on the frontend if they have a proxy
 
     // Greylists
-    mapping(address => bool) public greylist;
+    mapping(address => bool) internal greylist;
 
     // Admin booleans for emergencies, migrations, and overrides
     bool public stakesUnlocked; // Release locked stakes in case of emergency
-    bool public migrationsOn; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
-    bool public withdrawalsPaused; // For emergencies
-    bool public rewardsCollectionPaused; // For emergencies
-    bool public stakingPaused; // For emergencies
+    bool internal migrationsOn; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
+    bool internal withdrawalsPaused; // For emergencies
+    bool internal rewardsCollectionPaused; // For emergencies
+    bool internal stakingPaused; // For emergencies
 
     /* ========== STRUCTS ========== */
     // In children...
@@ -331,8 +331,16 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     function veFXSMultiplier(address account) public view returns (uint256 vefxs_multiplier) {
+        // Use either the user's or their proxy's veFXS balance
+        uint256 vefxs_bal_to_use = 0;
+        {
+            uint256 vefxs_user_bal = veFXS.balanceOf(account);
+            uint256 vefxs_proxy_bal = veFXS.balanceOf(staker_designated_proxies[account]);
+            vefxs_bal_to_use = (vefxs_user_bal > vefxs_proxy_bal ? vefxs_user_bal : vefxs_proxy_bal);
+        }
+
         // First option based on fraction of total veFXS supply, with an added scale factor
-        uint256 mult_op_1 = (veFXSBoostDlgPxy.adjusted_balance_of(account) * vefxs_max_multiplier * vefxs_boost_scale_factor) 
+        uint256 mult_op_1 = (vefxs_bal_to_use * vefxs_max_multiplier * vefxs_boost_scale_factor) 
                             / (veFXS.totalSupply() * MULTIPLIER_PRECISION);
         
         // Second based on old method, where the amount of FRAX staked comes into play
@@ -340,16 +348,16 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         {
             uint256 veFXS_needed_for_max_boost = minVeFXSForMaxBoost(account);
             if (veFXS_needed_for_max_boost > 0){ 
-                uint256 user_vefxs_fraction = (veFXSBoostDlgPxy.adjusted_balance_of(account) * MULTIPLIER_PRECISION) / veFXS_needed_for_max_boost;
+                uint256 user_vefxs_fraction = (vefxs_bal_to_use * MULTIPLIER_PRECISION) / veFXS_needed_for_max_boost;
                 
                 mult_op_2 = (user_vefxs_fraction * vefxs_max_multiplier) / MULTIPLIER_PRECISION;
             }
             else mult_op_2 = 0; // This will happen with the first stake, when user_staked_frax is 0
         }
 
-        // Select the higher of the two
+        // Select the higher of the three
         vefxs_multiplier = (mult_op_1 > mult_op_2 ? mult_op_1 : mult_op_2);
- 
+
         // Cap the boost to the vefxs_max_multiplier
         if (vefxs_multiplier > vefxs_max_multiplier) vefxs_multiplier = vefxs_max_multiplier;
     }
@@ -362,6 +370,25 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     function stakerToggleMigrator(address migrator_address) external {
         require(valid_migrators[migrator_address], "Invalid migrator address");
         staker_allowed_migrators[msg.sender][migrator_address] = !staker_allowed_migrators[msg.sender][migrator_address]; 
+    }
+
+    // Staker can allow a veFXS proxy (the proxy will have to toggle them first)
+    function stakerSetVeFXSProxy(address proxy_address) external {
+        require(valid_vefxs_proxies[proxy_address], "Invalid proxy");
+        require(proxy_allowed_stakers[proxy_address][msg.sender], "Proxy has not allowed you yet");
+        staker_designated_proxies[msg.sender] = proxy_address; 
+    }
+
+    // Proxy can allow a staker to use their veFXS balance (the staker will have to reciprocally toggle them too)
+    // Must come before stakerSetVeFXSProxy
+    function proxyToggleStaker(address staker_address) external {
+        require(valid_vefxs_proxies[msg.sender], "Invalid proxy");
+        proxy_allowed_stakers[msg.sender][staker_address] = !proxy_allowed_stakers[msg.sender][staker_address]; 
+
+        // Disable the staker's set proxy if it was the toggler and is currently on
+        if (staker_designated_proxies[staker_address] == msg.sender){
+            staker_designated_proxies[staker_address] = address(0); 
+        }
     }
 
     // ------ STAKING ------
@@ -571,9 +598,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         valid_migrators[migrator_address] = !valid_migrators[migrator_address];
     }
 
-    // Set the veFXSBoostDelegationProxy
-    function set_veFXSBoostDelegationProxy(address _dlg_pxy_addr) external onlyByOwnGov {
-        veFXSBoostDlgPxy = IDelegationProxy(_dlg_pxy_addr);
+    // Adds a valid veFXS proxy address
+    function toggleValidVeFXSProxy(address _proxy_addr) external onlyByOwnGov {
+        valid_vefxs_proxies[_proxy_addr] = !valid_vefxs_proxies[_proxy_addr];
     }
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
