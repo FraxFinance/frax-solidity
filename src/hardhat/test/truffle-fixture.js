@@ -66,8 +66,10 @@ const FraxUniV3Farm_Stable_FRAX_USDC = artifacts.require("Staking/Variants/FraxU
 const FraxUniV3Farm_Stable_FRAX_DAI = artifacts.require("Staking/Variants/FraxUniV3Farm_Stable_FRAX_DAI");
 const StakingRewardsMultiGauge_FXS_WETH = artifacts.require("Staking/Variants/StakingRewardsMultiGauge_FXS_WETH");
 const StakingRewardsMultiGauge_FRAX_SUSHI = artifacts.require("Staking/Variants/StakingRewardsMultiGauge_FRAX_SUSHI");
-const StakingRewardsMultiGauge_Gelato_FRAX_DAI = artifacts.require("Staking/Variants/StakingRewardsMultiGauge_Gelato_FRAX_DAI");
+const FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI");
+const FraxUnifiedFarm_UniV3_FRAX_RAI = artifacts.require("Staking/Variants/FraxUnifiedFarm_UniV3_FRAX_RAI");
 const FraxMiddlemanGauge_FRAX_mUSD = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_FRAX_mUSD");
+
 
 // Migrator contracts
 // const UniLPToSushiLPMigrator = artifacts.require("Staking/UniLPToSushiLPMigrator");
@@ -171,7 +173,8 @@ module.exports = async (deployer) => {
     let fraxUniV3Farm_Stable_FRAX_USDC;
     let fraxUniV3Farm_Stable_FRAX_DAI;
     let stakingInstanceMultiGauge_FXS_WETH;
-    let stakingInstanceMultiGauge_Gelato_FRAX_DAI;
+    let fraxUnifiedFarm_Gelato_FRAX_DAI_instance;
+    let fraxUnifiedFarm_UniV3_FRAX_RAI_instance;
     let fraxCrossChainFarm_FRAX_mUSD;
     let middlemanGauge_FRAX_mUSD;
 
@@ -390,18 +393,17 @@ module.exports = async (deployer) => {
     // await pid_controller_instance.setMetapool(FRAX3CRV_V2_Instance.address, { from: THE_ACCOUNTS[1] });
 
 
-    console.log(chalk.yellow("========== StakingRewardsMultiGauge_Gelato_FRAX_DAI =========="));
-    // StakingRewardsMultiGauge_Gelato_FRAX_DAI 
-    stakingInstanceMultiGauge_Gelato_FRAX_DAI = await StakingRewardsMultiGauge_Gelato_FRAX_DAI.new(
+    console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI =========="));
+    // FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI 
+    fraxUnifiedFarm_Gelato_FRAX_DAI_instance = await FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI.new(
         THE_ACCOUNTS[6], 
-        CONTRACT_ADDRESSES.ethereum.pair_tokens['Gelato Uniswap FRAX/DAI'],
         [
-            "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
-            "0x15b7c0c907e4C6b9AdaAaabC300C08991D6CEA05"
+            "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
+            "0x15b7c0c907e4C6b9AdaAaabC300C08991D6CEA05" // GEL
         ], 
         [
-            "0x234D953a9404Bf9DbC3b526271d440cD2870bCd2", 
-            "0xeD5cF41b0fD6A3C564c17eE34d9D26Eafc30619b"
+            "0x234D953a9404Bf9DbC3b526271d440cD2870bCd2", // Frax[1]
+            "0xeD5cF41b0fD6A3C564c17eE34d9D26Eafc30619b" // Gelato Msig
         ],
         [
             11574074074074, 
@@ -411,6 +413,38 @@ module.exports = async (deployer) => {
             "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
             "0x0000000000000000000000000000000000000000"
         ],
+        [
+            "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
+            "0x0000000000000000000000000000000000000000"
+        ],
+        CONTRACT_ADDRESSES.ethereum.pair_tokens['Gelato Uniswap FRAX/DAI'],
+    );
+
+    console.log(chalk.yellow("========== FraxUnifiedFarm_UniV3_FRAX_RAI =========="));
+    // FraxUnifiedFarm_UniV3_FRAX_RAI 
+    fraxUnifiedFarm_UniV3_FRAX_RAI_instance = await FraxUnifiedFarm_UniV3_FRAX_RAI.new(
+        THE_ACCOUNTS[6], 
+        [
+            "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
+            "0x6243d8CEA23066d098a15582d81a598b4e8391F4" // FLX: Reflexer Ungovernance Token
+        ], 
+        [
+            "0x234D953a9404Bf9DbC3b526271d440cD2870bCd2", // Frax[1]
+            "0xbE74e7AA108436324D5dd3db4979Db3Ba2cAEbcB" // Rai Msig
+        ],
+        [
+            11574074074074, // 1 FXS per day
+            11574074074074 // 1 FLX per day
+        ],
+        [
+            "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
+            "0x0000000000000000000000000000000000000000"
+        ],
+        [
+            "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
+            "0x0000000000000000000000000000000000000000"
+        ],
+        165457
     );
 
     // console.log(chalk.yellow('========== Convex_AMO_V2 =========='));
@@ -753,7 +787,8 @@ module.exports = async (deployer) => {
     FraxUniV3Farm_Stable_FRAX_DAI.setAsDeployed(fraxUniV3Farm_Stable_FRAX_DAI);
     StakingRewardsDualV5_FRAX_OHM.setAsDeployed(stakingInstanceDualV5_FRAX_OHM);
     StakingRewardsMultiGauge_FRAX_SUSHI.setAsDeployed(stakingInstanceMultiGauge_FRAX_SUSHI);
-    StakingRewardsMultiGauge_Gelato_FRAX_DAI.setAsDeployed(stakingInstanceMultiGauge_Gelato_FRAX_DAI);
+    FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI.setAsDeployed(fraxUnifiedFarm_Gelato_FRAX_DAI_instance);
+    FraxUnifiedFarm_UniV3_FRAX_RAI.setAsDeployed(fraxUnifiedFarm_UniV3_FRAX_RAI_instance);
     
     console.log(chalk.yellow("--------DEPLOY CROSSCHAIN CONTRACTS--------"));
     FraxLiquidityBridger_ARBI_AnySwap.setAsDeployed(frax_liquidity_bridger_arbi_anyswap_instance);
