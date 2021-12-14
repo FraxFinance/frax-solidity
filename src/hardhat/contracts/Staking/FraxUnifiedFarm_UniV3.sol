@@ -24,23 +24,21 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
 
     // Uniswap V3 related
     INonfungiblePositionManager private stakingTokenNFT = INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88); // UniV3 uses an NFT
-    IUniswapV3Pool private lp_pool;
     int24 public uni_tick_lower;
     int24 public uni_tick_upper;
-    int24 public ideal_tick;
     uint24 public uni_required_fee;
     address public uni_token0;
     address public uni_token1;
-    // uint32 public twap_duration = 300; // 5 minutes
 
-    // Single NFT related
-    uint256 public main_nft_token_id;
+    // Need to seed a starting token to use both as a basis for fraxPerLPToken
+    // as well as getting ticks, etc
+    uint256 public seed_token_id; 
 
     // Combo Oracle related
     ComboOracle_UniV2_UniV3 private comboOracleUniV2UniV3 = ComboOracle_UniV2_UniV3(0xD13c9a29eF6c5ADc7b43BBd5854B07bB9b099862);
 
     // Stake tracking
-    mapping(address => LockedNFT[]) private lockedNFTs;
+    mapping(address => LockedNFT[]) public lockedNFTs;
 
 
     /* ========== STRUCTS ========== */
@@ -60,32 +58,46 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
 
     constructor (
         address _owner,
-        address _stakingToken,
         address[] memory _rewardTokens,
         address[] memory _rewardManagers,
         uint256[] memory _rewardRatesManual,
         address[] memory _gaugeControllers,
-        address _lp_pool_address,
-        int24[] memory ticks
+        address[] memory _rewardDistributors,
+        uint256 _seed_token_id
+
     ) 
-    FraxUnifiedFarmTemplate(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers)
+    FraxUnifiedFarmTemplate(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers, _rewardDistributors)
     {
-        lp_pool = IUniswapV3Pool(_lp_pool_address); // call getPool(token0, token1, fee) on the Uniswap V3 Factory (0x1F98431c8aD98523631AE4a59f267346ea31F984) to get this otherwise
+        // Use the seed token as a template
+        (
+            ,
+            ,
+            address token0,
+            address token1,
+            uint24 fee,
+            int24 tickLower,
+            int24 tickUpper,
+            ,
+            ,
+            ,
+            ,
+
+        ) = stakingTokenNFT.positions(_seed_token_id);
 
         // Set the UniV3 addresses
-        uni_token0 = lp_pool.token0();
-        uni_token1 = lp_pool.token1();
+        uni_token0 = token0;
+        uni_token1 = token1;
 
         // Check where FRAX is
         if (uni_token0 == frax_address) frax_is_token0 = true;
 
         // Fee, Tick, and Liquidity related
-        uni_required_fee = lp_pool.fee();
-        uni_tick_lower = ticks[0];
-        uni_tick_upper = ticks[1];
+        uni_required_fee = fee;
+        uni_tick_lower = tickLower;
+        uni_tick_upper = tickUpper;
         
-        // Closest tick to 1
-        ideal_tick = ticks[2];
+        // Set the seed token id
+        seed_token_id = _seed_token_id;
     }
 
     /* ============= VIEWS ============= */
@@ -93,8 +105,10 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
     // ------ FRAX RELATED ------
 
     function fraxPerLPToken() public view override returns (uint256) {
-        ComboOracle_UniV2_UniV3.UniV3NFTBasicInfo memory NFTBasicInfo = comboOracleUniV2UniV3.getUniV3NFTBasicInfo(main_nft_token_id);
-        ComboOracle_UniV2_UniV3.UniV3NFTValueInfo memory NFTValueInfo = comboOracleUniV2UniV3.getUniV3NFTValueInfo(main_nft_token_id);
+        // Used the seeded main NFT token ID as a basis for this
+        // Doing this + using fraxPerLPStored should save a lot of gas
+        ComboOracle_UniV2_UniV3.UniV3NFTBasicInfo memory NFTBasicInfo = comboOracleUniV2UniV3.getUniV3NFTBasicInfo(seed_token_id);
+        ComboOracle_UniV2_UniV3.UniV3NFTValueInfo memory NFTValueInfo = comboOracleUniV2UniV3.getUniV3NFTValueInfo(seed_token_id);
 
         if (frax_is_token0) {
             return (NFTValueInfo.token0_value * MULTIPLIER_PRECISION) / NFTBasicInfo.liquidity;
@@ -219,32 +233,32 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         return lockedNFTs[account];
     }
 
-    // All the locked stakes for a given account [old-school method]
-    function lockedNFTsOfMultiArr(address account) external view returns (
-        uint256[] memory token_ids,
-        uint256[] memory start_timestamps,
-        uint256[] memory liquidities,
-        uint256[] memory ending_timestamps,
-        uint256[] memory lock_multipliers,
-        int24[] memory tick_lowers,
-        int24[] memory tick_uppers
-    ) {
-        for (uint256 i = 0; i < lockedNFTs[account].length; i++){ 
-            LockedNFT memory thisNFT = lockedNFTs[account][i];
-            token_ids[i] = thisNFT.token_id;
-            start_timestamps[i] = thisNFT.start_timestamp;
-            liquidities[i] = thisNFT.liquidity;
-            ending_timestamps[i] = thisNFT.ending_timestamp;
-            lock_multipliers[i] = thisNFT.lock_multiplier;
-            tick_lowers[i] = thisNFT.tick_lower;
-            tick_uppers[i] = thisNFT.tick_upper;
-        }
-    }
-
     // Returns the length of the locked NFTs for a given account
     function lockedNFTsOfLength(address account) external view returns (uint256) {
         return lockedNFTs[account].length;
     }
+
+    // // All the locked stakes for a given account [old-school method]
+    // function lockedNFTsOfMultiArr(address account) external view returns (
+    //     uint256[] memory token_ids,
+    //     uint256[] memory start_timestamps,
+    //     uint256[] memory liquidities,
+    //     uint256[] memory ending_timestamps,
+    //     uint256[] memory lock_multipliers,
+    //     int24[] memory tick_lowers,
+    //     int24[] memory tick_uppers
+    // ) {
+    //     for (uint256 i = 0; i < lockedNFTs[account].length; i++){ 
+    //         LockedNFT memory thisNFT = lockedNFTs[account][i];
+    //         token_ids[i] = thisNFT.token_id;
+    //         start_timestamps[i] = thisNFT.start_timestamp;
+    //         liquidities[i] = thisNFT.liquidity;
+    //         ending_timestamps[i] = thisNFT.ending_timestamp;
+    //         lock_multipliers[i] = thisNFT.lock_multiplier;
+    //         tick_lowers[i] = thisNFT.tick_lower;
+    //         tick_uppers[i] = thisNFT.tick_upper;
+    //     }
+    // }
 
     /* =============== MUTATIVE FUNCTIONS =============== */
 
@@ -294,21 +308,35 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
     }
 
     // Add additional LPs to an existing locked stake
-    function lockAdditional(uint256 token_id, uint256 addl_liq) updateRewardAndBalance(msg.sender, true) public {
+    // Make sure to do the 2 token approvals to the NFT Position Manager first on the UI
+    function lockAdditional(
+        uint256 token_id, 
+        uint256 token0_amt, 
+        uint256 token1_amt,
+        uint256 token0_min_in, 
+        uint256 token1_min_in
+    ) updateRewardAndBalance(msg.sender, true) public {
         // Get the stake and its index
         (LockedNFT memory thisNFT, uint256 theArrayIndex) = _getStake(msg.sender, token_id);
 
-        // Calculate the new amount
-        uint256 new_amt = thisNFT.liquidity + addl_liq;
+        // Calculate the increaseLiquidity parms
+        INonfungiblePositionManager.IncreaseLiquidityParams memory inc_liq_params = INonfungiblePositionManager.IncreaseLiquidityParams(
+            token_id,
+            token0_amt,
+            token1_amt,
+            token0_min_in,
+            token1_min_in,
+            block.timestamp + 604800 // Expiration: 7 days from now
+        );
+
+        // Add the liquidity
+        ( uint128 addl_liq, ,  ) = stakingTokenNFT.increaseLiquidity(inc_liq_params);
 
         // Checks
         require(addl_liq >= 0, "Must be nonzero");
 
-        // TODO
-        // NEED LOGIC HERE!!!
-        // NEED LOGIC HERE!!!
-        // NEED LOGIC HERE!!!
-        revert("NEED LOGIC");
+        // Calculate the new amount
+        uint256 new_amt = thisNFT.liquidity + addl_liq;
 
         // Update the stake
         lockedNFTs[msg.sender][theArrayIndex] = LockedNFT(

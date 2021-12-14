@@ -27,6 +27,12 @@ const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
 const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
 const IGUniPool = artifacts.require("Misc_AMOs/gelato/IGUniPool");
 
+// Uniswap V3 related
+const IUniswapV3PositionsNFT = artifacts.require("Uniswap_V3/IUniswapV3PositionsNFT");
+
+// Collateral
+const WETH = artifacts.require("ERC20/WETH");
+
 // Collateral Pools
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 
@@ -38,7 +44,7 @@ const FRAXStablecoin = artifacts.require("Frax/IFrax");
 const FRAXShares = artifacts.require("FXS/FRAXShares");
 
 // Staking contracts
-const FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI");
+const FraxUnifiedFarm_UniV3_FRAX_RAI = artifacts.require("Staking/Variants/FraxUnifiedFarm_UniV3_FRAX_RAI");
 
 // veFXS and gauge related
 const veFXS = artifacts.require("Curve/IveFXS");
@@ -50,7 +56,7 @@ const FraxGaugeFXSRewardsDistributor = artifacts.require("Curve/IFraxGaugeFXSRew
 const BIG6 = new BigNumber("1e6");
 const BIG18 = new BigNumber("1e18");
 
-contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
+contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 	CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
 
 	// Constants
@@ -69,9 +75,20 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
 	const ADDRESS_WITH_LP_TOKENS = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
 	const ADDRESS_WITH_FXS = '0xF977814e90dA44bFA03b6295A0616a897441aceC';
-	const ADDRESS_WITH_GEL = '0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27';
+	const ADDRESS_WITH_FLX = '0xbE74e7AA108436324D5dd3db4979Db3Ba2cAEbcB';
 	const ADDRESS_WITH_VEFXS = '0xfF5B4BCbf765FE363269114e1c765229a29eDeFD';
 	const ADDRESS_VEFXS_WHALE = '0xb55794c3bef4651b6cBc78b64a2Ef6c5c67837C3';
+
+	const ADDRESS_WITH_UNI_V3_NFT_1 = '0x5180db0237291A6449DdA9ed33aD90a38787621c';
+	const TOKEN_ID_1 = 165457;
+	const TOKEN_ID_1_ALT_GOOD = 166746;
+	const ADDRESS_WITH_UNI_V3_NFT_9 = '0x36a87d1e3200225f881488e4aeedf25303febcae';
+	const TOKEN_ID_9_INVALID_WRONG_TICKS = 166748;
+	const TOKEN_ID_9_INVALID_WRONG_UNDERLYING_TOKENS = 12252;
+	const TOKEN_ID_9_INVALID_WRONG_FEE = 166750;
+	const TOKEN_ID_9 = 166749;
+	const TOKEN_ID_9_INSIDE_WRONG_TICKS = 166753;
+	const TOKEN_ID_9_OUTSIDE_WRONG_TICKS = 166751;
 
 	// Initialize core contract instances
 	let frax_instance;
@@ -80,7 +97,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 	// Initialize collateral instances
 	let wethInstance;
 	let usdc_instance;
-	let gel_instance;
+	let flx_instance;
 
 	// Initialize the Uniswap V3 Positions NFT
 	let uniswapV3PositionsNFTInstance;
@@ -89,14 +106,8 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 	let oracle_instance_FXS_WETH;
 	let oracle_instance_FXS_USDC;
 
-	// Initialize pair contracts
-	let pair_instance;
-
-	// Initialize Saddle pair contracts
-	let pair_instance_Saddle_D4;
-
 	// Initialize staking instances
-	let fraxUnifiedFarm_Gelato_FRAX_DAI_instance;
+	let fraxUnifiedFarm_UniV3_FRAX_RAI_instance;
 	let staking_instance;
 
 	// Initialize veFXS and gauge-related instances
@@ -131,32 +142,20 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		fxs_instance = await FRAXShares.deployed();
 		wethInstance = await ERC20.at("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 		usdc_instance = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-		gel_instance = await ERC20.at("0x15b7c0c907e4c6b9adaaaabc300c08991d6cea05");
-
+		flx_instance = await ERC20.at("0x6243d8CEA23066d098a15582d81a598b4e8391F4");
 
 		// Fill oracle instances
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
+
 		// Initialize pool instances
 		pool_instance_USDC = await Pool_USDC.deployed();
 
 		// Fill the Uniswap V3 Instances
-		// uniswapV3PositionsNFTInstance = await IUniswapV3PositionsNFT.deployed(); 
+		uniswapV3PositionsNFTInstance = await IUniswapV3PositionsNFT.deployed(); 
 
-		// Initialize the swap to price contract
-		// swapToPriceInstance = await SwapToPrice.deployed(); 
-
-		// Get instances of the Uniswap pairs
-
-		// pair_instance_FRAX_SUSHI_Sushi = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Sushi FRAX/SUSHI"]);
-		pair_instance_Gelato_FRAX_DAI = await IGUniPool.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Gelato Uniswap FRAX/DAI"]);
-
-		// Get the mock CRVDAO Instance
-
-		// Get the mock FRAX3CRV Instance
-		// uniswapV3PositionsNFTInstance = await FRAX3CRV_Mock.deployed(); 
 
 		// Fill the staking rewards instances
-		fraxUnifiedFarm_Gelato_FRAX_DAI_instance = await FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI.deployed();
+		fraxUnifiedFarm_UniV3_FRAX_RAI_instance = await FraxUnifiedFarm_UniV3_FRAX_RAI.deployed();
 
 		// veFXS and gauge related
 		veFXS_instance = await veFXS.deployed();
@@ -166,12 +165,12 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		// Set which pairs to test
 		console.log(chalk.hex("#ff8b3d").bold("CHOOSING THE STAKING CONTRACT"))
 		// staking_instance = stakingInstanceMultiGauge_FXS_WETH;
-		staking_instance = fraxUnifiedFarm_Gelato_FRAX_DAI_instance;
+		staking_instance = fraxUnifiedFarm_UniV3_FRAX_RAI_instance;
 
 		// Set which pairs to test
 		console.log(chalk.hex("#ff8b3d").bold("CHOOSING THE PAIR"))
 		// pair_instance = pair_instance_FXS_WETH_Sushi;
-		pair_instance = pair_instance_Gelato_FRAX_DAI;
+		// pair_instance = pair_instance_Gelato_FRAX_DAI;
 	});
 	
 	afterEach(async() => {
@@ -221,32 +220,51 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		});
 
 		console.log("------------------------------------------------");
-		console.log("Seed the staking contract with GEL");
+		console.log("Seed the staking contract with FLX");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_GEL]
+			params: [ADDRESS_WITH_FLX]
 		});
 
-		await gel_instance.transfer(staking_instance.address, new BigNumber("1000e18"), { from: ADDRESS_WITH_GEL });
+		await flx_instance.transfer(staking_instance.address, new BigNumber("1000e18"), { from: ADDRESS_WITH_FLX });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_GEL]
+			params: [ADDRESS_WITH_FLX]
 		});
 
 		console.log("------------------------------------------------");
-		console.log("Give LPs to test users");
+		console.log("Give a NFT to a test user");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_LP_TOKENS]
+			params: [ADDRESS_WITH_UNI_V3_NFT_1]
 		});
 
-		await pair_instance.transfer(accounts[1], new BigNumber("30e18"), { from: ADDRESS_WITH_LP_TOKENS });
-		await pair_instance.transfer(accounts[9], new BigNumber("30e18"), { from: ADDRESS_WITH_LP_TOKENS });
+		await uniswapV3PositionsNFTInstance.safeTransferFrom(ADDRESS_WITH_UNI_V3_NFT_1, accounts[1], TOKEN_ID_1, { from: ADDRESS_WITH_UNI_V3_NFT_1 });
+		await uniswapV3PositionsNFTInstance.safeTransferFrom(ADDRESS_WITH_UNI_V3_NFT_1, accounts[1], TOKEN_ID_1_ALT_GOOD, { from: ADDRESS_WITH_UNI_V3_NFT_1 });
+		
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_LP_TOKENS]
+			params: [ADDRESS_WITH_UNI_V3_NFT_1]
+		});
+
+		console.log("------------------------------------------------");
+		console.log("Give different NFTs to a different test user");
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [ADDRESS_WITH_UNI_V3_NFT_9]
+		});
+
+		await uniswapV3PositionsNFTInstance.safeTransferFrom(ADDRESS_WITH_UNI_V3_NFT_9, accounts[9], TOKEN_ID_9, { from: ADDRESS_WITH_UNI_V3_NFT_9 });
+		await uniswapV3PositionsNFTInstance.safeTransferFrom(ADDRESS_WITH_UNI_V3_NFT_9, accounts[9], TOKEN_ID_9_INVALID_WRONG_TICKS, { from: ADDRESS_WITH_UNI_V3_NFT_9 });
+		await uniswapV3PositionsNFTInstance.safeTransferFrom(ADDRESS_WITH_UNI_V3_NFT_9, accounts[9], TOKEN_ID_9_INVALID_WRONG_UNDERLYING_TOKENS, { from: ADDRESS_WITH_UNI_V3_NFT_9 });
+		await uniswapV3PositionsNFTInstance.safeTransferFrom(ADDRESS_WITH_UNI_V3_NFT_9, accounts[9], TOKEN_ID_9_INVALID_WRONG_FEE, { from: ADDRESS_WITH_UNI_V3_NFT_9 });
+		await uniswapV3PositionsNFTInstance.safeTransferFrom(ADDRESS_WITH_UNI_V3_NFT_9, accounts[9], TOKEN_ID_9_INSIDE_WRONG_TICKS, { from: ADDRESS_WITH_UNI_V3_NFT_9 });
+
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [ADDRESS_WITH_UNI_V3_NFT_9]
 		});
 
 		console.log("------------------------------------------------");
@@ -340,6 +358,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// NOTE
 		console.log(chalk.yellow.bold("DEPENDING ON WHO VOTED, THE REWARD RATE MAY CHANGE SLIGHTLY WEEK AFTER WEEK DUE TO VEFXS DECAY"));
+
 	});
 
 	it('Locked stakes', async () => {
@@ -370,57 +389,49 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		await fxs_instance.approve(veFXS_instance.address, deposit_amount_1_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await veFXS_instance.create_lock(deposit_amount_1_e18, veFXS_deposit_end_timestamp_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		
-		// Print FXS balances
-		const fxs_bal_week_0 = new BigNumber(await fxs_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
-		console.log("FXS balance week 0:", fxs_bal_week_0);
-		console.log("accounts[1] FXS balance:", new BigNumber(await fxs_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber());
-		console.log("accounts[9] FXS balance:", new BigNumber(await fxs_instance.balanceOf(accounts[9])).div(BIG18).toNumber());
-		
 		// Need to approve first so the staking can use transfer
-		const uni_pool_locked_1 = new BigNumber("75e17");
-		const uni_pool_locked_1_sum = new BigNumber ("10e18");
-		const uni_pool_locked_9 = new BigNumber("25e17");
-		await pair_instance.approve(staking_instance.address, uni_pool_locked_1_sum, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await pair_instance.approve(staking_instance.address, uni_pool_locked_9, { from: accounts[9] });
-		
-		// // Note the FRAX amounts before
-		// const frax_before_1_locked = new BigNumber(await frax_instance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		// const frax_before_9_locked = new BigNumber(await frax_instance.balanceOf.call(accounts[9])).div(BIG18);
-		// console.log("FRAX_USDC Uniswap Liquidity Tokens BEFORE [1]: ", frax_before_1_locked.toString());
-		// console.log("FRAX_USDC Uniswap Liquidity Tokens BEFORE [9]: ", frax_before_9_locked.toString());
+		// account[1]
+		await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_1_ALT_GOOD, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// account[9]
+		await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_9, { from: accounts[9] });
 
 		// Stake Locked
 		// account[1]
-		await staking_instance.stakeLocked(uni_pool_locked_1, 6.95 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 15 days
-		await staking_instance.stakeLocked(new BigNumber ("25e17"), 365 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 270 days
+		await staking_instance.stakeLocked(TOKEN_ID_1, 7 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 7 days
+		await staking_instance.stakeLocked(TOKEN_ID_1_ALT_GOOD, 548 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 548 days
 		
 		// account[9]
-		await staking_instance.stakeLocked(uni_pool_locked_9, 28 * 86400, { from: accounts[9] });
+		await staking_instance.stakeLocked(TOKEN_ID_9, 28 * 86400, { from: accounts[9] }); // 28 days
+
 		await time.advanceBlock();
 
 		// Show the stake structs
-		let locked_stake_structs_1_0 = await staking_instance.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		let locked_stake_structs_9_0 = await staking_instance.lockedStakesOf.call(accounts[9]);
-		console.log("LOCKED STAKES [1]: ", locked_stake_structs_1_0);
-		console.log("LOCKED STAKES [9]: ", locked_stake_structs_9_0);
+		const locked_NFT_structs_1 = await staking_instance.lockedNFTsOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+		const locked_NFT_structs_9 = await staking_instance.lockedNFTsOf.call(accounts[9]);
+		console.log("LOCKED STAKES [1]: ", locked_NFT_structs_1);
+		console.log("LOCKED STAKES [9]: ", locked_NFT_structs_9);
 
 		// Note the UNI POOL and FXS amount after staking
 		const regular_balance_1 = new BigNumber(await staking_instance.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const boosted_balance_1 = new BigNumber(await staking_instance.combinedWeightOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
-		const locked_balance_1 = new BigNumber(await staking_instance.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const combined_weight_1 = new BigNumber(await staking_instance.combinedWeightOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const regular_balance_9 = new BigNumber(await staking_instance.lockedLiquidityOf.call(accounts[9])).div(BIG18);
-		const boosted_balance_9 = new BigNumber(await staking_instance.combinedWeightOf.call(accounts[9])).div(BIG18);
-		const locked_balance_9 = new BigNumber(await staking_instance.lockedLiquidityOf.call(accounts[9])).div(BIG18);
+		const combined_weight_9 = new BigNumber(await staking_instance.combinedWeightOf.call(accounts[9])).div(BIG18);
 		console.log("LOCKED LIQUIDITY [1]: ", regular_balance_1.toString());
-		console.log("COMBINED WEIGHT [1]: ", boosted_balance_1.toString());
-		console.log("---- LOCKED [1]: ", locked_balance_1.toString());
+		console.log("COMBINED WEIGHT [1]: ", combined_weight_1.toString());
 		console.log("LOCKED LIQUIDITY [9]: ", regular_balance_9.toString());
-		console.log("COMBINED WEIGHT [9]: ", boosted_balance_9.toString());
-		console.log("---- LOCKED [9]: ", locked_balance_9.toString());
-
-		console.log("TRY AN WITHDRAWALS (SHOULD FAIL)");
-		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_1_0[0].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
-		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_9_0[0].kek_id, { from: accounts[9] }));
+		console.log("COMBINED WEIGHT [9]: ", combined_weight_9.toString());
+		
+		console.log("TRY AN EARLY WITHDRAWAL (SHOULD FAIL)");
+		await expectRevert(
+			staking_instance.withdrawLocked(TOKEN_ID_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			"Stake is still locked"
+		);
+		await expectRevert(
+			staking_instance.withdrawLocked(TOKEN_ID_9, { from: accounts[9] }),
+			"Stake is still locked"
+		);
 		await time.advanceBlock();
 
 		await utilities.printCalcCurCombinedWeight(staking_instance, COLLATERAL_FRAX_AND_FXS_OWNER);
@@ -522,9 +533,15 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		const fxs_bal_before_claim_wk_1 = new BigNumber(await fxs_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
 
 		console.log("TRY WITHDRAWING AGAIN");
-		console.log("[1] SHOULD SUCCEED, [9] SHOULD FAIL");
-		await staking_instance.withdrawLocked(locked_stake_structs_1_0[0].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_9_0[0].kek_id, { from: accounts[9] }));
+		console.log("[1] SHOULD SUCCEED (WITH THE TOKEN_ID_1), [9] SHOULD FAIL");
+		await time.increase(28800); // 8 hrs
+		await time.advanceBlock();
+
+		await staking_instance.withdrawLocked(TOKEN_ID_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await expectRevert(
+			staking_instance.withdrawLocked(TOKEN_ID_9, { from: accounts[9] }),
+			"Stake is still locked"
+		);
 
 		// Since withdrawLocked does getReward, accounts[9] should collect now as well
 		// Account 9 either claims or it does not
@@ -605,6 +622,8 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		}
 		catch (err) {}
 
+		
+
 		// Checkpoint the gauges again
 		const current_timestamp_re_checkpoint = (new BigNumber(await time.latest())).toNumber();
 		await frax_gauge_controller.gauge_relative_weight_write(staking_instance.address, current_timestamp_re_checkpoint, { from: accounts[9] });
@@ -663,9 +682,9 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		const fxs_bal_before_claim_wk_5 = new BigNumber(await fxs_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
 
 		// Account 9 withdraws and claims its locked stake
-		await staking_instance.withdrawLocked(locked_stake_structs_9_0[0].kek_id, { from: accounts[9] });
+		await staking_instance.withdrawLocked(TOKEN_ID_9, { from: accounts[9] });
 		await staking_instance.getReward({ from: accounts[9] });
-		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_1_0[1].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
+		await expectRevert.unspecified(staking_instance.withdrawLocked(TOKEN_ID_1_ALT_GOOD, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
 
 		const _total_liquidity_locked_1 = new BigNumber(await staking_instance.totalLiquidityLocked.call()).div(BIG18);
 		const _total_combined_weight_1 = new BigNumber(await staking_instance.totalCombinedWeight.call()).div(BIG18);
@@ -674,7 +693,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		console.log("UNLOCKING ALL STAKES");
 		await staking_instance.unlockStakes({ from: STAKING_OWNER });
-		await staking_instance.withdrawLocked(locked_stake_structs_1_0[1].kek_id, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await staking_instance.withdrawLocked(TOKEN_ID_1_ALT_GOOD, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		await utilities.printCalcCurCombinedWeight(staking_instance, COLLATERAL_FRAX_AND_FXS_OWNER);
 		await utilities.printCalcCurCombinedWeight(staking_instance, accounts[9]);
@@ -883,9 +902,9 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// Get FXS and SUSHI balances
 		const fxs_bal = new BigNumber(await fxs_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
-		const gel_bal = new BigNumber(await gel_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
+		const flx_bal = new BigNumber(await flx_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
 		console.log("fxs_bal: ", fxs_bal);
-		console.log("gel_bal: ", gel_bal);
+		console.log("flx_bal: ", flx_bal);
 
 		console.log("Try recovering a non-reward token as the owner");
 		await staking_instance.recoverERC20(frax_instance.address, test_recovery_amount, { from: STAKING_OWNER });
@@ -951,7 +970,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		console.log("---------TRY TO ERC20 RECOVER A REWARD TOKEN AS THE OWNER [SHOULD FAIL]---------");
 		await expectRevert(
-			staking_instance.recoverERC20(gel_instance.address, test_amount_1, { from: STAKING_OWNER }),
+			staking_instance.recoverERC20(flx_instance.address, test_amount_1, { from: STAKING_OWNER }),
 			"No valid tokens to recover"
 		);
 	});

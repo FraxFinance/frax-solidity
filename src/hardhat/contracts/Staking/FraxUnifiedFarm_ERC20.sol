@@ -77,13 +77,14 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     constructor (
         address _owner,
-        address _stakingToken,
         address[] memory _rewardTokens,
         address[] memory _rewardManagers,
         uint256[] memory _rewardRatesManual,
-        address[] memory _gaugeControllers
+        address[] memory _gaugeControllers,
+        address[] memory _rewardDistributors,
+        address _stakingToken
     ) 
-    FraxUnifiedFarmTemplate(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers)
+    FraxUnifiedFarmTemplate(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers, _rewardDistributors)
     {
 
         // -------------------- VARIES --------------------
@@ -230,28 +231,28 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         return lockedStakes[account];
     }
 
-    // All the locked stakes for a given account [old-school method]
-    function lockedStakesOfMultiArr(address account) external view returns (
-        bytes32[] memory kek_ids,
-        uint256[] memory start_timestamps,
-        uint256[] memory liquidities,
-        uint256[] memory ending_timestamps,
-        uint256[] memory lock_multipliers
-    ) {
-        for (uint256 i = 0; i < lockedStakes[account].length; i++){ 
-            LockedStake memory thisStake = lockedStakes[account][i];
-            kek_ids[i] = thisStake.kek_id;
-            start_timestamps[i] = thisStake.start_timestamp;
-            liquidities[i] = thisStake.liquidity;
-            ending_timestamps[i] = thisStake.ending_timestamp;
-            lock_multipliers[i] = thisStake.lock_multiplier;
-        }
-    }
-
     // Returns the length of the locked stakes for a given account
     function lockedStakesOfLength(address account) external view returns (uint256) {
         return lockedStakes[account].length;
     }
+
+    // // All the locked stakes for a given account [old-school method]
+    // function lockedStakesOfMultiArr(address account) external view returns (
+    //     bytes32[] memory kek_ids,
+    //     uint256[] memory start_timestamps,
+    //     uint256[] memory liquidities,
+    //     uint256[] memory ending_timestamps,
+    //     uint256[] memory lock_multipliers
+    // ) {
+    //     for (uint256 i = 0; i < lockedStakes[account].length; i++){ 
+    //         LockedStake memory thisStake = lockedStakes[account][i];
+    //         kek_ids[i] = thisStake.kek_id;
+    //         start_timestamps[i] = thisStake.start_timestamp;
+    //         liquidities[i] = thisStake.liquidity;
+    //         ending_timestamps[i] = thisStake.ending_timestamp;
+    //         lock_multipliers[i] = thisStake.lock_multiplier;
+    //     }
+    // }
 
     /* =============== MUTATIVE FUNCTIONS =============== */
 

@@ -54,8 +54,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // Instances
     IveFXS private veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
-    IFraxGaugeFXSRewardsDistributor private rewards_distributor = IFraxGaugeFXSRewardsDistributor(0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34);
-
+    
     // Frax related
     address internal frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
     bool internal frax_is_token0;
@@ -85,6 +84,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     mapping(address => address) public rewardManagers; // token addr -> manager addr
     address[] internal rewardTokens;
     address[] internal gaugeControllers;
+    address[] internal rewardDistributors;
     uint256[] internal rewardRatesManual;
     mapping(address => uint256) public rewardTokenAddrToIdx; // token addr -> token index
     
@@ -157,12 +157,14 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         address[] memory _rewardTokens,
         address[] memory _rewardManagers,
         uint256[] memory _rewardRatesManual,
-        address[] memory _gaugeControllers
+        address[] memory _gaugeControllers,
+        address[] memory _rewardDistributors
     ) Owned(_owner) {
 
         // Address arrays
         rewardTokens = _rewardTokens;
         gaugeControllers = _gaugeControllers;
+        rewardDistributors = _rewardDistributors;
         rewardRatesManual = _rewardRatesManual;
 
         for (uint256 i = 0; i < _rewardTokens.length; i++){ 
@@ -489,8 +491,13 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // If the period expired, renew it
     function retroCatchUp() internal {
-        // Pull in rewards from the rewards distributor
-        rewards_distributor.distributeReward(address(this));
+        // Pull in rewards from the rewards distributor, if applicable
+        for (uint256 i = 0; i < rewardDistributors.length; i++){ 
+            address reward_distributor_address = rewardDistributors[i];
+            if (reward_distributor_address != address(0)) {
+                IFraxGaugeFXSRewardsDistributor(reward_distributor_address).distributeReward(address(this));
+            }
+        }
 
         // Ensure the provided reward amount is not more than the balance in the contract.
         // This keeps the reward rate in the right range, preventing overflows due to
@@ -663,9 +670,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     // The owner or the reward token managers can set reward rates 
-    function setGaugeController(address reward_token_address, address _rewards_distributor_address, address _gauge_controller_address) external onlyTknMgrs(reward_token_address) {
+    function setGaugeController(address reward_token_address, address _gauge_controller_address, address _rewards_distributor_address) external onlyTknMgrs(reward_token_address) {
         gaugeControllers[rewardTokenAddrToIdx[reward_token_address]] = _gauge_controller_address;
-        rewards_distributor = IFraxGaugeFXSRewardsDistributor(_rewards_distributor_address);
+        rewardDistributors[rewardTokenAddrToIdx[reward_token_address]] = _rewards_distributor_address;
     }
 
     // The owner or the reward token managers can change managers
