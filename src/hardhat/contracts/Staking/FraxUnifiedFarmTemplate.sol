@@ -246,17 +246,24 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         uint256[] memory reward_arr = rewardsPerToken();
         new_earned = new uint256[](rewardTokens.length);
 
-        if (_combined_weights[account] == 0){
-            for (uint256 i = 0; i < rewardTokens.length; i++){ 
-                new_earned[i] = 0;
-            }
-        }
-        else {
+        if (_combined_weights[account] > 0){
             for (uint256 i = 0; i < rewardTokens.length; i++){ 
                 new_earned[i] = ((_combined_weights[account] * (reward_arr[i] - userRewardsPerTokenPaid[account][i])) / 1e18)
                                 + rewards[account][i];
             }
         }
+
+        // if (_combined_weights[account] == 0){
+        //     for (uint256 i = 0; i < rewardTokens.length; i++){ 
+        //         new_earned[i] = 0;
+        //     }
+        // }
+        // else {
+        //     for (uint256 i = 0; i < rewardTokens.length; i++){ 
+        //         new_earned[i] = ((_combined_weights[account] * (reward_arr[i] - userRewardsPerTokenPaid[account][i])) / 1e18)
+        //                         + rewards[account][i];
+        //     }
+        // }
     }
 
     // Total reward tokens emitted in the given period
@@ -300,19 +307,19 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
             uint256 new_combined_weight
         )
     {
-        revert("Need calcCurCombinedWeight logic");
+        revert("Need cCCW logic");
     }
 
     // ------ LOCK RELATED ------
 
     // Multiplier amount, given the length of the lock
     function lockMultiplier(uint256 secs) public view returns (uint256) {
-        uint256 lock_multiplier =
+        return Math.min(
+            lock_max_multiplier,
             uint256(MULTIPLIER_PRECISION) + (
                 (secs * (lock_max_multiplier - MULTIPLIER_PRECISION)) / lock_time_for_max_multiplier
-            );
-        if (lock_multiplier > lock_max_multiplier) lock_multiplier = lock_max_multiplier;
-        return lock_multiplier;
+            )
+        ) ;
     }
 
     // ------ FRAX RELATED ------
@@ -323,7 +330,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // Meant to be overridden
     function fraxPerLPToken() public virtual view returns (uint256) {
-        revert("Need fraxPerLPToken logic");
+        revert("Need fPLPT logic");
     }
 
     // ------ veFXS RELATED ------
@@ -377,7 +384,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // Staker can allow a veFXS proxy (the proxy will have to toggle them first)
     function stakerSetVeFXSProxy(address proxy_address) external {
         require(valid_vefxs_proxies[proxy_address], "Invalid proxy");
-        require(proxy_allowed_stakers[proxy_address][msg.sender], "Proxy has not allowed you yet");
+        require(proxy_allowed_stakers[proxy_address][msg.sender], "Proxy has not allowed you");
         staker_designated_proxies[msg.sender] = proxy_address; 
     }
 
@@ -459,12 +466,12 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // ------ REWARDS CLAIMING ------
 
     function _getRewardExtraLogic(address rewardee, address destination_address) internal virtual {
-        revert("Need _getRewardExtraLogic logic");
+        revert("Need gREL logic");
     }
 
     // Two different getReward functions are needed because of delegateCall and msg.sender issues
     function getReward() external nonReentrant returns (uint256[] memory) {
-        require(rewardsCollectionPaused == false,"Rewards collection paused");
+        require(rewardsCollectionPaused == false, "Rewards collection paused");
         return _getReward(msg.sender, msg.sender);
     }
 
@@ -567,7 +574,6 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         fraxPerLPStored = fraxPerLPToken();
     }
 
-
     /* ========== RESTRICTED FUNCTIONS - Curator / migrator callable ========== */
     
     // ------ FARM SYNCING ------
@@ -622,55 +628,44 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         }
 
         // Only the reward managers can take back their reward tokens
-        if (isRewardToken && rewardManagers[tokenAddress] == msg.sender){
-            ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
+        // Also, other tokens, like the staking token, airdrops, or accidental deposits, can be withdrawn by the owner
+        if (
+                (isRewardToken && rewardManagers[tokenAddress] == msg.sender)
+                || (!isRewardToken && (msg.sender == owner))
+            ) {
+            TransferHelper.safeTransfer(tokenAddress, msg.sender, tokenAmount);
             return;
         }
-
-        // Other tokens, like the staking token, airdrops, or accidental deposits, can be withdrawn by the owner
-        else if (!isRewardToken && (msg.sender == owner)){
-            ERC20(tokenAddress).transfer(msg.sender, tokenAmount);
-            return;
-        }
-
         // If none of the above conditions are true
         else {
             revert("No valid tokens to recover");
         }
     }
 
-    function setMultipliers(
-        uint256 _lock_max_multiplier, 
-        uint256 _vefxs_max_multiplier, 
-        uint256 _vefxs_per_frax_for_max_boost,
-        uint256 _vefxs_boost_scale_factor
+    function setMiscVariables(
+        uint256[6] memory _misc_vars
+        // [0]: uint256 _lock_max_multiplier, 
+        // [1] uint256 _vefxs_max_multiplier, 
+        // [2] uint256 _vefxs_per_frax_for_max_boost,
+        // [3] uint256 _vefxs_boost_scale_factor,
+        // [4] uint256 _lock_time_for_max_multiplier,
+        // [5] uint256 _lock_time_min
     ) external onlyByOwnGov {
-        require(_lock_max_multiplier >= MULTIPLIER_PRECISION, "Mult must be >= MULTIPLIER_PRECISION");
-        require(_vefxs_max_multiplier >= 0, "veFXS mul must be >= 0");
-        require(_vefxs_per_frax_for_max_boost > 0, "veFXS pct max must be >= 0");
-        require(_vefxs_boost_scale_factor > 0, "veFXS boost scale factor must be >= 0");
+        require(_misc_vars[0] >= MULTIPLIER_PRECISION, "Must be >= MUL PREC");
+        require((_misc_vars[1] >= 0) && (_misc_vars[2] >= 0) && (_misc_vars[3] >= 0), "Must be >= 0");
+        require((_misc_vars[4] >= 1) && (_misc_vars[5] >= 1), "Must be >= 1");
 
-        lock_max_multiplier = _lock_max_multiplier;
-        vefxs_max_multiplier = _vefxs_max_multiplier;
-        vefxs_per_frax_for_max_boost = _vefxs_per_frax_for_max_boost;
-        vefxs_boost_scale_factor = _vefxs_boost_scale_factor;
-    }
-
-    function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnGov {
-        require(_lock_time_for_max_multiplier >= 1, "Mul max time must be >= 1");
-        require(_lock_time_min >= 1, "Mul min time must be >= 1");
-
-        lock_time_for_max_multiplier = _lock_time_for_max_multiplier;
-        lock_time_min = _lock_time_min;
+        lock_max_multiplier = _misc_vars[0];
+        vefxs_max_multiplier = _misc_vars[1];
+        vefxs_per_frax_for_max_boost = _misc_vars[2];
+        vefxs_boost_scale_factor = _misc_vars[3];
+        lock_time_for_max_multiplier = _misc_vars[4];
+        lock_time_min = _misc_vars[5];
     }
 
     // The owner or the reward token managers can set reward rates 
-    function setRewardRate(address reward_token_address, uint256 new_rate) external onlyTknMgrs(reward_token_address) {
-        rewardRatesManual[rewardTokenAddrToIdx[reward_token_address]] = new_rate;
-    }
-
-    // The owner or the reward token managers can set reward rates 
-    function setGaugeController(address reward_token_address, address _gauge_controller_address, address _rewards_distributor_address) external onlyTknMgrs(reward_token_address) {
+    function setRewardVars(address reward_token_address, uint256 _new_rate, address _gauge_controller_address, address _rewards_distributor_address) external onlyTknMgrs(reward_token_address) {
+        rewardRatesManual[rewardTokenAddrToIdx[reward_token_address]] = _new_rate;
         gaugeControllers[rewardTokenAddrToIdx[reward_token_address]] = _gauge_controller_address;
         rewardDistributors[rewardTokenAddrToIdx[reward_token_address]] = _rewards_distributor_address;
     }
