@@ -167,7 +167,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         address,
         uint256,
         bytes memory
-    ) public pure returns (bytes4) {
+    ) external pure returns (bytes4) {
         return this.onERC721Received.selector;
     }
 
@@ -295,8 +295,8 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         // Update the stake
         lockedNFTs[msg.sender][theArrayIndex] = LockedNFT(
             token_id,
-            block.timestamp,
             thisNFT.liquidity,
+            block.timestamp,
             new_ending_ts,
             lockMultiplier(new_secs),
             thisNFT.tick_lower,
@@ -319,6 +319,10 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         // Get the stake and its index
         (LockedNFT memory thisNFT, uint256 theArrayIndex) = _getStake(msg.sender, token_id);
 
+        // Pull in the two tokens
+        TransferHelper.safeTransferFrom(uni_token0, msg.sender, address(this), token0_amt);
+        TransferHelper.safeTransferFrom(uni_token1, msg.sender, address(this), token1_amt);
+
         // Calculate the increaseLiquidity parms
         INonfungiblePositionManager.IncreaseLiquidityParams memory inc_liq_params = INonfungiblePositionManager.IncreaseLiquidityParams(
             token_id,
@@ -328,6 +332,10 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
             token1_min_in,
             block.timestamp + 604800 // Expiration: 7 days from now
         );
+
+        // Approve the two tokens to the Positions NFT Manager
+        ERC20(uni_token0).approve(address(stakingTokenNFT), token0_amt);
+        ERC20(uni_token1).approve(address(stakingTokenNFT), token1_amt);
 
         // Add the liquidity
         ( uint128 addl_liq, ,  ) = stakingTokenNFT.increaseLiquidity(inc_liq_params);
@@ -341,8 +349,8 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         // Update the stake
         lockedNFTs[msg.sender][theArrayIndex] = LockedNFT(
             token_id,
-            thisNFT.start_timestamp,
             new_amt,
+            thisNFT.start_timestamp,
             thisNFT.ending_timestamp,
             thisNFT.lock_multiplier,
             thisNFT.tick_lower,

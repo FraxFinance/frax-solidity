@@ -7,10 +7,12 @@ const util = require('util');
 const chalk = require('chalk');
 const Contract = require('web3-eth-contract');
 const { expectRevert, time } = require('@openzeppelin/test-helpers');
+const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants');
 const { expect } = require("chai");
 
 const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 const utilities = require(path.join(__dirname, '../../../dist/misc/utilities'));
+
 
 // Set provider for all later instances to use
 Contract.setProvider('http://127.0.0.1:7545');
@@ -337,6 +339,10 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		// Print the reward rate
 		let reward_amount = new BigNumber(await staking_instance.rewardRates.call(0)).multipliedBy(604800).div(BIG18).toNumber();
 		console.log("reward_amount per week (FXS): ", reward_amount);
+
+		// Print the FRAX per LP Token
+		const frax_per_lp_token = new BigNumber(await staking_instance.fraxPerLPToken.call()).div(BIG18);
+		console.log("frax_per_lp_token: ", frax_per_lp_token.toString());
 
 		// NOTE
 		console.log(chalk.yellow.bold("DEPENDING ON WHO VOTED, THE REWARD RATE MAY CHANGE SLIGHTLY WEEK AFTER WEEK DUE TO VEFXS DECAY"));
@@ -891,7 +897,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		await staking_instance.recoverERC20(frax_instance.address, test_recovery_amount, { from: STAKING_OWNER });
 
 		console.log("Set a reward rate as the owner");
-		await staking_instance.setRewardRate(staking_reward_tokens_addresses[1], 1000, { from: STAKING_OWNER });
+		await staking_instance.setRewardVars(staking_reward_tokens_addresses[1], 1000, frax_gauge_controller.address, gauge_rewards_distributor_instance.address, { from: STAKING_OWNER });
 
 		for (let j = 0; j < staking_reward_tokens_addresses.length; j++){
 			const token_manager_address = await staking_instance.rewardManagers.call(staking_reward_tokens_addresses[j]);
@@ -906,7 +912,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		
 			console.log("Try to set the reward rate with the wrong manager [SHOULD FAIL]");
 			await expectRevert(
-				staking_instance.setRewardRate(staking_reward_tokens_addresses[j], 0, { from: accounts[9] }),
+				staking_instance.setRewardVars(staking_reward_tokens_addresses[j], 0, ZERO_ADDRESS, ZERO_ADDRESS, { from: accounts[9] }),
 				"Not owner or tkn mgr"
 			);
 
@@ -922,7 +928,9 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 			});
 	
 			console.log("Set the reward rate with the correct manager");
-			await staking_instance.setRewardRate(staking_reward_tokens_addresses[j], 0, { from: token_manager_address });
+			const gauge_ctr_add_to_use = (j == 0 ? frax_gauge_controller.address : ZERO_ADDRESS);
+			const gauge_rew_dist_add_to_use = (j == 0 ? gauge_rewards_distributor_instance.address : ZERO_ADDRESS);
+			await staking_instance.setRewardVars(staking_reward_tokens_addresses[j], 0, gauge_ctr_add_to_use, gauge_rew_dist_add_to_use, { from: token_manager_address });
 
 			console.log("Try recovering reward tokens as the reward manager");
 			await staking_instance.recoverERC20(staking_reward_tokens_addresses[j], test_recovery_amount, { from: token_manager_address });
@@ -1123,7 +1131,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		console.log("--------- TRY ALLOWING A VALID PROXY FOR A STAKER BEFORE THE PROXY TOGGLED THEM FIRST ---------");
 		await expectRevert(
 			staking_instance.stakerSetVeFXSProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: accounts[9] }),
-			"Proxy has not allowed you yet"
+			"Proxy has not allowed you"
 		);
 	});
 
