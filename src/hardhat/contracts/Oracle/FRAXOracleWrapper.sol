@@ -61,7 +61,9 @@ contract FRAXOracleWrapper is Owned {
     /* ========== VIEWS ========== */
 
     function getFRAXPrice() public view returns (uint256 raw_price, uint256 precise_price) {
-        ( , int price, , , ) = priceFeedFRAXETH.latestRoundData();
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedFRAXETH.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+        
         // E6
         raw_price = uint256(price).mul(PRICE_PRECISION).div(uint256(10) ** chainlink_frax_eth_decimals);
 

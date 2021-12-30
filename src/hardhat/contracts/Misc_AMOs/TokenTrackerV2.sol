@@ -171,7 +171,7 @@ contract TokenTrackerV2 is Owned {
             value_usd_e18 = (tracked_address.balance * ethUSDOracle.getETHPricePrecise()) / PRECISE_PRICE_PRECISION;
         }
         else {
-            ( uint256 precise_price, ) = ComboOracle(thisOracleCRInfo.oracle_address).getTokenPrice(token_address);
+            ( uint256 precise_price, , ) = ComboOracle(thisOracleCRInfo.oracle_address).getTokenPrice(token_address);
             uint256 missing_decimals = uint256(18) - ERC20(token_address).decimals();
 
             // Scale up to E18
@@ -239,7 +239,7 @@ contract TokenTrackerV2 is Owned {
 
     function setTokenOracleCRInfo(address token_address, address oracle_address, bool use_cr) public onlyByOwnGov {
         // Make sure the oracle is valid
-        ( uint256 precise_price, ) = ComboOracle(oracle_address).getTokenPrice(token_address);
+        ( uint256 precise_price, , ) = ComboOracle(oracle_address).getTokenPrice(token_address);
         require(precise_price > 0, "Invalid Oracle");
 
         oracle_cr_infos[token_address].token_address = token_address;

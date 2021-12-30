@@ -16,13 +16,9 @@ contract ChainlinkFXSUSDPriceConsumer {
      * Returns the latest price
      */
     function getLatestPrice() public view returns (int) {
-        (
-            , 
-            int price,
-            ,
-            ,
-            
-        ) = priceFeed.latestRoundData();
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeed.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+        
         return price;
     }
 

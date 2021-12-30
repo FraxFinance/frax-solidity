@@ -5,25 +5,27 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./ABDKMath64x64.sol";
+import "hardhat/console.sol";
 import "./StakedFPI.sol";
 
 
 /**
  * FPI staking pool.
  */
-contract FPIStaking is Ownable {
+contract FPIStaking2 is Ownable {
     using ABDKMath64x64 for int128;
     IERC20 public FPI;
     StakedFPI public sFPI;
     IExitQueue public EXIT_QUEUE;
     uint256 public stakingMultiplier;
     uint256 public lastUpdatedTime;
-    uint256 public PERIOD = 100*24*60*60; // 100 days
+    int128 public PERIOD = 100*24*60*60; // 100 days
     uint256 PRECISION = 1e18;
+    int128 logRewardRate = ABDKMath64x64.ln(ABDKMath64x64.fromUInt(10100).div(ABDKMath64x64.fromUInt(10000))); //ln(1.01)
     
     constructor(IERC20 _FPI, uint256 _PERIOD) {
         FPI = _FPI;
-        PERIOD = _PERIOD;
+        PERIOD = ABDKMath64x64.fromUInt(_PERIOD);
 
         // Each version of the staking contract needs it's own instance of StakedFPI, users can use to claim back rewards
         sFPI = new StakedFPI(); 
@@ -31,18 +33,12 @@ contract FPIStaking is Ownable {
         stakingMultiplier=PRECISION;
     }
     
-    
     /** Calculate the updated staking multiplier, based on the given time */
     function stakingMultiplierAt(uint256 time) public view returns(uint256) {
-        uint256 sFPISupply = sFPI.totalSupply();
-        if (sFPISupply==0) return stakingMultiplier;
+        if (time<=lastUpdatedTime) return stakingMultiplier;
         else {
-            uint256 FPIInContract = FPI.balanceOf(address(this));
-            uint256 owedFPI = balance(sFPISupply);
-            uint256 rewardsPoolSize = FPIInContract - owedFPI;
-            int128 t = ABDKMath64x64.fromUInt(time - lastUpdatedTime).div(ABDKMath64x64.fromUInt(PERIOD));
-            uint256 newRewardsPoolSize = ABDKMath64x64.mulu(ABDKMath64x64.exp(-t),rewardsPoolSize);
-            return (FPIInContract-newRewardsPoolSize)*PRECISION/sFPISupply;
+            int128 t = ABDKMath64x64.fromUInt(time - lastUpdatedTime).div(PERIOD);
+            return ABDKMath64x64.mulu(ABDKMath64x64.exp(logRewardRate.mul(t)),stakingMultiplier);
         }
     }
 
@@ -115,9 +111,16 @@ contract FPIStaking is Ownable {
         EXIT_QUEUE = _EXIT_QUEUE;
     }
     
-     /** Set period */
+    /** Set period */
+    //@param _PERIOD period in seconds
     function setPeriod(uint256 _PERIOD) external onlyOwner {
-        PERIOD = _PERIOD;
+        PERIOD = ABDKMath64x64.fromUInt(_PERIOD);
+    }
+    
+    /** Set rewardRate */
+    //@param rewardRate per period. (1 is 0.1%)
+    function setRewardRate(uint256 rewardRate) external onlyOwner {
+	logRewardRate = ABDKMath64x64.ln(ABDKMath64x64.fromUInt(10000+rewardRate).div(ABDKMath64x64.fromUInt(10000)));
     }
 
     event StakeCompleted(address _staker, uint256 _amount, uint256 _lockedUntil);
