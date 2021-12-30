@@ -66,12 +66,16 @@ contract FXSOracleWrapper is Owned {
     /* ========== VIEWS ========== */
 
     function getFXSPrice() public view returns (uint256) {
-        ( , int price, , , ) = priceFeedFXSUSD.latestRoundData();
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedFXSUSD.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+
         return uint256(price).mul(PRICE_PRECISION).div(10 ** chainlink_fxs_usd_decimals);
     }
 
     function getETHPrice() public view returns (uint256) {
-        ( , int price, , , ) = priceFeedETHUSD.latestRoundData();
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+        
         return uint256(price).mul(PRICE_PRECISION).div(10 ** chainlink_eth_usd_decimals);
     }
 

@@ -270,35 +270,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         
     }
 
-    // Extends the lock of an existing stake
-    function extendLockTime(bytes32 kek_id, uint256 new_ending_ts) updateRewardAndBalance(msg.sender, true) public {
-        // Get the stake and its index
-        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
-
-        // Check 
-        require(new_ending_ts > block.timestamp, "Must be in the future");
-        require(new_ending_ts > thisStake.ending_timestamp, "Cannot shorten lock time");
-
-        // Calculate the new seconds
-        uint256 new_secs = new_ending_ts - block.timestamp;
-
-        // Checks
-        require(new_secs >= lock_time_min, "Minimum stake time not met");
-        require(new_secs <= lock_time_for_max_multiplier, "Trying to lock for too long");
-
-        // Update the stake
-        lockedStakes[msg.sender][theArrayIndex] = LockedStake(
-            kek_id,
-            block.timestamp,
-            thisStake.liquidity,
-            new_ending_ts,
-            lockMultiplier(new_secs)
-        );
-
-        // Need to call to update the combined weights
-        _updateRewardAndBalance(msg.sender, false);
-    }
-
     // Add additional LPs to an existing locked stake
     function lockAdditional(bytes32 kek_id, uint256 addl_liq) updateRewardAndBalance(msg.sender, true) public {
         // Get the stake and its index
@@ -382,9 +353,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // ------ WITHDRAWING ------
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function withdrawLocked(bytes32 kek_id) nonReentrant external {
+    function withdrawLocked(bytes32 kek_id, address destination_address) nonReentrant external {
         require(withdrawalsPaused == false, "Withdrawals paused");
-        _withdrawLocked(msg.sender, msg.sender, kek_id);
+        _withdrawLocked(msg.sender, destination_address, kek_id);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper

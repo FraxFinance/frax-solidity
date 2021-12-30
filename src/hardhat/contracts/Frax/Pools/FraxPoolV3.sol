@@ -58,7 +58,7 @@ contract FraxPoolV3 is Owned {
     string[] public collateral_symbols;
     uint256[] public missing_decimals; // Number of decimals needed to get to E18. collateral index -> missing_decimals
     uint256[] public pool_ceilings; // Total across all collaterals. Accounts for missing_decimals
-    uint256[] public collateral_prices; // Stores price of the collateral, if price is paused
+    uint256[] public collateral_prices; // Stores price of the collateral, if price is paused. CONSIDER ORACLES EVENTUALLY!!!
     mapping(address => uint256) public collateralAddrToIdx; // collateral addr -> collateral index
     mapping(address => bool) public enabled_collaterals; // collateral address -> is it enabled
     
@@ -97,6 +97,7 @@ contract FraxPoolV3 is Owned {
     bool[] private redeemPaused; // Collateral-specific
     bool[] private recollateralizePaused; // Collateral-specific
     bool[] private buyBackPaused; // Collateral-specific
+    bool[] private borrowingPaused; // Collateral-specific
 
     /* ========== MODIFIERS ========== */
 
@@ -166,6 +167,7 @@ contract FraxPoolV3 is Owned {
             redeemPaused.push(false);
             recollateralizePaused.push(false);
             buyBackPaused.push(false);
+            borrowingPaused.push(false);
         }
 
         // Pool ceiling
@@ -190,6 +192,7 @@ contract FraxPoolV3 is Owned {
         bool redeem_paused;
         bool recollat_paused;
         bool buyback_paused;
+        bool borrowing_paused;
         uint256 minting_fee;
         uint256 redemption_fee;
         uint256 buyback_fee;
@@ -217,10 +220,11 @@ contract FraxPoolV3 is Owned {
             redeemPaused[idx], // [8]
             recollateralizePaused[idx], // [9]
             buyBackPaused[idx], // [10]
-            minting_fee[idx], // [11]
-            redemption_fee[idx], // [12]
-            buyback_fee[idx], // [13]
-            recollat_fee[idx] // [14]
+            borrowingPaused[idx], // [11]
+            minting_fee[idx], // [12]
+            redemption_fee[idx], // [13]
+            buyback_fee[idx], // [14]
+            recollat_fee[idx] // [15]
         );
     }
 
@@ -229,12 +233,16 @@ contract FraxPoolV3 is Owned {
     }
 
     function getFRAXPrice() public view returns (uint256) {
-        ( , int price, , , ) = priceFeedFRAXUSD.latestRoundData();
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedFRAXUSD.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+
         return uint256(price).mul(PRICE_PRECISION).div(10 ** chainlink_frax_usd_decimals);
     }
 
     function getFXSPrice() public view returns (uint256) {
-        ( , int price, , , ) = priceFeedFXSUSD.latestRoundData();
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedFXSUSD.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+
         return uint256(price).mul(PRICE_PRECISION).div(10 ** chainlink_fxs_usd_decimals);
     }
 
@@ -347,6 +355,8 @@ contract FraxPoolV3 is Owned {
         uint256 col_idx, 
         uint256 frax_amt,
         uint256 frax_out_min,
+        uint256 max_collat_in,
+        uint256 max_fxs_in,
         bool one_to_one_override
     ) external collateralEnabled(col_idx) returns (
         uint256 total_frax_mint, 
@@ -379,8 +389,12 @@ contract FraxPoolV3 is Owned {
         // Subtract the minting fee
         total_frax_mint = (frax_amt.mul(PRICE_PRECISION.sub(minting_fee[col_idx]))).div(PRICE_PRECISION);
 
-        // Checks
-        require((frax_out_min <= total_frax_mint), "FRAX slippage");
+        // Check slippages
+        require((total_frax_mint >= frax_out_min), "FRAX slippage");
+        require((collat_needed <= max_collat_in), "Collat slippage");
+        require((fxs_needed <= max_fxs_in), "FXS slippage");
+
+        // Check the pool ceiling
         require(freeCollatBalance(col_idx).add(collat_needed) <= pool_ceilings[col_idx], "Pool ceiling");
 
         // Take the FXS and collateral first
@@ -411,9 +425,7 @@ contract FraxPoolV3 is Owned {
         // Assumes $1 FRAX in all cases
         if(global_collateral_ratio >= PRICE_PRECISION) { 
             // 1-to-1 or overcollateralized
-            collat_out = frax_after_fee
-                            .mul(collateral_prices[col_idx])
-                            .div(10 ** (6 + missing_decimals[col_idx])); // PRICE_PRECISION + missing decimals
+            collat_out = getFRAXInCollateral(col_idx, frax_after_fee);
             fxs_out = 0;
         } else if (global_collateral_ratio == 0) { 
             // Algorithmic
@@ -423,10 +435,9 @@ contract FraxPoolV3 is Owned {
             collat_out = 0;
         } else { 
             // Fractional
-            collat_out = frax_after_fee
+            collat_out = getFRAXInCollateral(col_idx, frax_after_fee)
                             .mul(global_collateral_ratio)
-                            .mul(collateral_prices[col_idx])
-                            .div(10 ** (12 + missing_decimals[col_idx])); // PRICE_PRECISION ^2 + missing decimals
+                            .div(PRICE_PRECISION);
             fxs_out = frax_after_fee
                             .mul(PRICE_PRECISION.sub(global_collateral_ratio))
                             .div(getFXSPrice()); // PRICE_PRECISIONS CANCEL OUT
@@ -554,6 +565,12 @@ contract FraxPoolV3 is Owned {
         // Checks the col_idx of the minter as an additional safety check
         uint256 minter_col_idx = IFraxAMOMinter(msg.sender).col_idx();
 
+        // Checks to see if borrowing is paused
+        require(borrowingPaused[minter_col_idx] == false, "Borrowing is paused");
+
+        // Ensure collateral is enabled
+        require(enabled_collaterals[collateral_addresses[minter_col_idx]], "Collateral disabled");
+
         // Transfer
         TransferHelper.safeTransfer(collateral_addresses[minter_col_idx], msg.sender, collateral_amount);
     }
@@ -565,6 +582,7 @@ contract FraxPoolV3 is Owned {
         else if (tog_idx == 1) redeemPaused[col_idx] = !redeemPaused[col_idx];
         else if (tog_idx == 2) buyBackPaused[col_idx] = !buyBackPaused[col_idx];
         else if (tog_idx == 3) recollateralizePaused[col_idx] = !recollateralizePaused[col_idx];
+        else if (tog_idx == 4) borrowingPaused[col_idx] = !borrowingPaused[col_idx];
 
         emit MRBRToggled(col_idx, tog_idx);
     }
@@ -592,6 +610,7 @@ contract FraxPoolV3 is Owned {
     }
 
     function setCollateralPrice(uint256 col_idx, uint256 _new_price) external onlyByOwnGov {
+        // CONSIDER ORACLES EVENTUALLY!!!
         collateral_prices[col_idx] = _new_price;
 
         emit CollateralPriceSet(col_idx, _new_price);

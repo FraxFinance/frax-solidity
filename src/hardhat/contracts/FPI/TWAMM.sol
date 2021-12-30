@@ -5,6 +5,7 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../Utils/LongTermOrders.sol";
+import '../Uniswap/TransferHelper.sol';
 
 ///@notice TWAMM -- https://www.paradigm.xyz/2021/07/twamm/
 contract TWAMM is ERC20 {
@@ -106,8 +107,8 @@ contract TWAMM is ERC20 {
     function provideInitialLiquidity(uint256 amountA, uint256 amountB) external {
         require(totalSupply() == 0, 'EC4');
 
-        ERC20(tokenA).transferFrom(msg.sender, address(this), amountA);
-        ERC20(tokenB).transferFrom(msg.sender, address(this), amountB);
+        TransferHelper.safeTransferFrom(tokenA, msg.sender, address(this), amountA);
+        TransferHelper.safeTransferFrom(tokenB, msg.sender, address(this), amountB);
 
         reserveMap[tokenA] = amountA;
         reserveMap[tokenB] = amountB;
@@ -132,8 +133,8 @@ contract TWAMM is ERC20 {
         uint256 amountAIn = lpTokenAmount * reserveMap[tokenA] / totalSupply();
         uint256 amountBIn = lpTokenAmount * reserveMap[tokenB] / totalSupply();
 
-        ERC20(tokenA).transferFrom(msg.sender, address(this), amountAIn);
-        ERC20(tokenB).transferFrom(msg.sender, address(this), amountBIn);
+        TransferHelper.safeTransferFrom(tokenA, msg.sender, address(this), amountAIn);
+        TransferHelper.safeTransferFrom(tokenB, msg.sender, address(this), amountBIn);
 
         reserveMap[tokenA] += amountAIn;
         reserveMap[tokenB] += amountBIn;
@@ -156,11 +157,11 @@ contract TWAMM is ERC20 {
         uint256 amountAOut = reserveMap[tokenA] * lpTokenAmount / totalSupply();
         uint256 amountBOut = reserveMap[tokenB] * lpTokenAmount / totalSupply();
 
-        ERC20(tokenA).transfer(msg.sender, amountAOut);
-        ERC20(tokenB).transfer(msg.sender, amountBOut);
-
         reserveMap[tokenA] -= amountAOut;
         reserveMap[tokenB] -= amountBOut;
+
+        TransferHelper.safeTransfer(tokenA, msg.sender, amountAOut);
+        TransferHelper.safeTransfer(tokenB, msg.sender, amountBOut);
 
         _burn(msg.sender, lpTokenAmount);
 
@@ -220,8 +221,8 @@ contract TWAMM is ERC20 {
         //charge LP fee
         amountOutMinusFee = amountOut * (10000 - LP_FEE) / 10000;
         
-        ERC20(from).transferFrom(msg.sender, address(this), amountIn);  
-        ERC20(to).transfer(msg.sender, amountOutMinusFee);
+        TransferHelper.safeTransferFrom(from, msg.sender, address(this), amountIn);
+        TransferHelper.safeTransfer(to, msg.sender, amountOutMinusFee);
 
         reserveMap[from] += amountIn;
         reserveMap[to] -= amountOutMinusFee;

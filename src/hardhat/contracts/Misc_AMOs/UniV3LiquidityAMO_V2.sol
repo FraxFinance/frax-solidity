@@ -164,14 +164,14 @@ contract UniV3LiquidityAMO_V2 is Owned {
             ERC20 thisCollateral = ERC20(collateral_addresses[i]);
             uint256 missing_decs = uint256(18).sub(thisCollateral.decimals());
             uint256 col_bal_e18 = thisCollateral.balanceOf(address(this)).mul(10 ** missing_decs);
-            uint256 col_usd_value_e18 = collatDolarValue(oracles[collateral_addresses[i]], col_bal_e18);
+            uint256 col_usd_value_e18 = collatDollarValue(oracles[collateral_addresses[i]], col_bal_e18);
             value_tally_e18 = value_tally_e18.add(col_usd_value_e18);
         }
         return value_tally_e18;
     }
 
     // Convert collateral to dolar. If no oracle assumes pegged to 1USD. Both oracle, balance and return are E18
-    function collatDolarValue(OracleLike oracle, uint256 balance) public view returns (uint256) {
+    function collatDollarValue(OracleLike oracle, uint256 balance) public view returns (uint256) {
         if (address(oracle) == address(0)) return balance;
         return balance.mul(oracle.read()).div(1 ether);
     }

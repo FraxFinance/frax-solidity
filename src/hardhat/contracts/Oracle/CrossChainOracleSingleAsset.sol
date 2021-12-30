@@ -34,6 +34,7 @@ contract CrossChainOracleSingleAsset is Owned {
     
     // Prices
     uint256 public price;
+    uint256 public last_updated_time;
 
     // AggregatorV3Interface stuff
     uint8 public decimals = 18;
@@ -59,6 +60,7 @@ contract CrossChainOracleSingleAsset is Owned {
         address _tkn_address,
         address _timelock_address,
         address _bot_address,
+        uint256 _initial_price_e6,
         string memory _description
     ) Owned(_creator_address) {
         tkn_address = _tkn_address;
@@ -66,6 +68,9 @@ contract CrossChainOracleSingleAsset is Owned {
         bot_address = _bot_address;
 
         description = _description;
+
+        price = _initial_price_e6;
+        last_updated_time = block.timestamp;
     }
 
     /* ========== VIEWS ========== */
@@ -83,7 +88,7 @@ contract CrossChainOracleSingleAsset is Owned {
         uint80 answeredInRound
     ) {
         int256 price_e18 = int256(price) * 1e12;
-        return (0, price_e18, 0, 0, 0);
+        return (0, price_e18, 0, last_updated_time, 0);
     }
 
     /* ========== RESTRICTED FUNCTIONS, BUT BOT CAN SET ========== */
@@ -93,6 +98,7 @@ contract CrossChainOracleSingleAsset is Owned {
         require(token_address == tkn_address, "Invalid token");
 
         setPrice(price_e6);
+        last_updated_time = block.timestamp;
     }
 
     // Set the price for a token
@@ -106,6 +112,7 @@ contract CrossChainOracleSingleAsset is Owned {
         require(token_addresses[0] == tkn_address, "Invalid token");
 
         setPrice(prices_e6[0]);
+        last_updated_time = block.timestamp;
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */

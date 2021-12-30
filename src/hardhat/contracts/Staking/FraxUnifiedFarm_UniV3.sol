@@ -98,6 +98,11 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         
         // Set the seed token id
         seed_token_id = _seed_token_id;
+
+        // Infinite approve the two tokens to the Positions NFT Manager 
+        // This saves gas
+        ERC20(uni_token0).approve(address(stakingTokenNFT), type(uint256).max);
+        ERC20(uni_token1).approve(address(stakingTokenNFT), type(uint256).max);
     }
 
     /* ============= VIEWS ============= */
@@ -276,66 +281,46 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         
     }
 
-    // Extends the lock of an existing stake
-    function extendLockTime(uint256 token_id, uint256 new_ending_ts) updateRewardAndBalance(msg.sender, true) public {
-        // Get the stake and its index
-        (LockedNFT memory thisNFT, uint256 theArrayIndex) = _getStake(msg.sender, token_id);
-
-        // Check 
-        require(new_ending_ts > block.timestamp, "Must be in the future");
-        require(new_ending_ts > thisNFT.ending_timestamp, "Cannot shorten lock time");
-
-        // Calculate the new seconds
-        uint256 new_secs = new_ending_ts - block.timestamp;
-
-        // Checks
-        require(new_secs >= lock_time_min, "Minimum stake time not met");
-        require(new_secs <= lock_time_for_max_multiplier, "Trying to lock for too long");
-
-        // Update the stake
-        lockedNFTs[msg.sender][theArrayIndex] = LockedNFT(
-            token_id,
-            thisNFT.liquidity,
-            block.timestamp,
-            new_ending_ts,
-            lockMultiplier(new_secs),
-            thisNFT.tick_lower,
-            thisNFT.tick_upper
-        );
-
-        // Need to call to update the combined weights
-        _updateRewardAndBalance(msg.sender, false);
-    }
-
     // Add additional LPs to an existing locked stake
     // Make sure to do the 2 token approvals to the NFT Position Manager first on the UI
+    // NOTE: If use_balof_override is true, make sure your calling transaction is atomic with the token
+    // transfers in to prevent front running!
     function lockAdditional(
         uint256 token_id, 
         uint256 token0_amt, 
         uint256 token1_amt,
         uint256 token0_min_in, 
-        uint256 token1_min_in
+        uint256 token1_min_in,
+        bool use_balof_override // Use balanceOf Override
     ) updateRewardAndBalance(msg.sender, true) public {
         // Get the stake and its index
         (LockedNFT memory thisNFT, uint256 theArrayIndex) = _getStake(msg.sender, token_id);
 
-        // Pull in the two tokens
-        TransferHelper.safeTransferFrom(uni_token0, msg.sender, address(this), token0_amt);
-        TransferHelper.safeTransferFrom(uni_token1, msg.sender, address(this), token1_amt);
+        // Handle the tokens
+        uint256 tk0_amt_to_use;
+        uint256 tk1_amt_to_use;
+        if (use_balof_override){
+            // Get the token balances atomically sent to this farming contract
+            tk0_amt_to_use = ERC20(uni_token0).balanceOf(address(this));
+            tk1_amt_to_use = ERC20(uni_token1).balanceOf(address(this));
+        }
+        else {
+            // Pull in the two tokens
+            tk0_amt_to_use = token0_amt;
+            tk1_amt_to_use = token1_amt;
+            TransferHelper.safeTransferFrom(uni_token0, msg.sender, address(this), tk0_amt_to_use);
+            TransferHelper.safeTransferFrom(uni_token1, msg.sender, address(this), tk1_amt_to_use);
+        }
 
         // Calculate the increaseLiquidity parms
         INonfungiblePositionManager.IncreaseLiquidityParams memory inc_liq_params = INonfungiblePositionManager.IncreaseLiquidityParams(
             token_id,
-            token0_amt,
-            token1_amt,
-            token0_min_in,
-            token1_min_in,
+            tk0_amt_to_use,
+            tk1_amt_to_use,
+            use_balof_override ? 0 : token0_min_in, // Ignore slippage if using balanceOf
+            use_balof_override ? 0 : token1_min_in, // Ignore slippage if using balanceOf
             block.timestamp + 604800 // Expiration: 7 days from now
         );
-
-        // Approve the two tokens to the Positions NFT Manager
-        ERC20(uni_token0).approve(address(stakingTokenNFT), token0_amt);
-        ERC20(uni_token1).approve(address(stakingTokenNFT), token1_amt);
 
         // Add the liquidity
         ( uint128 addl_liq, ,  ) = stakingTokenNFT.increaseLiquidity(inc_liq_params);
@@ -343,13 +328,10 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         // Checks
         require(addl_liq >= 0, "Must be nonzero");
 
-        // Calculate the new amount
-        uint256 new_amt = thisNFT.liquidity + addl_liq;
-
         // Update the stake
         lockedNFTs[msg.sender][theArrayIndex] = LockedNFT(
             token_id,
-            new_amt,
+            thisNFT.liquidity + addl_liq,
             thisNFT.start_timestamp,
             thisNFT.ending_timestamp,
             thisNFT.lock_multiplier,
@@ -412,9 +394,9 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
     // ------ WITHDRAWING ------
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function withdrawLocked(uint256 token_id) nonReentrant external {
+    function withdrawLocked(uint256 token_id, address destination_address) nonReentrant external {
         require(withdrawalsPaused == false, "Withdrawals paused");
-        _withdrawLocked(msg.sender, msg.sender, token_id);
+        _withdrawLocked(msg.sender, destination_address, token_id);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
@@ -461,7 +443,26 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
     }
 
     function _getRewardExtraLogic(address rewardee, address destination_address) internal override {
-        // Do nothing
+        // Collect liquidity fees too
+        uint256 accumulated_token0 = 0;
+        uint256 accumulated_token1 = 0;
+        LockedNFT memory thisNFT;
+        for (uint256 i = 0; i < lockedNFTs[rewardee].length; i++) {
+            thisNFT = lockedNFTs[rewardee][i];
+            
+            // Check for null entries
+            if (thisNFT.token_id != 0){
+                INonfungiblePositionManager.CollectParams memory collect_params = INonfungiblePositionManager.CollectParams(
+                    thisNFT.token_id,
+                    destination_address,
+                    type(uint128).max,
+                    type(uint128).max
+                );
+                (uint256 tok0_amt, uint256 tok1_amt) = stakingTokenNFT.collect(collect_params);
+                accumulated_token0 += tok0_amt;
+                accumulated_token1 += tok1_amt;
+            }
+        }
     }
 
      /* ========== RESTRICTED FUNCTIONS - Curator / migrator callable ========== */
@@ -489,7 +490,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         
         // Only the owner address can ever receive the recovery withdrawal
         // INonfungiblePositionManager inherits IERC721 so the latter does not need to be imported
-        INonfungiblePositionManager(tokenAddress).safeTransferFrom( address(this), owner, token_id);
+        INonfungiblePositionManager(tokenAddress).safeTransferFrom(address(this), owner, token_id);
     }
 
     /* ========== EVENTS ========== */

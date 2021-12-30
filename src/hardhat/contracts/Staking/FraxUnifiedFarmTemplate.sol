@@ -16,10 +16,9 @@ pragma experimental ABIEncoderV2;
 // Overrideable for UniV3, ERC20s, etc
 // New for V2
 //      - Two reward tokens possible
-//      - Can extend or add to existing locked stakes
+//      - Can add to existing locked stakes
 //      - Contract is aware of proxied veFXS
 //      - veFXS multiplier formula changed
-//      - Contract uses only 1 (large) NFT
 // Apes together strong
 
 // Frax Finance: https://github.com/FraxFinance
@@ -470,9 +469,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     // Two different getReward functions are needed because of delegateCall and msg.sender issues
-    function getReward() external nonReentrant returns (uint256[] memory) {
+    function getReward(address destination_address) external nonReentrant returns (uint256[] memory) {
         require(rewardsCollectionPaused == false, "Rewards collection paused");
-        return _getReward(msg.sender, msg.sender);
+        return _getReward(msg.sender, destination_address);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable
