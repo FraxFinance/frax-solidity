@@ -194,16 +194,80 @@ contract('ComboOracle_UniV2_UniV3-Tests', async (accounts) => {
 		// ****************************************************************************************
 		console.log("----------------------------");
 
-		console.log("==============NOTE SOME INFO===============");
+		console.log(chalk.hex("#ff8b3d").bold("=====================GET CONSTITUENT TOKEN PRICES====================="));
+		const tokens_to_price = [
+			ADDRS_ETH.main.FRAX, 
+			ADDRS_ETH.main.FXS, 
+			ADDRS_ETH.collaterals.DAI,
+			ADDRS_ETH.collaterals.GUSD,
+			ADDRS_ETH.collaterals.RAI,
+			ADDRS_ETH.collaterals.sUSD,
+			ADDRS_ETH.collaterals.USDC,
+			ADDRS_ETH.collaterals.wUST,
+			ADDRS_ETH.reward_tokens.ohm, 
+			ADDRS_ETH.reward_tokens.ohm_v2, 
+			ADDRS_ETH.reward_tokens.sushi,
+			ADDRS_ETH.reward_tokens.weth, 
+		];
 
+		for (let i = 0; i < tokens_to_price.length; i++){
+			let token_price_pack = await combo_oracle_instance.getTokenPrice.call(tokens_to_price[i]);
+			let precise_price = new BigNumber(token_price_pack[0]).div(BIG18).toString();
+			let eth_price = new BigNumber(token_price_pack[2]).div(BIG18).toString();
+			let token_symbol = utilities.rewardTokenSymbolFromAddress(tokens_to_price[i]);
+
+			console.log(`${token_symbol} USD Price: $${precise_price}`);
+			console.log(`${token_symbol} ETH Price: Ξ${eth_price}`);
+		}
+
+		console.log(chalk.hex("#ff8b3d").bold("=====================GET UNIV2 LP TOKEN PRICES====================="));
+		const univ2_test_token_addresses = [
+			"0xe1573b9d29e2183b1af0e743dc2754979a40d237", // Uniswap FRAX/FXS, $9.820
+			"0x97c4adc5d28a86f9470c70dd91dc6cc2f20d2d4d", // Uniswap FRAX/USDC, $2,200,001.120
+			"0xB612c37688861f1f90761DC7F382C2aF3a50Cc39", // Uniswap FRAX/OHM, $1,302,004.19
+			// "0xd6c783b257e662ca949b441a4fcb08a53fc49914", // Uniswap FRAX/IQ, $0.236 [AVOID FOR TESTS: NO CHAINLINK ORACLE!]
+			"0xecBa967D84fCF0405F6b32Bc45F4d36BfDBB2E81", // Uniswap FXS/WETH, $1378.592
+			"0x691C010aDaA0c1a1bfE172b3af9f63e3836E190b", // Uniswap FRAX/GUSD, $200,000,000.000
+			"0x34d7d7Aaf50AD4944B70B320aCB24C95fa2def7c", // SushiSwap OHM/DAI, $1,613,441.886
+			"0x800930A57c28845026d18514ce29aAf644dC343E", // SushiSwap OHM/USDT, $1,322,388,120,807.666
+			"0xeC8C342bc3E07F05B9a782bc34e7f04fB9B44502", // SushiSwap FRAX/WETH, $136.166
+			"0xe06f8d30ac334c857fc8c380c85969c150f38a6a", // SushiSwap FRAX/SUSHI, $5.222
+		];
+
+		// Reserves method
+		console.log(chalk.yellow.bold(`--------- Reserves Method ---------`));
+		for (let i = 0; i < univ2_test_token_addresses.length; i++){
+			let token_price_pack = await combo_oracle_instance_univ2_univ3.uniV2LPPriceInfoViaReserves.call(univ2_test_token_addresses[i]);
+			let token_price = new BigNumber(token_price_pack[0]).div(BIG18).toString();
+			let token_symbol = token_price_pack[2];
+			let token0_symbol = token_price_pack[4];
+			let token1_symbol = token_price_pack[5];
+
+			console.log(`${token_symbol} [${token0_symbol}/${token1_symbol}] Price: $${token_price}`);
+		}
+
+		// Alpha Homora method
+		console.log(chalk.yellow.bold(`--------- Alpha Homora Method ---------`));
+		for (let i = 0; i < univ2_test_token_addresses.length; i++){
+			let token_price_pack = await combo_oracle_instance_univ2_univ3.uniV2LPPriceInfo.call(univ2_test_token_addresses[i]);
+			let token_price = new BigNumber(token_price_pack[0]).div(BIG18).toString();
+			let token_symbol = token_price_pack[2];
+			let token0_symbol = token_price_pack[4];
+			let token1_symbol = token_price_pack[5];
+
+			console.log(`${token_symbol} [${token0_symbol}/${token1_symbol}] Price: $${token_price}`);
+		}
 
 		console.log(chalk.hex("#ff8b3d").bold("=====================GET UNIV3 NFT VALUES====================="));
 		const univ3_test_nft_ids = [
 			85702, // FRAX/USDC, $502.30
 			101161, // FRAX/DAI, $679.86
-			147047, // FXS/ETH, $2,786,844.35
+			176496, // FXS/ETH, $2,786,844.35
+			165457, // RAI/FRAX, $2,031,969.10
 			112294, // FRAX/sUSD, $2,024,191.12
 			116265, // FRAX/USDT, $3,364,581.38
+			169575, // FRAX/wUST, $1,087,971.56
+			170868, // GUSD/USDT, $10
 		];
 
 		for (let i = 0; i < univ3_test_nft_ids.length; i++){
@@ -220,25 +284,7 @@ contract('ComboOracle_UniV2_UniV3-Tests', async (accounts) => {
 		}
 
 		
-		console.log(chalk.hex("#ff8b3d").bold("=====================GET UNIV2 LP TOKEN PRICES====================="));
-		const univ2_test_token_addresses = [
-			"0xe1573b9d29e2183b1af0e743dc2754979a40d237", // Uniswap FRAX/FXS, $8.710
-			"0x97c4adc5d28a86f9470c70dd91dc6cc2f20d2d4d", // Uniswap FRAX/USDC, $2,150,001.120
-			"0xe06f8d30ac334c857fc8c380c85969c150f38a6a", // SushiSwap FRAX/SUSHI, $7.155
-		];
-
-		for (let i = 0; i < univ2_test_token_addresses.length; i++){
-			let token_price_pack = await combo_oracle_instance_univ2_univ3.uniV2LPPriceInfo.call(univ2_test_token_addresses[i]);
-			let token_price = new BigNumber(token_price_pack[0]).div(BIG18).toString();
-			let token_symbol = token_price_pack[2];
-			// let token_name = token_price_pack[3];
-			let token0_symbol = token_price_pack[4];
-			let token1_symbol = token_price_pack[5];
-
-			console.log(`${token_symbol} [${token0_symbol}/${token1_symbol}] Price: $${token_price}`);
-		}
-
-
+		
 		
 	});
 	
