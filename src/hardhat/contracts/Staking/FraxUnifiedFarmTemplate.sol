@@ -348,23 +348,23 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         }
 
         // First option based on fraction of total veFXS supply, with an added scale factor
-        uint256 mult_op_1 = (vefxs_bal_to_use * vefxs_max_multiplier * vefxs_boost_scale_factor) 
+        uint256 mult_optn_1 = (vefxs_bal_to_use * vefxs_max_multiplier * vefxs_boost_scale_factor) 
                             / (veFXS.totalSupply() * MULTIPLIER_PRECISION);
         
         // Second based on old method, where the amount of FRAX staked comes into play
-        uint256 mult_op_2;
+        uint256 mult_optn_2;
         {
             uint256 veFXS_needed_for_max_boost = minVeFXSForMaxBoost(account);
             if (veFXS_needed_for_max_boost > 0){ 
                 uint256 user_vefxs_fraction = (vefxs_bal_to_use * MULTIPLIER_PRECISION) / veFXS_needed_for_max_boost;
                 
-                mult_op_2 = (user_vefxs_fraction * vefxs_max_multiplier) / MULTIPLIER_PRECISION;
+                mult_optn_2 = (user_vefxs_fraction * vefxs_max_multiplier) / MULTIPLIER_PRECISION;
             }
-            else mult_op_2 = 0; // This will happen with the first stake, when user_staked_frax is 0
+            else mult_optn_2 = 0; // This will happen with the first stake, when user_staked_frax is 0
         }
 
         // Select the higher of the three
-        vefxs_multiplier = (mult_op_1 > mult_op_2 ? mult_op_1 : mult_op_2);
+        vefxs_multiplier = (mult_optn_1 > mult_optn_2 ? mult_optn_1 : mult_optn_2);
 
         // Cap the boost to the vefxs_max_multiplier
         if (vefxs_multiplier > vefxs_max_multiplier) vefxs_multiplier = vefxs_max_multiplier;
