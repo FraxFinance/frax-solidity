@@ -339,6 +339,10 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
             thisNFT.tick_upper
         );
 
+        // Update liquidities
+        _total_liquidity_locked += addl_liq;
+        _locked_liquidity[msg.sender] += addl_liq;
+
         // Need to call to update the combined weights
         _updateRewardAndBalance(msg.sender, false);
     }
@@ -382,8 +386,8 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         stakingTokenNFT.safeTransferFrom(source_address, address(this), token_id);
 
         // Update liquidities
-        _total_liquidity_locked = _total_liquidity_locked + liquidity;
-        _locked_liquidity[staker_address] = _locked_liquidity[staker_address] + liquidity;
+        _total_liquidity_locked += liquidity;
+        _locked_liquidity[staker_address] += liquidity;
 
         // Need to call again to make sure everything is correct
         _updateRewardAndBalance(staker_address, false);
@@ -426,8 +430,8 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
 
         if (theLiquidity > 0) {
             // Update liquidities
-            _total_liquidity_locked = _total_liquidity_locked + theLiquidity;
-            _locked_liquidity[staker_address] = _locked_liquidity[staker_address] + theLiquidity;
+            _total_liquidity_locked -= theLiquidity;
+            _locked_liquidity[staker_address] -= theLiquidity;
 
             // Remove the stake from the array
             delete lockedNFTs[staker_address][theArrayIndex];

@@ -293,6 +293,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             thisStake.lock_multiplier
         );
 
+        // Update liquidities
+        _total_liquidity_locked += addl_liq;
+        _locked_liquidity[msg.sender] += addl_liq;
+
         // Need to call to update the combined weights
         _updateRewardAndBalance(msg.sender, false);
     }
@@ -341,8 +345,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         ));
 
         // Update liquidities
-        _total_liquidity_locked = _total_liquidity_locked + liquidity;
-        _locked_liquidity[staker_address] = _locked_liquidity[staker_address] + liquidity;
+        _total_liquidity_locked += liquidity;
+        _locked_liquidity[staker_address] += liquidity;
 
         // Need to call again to make sure everything is correct
         _updateRewardAndBalance(staker_address, false);
