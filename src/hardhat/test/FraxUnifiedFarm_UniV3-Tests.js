@@ -39,6 +39,8 @@ const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
 
 // Oracles
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
+const ComboOracle = artifacts.require("Oracle/ComboOracle");
+const ComboOracle_UniV2_UniV3 = artifacts.require("Oracle/ComboOracle_UniV2_UniV3");
 
 // FRAX core
 const FRAXStablecoin = artifacts.require("Frax/IFrax");
@@ -73,8 +75,8 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 	let INVESTOR_CUSTODIAN_ADDRESS;
 	let MIGRATOR_ADDRESS;
 
-	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
-	const ADDRESS_WITH_RAI = '0x5180db0237291A6449DdA9ed33aD90a38787621c';
+	const ADDRESS_WITH_FRAX = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
+	const ADDRESS_WITH_RAI = '0xeB2629a2734e272Bcc07BDA959863f316F4bD4Cf';
 	const ADDRESS_WITH_LP_TOKENS = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
 	const ADDRESS_WITH_FXS = '0xF977814e90dA44bFA03b6295A0616a897441aceC';
 	const ADDRESS_WITH_FLX = '0xbE74e7AA108436324D5dd3db4979Db3Ba2cAEbcB';
@@ -108,6 +110,8 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 	// Initialize oracle instances
 	let oracle_instance_FXS_WETH;
 	let oracle_instance_FXS_USDC;
+	let combo_oracle_instance;
+    let combo_oracle_univ2_univ3_instance;
 
 	// Initialize staking instances
 	let fraxUnifiedFarm_UniV3_FRAX_RAI_instance;
@@ -150,13 +154,14 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 
 		// Fill oracle instances
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
-
+		combo_oracle_instance = await ComboOracle.deployed(); 
+		combo_oracle_univ2_univ3_instance = await ComboOracle_UniV2_UniV3.deployed(); 
+	
 		// Initialize pool instances
 		pool_instance_USDC = await Pool_USDC.deployed();
 
 		// Fill the Uniswap V3 Instances
 		uniswapV3PositionsNFTInstance = await IUniswapV3PositionsNFT.deployed(); 
-
 
 		// Fill the staking rewards instances
 		fraxUnifiedFarm_UniV3_FRAX_RAI_instance = await FraxUnifiedFarm_UniV3_FRAX_RAI.deployed();
@@ -195,13 +200,12 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		catch (err) {}
 
 		console.log("------------------------------------------------");
-		console.log("Give the staking contract some FRAX, to be recovered later, as well as address [1], for the add liquidity");
+		console.log("Give address [1] some FRAX, for the add liquidities");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
 			params: [ADDRESS_WITH_FRAX]
 		});
 
-		await frax_instance.transfer(staking_instance.address, new BigNumber("1e18"), { from: ADDRESS_WITH_FRAX });
 		await frax_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("2500e18"), { from: ADDRESS_WITH_FRAX });
 
 		await hre.network.provider.request({
@@ -245,7 +249,7 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_RAI]
 		});
 
-		await rai_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000e18"), { from: ADDRESS_WITH_RAI });
+		await rai_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("3000e18"), { from: ADDRESS_WITH_RAI });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -402,20 +406,91 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		await utilities.printCalcCurCombinedWeight(staking_instance, COLLATERAL_FRAX_AND_FXS_OWNER);
 		await utilities.printCalcCurCombinedWeight(staking_instance, accounts[9]);
 
-		// Get more veFXS (accounts[1])
-		const deposit_amount_1 = 1;
-		const deposit_amount_1_e18 = new BigNumber(deposit_amount_1).multipliedBy("1e18");
-		console.log(`Deposit ${deposit_amount_1} FXS (4 years) for veFXS`);
 
+		console.log(chalk.yellow.bold("--------------- Stake once with [1] and test ---------------"));
+		console.log(chalk.hex("#f3f3f3").bold("------Basic veFXS Info------"));
+		const vefxs_bst_scl_fctr = new BigNumber(await staking_instance.vefxs_boost_scale_factor.call()).div(BIG18).toNumber();
+		const vefxs_max_mult = new BigNumber(await staking_instance.vefxs_max_multiplier.call()).div(BIG18).toNumber();
+		const vefxs_per_fx_max_bst = new BigNumber(await staking_instance.vefxs_per_frax_for_max_boost.call()).div(BIG18).toNumber();
+		console.log("vefxs_boost_scale_factor: ", vefxs_bst_scl_fctr);
+		console.log("vefxs_max_multiplier: ", vefxs_max_mult);
+		console.log("vefxs_per_frax_for_max_boost: ", vefxs_per_fx_max_bst);
+
+		console.log(chalk.hex("#f3f3f3").bold("------Basic LP Info------"));
+		const nft_info = await uniswapV3PositionsNFTInstance.positions.call(TOKEN_ID_1);
+		const liq_locked_1 = new BigNumber(nft_info[7]);
+		const liq_locked_1_dec = liq_locked_1.div(BIG18).toNumber();
+		const frax_per_lp_token_bn = await staking_instance.fraxPerLPToken.call();
+		const frax_per_lp_token_dec = new BigNumber(frax_per_lp_token_bn).div(BIG18).toNumber();
+		console.log("Liq to lock: ", liq_locked_1_dec);
+		console.log("frax_per_lp_token: ", frax_per_lp_token_dec);
+
+		console.log(chalk.hex("#f3f3f3").bold("------Note before lock------"));
+		const vefxs_bal_1_bef = new BigNumber(await veFXS_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const vefxs_mult_1_bef = new BigNumber(await staking_instance.veFXSMultiplier(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const min_vefxs_max_boost_1_bef = new BigNumber(await staking_instance.minVeFXSForMaxBoost(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const user_staked_frax_1_bef = new BigNumber(await staking_instance.userStakedFrax(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		console.log("veFXS balance before [1]: ", vefxs_bal_1_bef);
+		console.log("veFXS multiplier before [1]: ", vefxs_mult_1_bef);
+		console.log("minVeFXSForMaxBoost before [1]: ", min_vefxs_max_boost_1_bef);
+		console.log("userStakedFrax before [1]: ", user_staked_frax_1_bef);
+
+		console.log(chalk.hex("#f3f3f3").bold("------Lock a position for [1]------"))
+		await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await staking_instance.stakeLocked(TOKEN_ID_1, 7 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 7 days
+		const frax_lp_locked_1 = liq_locked_1_dec * frax_per_lp_token_dec;
+		console.log("Amount LP locked [1]: ", liq_locked_1_dec);
+		console.log("FRAX in LP locked [1]: ", frax_lp_locked_1);
+
+		console.log(chalk.hex("#f3f3f3").bold("------Note after lock------"));
+		const vefxs_bal_1_aft = new BigNumber(await veFXS_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const vefxs_mult_1_aft = new BigNumber(await staking_instance.veFXSMultiplier(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const min_vefxs_max_boost_1_aft_bn = new BigNumber(await staking_instance.minVeFXSForMaxBoost(COLLATERAL_FRAX_AND_FXS_OWNER));
+		const min_vefxs_max_boost_1_aft = min_vefxs_max_boost_1_aft_bn.div(BIG18).toNumber();
+		const user_staked_frax_1_aft = new BigNumber(await staking_instance.userStakedFrax(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		console.log("veFXS balance after [1]: ", vefxs_bal_1_aft);
+		console.log("veFXS multiplier after [1]: ", vefxs_mult_1_aft);
+		console.log("minVeFXSForMaxBoost after [1]: ", min_vefxs_max_boost_1_aft);
+		console.log("userStakedFrax after [1]: ", user_staked_frax_1_aft);
+
+		console.log(chalk.hex("#f3f3f3").bold("------Quick check [minVeFXSForMaxBoost / userStakedFrax]------"));
+		assert((min_vefxs_max_boost_1_aft / user_staked_frax_1_aft) >= (vefxs_per_fx_max_bst * .99), 'minVeFXSForMaxBoost / userStakedFrax error [too low]');
+		assert((min_vefxs_max_boost_1_aft / user_staked_frax_1_aft) <= (vefxs_per_fx_max_bst * 1.01), 'minVeFXSForMaxBoost / userStakedFrax error [too high]');
+		console.log("Looks ok");
+
+		console.log(chalk.hex("#f3f3f3").bold("------Get some veFXS and target 1x veFXSMultiplier------"));
+		const fxs_needed_at_4_year_for_max_bst = min_vefxs_max_boost_1_aft_bn.div(4);
+		const fxs_needed_at_4_year_for_1x_bst = fxs_needed_at_4_year_for_max_bst.div(2).integerValue(BigNumber.ROUND_FLOOR);
+		const fxs_needed_at_4_year_for_1x_bst_dec = fxs_needed_at_4_year_for_1x_bst.div(BIG18).toNumber();
+
+		console.log(chalk.hex("#f3f3f3")(`Deposit ${fxs_needed_at_4_year_for_1x_bst_dec} FXS (4 years) for veFXS`));
+		
 		const veFXS_deposit_days_1 = (4 * 365); // 4 years
 		let block_time_current_1 = (await time.latest()).toNumber();
 		const veFXS_deposit_end_timestamp_1 = block_time_current_1 + ((veFXS_deposit_days_1 * 86400) + 1);
-		await fxs_instance.approve(veFXS_instance.address, deposit_amount_1_e18, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await veFXS_instance.create_lock(deposit_amount_1_e18, veFXS_deposit_end_timestamp_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		
+		await fxs_instance.approve(veFXS_instance.address, fxs_needed_at_4_year_for_1x_bst, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await veFXS_instance.create_lock(fxs_needed_at_4_year_for_1x_bst, veFXS_deposit_end_timestamp_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+				
+		console.log(chalk.hex("#f3f3f3").bold("------Note after veFXS increase------"));
+		const vefxs_bal_1_aft_vefxs = new BigNumber(await veFXS_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const vefxs_mult_1_aft_vefxs = new BigNumber(await staking_instance.veFXSMultiplier(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const min_vefxs_max_boost_1_aft_vefxs = new BigNumber(await staking_instance.minVeFXSForMaxBoost(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const user_staked_frax_1_aft_vefxs = new BigNumber(await staking_instance.userStakedFrax(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		console.log("veFXS balance after veFXS lock [1]: ", vefxs_bal_1_aft_vefxs);
+		console.log("veFXS multiplier after veFXS lock [1]: ", vefxs_mult_1_aft_vefxs);
+		console.log("minVeFXSForMaxBoost after veFXS lock [1]: ", min_vefxs_max_boost_1_aft_vefxs);
+		console.log("userStakedFrax after veFXS lock [1]: ", user_staked_frax_1_aft_vefxs);
+
+		console.log(chalk.hex("#f3f3f3").bold("------Quick check [veFXSMultiplier]------"));
+		assert(vefxs_mult_1_aft_vefxs >= .99, 'veFXSMultiplier error [too low]');
+		assert(vefxs_mult_1_aft_vefxs <= 1.01, 'veFXSMultiplier error [too high]');
+		console.log("Looks ok");
+
+
+		console.log(chalk.yellow.bold("------------ Lock the other positions ------------"));
+
 		// Need to approve first so the staking can use transfer
 		// account[1]
-		await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_1_ALT_GOOD, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// account[9]
@@ -426,7 +501,6 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 
 		// Stake Locked
 		// account[1]
-		await staking_instance.stakeLocked(TOKEN_ID_1, 7 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 7 days
 		await staking_instance.stakeLocked(TOKEN_ID_1_ALT_GOOD, 548 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 548 days
 		
 		// account[9]
@@ -452,11 +526,11 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		
 		console.log("TRY AN EARLY WITHDRAWAL (SHOULD FAIL)");
 		await expectRevert(
-			staking_instance.withdrawLocked(TOKEN_ID_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			staking_instance.withdrawLocked(TOKEN_ID_1, COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
 			"Stake is still locked"
 		);
 		await expectRevert(
-			staking_instance.withdrawLocked(TOKEN_ID_9, { from: accounts[9] }),
+			staking_instance.withdrawLocked(TOKEN_ID_9, accounts[9], { from: accounts[9] }),
 			"Stake is still locked"
 		);
 		await time.advanceBlock();
@@ -526,7 +600,7 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		const staking_earned_1_arr = await staking_instance.earned.call(COLLATERAL_FRAX_AND_FXS_OWNER);
 
 		// Call here, not send. Just want to see return values
-		const staking_getRewardCall_1_arr = await staking_instance.getReward.call({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		const staking_getRewardCall_1_arr = await staking_instance.getReward.call(COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		const staking_earned_9_arr = await staking_instance.earned.call(accounts[9]);
 		const duration_reward_1_arr = await staking_instance.getRewardForDuration.call();
@@ -568,9 +642,9 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		await time.increase(increase_time_end_lock);
 		await time.advanceBlock();
 
-		await staking_instance.withdrawLocked(TOKEN_ID_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await staking_instance.withdrawLocked(TOKEN_ID_1, COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await expectRevert(
-			staking_instance.withdrawLocked(TOKEN_ID_9, { from: accounts[9] }),
+			staking_instance.withdrawLocked(TOKEN_ID_9, accounts[9], { from: accounts[9] }),
 			"Stake is still locked"
 		);
 
@@ -580,7 +654,7 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 			console.log(chalk.green.bold("ACCOUNT[9] claims early"));
 
 			// Mutate
-			await staking_instance.getReward({ from: accounts[9] });
+			await staking_instance.getReward(accounts[9], { from: accounts[9] });
 
 			ACCOUNT_9_EARLY_EARN[0] = new BigNumber(0);
 		}
@@ -619,8 +693,8 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		const weekly_total_emission_check_1 = new BigNumber(await frax_gauge_controller.global_emission_rate.call()).multipliedBy(604800).div(BIG18).toNumber();
 		console.log("Weekly Total FXS Emission: ", weekly_total_emission_check_1);
 
-		console.log(chalk.yellow("===================================================================="));
-		console.log("CUT THE VOTE FOR THE FARM by 90%");
+		console.log(chalk.yellow.bold("===================================================================="));
+		console.log(chalk.yellow.bold("CUT THE VOTE FOR THE FARM by 90%"));
 
 		console.log("------------------------------------------------");
 		console.log("Vote for the farm");
@@ -640,8 +714,8 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 
 		console.log("VOTE CUT");
 
-		console.log(chalk.yellow("===================================================================="));
-		console.log("ADVANCING 28 DAYS");
+		console.log(chalk.yellow.bold("===================================================================="));
+		console.log(chalk.yellow.bold("ADVANCING 28 DAYS"));
 		
 		// Advance 28 days
 		await time.increase((28 * 86400));
@@ -713,18 +787,18 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		const fxs_bal_before_claim_wk_5 = new BigNumber(await fxs_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
 
 		// Account 9 withdraws and claims its locked stake
-		await staking_instance.withdrawLocked(TOKEN_ID_9, { from: accounts[9] });
-		await staking_instance.getReward({ from: accounts[9] });
-		await expectRevert.unspecified(staking_instance.withdrawLocked(TOKEN_ID_1_ALT_GOOD, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
+		await staking_instance.withdrawLocked(TOKEN_ID_9, accounts[9], { from: accounts[9] });
+		await staking_instance.getReward(accounts[9], { from: accounts[9] });
+		await expectRevert.unspecified(staking_instance.withdrawLocked(TOKEN_ID_1_ALT_GOOD, COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
 
 		const _total_liquidity_locked_1 = new BigNumber(await staking_instance.totalLiquidityLocked.call()).div(BIG18);
 		const _total_combined_weight_1 = new BigNumber(await staking_instance.totalCombinedWeight.call()).div(BIG18);
 		console.log("_total_liquidity_locked GLOBAL: ", _total_liquidity_locked_1.toString());
 		console.log("_total_combined_weight GLOBAL: ", _total_combined_weight_1.toString());
 
-		console.log("UNLOCKING ALL STAKES");
+		console.log(chalk.yellow.bold("UNLOCKING ALL STAKES"));
 		await staking_instance.unlockStakes({ from: STAKING_OWNER });
-		await staking_instance.withdrawLocked(TOKEN_ID_1_ALT_GOOD, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await staking_instance.withdrawLocked(TOKEN_ID_1_ALT_GOOD, COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		await utilities.printCalcCurCombinedWeight(staking_instance, COLLATERAL_FRAX_AND_FXS_OWNER);
 		await utilities.printCalcCurCombinedWeight(staking_instance, accounts[9]);
@@ -744,7 +818,7 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		assert(fxs_actually_emitted_wk_5 >= (reward_week_5[0].toNumber() * .99), 'FXS actually emitted mismatches FXS earned() [underemission]');
 		assert(fxs_actually_emitted_wk_5 <= (reward_week_5[0].toNumber() * 1.01), 'FXS actually emitted mismatches FXS earned() [overemission]');
 
-		console.log(chalk.yellow("===================================================================="));
+		console.log(chalk.yellow.bold("===================================================================="));
 		console.log("PREPARING LOCK EXPIRY BOUNDARY ISSUE CHECK");
 
 		const uni_pool_lock_boundary_check_amount = new BigNumber("1e18");
@@ -765,7 +839,7 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		await staking_instance.stakeLocked(TOKEN_ID_9, 10 * 86400, { from: accounts[9] });
 
 
-		console.log(chalk.yellow("===================================================================="));
+		console.log(chalk.yellow.bold("===================================================================="));
 		console.log("account[1] claims right before expiry");
 
 		// Advance 9 days and 12 hrs
@@ -777,10 +851,10 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		await staking_instance.sync({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Account 1 claims. Account 9 does not
-		await staking_instance.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await staking_instance.getReward(COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 
-		console.log(chalk.yellow("===================================================================="));
+		console.log(chalk.yellow.bold("===================================================================="));
 		console.log("Advance 60 days and have both accounts claim");
 
 		// Advance 2 weeks
@@ -792,8 +866,8 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		await staking_instance.sync({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Both accounts claim
-		await staking_instance.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await staking_instance.getReward({ from: accounts[9] });
+		await staking_instance.getReward(COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await staking_instance.getReward(accounts[9], { from: accounts[9] });
 
 		// Fetch the new balances
 		const ending_bal_fxs_1 =  new BigNumber(await fxs_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
@@ -854,113 +928,130 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		// Make sure the weight went back to what it was before
 		assert(vefxs_multiplier_9_post_proxy_disallow.isEqualTo(vefxs_multiplier_9_pre_proxy), `Weight should be back to normal`);
 
-
-		console.log(chalk.yellow.bold("===================================================================="));
-		console.log(chalk.yellow.bold("Extend a lock"));
-
-		// Print the info for the stake before
-		const extend_lk_before_arr = await staking_instance.lockedNFTsOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		const extend_lk_nft_before = utilities.getLockedNFTInfoFromArr(extend_lk_before_arr, TOKEN_ID_1);
-		console.log("TOKEN_ID_1 before lock extension: ", extend_lk_nft_before);
-
-		// Extend the lock (trying an invalid one first)
-		const existing_ending_timestamp = parseInt(extend_lk_nft_before.ending_timestamp);
-		console.log("existing_ending_timestamp: ", existing_ending_timestamp);
-		await expectRevert(
-			staking_instance.extendLockTime(TOKEN_ID_1, existing_ending_timestamp + 1000, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-			"Must be in the future"
-		);
-
-		await staking_instance.extendLockTime(TOKEN_ID_1, existing_ending_timestamp + (365 * 86400), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		
-		// Print the info for the stake after
-		const extend_lk_after_arr = await staking_instance.lockedNFTsOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		const extend_lk_nft_after = utilities.getLockedNFTInfoFromArr(extend_lk_after_arr, TOKEN_ID_1);
-		console.log("TOKEN_ID_1 after lock extension: ", extend_lk_nft_after);
-
-		// Make sure the lock has been extended properly
-		const extend_end_before = parseInt(extend_lk_nft_before.ending_timestamp);
-		const extend_end_after = parseInt(extend_lk_nft_after.ending_timestamp);
-		const extend_end_diff = extend_end_after - extend_end_before;
-		console.log("Lock extension diff: ", extend_end_diff);
-		assert((extend_end_diff) == (365 * 86400), `Incorrect lock extension amount`);
-
-
 		console.log(chalk.yellow.bold("===================================================================="));
-		console.log(chalk.yellow.bold("Add more to a lock"));
+		console.log(chalk.yellow.bold("Add more to a lock (normal method)"));
 
 		// Print the info for the stake before
 		const add_more_before_arr = await staking_instance.lockedNFTsOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
 		const add_more_nft_before = utilities.getLockedNFTInfoFromArr(add_more_before_arr, TOKEN_ID_1);
-		console.log("TOKEN_ID_1 before add more: ", add_more_nft_before);
+		console.log("TOKEN_ID_1 before add more (normal): ", add_more_nft_before);
 
 		// Add more FRAX and RAI to the position
 		const add_tkn_amt = new BigNumber("1000e18");
 		await rai_instance.approve(staking_instance.address, add_tkn_amt, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await frax_instance.approve(staking_instance.address, add_tkn_amt, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await staking_instance.lockAdditional(TOKEN_ID_1, add_tkn_amt, add_tkn_amt, 0, 0, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Lock additional
+		await staking_instance.lockAdditional(TOKEN_ID_1, add_tkn_amt, add_tkn_amt, 0, 0, false, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Print the info for the stake after
 		const add_more_after_arr = await staking_instance.lockedNFTsOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
 		const add_more_nft_after = utilities.getLockedNFTInfoFromArr(add_more_after_arr, TOKEN_ID_1);
-		console.log("TOKEN_ID_1 after add more: ", add_more_nft_after);
+		console.log("TOKEN_ID_1 after add more (normal): ", add_more_nft_after);
 
 		// Make sure the liquidity has increased
 		const add_liq_before = new BigNumber(add_more_nft_before.liquidity);
 		const add_liq_after = new BigNumber(add_more_nft_after.liquidity);
 		const add_liq_diff = add_liq_after.minus(add_liq_before);
-		console.log("Add liq diff: ", add_liq_diff.toString());
+		console.log("Add liq diff (normal): ", add_liq_diff.toString());
 		assert(add_liq_after.isGreaterThan(add_liq_before), `Liquidity did not increase`);
+
+
+		console.log(chalk.yellow.bold("===================================================================="));
+		console.log(chalk.yellow.bold("Add more to a lock (balanceOf override method)"));
+
+		// Print the info for the stake before
+		const add_more_balof_ovr_before_arr = await staking_instance.lockedNFTsOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+		const add_more_balof_ovr_nft_before = utilities.getLockedNFTInfoFromArr(add_more_balof_ovr_before_arr, TOKEN_ID_1);
+		console.log("TOKEN_ID_1 before add more (balanceOf override): ", add_more_balof_ovr_nft_before);
+
+		// Add more FRAX and RAI to the position
+		// Transfer instead of approve for this method
+		const add_tkn_balof_ovr_amt = new BigNumber("1000e18");
+		await rai_instance.transfer(staking_instance.address, add_tkn_balof_ovr_amt, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await frax_instance.transfer(staking_instance.address, add_tkn_balof_ovr_amt, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Lock additional
+		await staking_instance.lockAdditional(TOKEN_ID_1, 0, 0, 0, 0, true, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Print the info for the stake after
+		const add_more_balof_ovr_after_arr = await staking_instance.lockedNFTsOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+		const add_more_balof_ovr_nft_after = utilities.getLockedNFTInfoFromArr(add_more_balof_ovr_after_arr, TOKEN_ID_1);
+		console.log("TOKEN_ID_1 after add more (balanceOf override): ", add_more_balof_ovr_nft_after);
+
+		// Make sure the liquidity has increased
+		const add_liq_balof_ovr_before = new BigNumber(add_more_balof_ovr_nft_before.liquidity);
+		const add_liq_balof_ovr_after = new BigNumber(add_more_balof_ovr_nft_after.liquidity);
+		const add_liq_balof_ovr_diff = add_liq_balof_ovr_after.minus(add_liq_balof_ovr_before);
+		console.log("Add liq diff (balanceOf override): ", add_liq_balof_ovr_diff.toString());
+		assert(add_liq_balof_ovr_after.isGreaterThan(add_liq_balof_ovr_before), `Liquidity did not increase`);
 	});
 
-	// it("Blocks a greylisted address which tries to stake; SHOULD FAIL", async () => {
-	// 	console.log(chalk.hex("#ff8b3d").bold("=========================Greylist Fail Test========================="));
+	it("Blocks a greylisted address which tries to stake; SHOULD FAIL", async () => {
+		console.log(chalk.hex("#ff8b3d").bold("=========================Greylist Fail Test========================="));
 
 
-	// 	console.log("greylistAddress(accounts[9])");
-	// 	await staking_instance.greylistAddress(accounts[9], { from: STAKING_OWNER });
-	// 	console.log("");
-	// 	console.log("this should fail");
-	// 	await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_9, { from: accounts[9] });
+		console.log("greylistAddress(accounts[9])");
+		await staking_instance.greylistAddress(accounts[9], { from: STAKING_OWNER });
+		console.log("");
+		console.log("this should fail");
+		await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_9_INSIDE_WRONG_TICKS, { from: accounts[9] });
 		
-	// 	await expectRevert(
-	// 		staking_instance.stakeLocked(TOKEN_ID_9, 7 * 86400, { from: accounts[9] }),
-	// 		"Address has been greylisted"
-	// 	);
-	// });
+		await expectRevert(
+			staking_instance.stakeLocked(TOKEN_ID_9_INSIDE_WRONG_TICKS, 7 * 86400, { from: accounts[9] }),
+			"Address has been greylisted"
+		);
+	});
 
-	// it("Ungreylists a greylisted address which tries to stake; SHOULD SUCCEED", async () => {
-	// 	console.log(chalk.hex("#ff8b3d").bold("=========================Greylist Succeed Test========================="));
+	it("Ungreylists a greylisted address which tries to stake; SHOULD SUCCEED", async () => {
+		console.log(chalk.hex("#ff8b3d").bold("=========================Greylist Succeed Test========================="));
 
-	// 	console.log("greylistAddress(accounts[9])");
-	// 	await staking_instance.greylistAddress(accounts[9], { from: STAKING_OWNER });
-	// 	// console.log("");
-	// 	// console.log("this should succeed");
-	// 	// await pair_instance.approve(staking_instance.address, new BigNumber("1e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// 	// await staking_instance.stakeLocked(new BigNumber("1e18"), 1 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("greylistAddress(accounts[9])");
+		await staking_instance.greylistAddress(accounts[9], { from: STAKING_OWNER });
+		// console.log("");
+		// console.log("this should succeed");
+		// await pair_instance.approve(staking_instance.address, new BigNumber("1e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await staking_instance.stakeLocked(new BigNumber("1e18"), 1 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	
-	// 	// // Wait 2 days
-	// 	// for (let j = 0; j < 2; j++){
-	// 	// 	await time.increase(86400);
-	// 	// 	await time.advanceBlock();
-	// 	// }
+		// // Wait 2 days
+		// for (let j = 0; j < 2; j++){
+		// 	await time.increase(86400);
+		// 	await time.advanceBlock();
+		// }
 
 	// 	// // Claim back the NFT and collect the rewards
-	// 	// await staking_instance.withdrawLocked(TOKEN_ID_1_ALT_GOOD, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+	// 	// await staking_instance.withdrawLocked(TOKEN_ID_1_ALT_GOOD, COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	// 	// await staking_instance.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// });
+	});
 
 	it("Communal / Token Manager Tests", async () => {
 		console.log(chalk.hex("#ff8b3d").bold("================Communal / Token Manager Tests================"));
 
+		console.log("------------------------------------------------");
+		console.log("Give the staking contract some FRAX, to be recovered soon");
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [ADDRESS_WITH_FRAX]
+		});
+
+		await frax_instance.transfer(staking_instance.address, new BigNumber("1e18"), { from: ADDRESS_WITH_FRAX });
+
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [ADDRESS_WITH_FRAX]
+		});
+
 		const staking_reward_tokens_addresses = await staking_instance.getAllRewardTokens.call();
 		const test_recovery_amount = new BigNumber("1e18");
 
-		// Get FXS and SUSHI balances
-		const fxs_bal = new BigNumber(await fxs_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
+		// Get some balances
 		const flx_bal = new BigNumber(await flx_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
-		console.log("fxs_bal: ", fxs_bal);
+		const frax_bal = new BigNumber(await frax_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
+		const fxs_bal = new BigNumber(await fxs_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
 		console.log("flx_bal: ", flx_bal);
+		console.log("frax_bal: ", frax_bal);
+		console.log("fxs_bal: ", fxs_bal);
 
 		console.log("Try recovering a non-reward token as the owner");
 		await staking_instance.recoverERC20(frax_instance.address, test_recovery_amount, { from: STAKING_OWNER });
@@ -1049,11 +1140,10 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		console.log("accounts[1] liquidity staked:", (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
 		
 		// Get TOKEN_ID_1 back and give it to COLLATERAL_FRAX_AND_FXS_OWNER
-		// Turn off and on migrations really quick to do so
-		await staking_instance.toggleMigrations({ from: STAKING_OWNER });
-		await staking_instance.recoverERC721(uniswapV3PositionsNFTInstance.address, TOKEN_ID_1, { from: STAKING_OWNER }),
-		await uniswapV3PositionsNFTInstance.safeTransferFrom(STAKING_OWNER, COLLATERAL_FRAX_AND_FXS_OWNER, TOKEN_ID_1, { from: STAKING_OWNER });
-		await staking_instance.toggleMigrations({ from: STAKING_OWNER });
+		// Unlock stakes really quick to do so
+		await staking_instance.unlockStakes({ from: STAKING_OWNER });
+		await staking_instance.withdrawLocked(TOKEN_ID_1, COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+		await staking_instance.unlockStakes({ from: STAKING_OWNER });
 
 		// Stake Locked
 		await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -1083,23 +1173,31 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		console.log("_total_liquidity_staked_2: ", _total_liquidity_staked_2.toString());
 		console.log("_total_combined_weight_2: ", _total_combined_weight_2.toString());
 
-		// Have the migrator withdraw locked tokens
+		console.log(chalk.yellow("---Have the migrator withdraw account [1]'s locked token---"));
+		const locked_liq_before0 = (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
+		const combined_weight_before0 = (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
 		await staking_instance.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, TOKEN_ID_1, { from: MIGRATOR_ADDRESS });		
-		console.log("Migrator (accounts[10]) lockedLiquidityOf:", (new BigNumber(await staking_instance.lockedLiquidityOf(MIGRATOR_ADDRESS))).div(BIG18).toNumber());
-		console.log("accounts[1] lockedLiquidityOf:", (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-		console.log("accounts[1] combinedWeightOf:", (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
+		const locked_liq_after0 = (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
+		const combined_weight_after0 = (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
+		console.log(`accounts[1] lockedLiquidityOf change [${locked_liq_before0} -> ${locked_liq_after0}]:`, locked_liq_after0 - locked_liq_before0);
+		console.log(`accounts[1] combinedWeightOf change [${combined_weight_before0} -> ${combined_weight_after0}]:`, combined_weight_after0 - combined_weight_before0);
+		assert(locked_liq_after0 < locked_liq_before0, "Locked liquidity should be lower");
+		assert(combined_weight_after0 < combined_weight_before0, "Combined weight should be lower");
 		console.log("");
 
-		// Proxy locked stake for someone else as the migrator
+		console.log(chalk.yellow("---Have the migrator re-stake account [1]'s token---"));
+		const locked_liq_before1 = (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
+		const combined_weight_before1 = (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
 		await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_1, { from: MIGRATOR_ADDRESS });
 		let block_time_current_0 = (await time.latest()).toNumber();
 		await staking_instance.migrator_stakeLocked_for(COLLATERAL_FRAX_AND_FXS_OWNER, TOKEN_ID_1, 28 * 86400, block_time_current_0, { from: MIGRATOR_ADDRESS });		
-		console.log("Migrator (accounts[10]) lockedLiquidityOf:", (new BigNumber(await staking_instance.lockedLiquidityOf(MIGRATOR_ADDRESS))).div(BIG18).toNumber());
-		console.log("accounts[1] lockedLiquidityOf:", (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-		console.log("accounts[1] combinedWeightOf:", (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
+		const locked_liq_after1 = (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
+		const combined_weight_after1 = (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
+		console.log(`accounts[1] lockedLiquidityOf change [${locked_liq_before1} -> ${locked_liq_after1}]:`, locked_liq_after1 - locked_liq_before1);
+		console.log(`accounts[1] combinedWeightOf change [${combined_weight_before1} -> ${combined_weight_after1}]:`, combined_weight_after1 - combined_weight_before1);
+		assert(locked_liq_after1 > locked_liq_before1, "Locked liquidity should be higher");
+		assert(combined_weight_after1 > combined_weight_before1, "Combined weight should be higher");
 		console.log("");
-
-
 	});
 
 	it("Migration Fail Tests ", async () => {

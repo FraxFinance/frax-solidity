@@ -376,7 +376,7 @@ contract('TokenTrackerV2-Tests', async (accounts) => {
 		// await token_tracker_v2.removeTokenForAddress(COMPTROLLER_ADDRESS, ADDRS_ETH.reward_tokens.tribe, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await token_tracker_v2.removeTokenForAddress(COMPTROLLER_ADDRESS, ADDRS_ETH.reward_tokens.curve_dao, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await token_tracker_v2.removeTokenForAddress(COMPTROLLER_ADDRESS, ADDRS_ETH.reward_tokens.comp, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await token_tracker_v2.removeTokenForAddress(COMPTROLLER_ADDRESS, ADDRS_ETH.reward_tokens.stk_aave, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await token_tracker_v2.removeTokenForAddress(COMPTROLLER_ADDRESS, ADDRS_ETH.bearer_tokens.stkAAVE, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await token_tracker_v2.removeTokenForAddress(COMPTROLLER_ADDRESS, ADDRS_ETH.reward_tokens.ohm, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await token_tracker_v2.removeTokenForAddress(COMPTROLLER_ADDRESS, ADDRS_ETH.reward_tokens.sdt, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await token_tracker_v2.removeTokenForAddress(COMPTROLLER_ADDRESS, ADDRS_ETH.bearer_tokens.yvUSDC, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -385,7 +385,7 @@ contract('TokenTrackerV2-Tests', async (accounts) => {
 		// await token_tracker_v2.removeTokenForAddress(MAINNET_INVESTOR_CUSTODIAN_ADDRESS, ADDRS_ETH.reward_tokens.tribe, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await token_tracker_v2.removeTokenForAddress(MAINNET_INVESTOR_CUSTODIAN_ADDRESS, ADDRS_ETH.reward_tokens.curve_dao, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await token_tracker_v2.removeTokenForAddress(MAINNET_INVESTOR_CUSTODIAN_ADDRESS, ADDRS_ETH.reward_tokens.comp, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await token_tracker_v2.removeTokenForAddress(MAINNET_INVESTOR_CUSTODIAN_ADDRESS, ADDRS_ETH.reward_tokens.stk_aave, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// await token_tracker_v2.removeTokenForAddress(MAINNET_INVESTOR_CUSTODIAN_ADDRESS, ADDRS_ETH.bearer_tokens.stkAAVE, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await token_tracker_v2.removeTokenForAddress(MAINNET_INVESTOR_CUSTODIAN_ADDRESS, ADDRS_ETH.reward_tokens.ohm, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await token_tracker_v2.removeTokenForAddress(MAINNET_INVESTOR_CUSTODIAN_ADDRESS, ADDRS_ETH.reward_tokens.sdt, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		// await token_tracker_v2.removeTokenForAddress(MAINNET_INVESTOR_CUSTODIAN_ADDRESS, ADDRS_ETH.bearer_tokens.yvUSDC, { from: COLLATERAL_FRAX_AND_FXS_OWNER });

@@ -84,8 +84,8 @@ const FraxMiddlemanGauge_FRAX_mUSD = artifacts.require("Curve/Middleman_Gauges/F
 
 // Investor and lending contract related
 // const FraxPoolInvestorForV2 = artifacts.require("Misc_AMOs/FraxPoolInvestorForV2");
-const InvestorAMO_V3 = artifacts.require("Misc_AMOs/InvestorAMO_V3");
-const FraxLendingAMO_V2 = artifacts.require("Misc_AMOs/FraxLendingAMO_V2");
+// const InvestorAMO_V3 = artifacts.require("Misc_AMOs/InvestorAMO_V3");
+// const FraxLendingAMO_V2 = artifacts.require("Misc_AMOs/FraxLendingAMO_V2");
 const IyUSDC_V2_Partial = artifacts.require("Misc_AMOs/yearn/IyUSDC_V2_Partial");
 const IAAVELendingPool_Partial = artifacts.require("Misc_AMOs/aave/IAAVELendingPool_Partial");
 const IAAVE_aUSDC_Partial = artifacts.require("Misc_AMOs/aave/IAAVE_aUSDC_Partial");
@@ -93,7 +93,7 @@ const IAAVE_aFRAX = artifacts.require("Misc_AMOs/aave/IAAVE_aFRAX");
 const IcUSDC_Partial = artifacts.require("Misc_AMOs/compound/IcUSDC_Partial");
 const IComptroller = artifacts.require("Misc_AMOs/compound/IComptroller");
 
-const ICREAM_crFRAX = artifacts.require("Misc_AMOs/cream/ICREAM_crFRAX");
+// const ICREAM_crFRAX = artifacts.require("Misc_AMOs/cream/ICREAM_crFRAX");
 
 // Curve Metapool and AMO
 const CurveAMO_V4 = artifacts.require("Curve/CurveAMO_V4");
@@ -106,12 +106,10 @@ const FraxGaugeFXSRewardsDistributor = artifacts.require("Curve/IFraxGaugeFXSRew
 // Misc AMOs
 const FXS1559_AMO_V3 = artifacts.require("Misc_AMOs/FXS1559_AMO_V3");
 const StakeDAO_AMO_V2 = artifacts.require("Misc_AMOs/StakeDAO_AMO_V2");
-const OHM_AMO_V3 = artifacts.require("Misc_AMOs/OHM_AMO_V3");
 const Convex_AMO_V2 = artifacts.require("Misc_AMOs/Convex_AMO_V2");
 const MIM_Convex_AMO = artifacts.require("Misc_AMOs/MIM_Convex_AMO");
 const CurveMetapoolLockerAMO = artifacts.require("Misc_AMOs/CurveMetapoolLockerAMO");
 const RariFuseLendingAMO_V2 = artifacts.require("Misc_AMOs/RariFuseLendingAMO_V2");
-const UniV3LiquidityAMO = artifacts.require("Misc_AMOs/UniV3LiquidityAMO");
 const UniV3LiquidityAMO_V2 = artifacts.require("Misc_AMOs/UniV3LiquidityAMO_V2");
 const FraxAMOMinter = artifacts.require("Frax/FraxAMOMinter");
 const FraxLiquidityBridger_ARBI_AnySwap = artifacts.require("Bridges/Avalanche/FraxLiquidityBridger_ARBI_AnySwap");
@@ -183,7 +181,7 @@ module.exports = async (deployer) => {
 
     let investor_amo_v1_instance;
     let investor_amo_v3_instance;
-    let fraxLendingAMO_V2_instance;
+    // let fraxLendingAMO_V2_instance;
     let ohm_amo_instance;
     let rari_amo_instance;
     let frax_amo_minter_instance;
@@ -244,7 +242,7 @@ module.exports = async (deployer) => {
     cUSDC_instance = await IcUSDC_Partial.at(CONTRACT_ADDRESSES.ethereum.investments["compound_cUSDC"]);
     compController_instance = await IComptroller.at(CONTRACT_ADDRESSES.ethereum.investments["compound_controller"]);
 
-    crFRAX_instance = await ICREAM_crFRAX.at(CONTRACT_ADDRESSES.ethereum.investments["cream_crFRAX"]);
+    // crFRAX_instance = await ICREAM_crFRAX.at(CONTRACT_ADDRESSES.ethereum.investments["cream_crFRAX"]);
 
     routerInstance = await IUniswapV2Router02.at(CONTRACT_ADDRESSES.ethereum.uniswap_other.router); 
     uniswapFactoryInstance = await IUniswapV2Factory.at(CONTRACT_ADDRESSES.ethereum.uniswap_other.factory); 
@@ -255,6 +253,7 @@ module.exports = async (deployer) => {
     oracle_instance_USDC_WETH = await UniswapPairOracle_USDC_WETH.at(CONTRACT_ADDRESSES.ethereum.retired_oracles.USDC_WETH);
     // oracle_extra_instance_SDT_WETH = await UniswapPairOracleExtra_SDT_WETH.at(CONTRACT_ADDRESSES.ethereum.oracles.SDT_WETH);
     combo_oracle_instance = await ComboOracle.at(CONTRACT_ADDRESSES.ethereum.oracles_other.combo_oracle);
+    combo_oracle_instance_univ2_univ3 = await ComboOracle_UniV2_UniV3.at(CONTRACT_ADDRESSES.ethereum.oracles_other.combo_oracle_univ2_univ3);
 
     frax_oracle_wrapper_instance = await FRAXOracleWrapper.at(CONTRACT_ADDRESSES.ethereum.pricing.frax_oracle_wrapper);
     fxs_oracle_wrapper_instance = await FXSOracleWrapper.at(CONTRACT_ADDRESSES.ethereum.pricing.fxs_oracle_wrapper);
@@ -274,8 +273,8 @@ module.exports = async (deployer) => {
     pool_instance_v3 = await FraxPoolV3.at(CONTRACT_ADDRESSES.ethereum.pools.V3);
     
     // investor_amo_v1_instance = await FraxPoolInvestorForV2.at(CONTRACT_ADDRESSES.ethereum.misc.investor_amo_V1);
-    investor_amo_v3_instance = await InvestorAMO_V3.at(CONTRACT_ADDRESSES.ethereum.misc.investor_amo);
-    fraxLendingAMO_V2_instance = await FraxLendingAMO_V2.at(CONTRACT_ADDRESSES.ethereum.misc.lending_amo);
+    // investor_amo_v3_instance = await InvestorAMO_V3.at(CONTRACT_ADDRESSES.ethereum.misc.investor_amo);
+    // fraxLendingAMO_V2_instance = await FraxLendingAMO_V2.at(CONTRACT_ADDRESSES.ethereum.misc.lending_amo);
     curve_amo_v3_instance = await CurveAMO_V4.at(CONTRACT_ADDRESSES.ethereum.misc.curve_amo);
     // curve_metapool_locker_instance = await CurveMetapoolLockerAMO.at(CONTRACT_ADDRESSES.ethereum.misc.curve_metapool_locker_amo);
     fxs_1559_amo_instance = await FXS1559_AMO_V3.at(CONTRACT_ADDRESSES.ethereum.misc.fxs_1559_amo);
@@ -298,100 +297,6 @@ module.exports = async (deployer) => {
     // ANY NEW CONTRACTS, PUT BELOW HERE
     // .new() calls and deployments
     // ==========================================================================
-
-    // console.log(chalk.yellow('========== FraxGaugeFXSRewardsDistributor =========='));
-    // // FraxGaugeFXSRewardsDistributor 
-    // gauge_rewards_distributor_instance = await FraxGaugeFXSRewardsDistributor.new(
-    //     THE_ACCOUNTS[1], 
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     THE_ACCOUNTS[7], 
-    //     CONTRACT_ADDRESSES.ethereum.main.FXS,
-    //     frax_gauge_controller.address
-    // );
-
-    // console.log("========== FraxMiddlemanGauge_FRAX_mUSD ==========");
-    // // FraxMiddlemanGauge_FRAX_mUSD 
-    // middlemanGauge_FRAX_mUSD = await FraxMiddlemanGauge_FRAX_mUSD.new(
-    //     THE_ACCOUNTS[1],
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     gauge_rewards_distributor_instance.address,
-    //     "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77",
-    //     3,
-    //     CONTRACT_ADDRESSES.polygon.staking_contracts['mStable FRAX/mUSD'],
-    //     "",
-    //     "mStable FRAX/mUSD",
-    // );
-
-    // console.log(chalk.yellow('========== StakingRewardsDualV5_FRAX_OHM =========='));
-    // // StakingRewardsDualV5_FRAX_OHM 
-    // stakingInstanceDualV5_FRAX_OHM = await StakingRewardsDualV5_FRAX_OHM.new(
-    //     THE_ACCOUNTS[6], 
-    //     CONTRACT_ADDRESSES.ethereum.main.FXS, 
-    //     CONTRACT_ADDRESSES.ethereum.reward_tokens.iq,
-    //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Uniswap FRAX/IQ'],
-    //     CONTRACT_ADDRESSES.ethereum.main.FRAX, 
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     CONTRACT_ADDRESSES.ethereum.main.veFXS,
-    // );
-
-    // console.log(chalk.yellow('========== FraxUniV3Farm_Stable_FRAX_DAI =========='));
-    // // FraxUniV3Farm_Stable_FRAX_DAI 
-    // fraxUniV3Farm_Stable_FRAX_DAI = await FraxUniV3Farm_Stable_FRAX_DAI.new(
-    //     THE_ACCOUNTS[6],
-    //     CONTRACT_ADDRESSES.ethereum.uni_v3_pools['Uniswap V3 FRAX/DAI'],
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_rewards_distributor,
-	// 	-50,
-	// 	50,
-	// 	0
-    // );
-
-    // console.log(chalk.yellow('========== FraxCrossChainFarm_FRAX_mUSD =========='));
-    // // FraxCrossChainFarm_FRAX_mUSD 
-    // fraxCrossChainFarm_FRAX_mUSD = await FraxCrossChainFarm_FRAX_mUSD.new(
-    //     THE_ACCOUNTS[6], 
-    //     CONTRACT_ADDRESSES.ethereum.main.FXS, 
-    //     CONTRACT_ADDRESSES.ethereum.reward_tokens.iq,
-    //     "0x4fb30c5a3ac8e85bc32785518633303c4590752d", // Use mUSD/GUSD Feeder Pool here as a dry run
-    //     "0xe2f2a5c287993345a840db3b0845fbc70f5935a5", // use mUSD here as a dry run
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    // );
-
-    // console.log(chalk.yellow("========== veFXSYieldDistributorV4 =========="));
-    // // veFXSYieldDistributorV4 
-    // veFXSYieldDistributorV4_instance = await veFXSYieldDistributorV4.new(
-    //     THE_ACCOUNTS[6], 
-    //     CONTRACT_ADDRESSES.ethereum.main.FXS, 
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     CONTRACT_ADDRESSES.ethereum.main.veFXS
-    // );
-
-    // console.log(chalk.yellow('========== PIDController & ReserveTracker – using Curve =========='));
-    // reserve_tracker_instance = await ReserveTracker.new(
-    //     CONTRACT_ADDRESSES.ethereum.main.FRAX,
-    //     CONTRACT_ADDRESSES.ethereum.main.FXS,
-    //     THE_ACCOUNTS[1],
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    // );
-
-    // pid_controller_instance = await PIDController.new(
-    //     CONTRACT_ADDRESSES.ethereum.main.FRAX,
-    //     CONTRACT_ADDRESSES.ethereum.main.FXS,
-    //     THE_ACCOUNTS[1],
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     reserve_tracker_instance.address
-    // )
-    
-    // // Initialize ReserveTracker
-    // await reserve_tracker_instance.setMetapool(FRAX3CRV_V2_Instance.address, { from: THE_ACCOUNTS[1] });
-    // await reserve_tracker_instance.setFRAXPriceOracle("0x2E45C589A9F301A2061f6567B9F432690368E3C6", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", 6, { from: THE_ACCOUNTS[1] });
-    // await reserve_tracker_instance.addFXSPair("0xE1573B9D29e2183B1AF0e743Dc2754979A40D237", { from: THE_ACCOUNTS[1] }); // Uni FRAX-FXS
-    // //await reserve_tracker_instance.addFXSPair("0x74C370990C1181303D20e9f0252437a97518B95B", { from: THE_ACCOUNTS[1] }); // Sushi FXS-WETH
-    // await reserve_tracker_instance.setChainlinkFXSOracle(priceConsumerInstance_FXS.address, { from: THE_ACCOUNTS[1] });
-
-    // // Initialize PIDController
-    // await pid_controller_instance.setMetapool(FRAX3CRV_V2_Instance.address, { from: THE_ACCOUNTS[1] });
-
 
     console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI =========="));
     // FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI 
@@ -475,12 +380,6 @@ module.exports = async (deployer) => {
     //     frax_amo_minter_instance.address
     // );
 
-    // console.log(chalk.yellow('========== FraxLendingAMO_V2 =========='));
-    // // FraxLendingAMO_V2
-    // fraxLendingAMO_V2_instance = await FraxLendingAMO_V2.new(
-    //     THE_ACCOUNTS[1],
-    //     frax_amo_minter_instance.address
-    // );
 
     // console.log(chalk.yellow('========== FraxPoolInvestorForV2 =========='));
     // // FraxPoolInvestorForV2
@@ -489,25 +388,12 @@ module.exports = async (deployer) => {
     //     frax_amo_minter_instance.address
     // );
 
-    // console.log(chalk.yellow('========== InvestorAMO_V3 =========='));
-    // // InvestorAMO_V3
-    // investor_amo_v3_instance = await InvestorAMO_V3.new(
-    //     THE_ACCOUNTS[1],
-    //     frax_amo_minter_instance.address
-    // );
 
     // console.log(chalk.yellow('========== FXS1559_AMO_V3 =========='));
     // // FXS1559_AMO_V3
     // fxs_1559_amo_instance = await FXS1559_AMO_V3.new(
     //     THE_ACCOUNTS[1],
     //     CONTRACT_ADDRESSES.ethereum.misc.vefxs_yield_distributor_v4,
-    //     frax_amo_minter_instance.address
-    // );
-
-    // console.log(chalk.yellow('========== OHM_AMO_V3 =========='));
-    // // OHM_AMO_V3
-    // ohm_amo_instance = await OHM_AMO_V3.new(
-    //     THE_ACCOUNTS[1],
     //     frax_amo_minter_instance.address
     // );
 
@@ -525,22 +411,28 @@ module.exports = async (deployer) => {
     // // ComboOracle
     // combo_oracle_instance = await ComboOracle.new(
     //     THE_ACCOUNTS[1],
+    //     "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419", // ETH / USD
+    //     ADDRS_ETH.reward_tokens.weth, // WETH
+    //     "ETH",
+    //     "WETH"
     // );
 
-    console.log(chalk.yellow('========== ComboOracle_UniV2_UniV3 =========='));
-    // ComboOracle_UniV2_UniV3
-    combo_oracle_instance_univ2_univ3 = await ComboOracle_UniV2_UniV3.new(
-        THE_ACCOUNTS[1],
-        [
-			CONTRACT_ADDRESSES.ethereum.canonicals.FRAX,
-			CONTRACT_ADDRESSES.ethereum.canonicals.FXS,
-			CONTRACT_ADDRESSES.ethereum.oracles_other.combo_oracle,
-			CONTRACT_ADDRESSES.ethereum.uniswap_other.router, // IUniswapV2Router02
-			CONTRACT_ADDRESSES.ethereum.uniswap_v3.UniswapV3Factory, // IUniswapV3Factory
-			CONTRACT_ADDRESSES.ethereum.uniswap_v3.NonfungiblePositionManager, // INonfungiblePositionManager
-			CONTRACT_ADDRESSES.ethereum.uniswap_v3.SwapRouter // ISwapRouter
-		]
-    );
+    
+
+    // console.log(chalk.yellow('========== ComboOracle_UniV2_UniV3 =========='));
+    // // ComboOracle_UniV2_UniV3
+    // combo_oracle_instance_univ2_univ3 = await ComboOracle_UniV2_UniV3.new(
+    //     THE_ACCOUNTS[1],
+    //     [
+	// 		CONTRACT_ADDRESSES.ethereum.canonicals.FRAX,
+	// 		CONTRACT_ADDRESSES.ethereum.canonicals.FXS,
+	// 		combo_oracle_instance.address, // CONTRACT_ADDRESSES.ethereum.oracles_other.combo_oracle,
+	// 		CONTRACT_ADDRESSES.ethereum.uniswap_other.router, // IUniswapV2Router02
+	// 		CONTRACT_ADDRESSES.ethereum.uniswap_v3.UniswapV3Factory, // IUniswapV3Factory
+	// 		CONTRACT_ADDRESSES.ethereum.uniswap_v3.NonfungiblePositionManager, // INonfungiblePositionManager
+	// 		CONTRACT_ADDRESSES.ethereum.uniswap_v3.SwapRouter // ISwapRouter
+	// 	]
+    // );
     
     // console.log(chalk.yellow('========== TokenTrackerV2 =========='));
     // // TokenTrackerV2
@@ -623,20 +515,6 @@ module.exports = async (deployer) => {
         "FRAX Harmony Horizon Liquidity Bridger",
     );
 
-    // console.log(chalk.yellow("========== UniV3LiquidityAMO =========="));
-    // univ3_liquidity_amo_instance = await UniV3LiquidityAMO.new(
-    //     THE_ACCOUNTS[1],
-    //     THE_ACCOUNTS[8],
-    //     CONTRACT_ADDRESSES.ethereum.main.FRAX,
-    //     CONTRACT_ADDRESSES.ethereum.main.FXS,
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     CONTRACT_ADDRESSES.ethereum.pools.USDC_V2,
-    //     CONTRACT_ADDRESSES.ethereum.collaterals.USDC,
-    //     CONTRACT_ADDRESSES.ethereum.uniswap_v3.UniswapV3Factory,
-    //     CONTRACT_ADDRESSES.ethereum.uniswap_v3.NonfungiblePositionManager,
-    //     CONTRACT_ADDRESSES.ethereum.uniswap_v3.SwapRouter
-    // );
-
     // // MigrationBundleUtils.setAsDeployed(migrationBundleUtils_instance);
     // console.log(chalk.yellow("========== UniV3LiquidityAMO_V2 =========="));
     // univ3_liquidity_amo_v2_instance = await UniV3LiquidityAMO_V2.new(
@@ -663,12 +541,8 @@ module.exports = async (deployer) => {
     // await frax_amo_minter_instance.addAMO(convex_amo_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(curve_amo_v4_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(stakedao_amo_instance.address, 0, { from: COMPTROLLER_ADDRESS });
-    // await frax_amo_minter_instance.addAMO(fraxLendingAMO_V2_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(rari_amo_instance.address, 0, { from: COMPTROLLER_ADDRESS });
-    // // await frax_amo_minter_instance.addAMO(investor_amo_v1_instance.address, 0, { from: COMPTROLLER_ADDRESS });
-    // await frax_amo_minter_instance.addAMO(investor_amo_v3_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(fxs_1559_amo_instance.address, 0, { from: COMPTROLLER_ADDRESS });
-    // await frax_amo_minter_instance.addAMO(ohm_amo_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(frax_liquidity_bridger_harm_horizon_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(univ3_liquidity_amo_v2_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(frax_cc_liq_tracker_instance.address, 0, { from: COMPTROLLER_ADDRESS });
@@ -761,7 +635,7 @@ module.exports = async (deployer) => {
     MIM_Convex_AMO.setAsDeployed(MIM_Convex_AMO_instance);
     // CurveAMO_V4.setAsDeployed(curve_amo_v4_instance);
     CurveMetapoolLockerAMO.setAsDeployed(curve_metapool_locker_instance);
-    FraxLendingAMO_V2.setAsDeployed(fraxLendingAMO_V2_instance);
+    // FraxLendingAMO_V2.setAsDeployed(fraxLendingAMO_V2_instance);
     FXS1559_AMO_V3.setAsDeployed(fxs_1559_amo_instance);
     IyUSDC_V2_Partial.setAsDeployed(yUSDC_instance);
     IAAVELendingPool_Partial.setAsDeployed(aUSDC_pool_instance);
@@ -769,14 +643,10 @@ module.exports = async (deployer) => {
     IAAVE_aFRAX.setAsDeployed(aFRAX_token_instance);
     IcUSDC_Partial.setAsDeployed(cUSDC_instance);
     IComptroller.setAsDeployed(compController_instance);
-    ICREAM_crFRAX.setAsDeployed(crFRAX_instance);
-    InvestorAMO_V3.setAsDeployed(investor_amo_v3_instance);
     MSIGHelper.setAsDeployed(msig_helper_instance);
-    OHM_AMO_V3.setAsDeployed(ohm_amo_instance);
     RariFuseLendingAMO_V2.setAsDeployed(rari_amo_instance);
     StakeDAO_AMO_V2.setAsDeployed(stakedao_amo_instance);
     TokenTrackerV2.setAsDeployed(token_tracker_v2_instance);
-    UniV3LiquidityAMO.setAsDeployed(univ3_liquidity_amo_instance);
     UniV3LiquidityAMO_V2.setAsDeployed(univ3_liquidity_amo_v2_instance);
     
     console.log(chalk.yellow("--------DEPLOY STAKING CONTRACTS--------"));
