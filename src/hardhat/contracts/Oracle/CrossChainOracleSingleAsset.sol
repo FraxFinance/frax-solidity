@@ -104,6 +104,7 @@ contract CrossChainOracleSingleAsset is Owned {
     // Set the price for a token
     function setPrice(uint256 price_e6) public onlyByOwnGovBot {
         price = price_e6;
+        last_updated_time = block.timestamp;
     }
 
     // Batch set prices for multiple tokens, old interface

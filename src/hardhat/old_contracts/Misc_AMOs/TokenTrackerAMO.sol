@@ -146,7 +146,9 @@ contract TokenTrackerAMO is Owned {
     }
 
     function getETHPrice() public view returns (uint256) {
-        ( , int price, , , ) = priceFeedETHUSD.latestRoundData();
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+
         return uint256(price).mul(PRICE_PRECISION).div(10 ** chainlink_eth_usd_decimals);
     }
 
@@ -156,7 +158,9 @@ contract TokenTrackerAMO is Owned {
         OracleInfo memory thisOracle = oracle_info[token_address];
 
         // Get the price
-        ( , int price, , , ) = AggregatorV3Interface(thisOracle.aggregator_address).latestRoundData();
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = AggregatorV3Interface(thisOracle.aggregator_address).latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+        
         uint256 price_u256 = uint256(price);
 
         // Convert to USD, if not already

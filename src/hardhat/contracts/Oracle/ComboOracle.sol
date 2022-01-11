@@ -288,7 +288,7 @@ contract ComboOracle is Owned {
         bytes4 pps_call_selector,
         uint256 pps_decimals
     ) internal {
-        require(token_address != address(0), "Cannot add zero address");
+        // require(token_address != address(0), "Cannot add zero address");
 
         // See if there are any missing decimals between a cToken and the underlying
         int256 ctkn_undrly_missing_decs = 0;

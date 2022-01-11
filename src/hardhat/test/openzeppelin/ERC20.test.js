@@ -23,7 +23,6 @@ global.artifacts = artifacts;
 global.web3 = web3;
 
 const hre = require("hardhat");
-const e = require('express');
 
 const {
   shouldBehaveLikeERC20,

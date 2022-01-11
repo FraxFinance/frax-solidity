@@ -18,7 +18,6 @@ pragma experimental ABIEncoderV2;
 //      - Can extend or add to existing locked stakes
 //      - Contract is aware of boosted veFXS (veFXSBoost)
 //      - veFXS multiplier formula changed
-//      - Contract uses only 1 (large) NFT
 // Apes together strong
 
 // Frax Finance: https://github.com/FraxFinance

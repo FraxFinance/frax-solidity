@@ -18,7 +18,6 @@ global.artifacts = artifacts;
 global.web3 = web3;
 
 const hre = require("hardhat");
-const e = require('express');
 
 // Core
 const IanyFRAX = artifacts.require("ERC20/__CROSSCHAIN/IanyFRAX");
