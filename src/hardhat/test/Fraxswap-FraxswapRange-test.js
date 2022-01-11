@@ -2,31 +2,38 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("FraxswapRange AMM", function () {
-	/*it("setupContracts", async function () {
-		var contracts = await setupContracts();
-	});*/
+	var PRECISION=BigInt(1e18);
+	it("setupContracts", async function () {
+		var contracts = await setupContracts(PRECISION,PRECISION/BigInt(2),30);
+	});
 
-	it("initialMint", async function () {
+	it("initial mint", async function () {
 		const [owner,user1,user2,user3] = await ethers.getSigners();
-		var contracts = await setupContracts();
+		var contracts = await setupContracts(PRECISION,PRECISION*BigInt(3),30);
 
 		// Add initial liquidity
 		await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
 		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
-		await contracts.rangePair.initialMint("100000000000000000000","100000000000000000000",owner.address);
+		await contracts.rangePair.mint(owner.address);
 		expect(await contracts.token0.balanceOf(contracts.rangePair.address)).to.equal("100000000000000000000");
 		expect(await contracts.token1.balanceOf(contracts.rangePair.address)).to.equal("100000000000000000000");
+
+		var reserves = await contracts.rangePair.getReserves();
+		var virtualReserve0 = await contracts.rangePair.virtualReserve0();
+		var virtualReserve1 = await contracts.rangePair.virtualReserve1();
+		var actualBalances0 = await contracts.token0.balanceOf(contracts.rangePair.address);
+		var actualBalances1 = await contracts.token1.balanceOf(contracts.rangePair.address);
 		expect(await contracts.rangePair.balanceOf(owner.address)).to.equal(BigInt("200000000000000000000")-BigInt(1000));
 	});
 
 	it("mint", async function () {
 		const [owner,user1,user2,user3] = await ethers.getSigners();
-		var contracts = await setupContracts();
+		var contracts = await setupContracts(PRECISION,PRECISION*BigInt(3),30);
 
 		// Add initial liquidity
 		await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
 		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
-		await contracts.rangePair.initialMint("100000000000000000000","100000000000000000000",owner.address);
+		await contracts.rangePair.mint(owner.address);
 
 		// Add extra liquiidty
 		await contracts.token0.connect(user1).transfer(contracts.rangePair.address,"100000000000000000000");
@@ -39,12 +46,12 @@ describe("FraxswapRange AMM", function () {
 
 	it("burn", async function () {
 		const [owner,user1,user2,user3] = await ethers.getSigners();
-		var contracts = await setupContracts();
+		var contracts = await setupContracts(PRECISION,PRECISION*BigInt(3),30);
 
 		// Add initial liquidity
 		await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
 		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
-		await contracts.rangePair.initialMint("100000000000000000000","100000000000000000000",owner.address);
+		await contracts.rangePair.mint(owner.address);
 
 		// Remove liquidity
 		var balance0Before = await contracts.token0.balanceOf(owner.address);
@@ -58,18 +65,204 @@ describe("FraxswapRange AMM", function () {
 		expect(await contracts.token1.balanceOf(owner.address)).to.equal(BigInt(balance1Before) + BigInt("50000000000000000000"));
 	});
 
-	it("swap 1", async function () {
+	it("protocol fees", async function () {
 		const [owner,user1,user2,user3] = await ethers.getSigners();
-		var contracts = await setupContracts();
+		var contracts = await setupContracts(PRECISION,PRECISION*BigInt(3),30);
+
+		// Set feeTo parameter so the protocol will earn 1/6th of the trading fees
+		await contracts.factory.setFeeTo(user3.address);
 
 		// Add initial liquidity
-		await contracts.token0.transfer(contracts.rangePair.address,BigInt("1000000"));
-		await contracts.token1.transfer(contracts.rangePair.address,BigInt("1000000"));
-		await contracts.rangePair.initialMint("1000000000000","1000000000000",owner.address);
+		await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.rangePair.mint(owner.address);
+
+		var tradeAmount = BigInt("10000000000000000");
+		var reserves = await contracts.rangePair.getReserves();
+		var rootKStart = sqrt(BigInt(reserves._reserve0)*BigInt(reserves._reserve1));
+		var expectedOutput = getExpectedOutput(reserves._reserve0,reserves._reserve1,tradeAmount,30);
+		await contracts.token0.connect(user2).transfer(contracts.rangePair.address,tradeAmount);
+		await contracts.rangePair.swap(0,expectedOutput,user1.address,[]);
+
+		expect(await contracts.rangePair.balanceOf(user3.address)).to.equal(BigInt("0"));
+
+		await contracts.rangePair.sync(); // Call sync to update virtual reserves so we can calculate earned fees
+
+		var reservesEnd = await contracts.rangePair.getReserves();
+		var totalSupply = BigInt(await contracts.rangePair.totalSupply());
+
+		// Add more liquidity to trigger protocol fees
+		await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.rangePair.mint(owner.address);
+
+		var rootKEnd = sqrt(BigInt(reservesEnd._reserve0)*BigInt(reservesEnd._reserve1));
+		console.log("rootKStart:"+rootKStart);
+		console.log("rootKEnd  :"+rootKEnd);
+		var numerator = totalSupply*(rootKEnd-rootKStart);
+		var denominator = rootKEnd*BigInt(5)+rootKStart;
+		var expectedEarnedFeeTokens = numerator / denominator;
+		var earnedFeeTokens = await contracts.rangePair.balanceOf(user3.address);
+		console.log("expectedEarnedFeeTokens:"+expectedEarnedFeeTokens);
+		console.log("earnedFeeTokens        :"+earnedFeeTokens);
+		expect(BigInt(expectedEarnedFeeTokens).toString()).to.equal(BigInt(earnedFeeTokens).toString());
+		var approximateFeeValue = BigInt(earnedFeeTokens)*BigInt("200000000000000000000")/totalSupply;
+		var expectedFeeValue = tradeAmount*BigInt(5)/BigInt(10000);
+		console.log("expectedFeeValue   :"+expectedFeeValue);
+		console.log("approximateFeeValue:"+approximateFeeValue);
+		expect(Number(expectedFeeValue)).to.be.closeTo(Number(approximateFeeValue),10000000000);
+	});
+
+
+
+	it("swap at edge", async function () {
+		const [owner,user1,user2,user3] = await ethers.getSigners();
+		var contracts = await setupContracts(PRECISION,PRECISION*BigInt(3),30);
+
+		// Add initial liquidity
+		await contracts.token0.transfer(contracts.rangePair.address,"0");
+		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.rangePair.mint(owner.address);
+
+		var tradeAmount = BigInt("1000000");
+		var reserves = await contracts.rangePair.getReserves();
+		var expectedOutput = getExpectedOutput(reserves._reserve0,reserves._reserve1,tradeAmount,30);
+		var virtualReserve0 = await contracts.rangePair.virtualReserve0();
+		var virtualReserve1 = await contracts.rangePair.virtualReserve1();
+		var actualBalances0 = await contracts.token0.balanceOf(contracts.rangePair.address);
+		var actualBalances1 = await contracts.token1.balanceOf(contracts.rangePair.address);
+
+		console.log("virtualReserve0:"+virtualReserve0);
+		console.log("actualBalances0:"+actualBalances0);
+		console.log("_reserve0      :"+reserves._reserve0);
+		console.log("virtualReserve1:"+virtualReserve1);
+		console.log("actualBalances1:"+actualBalances1);
+		console.log("_reserve1      :"+reserves._reserve1);
+		console.log("tradeAmount    :"+tradeAmount);
+		console.log("expectedOutput :"+expectedOutput);
+
+
+		var balanceBefore = await contracts.token1.balanceOf(user1.address);
+		await contracts.token0.connect(user2).transfer(contracts.rangePair.address,tradeAmount);
+
+		// Swap fails if you ask for too much
+		await expect(contracts.rangePair.swap(0,expectedOutput+BigInt(1),user1.address,[])).to.be.revertedWith("UniswapV2: K");
+
+		// Swap succeeds
+		await contracts.rangePair.swap(0,expectedOutput,user1.address,[]);
+		var balanceAfter = await contracts.token1.balanceOf(user1.address);
+		var balanceDiff = BigInt(balanceAfter)-BigInt(balanceBefore);
+		expect(balanceDiff.toString()).to.equal(expectedOutput.toString());
+	});
+	it("swap over the edge", async function () {
+		const [owner,user1,user2,user3] = await ethers.getSigners();
+		var contracts = await setupContracts(PRECISION,PRECISION*BigInt(3),30);
+
+		// Add initial liquidity
+		await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.rangePair.mint(owner.address);
+
+		var tradeAmount = BigInt("200000000000000000000")*BigInt(1004)/BigInt(1000);
+		var reserves = await contracts.rangePair.getReserves();
+		var expectedOutput = getExpectedOutput(reserves._reserve0,reserves._reserve1,tradeAmount,30);
+		await contracts.token0.connect(user2).transfer(contracts.rangePair.address,tradeAmount);
+
+		// Swap fails if you go over the edge
+		await expect(contracts.rangePair.swap(0,"100000000000000000001",user1.address,[])).to.be.revertedWith("UniswapV2: INSUFFICIENT_LIQUIDITY");
+
+		// Swap succes if you stay within boundaries
+		await contracts.rangePair.swap(0,"100000000000000000000",user1.address,[]);
+	});
+
+	it("swap fee", async function () {
+		const [owner,user1,user2,user3] = await ethers.getSigners();
+		for (var fee=0;fee<=100;fee=fee>=10?fee+10:fee+1) {
+			var contracts = await setupContracts(PRECISION,PRECISION,fee);
+
+			// Add initial liquidity
+			await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
+			await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
+			await contracts.rangePair.mint(owner.address);
+
+			var tradeAmount = BigInt("1000000000");
+			var reserves = await contracts.rangePair.getReserves();
+			var expectedOutput = getExpectedOutput(reserves._reserve0,reserves._reserve1,tradeAmount,fee);
+			var virtualReserve0 = await contracts.rangePair.virtualReserve0();
+			var virtualReserve1 = await contracts.rangePair.virtualReserve1();
+			var actualBalances0 = await contracts.token0.balanceOf(contracts.rangePair.address);
+			var actualBalances1 = await contracts.token1.balanceOf(contracts.rangePair.address);
+
+			console.log("fee            :"+fee);
+			console.log("expectedOutput :"+expectedOutput);
+
+			var balanceBefore = await contracts.token1.balanceOf(user1.address);
+			await contracts.token0.connect(user2).transfer(contracts.rangePair.address,tradeAmount);
+
+			// Swap fails if you ask for too much
+			await expect(contracts.rangePair.swap(0,expectedOutput+BigInt(1),user1.address,[])).to.be.revertedWith("UniswapV2: K");
+
+			// Swap succeeds
+			await contracts.rangePair.swap(0,expectedOutput,user1.address,[]);
+			var balanceAfter = await contracts.token1.balanceOf(user1.address);
+			var balanceDiff = BigInt(balanceAfter)-BigInt(balanceBefore);
+			expect(balanceDiff.toString()).to.equal(expectedOutput.toString());
+		}
+	});
+
+	it("update virtualReserves", async function () {
+		const [owner,user1,user2,user3] = await ethers.getSigners();
+		var fee=1;
+		var contracts = await setupContracts(PRECISION,PRECISION,fee);
+
+		// Add initial liquidity
+		await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.rangePair.mint(owner.address);
+
+		var initialQ = 0
+		var resetCount=0;
+		var tradeAmount = BigInt("10000000000000000000");
+		for (var i=0;i<100;i++) {
+			var reserves = await contracts.rangePair.getReserves();
+			var virtualReserve0 = await contracts.rangePair.virtualReserve0();
+			var virtualReserve1 = await contracts.rangePair.virtualReserve1();
+			var K = BigInt(reserves._reserve0)*BigInt(reserves._reserve1);
+			var Q = K*BigInt(1000000)/(BigInt(virtualReserve0)*BigInt(virtualReserve1));
+			if (initialQ==0) initialQ=Q;
+			else if (Number(Q)==initialQ) resetCount++;
+			//console.log("Q:"+Q);
+			var expectedOutput = getExpectedOutput(reserves._reserve0,reserves._reserve1,tradeAmount,fee);
+			await contracts.token0.connect(user1).transfer(contracts.rangePair.address,tradeAmount);
+			await contracts.rangePair.swap(0,expectedOutput,user1.address,[]);
+
+			reserves = await contracts.rangePair.getReserves();
+			virtualReserve0 = await contracts.rangePair.virtualReserve0();
+			virtualReserve1 = await contracts.rangePair.virtualReserve1();
+			K = BigInt(reserves._reserve0)*BigInt(reserves._reserve1);
+			Q = K*BigInt(1000000)/(BigInt(virtualReserve0)*BigInt(virtualReserve1));
+			if (Number(Q)==initialQ) resetCount++;
+			//console.log("Q:"+Q);
+			var expectedOutput = getExpectedOutput(reserves._reserve1,reserves._reserve0,tradeAmount,fee);
+			await contracts.token1.connect(user1).transfer(contracts.rangePair.address,tradeAmount);
+			await contracts.rangePair.swap(expectedOutput,0,user1.address,[]);
+		}
+		//console.log("resetCount:"+resetCount);
+		expect(resetCount).to.be.above(1);
+	});
+
+	it("swap token0 -> token1", async function () {
+		const [owner,user1,user2,user3] = await ethers.getSigners();
+		var contracts = await setupContracts(PRECISION,PRECISION,30);
+
+		// Add initial liquidity
+		await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.rangePair.mint(owner.address);
 
 		var tradeAmount = BigInt("1000");
 		var reserves = await contracts.rangePair.getReserves();
-		var expectedOutput = (tradeAmount*BigInt(997)*BigInt(reserves._reserve1))/(BigInt(reserves._reserve0)*BigInt(1000)+tradeAmount*BigInt(997));
+		var expectedOutput = getExpectedOutput(reserves._reserve0,reserves._reserve1,tradeAmount,30);
 		var virtualReserve0 = await contracts.rangePair.virtualReserve0();
 		var virtualReserve1 = await contracts.rangePair.virtualReserve1();
 		var actualBalances0 = await contracts.token0.balanceOf(contracts.rangePair.address);
@@ -98,18 +291,18 @@ describe("FraxswapRange AMM", function () {
 		expect(balanceDiff.toString()).to.equal(expectedOutput.toString());
 	});
 
-	it("swap 2", async function () {
+	it("swap token1 -> token0", async function () {
 		const [owner,user1,user2,user3] = await ethers.getSigners();
-		var contracts = await setupContracts();
+		var contracts = await setupContracts(PRECISION,PRECISION,30);
 
 		// Add initial liquidity
-		await contracts.token0.transfer(contracts.rangePair.address,BigInt("1000000"));
-		await contracts.token1.transfer(contracts.rangePair.address,BigInt("1000000"));
-		await contracts.rangePair.initialMint("1000000000000","1000000000000",owner.address);
+		await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.rangePair.mint(owner.address);
 
 		var tradeAmount = BigInt("1000");
 		var reserves = await contracts.rangePair.getReserves();
-		var expectedOutput = (tradeAmount*BigInt(997)*BigInt(reserves._reserve0))/(BigInt(reserves._reserve1)*BigInt(1000)+tradeAmount*BigInt(997));
+		var expectedOutput = getExpectedOutput(reserves._reserve1,reserves._reserve0,tradeAmount,30);
 		var virtualReserve0 = await contracts.rangePair.virtualReserve0();
 		var virtualReserve1 = await contracts.rangePair.virtualReserve1();
 		var actualBalances0 = await contracts.token0.balanceOf(contracts.rangePair.address);
@@ -138,15 +331,95 @@ describe("FraxswapRange AMM", function () {
 		expect(balanceDiff.toString()).to.equal(expectedOutput.toString());
 	});
 
-	it("virtualReserve donate check", async function () {
+	it("different decimals", async function () {
 		const [owner,user1,user2,user3] = await ethers.getSigners();
-		var contracts = await setupContracts();
+		var precision0 = PRECISION;
+		var precision1 = BigInt(1000000);
+		var range = PRECISION/BigInt(100);
+		var contracts = await setupContracts(PRECISION*precision1/precision0,range,30);
 
 		// Add initial liquidity
-		await contracts.token0.transfer(contracts.rangePair.address,BigInt("100000000"));
-		await contracts.token1.transfer(contracts.rangePair.address,BigInt("100000000"));
-		await contracts.rangePair.initialMint("2000000000000","1000000000000",owner.address);
-		var donation = BigInt("100000000");
+		await contracts.token0.transfer(contracts.rangePair.address,precision0*BigInt(200));
+		await contracts.token1.transfer(contracts.rangePair.address,precision1*BigInt(200));
+		await contracts.rangePair.mint(owner.address);
+
+		var tradeAmount = precision0;
+		var reserves = await contracts.rangePair.getReserves();
+		var expectedOutput = getExpectedOutput(reserves._reserve0,reserves._reserve1,tradeAmount,30);
+		var virtualReserve0 = await contracts.rangePair.virtualReserve0();
+		var virtualReserve1 = await contracts.rangePair.virtualReserve1();
+		var actualBalances0 = await contracts.token0.balanceOf(contracts.rangePair.address);
+		var actualBalances1 = await contracts.token1.balanceOf(contracts.rangePair.address);
+		console.log("virtualReserve0:"+virtualReserve0);
+		console.log("actualBalances0:"+actualBalances0);
+		console.log("_reserve0      :"+reserves._reserve0);
+		console.log("virtualReserve1:"+virtualReserve1);
+		console.log("actualBalances1:"+actualBalances1);
+		console.log("_reserve1      :"+reserves._reserve1);
+		console.log("tradeAmount    :"+tradeAmount);
+		console.log("expectedOutput :"+expectedOutput);
+
+		var balanceBefore = await contracts.token1.balanceOf(user1.address);
+		await contracts.token0.connect(user2).transfer(contracts.rangePair.address,tradeAmount);
+
+		// Swap fails if you ask for too much
+		await expect(contracts.rangePair.swap(0,expectedOutput+BigInt(1),user1.address,[])).to.be.revertedWith("UniswapV2: K");
+
+		// Swap succeeds
+		await contracts.rangePair.swap(0,expectedOutput,user1.address,[]);
+		var balanceAfter = await contracts.token1.balanceOf(user1.address);
+		var balanceDiff = BigInt(balanceAfter)-BigInt(balanceBefore);
+		expect(balanceDiff.toString()).to.equal(expectedOutput.toString());
+
+		range = range/BigInt(2);
+	});
+
+	it("Concentrated liquidity", async function () {
+		const [owner,user1,user2,user3] = await ethers.getSigners();
+		var range = PRECISION;
+		for (var i=0;i<20;i++) {
+			var contracts = await setupContracts(PRECISION,range,30);
+
+			// Add initial liquidity
+			await contracts.token0.transfer(contracts.rangePair.address,"200000000000000000000");
+			await contracts.token1.transfer(contracts.rangePair.address,"200000000000000000000");
+			await contracts.rangePair.mint(owner.address);
+
+			var tradeAmount = BigInt("100000000000000000000");
+			var reserves = await contracts.rangePair.getReserves();
+			var expectedOutput = getExpectedOutput(reserves._reserve0,reserves._reserve1,tradeAmount,30);
+			var virtualReserve0 = await contracts.rangePair.virtualReserve0();
+			var virtualReserve1 = await contracts.rangePair.virtualReserve1();
+			var actualBalances0 = await contracts.token0.balanceOf(contracts.rangePair.address);
+			var actualBalances1 = await contracts.token1.balanceOf(contracts.rangePair.address);
+			console.log("range         :"+range);
+			console.log("expectedOutput:"+expectedOutput);
+
+			var balanceBefore = await contracts.token1.balanceOf(user1.address);
+			await contracts.token0.connect(user2).transfer(contracts.rangePair.address,tradeAmount);
+
+			// Swap fails if you ask for too much
+			await expect(contracts.rangePair.swap(0,expectedOutput+BigInt(1),user1.address,[])).to.be.revertedWith("UniswapV2: K");
+
+			// Swap succeeds
+			await contracts.rangePair.swap(0,expectedOutput,user1.address,[]);
+			var balanceAfter = await contracts.token1.balanceOf(user1.address);
+			var balanceDiff = BigInt(balanceAfter)-BigInt(balanceBefore);
+			expect(balanceDiff.toString()).to.equal(expectedOutput.toString());
+
+			range = range/BigInt(2);
+		}
+	});
+
+	it("virtualReserve donate check", async function () {
+		const [owner,user1,user2,user3] = await ethers.getSigners();
+		var contracts = await setupContracts(PRECISION,PRECISION/BigInt(2),30);
+
+		// Add initial liquidity
+		await contracts.token0.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.token1.transfer(contracts.rangePair.address,"100000000000000000000");
+		await contracts.rangePair.mint(owner.address);
+		var donation = BigInt("10000000000");
 		var reserves = await contracts.rangePair.getReserves();
 		var virtualReserve0 = await contracts.rangePair.virtualReserve0();
 		var virtualReserve1 = await contracts.rangePair.virtualReserve1();
@@ -170,6 +443,7 @@ describe("FraxswapRange AMM", function () {
 		await contracts.token1.connect(user2).transfer(contracts.rangePair.address,donation);
 
 		await contracts.rangePair.sync();
+
 		var reserves_after = await contracts.rangePair.getReserves();
 		var virtualReserve0_after = await contracts.rangePair.virtualReserve0();
 		var virtualReserve1_after = await contracts.rangePair.virtualReserve1();
@@ -188,20 +462,21 @@ describe("FraxswapRange AMM", function () {
 
 	it("swaps", async function () {
 		const [owner,user1,user2,user3] = await ethers.getSigners();
-		var amounts = [BigInt("1000000"),BigInt("1000000000"),BigInt("1000000000000"),BigInt("1000000000000000")];
+		//var amounts = [BigInt("1000000"),BigInt("1000000000"),BigInt("1000000000000"),BigInt("1000000000000000")];
+		var amounts = [BigInt("1000000")];
 		for (var a=0;a<amounts.length;a++) {
 			for (var b=0;b<amounts.length;b++) {
 				for (var c=0;c<amounts.length;c++) {
 					for (var d=0;d<amounts.length;d++) {
-						var contracts = await setupContracts();
+						var contracts = await setupContracts(amounts[c]*PRECISION/amounts[d],amounts[b]*PRECISION/amounts[d],30);
 						// Add initial liquidity
 						await contracts.token0.transfer(contracts.rangePair.address,amounts[a]);
 						await contracts.token1.transfer(contracts.rangePair.address,amounts[b]);
-						await contracts.rangePair.initialMint(amounts[c],amounts[d],owner.address);
+						await contracts.rangePair.mint(owner.address);
 
 						var tradeAmount = amounts[a]/BigInt(1000); //0.1%
 						var reserves = await contracts.rangePair.getReserves();
-						var expectedOutput = (tradeAmount*BigInt(997)*BigInt(reserves._reserve1))/(BigInt(reserves._reserve0)*BigInt(1000)+tradeAmount*BigInt(997));
+						var expectedOutput = getExpectedOutput(reserves._reserve0,reserves._reserve1,tradeAmount,30);
 						var virtualReserve0 = await contracts.rangePair.virtualReserve0();
 						var virtualReserve1 = await contracts.rangePair.virtualReserve1();
 						var actualBalances0 = await contracts.token0.balanceOf(contracts.rangePair.address)
@@ -230,7 +505,7 @@ describe("FraxswapRange AMM", function () {
 				}
 			}
 		}
-	}).timeout(10000000);
+		}).timeout(10000000);
 });
 
 async function waitTill(time) {
@@ -242,7 +517,7 @@ async function waitTill(time) {
 	}
 }
 
-async function setupContracts() {
+async function setupContracts(centerPrice,rangeSize,fee) {
 	const [owner,user1,user2,user3] = await ethers.getSigners();
 
 	// Deploy token0/token1 token and distribute
@@ -269,7 +544,7 @@ async function setupContracts() {
 
 	// Create FraxswapRangePair
 	const FraxswapRangePair = await ethers.getContractFactory("FraxswapRangePair");
-	await factory.createPair(token0.address,token1.address);
+	await factory.createPair(token0.address,token1.address,centerPrice,rangeSize,fee);
 	var rangePair = FraxswapRangePair.attach(await factory.allPairs(0));
 
 	// Pack contracts in an object
@@ -281,7 +556,26 @@ async function setupContracts() {
     return result;
 }
 
+function getExpectedOutput(_reserve0,_reserve1,tradeAmount,fee) {
+	return (tradeAmount*BigInt(10000-fee)*BigInt(_reserve1))/(BigInt(_reserve0)*BigInt(10000)+tradeAmount*BigInt(10000-fee));
+}
 
+function sqrt(value) {
+    if (value < 0n) {
+        throw 'square root of negative numbers is not supported'
+    }
 
+    if (value < 2n) {
+        return value;
+    }
 
+    function newtonIteration(n, x0) {
+        const x1 = ((n / x0) + x0) >> 1n;
+        if (x0 === x1 || x0 === (x1 - 1n)) {
+            return x0;
+        }
+        return newtonIteration(n, x1);
+    }
 
+    return newtonIteration(value, 1n);
+}

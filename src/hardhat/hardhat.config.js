@@ -10,6 +10,7 @@ require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-etherscan");
 require('@openzeppelin/hardhat-upgrades');
 require("@nomiclabs/hardhat-vyper");
+require('hardhat-spdx-license-identifier');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -42,6 +43,7 @@ module.exports = {
 				// url: `${process.env.FANTOM_FORKING_NETWORK_ENDPOINT}`, // Fantom
 				// url: `${process.env.HARMONY_NETWORK_ENDPOINT}`, // Harmony
 				// url: `${process.env.MOONRIVER_NETWORK_ENDPOINT}`, // Moonriver
+				// url: `${process.env.OPTIMISM_NETWORK_ENDPOINT}`, // Optimism
 				// url: `${process.env.POLYGON_NETWORK_ENDPOINT}`, // Polygon
 				
 			},
@@ -106,7 +108,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 170000000000,
+			gasPrice: 150000000000,
 			gasMultiplier: 1.2
 		},
 		fantom: {
@@ -136,7 +138,17 @@ module.exports = {
 			},
 			chainId: 1285,
 			gas: "auto",
-			gasPrice: 5000000000, // 5 Gwei
+			gasPrice: 3000000000, // 3 Gwei
+			gasMultiplier: 1.2
+		},
+		optimism: {
+			url: process.env.OPTIMISM_NETWORK_ENDPOINT,
+			accounts: {
+				mnemonic: process.env.OPTIMISM_MNEMONIC_PHRASE
+			},
+			chainId: 10,
+			gas: "auto",
+			gasPrice: 1000000000, // 1 Gwei
 			gasMultiplier: 1.2
 		},
 		polygon: {
@@ -226,15 +238,15 @@ module.exports = {
 					}
 				  }
 			},
-			// {
-			// 	version: "0.8.6",
-			// 	settings: {
-			// 		optimizer: {
-			// 			enabled: true,
-			// 			runs: 100000
-			// 		}
-			// 	  }
-			// }
+			{
+				version: "0.8.6",
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 100000
+					}
+				  }
+			},
 			{
 				version: "0.8.10",
 				settings: {
@@ -257,8 +269,9 @@ module.exports = {
 	},
 	etherscan: {
 		// apiKey: process.env.BSCSCAN_API_KEY // BSC
-		apiKey: process.env.ETHERSCAN_API_KEY, // ETH Mainnet
+		// apiKey: process.env.ETHERSCAN_API_KEY, // ETH Mainnet
 		// apiKey: process.env.FTMSCAN_API_KEY // Fantom
+		apiKey: process.env.OPTIMISM_API_KEY, // Optimism
 		// apiKey: process.env.POLYGONSCAN_API_KEY // Polygon
 	},
 

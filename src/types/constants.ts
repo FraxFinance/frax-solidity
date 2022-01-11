@@ -16,6 +16,7 @@ export const PAST_LOGS_BATCH_SIZE = 2500;
 export const PAST_LOGS_BATCH_SIZE_FANTOM = 2000;
 export const PAST_LOGS_BATCH_SIZE_HARMONY = 2500;
 export const PAST_LOGS_BATCH_SIZE_MOONRIVER = 2500;
+export const PAST_LOGS_BATCH_SIZE_OPTIMISM = 2500;
 export const PAST_LOGS_BATCH_SIZE_POLYGON = 2500;
 
 // FXS contract created in block 11465584
@@ -1132,6 +1133,7 @@ export const CONTRACT_ADDRESSES = {
         fantom: "0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE", // anySwap: Dump into bridge
         harmony: "0x2dCCDB493827E15a5dC8f8b72147E6c4A5620857",
         moonriver: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
+        optimism: "",
         polygon: "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77",
         solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
       },
@@ -1145,6 +1147,7 @@ export const CONTRACT_ADDRESSES = {
         fantom: "0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE", // anySwap: Dump into bridge
         harmony: "0x2dCCDB493827E15a5dC8f8b72147E6c4A5620857",
         moonriver: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
+        optimism: "",
         polygon: "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77",
         solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
       },
@@ -1157,6 +1160,7 @@ export const CONTRACT_ADDRESSES = {
         fantom: "0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE", // anySwap: Dump into bridge
         harmony: "0x2dCCDB493827E15a5dC8f8b72147E6c4A5620857",
         moonriver: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
+        optimism: "",
         polygon: "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77",
         solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
       },
@@ -1184,6 +1188,9 @@ export const CONTRACT_ADDRESSES = {
         },
         moonriver: {
           anySwap: "0xc7F48Fb6Dbb6F8A3Eed90553017cDf5725Dc44ac"
+        },
+        optimism: {
+
         },
         polygon: {
           maticBridge: "0x6e1A844AFff1aa2a8ba3127dB83088e196187110"
@@ -1476,6 +1483,7 @@ export const CONTRACT_ADDRESSES = {
     bearer_tokens: {
       FRAX2pool: "0xf07d553B195080F84F582e88ecdD54bAa122b279",
       hFRAX: "0xb1c4426C86082D91a6c097fC588E5D5d8dD1f5a8",
+      saddleArbUSDv2: '0x0a20c2FFa10cD43F67D06170422505b7D6fC0953'
     },
     vamms: {},
     pair_tokens: {
@@ -1489,42 +1497,60 @@ export const CONTRACT_ADDRESSES = {
   aurora: {
     chain_id: 1313161554,
     main: {
-      FRAX: "",
-      FXS: "",
+      FRAX: "0xDA2585430fEf327aD8ee44Af8F1f989a2A91A3d2",
+      FXS: "0xc8fdD32E0bf33F0396a18209188bb8C6Fb8747d2",
     },
     canonicals: {
-      FRAX: "",
-      FXS: "",
+      FRAX: "0xE4B9e004389d91e4134a28F19BD833cBA1d994B6",
+      FXS: "0xBb8831701E68B99616bF940b7DafBeb4CDb23e0b",
     },
     bridge_tokens: {
-      rnbwFRAX: "",
-      rnbwFXS: "",
-      rnbwUSDC: "",
+      rnbwFRAX: "0xDA2585430fEf327aD8ee44Af8F1f989a2A91A3d2",
+      rnbwFXS: "0xc8fdD32E0bf33F0396a18209188bb8C6Fb8747d2",
+      rnbwUSDC: "0xB12BFcA5A55806AaF64E99521918A4bf0fC40802",
     },
-    collaterals: {},
-    bridges: {},
-    bridge_backers: {},
+    collaterals: {
+      rnbwUSDC: "0xB12BFcA5A55806AaF64E99521918A4bf0fC40802",
+      USDC: "0xB12BFcA5A55806AaF64E99521918A4bf0fC40802",
+    },
+    bridges: {
+      rnbwFRAX: "", // ???
+      rnbwFXS: "", // ???
+    },
+    bridge_backers: {
+      rainbow: "",
+    },
+    multisigs: {
+      Comptrollers: "",
+    },
+    reward_tokens: {
+      WETH: "0xC9BdeEd33CD01541e1eeD10f90519d2C06Fe3feB",
+    },
     oracles: {
       single_assets: {
-        FRAX: "",
-        FXS: "",
+        FRAX: "0x68610670f1A7e4B9565011598756E046f226bC9A",
+        FXS: "0x77eEB1D0958E65A5CB707bDd4B8Bea19512A3bbe",
+        USDC: "0x1F853fFe53b340194656Bc2FDBBe10C0832E0ae4",
+        WETH: "0xa1ba72e6Bb18f934c5Ea31e795FE48a5cD3a6b79"
       },
-      cross_chain_oracle: "",
+      cross_chain_oracle: "0x7330bFdB544D465d9AD5ea2fC2C2716df4bCFb62",
     },
     oracles_other: {
-      combo_oracle: "",
-      combo_oracle_univ2_univ3: "",
+      combo_oracle: "0x14F6C7bd72eff955878370cF9e57107544BfC406",
+      combo_oracle_univ2_univ3: "0x4Ea683676c25eB7EB477c8d1993fDdB6Ff7DA7de",
     },
     uniswap: {
-      v2_router: "",
+      v2_router: "0xBaE0d7DFcd03C90EBCe003C58332c1346A72836A",
       v3_factory: "0x0000000000000000000000000000000000000000",
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
     },
     amos: {},
-    reward_tokens: {},
     vamms: {},
-    pair_tokens: {},
+    pair_tokens: {
+			"NearPAD canFRAX/canFXS": "0x120160EF80BA3a5D06d14497886dBd0F032Efa7F",
+			"NearPAD canFRAX/WETH": "0x8561a678682E937cc7F778559613033B3a1Ae41e",
+    },
     staking_contracts: {},
   },
   avalanche: {
@@ -1650,17 +1676,19 @@ export const CONTRACT_ADDRESSES = {
     },
     oracles: {
       single_assets: {
-        FRAX: "",
-        FXS: "",
+        FRAX: "0xa6e4F91618012427f4C86F0EC7e38C7cB617eb81",
+        FXS: "0xa6CACC65d0d8125009972cCFF668AAc48AD0FF1b",
+        USDC: "0xEfCf59d9B41248B682F26Bb570e3f6eaB896EBB0",
+        WETH: "0x11d3cfDf4692A9249945aEAA21Ade906E68E9724"
       },
       cross_chain_oracle: "0xA8303990D90919da61CbAcACcaBb0D1b2EFe75a1",
     },
     oracles_other: {
-      combo_oracle: "",
-      combo_oracle_univ2_univ3: "",
+      combo_oracle: "0xA0e15F1cf14059989E0D1AefeC3cD09310450448",
+      combo_oracle_univ2_univ3: "0x7953b1fd417113E82AC66266ec4B7327eE67283A",
     },
     uniswap: {
-      v2_router: "",
+      v2_router: "0x17C83E2B96ACfb5190d63F5E46d93c107eC0b514",
       v3_factory: "0x0000000000000000000000000000000000000000",
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
@@ -1674,7 +1702,9 @@ export const CONTRACT_ADDRESSES = {
     vamms: {
 			USDC: "0x614580e411b6C8E2E21b4bb40b68910CCE802049", // Saddle FRAX/USDC
 		},
-    reward_tokens: {},
+    reward_tokens: {
+      WETH: "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000",
+    },
     pair_tokens: {
       "OolongSwap canFRAX/canFXS": "0x32ae2FB6312A02ca8eEF2A183514aAc11Ee6F195",
       "OolongSwap canFRAX/WETH": "0xB0BC608946EbB5D0cdF9e54e387FA20656577dd6",
@@ -1721,8 +1751,8 @@ export const CONTRACT_ADDRESSES = {
       cross_chain_oracle: "0xdB7Ee361784756947C529BFA8f54c7e5D8B43F3e",
     },
     oracles_other: {
-      combo_oracle: "0x1B3C6BdEACdc4DD9B0C8E3e2Fd222b4581a52A1A", // "0x86eB739D27A5cCfBE6d41a38FBd8B6923fAe3213",
-      combo_oracle_univ2_univ3: "0x8159D9CD28B7A140Fd92311C1E5c667d97176727", // "0xEC0C58b7d8d19858d4a0099a4850B1cC61EBa0F3",
+      combo_oracle: "0xA0e15F1cf14059989E0D1AefeC3cD09310450448",
+      combo_oracle_univ2_univ3: "0x8159D9CD28B7A140Fd92311C1E5c667d97176727",
     },
     uniswap: {
       v2_router: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7",
@@ -1975,11 +2005,13 @@ export const CONTRACT_ADDRESSES = {
     reward_tokens: {
       wmovr: "0x98878B06940aE243284CA214f92Bb71a2b032B8A"
     },
-    bearer_tokens: {
-      "Saddle FRAX/USDC": "0x7BA574cf7f40d4df1a7b2DdeF8106557490976fA",
-    },
-    vamms: {
-			USDC: "0x7bE2D3fee573fE1A865799e746fE1ceb93301fe6", // Saddle FRAX/USDC
+		bearer_tokens: {
+			"Saddle FRAX/MIM": "0xe60AbDBD3fF7A486ADd69763A7c5dEAA53E86b1d",
+			"Saddle FRAX/USDC": "0x7BA574cf7f40d4df1a7b2DdeF8106557490976fA"
+		},
+		vamms: {
+			MIM: "0x32319D63083B0e7c64a45c3951C7fa1ae84eBFd9", // Saddle FRAX/MIM
+			USDC: "0x7bE2D3fee573fE1A865799e746fE1ceb93301fe6" // Saddle FRAX/USDC
 		},
     pair_tokens: {
       "Solarbeam FRAX/ROME": "0x069c2065100b4d3d982383f7ef3ecd1b95c05894",
@@ -1990,6 +2022,58 @@ export const CONTRACT_ADDRESSES = {
       "Sushi canFRAX/WMOVR": "0x756057872D1Ad41C703B68e12701D27874fbe533",
       "Sushi canFXS/anyUSDC": "0xc0EAB66DaDC825c95cA1951A2B02BC56073Fc7B2",
     },
+    staking_contracts: {},
+  },
+  optimism: {
+    chain_id: 10,
+    main: {
+      FRAX: "",
+      FXS: "",
+    },
+    canonicals: {
+      FRAX: "0x2E3D870790dC77A83DD1d18184Acc7439A53f475",
+      FXS: "0x67CCEA5bb16181E7b4109c9c2143c24a1c2205Be",
+    },
+    bridge_tokens: {
+
+    },
+    collaterals: {
+      USDC: "0x7F5c764cBc14f9669B88837ca1490cCa17c31607"
+    },
+    bridges: {},
+    bridge_backers: {},
+    oracles: {
+      single_assets: {
+        FRAX: "0x7655a3dC27ae8df961939373E1df80875E23d502",
+        FXS: "0xc55a7F215a18713015570ECb18bbcf8C82F83071",
+        USDC: "0x35c6962c221E4E8c17E2b4D59c8De79457EA66DE"
+      },
+      cross_chain_oracle: "0x31aA22d69270148Ec63Baf53fde846b45dB86509",
+    },
+    oracles_other: {
+      combo_oracle: "0x7ef2a9AA33AB926a42F0e4F259Da225a5BEBdA73",
+      combo_oracle_univ2_univ3: "0x09044dA6e6EA891c83eE8d980BC109fda73B199a",
+    },
+    multisigs: {
+      Comptrollers: "0x0dF840dCbf1229262A4125C1fc559bd338eC9491",
+    },
+    uniswap: {
+      v2_router: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+      v3_factory: "0x0000000000000000000000000000000000000000",
+      v3_nft_manager: "0x0000000000000000000000000000000000000000",
+      v3_router: "0x0000000000000000000000000000000000000000",
+    },
+    amos: {},
+    reward_tokens: {
+      WETH: "0x4200000000000000000000000000000000000006"
+    },
+    bearer_tokens: {
+      "Saddle FRAX/USDC": "0x1C8FBaBDAE03B43e04dE5f86275e4cB148002530",
+    },
+    vamms: {
+    	USDC: "0xF47b8b1daF12c3058b757A1446dADfa8E4B33535", // Saddle FRAX/USDC
+    },
+    pair_tokens: {},
     staking_contracts: {},
   },
   polygon: {
