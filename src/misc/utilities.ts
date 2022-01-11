@@ -125,6 +125,28 @@ export const cleanLockedStake = (locked_stake_info: any) => {
     }
 }
 
+export const getLockedNFTInfoFromArr = (locked_nfts: any[], token_id: number) => {
+    for (let i = 0; i < locked_nfts.length; i++) {
+        const the_nft = locked_nfts[i];
+        console.log("the_nft.token_id: ", the_nft.token_id)
+        if (the_nft.token_id == token_id){
+            return cleanLockedNFT(the_nft);
+        }
+    }
+    return null;
+}
+
+export const cleanLockedNFT = (locked_nft_info: any) => {
+    return {
+        token_id: locked_nft_info.token_id,
+        liquidity: new BigNumber(locked_nft_info.liquidity).toString(),
+        start_timestamp: new BigNumber(locked_nft_info.start_timestamp).toString(),
+        ending_timestamp: new BigNumber(locked_nft_info.ending_timestamp).toString(),
+        lock_multiplier: (new BigNumber(locked_nft_info.lock_multiplier)).div(BIG18).toString(),
+        tick_lower: (new BigNumber(locked_nft_info.tick_lower)).toString(),
+        tick_upper: (new BigNumber(locked_nft_info.tick_lower)).toString(),
+    }
+}
 
 export const printCollateralInfo = async (pool_multicollateral_contract: any, collateral_address: string) => {
     // Collateral Info
@@ -456,6 +478,61 @@ export const stakingNameFromAddress = (staking_address: string): string => {
         }
     }
 
+
+    if (found_name) return found_name;
+
+    return null;
+}
+
+export const rewardTokenSymbolFromAddress = (rew_tkn_addr: string): string => {
+    let found_name;
+
+    // Search Ethereum mains first
+    const ethereum_main_obj = CONTRACT_ADDRESSES.ethereum.main;
+    const ethereum_main_keys = Object.keys(ethereum_main_obj);
+    for (let k = 0; k < ethereum_main_keys.length; k++){
+        const test_key = ethereum_main_keys[k];
+        if (ethereum_main_obj[test_key].toLowerCase() == rew_tkn_addr.toLowerCase()) {
+            found_name = test_key.toUpperCase();
+            break;
+        }
+    }
+    if (found_name) return found_name;
+
+    // Search Ethereum collaterals next
+    const ethereum_collat_obj = CONTRACT_ADDRESSES.ethereum.collaterals;
+    const ethereum_collat_keys = Object.keys(ethereum_collat_obj);
+    for (let k = 0; k < ethereum_collat_keys.length; k++){
+        const test_key = ethereum_collat_keys[k];
+        if (ethereum_collat_obj[test_key].toLowerCase() == rew_tkn_addr.toLowerCase()) {
+            found_name = test_key.toUpperCase();
+            break;
+        }
+    }
+    if (found_name) return found_name;
+
+    // Search Ethereum reward tokens next
+    const ethereum_rew_obj = CONTRACT_ADDRESSES.ethereum.reward_tokens;
+    const ethereum_rew_keys = Object.keys(ethereum_rew_obj);
+    for (let k = 0; k < ethereum_rew_keys.length; k++){
+        const test_key = ethereum_rew_keys[k];
+        if (ethereum_rew_obj[test_key].toLowerCase() == rew_tkn_addr.toLowerCase()) {
+            found_name = test_key.toUpperCase();
+            break;
+        }
+    }
+    if (found_name) return found_name;
+
+    // Search BSC next
+    const bsc_rew_obj = CONTRACT_ADDRESSES.bsc.reward_tokens;
+    const bsc_rew_keys = Object.keys(bsc_rew_obj);
+    for (let k = 0; k < bsc_rew_keys.length; k++){
+        const test_key = bsc_rew_keys[k];
+        if (bsc_rew_obj[test_key].toLowerCase() == rew_tkn_addr.toLowerCase()) {
+            found_name = test_key.toUpperCase();
+            break;
+        }
+    }
 
     if (found_name) return found_name;
 
