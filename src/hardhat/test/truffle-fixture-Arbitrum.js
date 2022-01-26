@@ -114,7 +114,6 @@ module.exports = async (deployer) => {
 
     // console.log(chalk.yellow('========== CrossChainBridgeBacker_ARBI_AnySwap =========='));
     // // CrossChainBridgeBacker_ARBI_AnySwap
-    // // Will start with Avalanche
     // cross_chain_bridge_backer_instance = await CrossChainBridgeBacker_ARBI_AnySwap.new(
     //     THE_ACCOUNTS[1],
     //     CONTRACT_ADDRESSES.ethereum.misc.timelock,

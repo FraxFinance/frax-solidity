@@ -49,4 +49,6 @@ interface IUniswapV2PairV5 {
     function sync() external;
 
     function initialize(address, address) external;
+
+    function executeVirtualOrders(uint256 blockNumber) external;
 }

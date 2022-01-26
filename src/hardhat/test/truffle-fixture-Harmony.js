@@ -109,7 +109,6 @@ module.exports = async (deployer) => {
 
     console.log(chalk.yellow('========== CrossChainBridgeBacker_HARM_Horizon =========='));
     // CrossChainBridgeBacker_HARM_Horizon
-    // Will start with Avalanche
     cross_chain_bridge_backer_instance = await CrossChainBridgeBacker_HARM_Horizon.new(
         THE_ACCOUNTS[1],
         CONTRACT_ADDRESSES.ethereum.misc.timelock,

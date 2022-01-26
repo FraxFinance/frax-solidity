@@ -1,7 +1,5 @@
 pragma solidity ^0.8.0;
 
-import 'hardhat/console.sol';
-
 import './interfaces/IUniswapV2PairV5.sol';
 import './interfaces/IUniswapV2PairPartialV5.sol';
 import './UniswapV2ERC20V8.sol';
@@ -11,6 +9,16 @@ import './interfaces/IERC20V5.sol';
 import './interfaces/IUniswapV2FactoryV5.sol';
 import './interfaces/IUniswapV2CalleeV5.sol';
 import "../twamm/LongTermOrders.sol";
+
+interface IUniswapV2PoolDeployer {
+    function parameters()
+    external
+    view
+    returns (
+        address token0,
+        address token1
+    );
+}
 
 contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     using SafeMath  for uint;
@@ -22,7 +30,7 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     /// -----TWAMM Parameters -----
     /// ---------------------------
 
-    address public owner_address;
+    address public immutable owner_address;
 
     ///@notice interval between blocks that are eligible for order expiry
     uint256 public orderBlockInterval = 10; // TODO: default it to 10 for now
@@ -54,6 +62,9 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     ///@notice An event emitted when a long term swap is cancelled
     event CancelLongTermOrder(address indexed addr, uint256 orderId);
 
+    ///@notice An event emitted when a long term swap is withdrawn
+    event WithdrawProceedsFromLongTermOrder(address indexed addr, uint256 orderId);
+
     /// -------------------------------
     /// -----UNISWAPV2 Parameters -----
     /// -------------------------------
@@ -61,14 +72,9 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     uint public constant override MINIMUM_LIQUIDITY = 10 ** 3;
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transfer(address,uint256)')));
 
-    address public override factory;
-    address public override token0;
-    address public override token1;
-
-    // Modified to use mapping
-    //    mapping(address => uint112) reserveMap;
-    //    function reserve0() internal view returns (uint112){return reserveMap[token0];}
-    //    function reserve1() internal view returns (uint112){return reserveMap[token1];}
+    address public immutable factory;
+    address public immutable token0;
+    address public immutable token1;
 
     uint112 private reserve0;           // uses single storage slot, accessible via getReserves
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
@@ -81,7 +87,8 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
 
     uint private unlocked = 1;
     modifier lock() {
-        require(unlocked == 1, 'UniswapV2: LOCKED');
+        require(unlocked == 1, 'EC16');
+        // LOCKED
         unlocked = 0;
         _;
         unlocked = 1;
@@ -93,44 +100,43 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         _blockTimestampLast = blockTimestampLast;
     }
 
-    function getTwammState() public view returns (uint256 token0Rate, uint256 token1Rate, uint256 lastVirtualOrderBlock){
-        token0Rate = longTermOrders.OrderPoolMap[token0].currentSalesRate;
-        token1Rate = longTermOrders.OrderPoolMap[token1].currentSalesRate;
+    function getTwammState(uint256 blockNumber) public view returns (
+        uint256 token0Rate,
+        uint256 token1Rate,
+        uint256 lastVirtualOrderBlock,
+        uint256 orderBlockInterval,
+        uint256 orderPool0SalesRateEnding,
+        uint256 orderPool1SalesRateEnding
+    ){
+        token0Rate = longTermOrders.OrderPoolA.currentSalesRate;
+        token1Rate = longTermOrders.OrderPoolB.currentSalesRate;
         lastVirtualOrderBlock = longTermOrders.lastVirtualOrderBlock;
+        orderBlockInterval = longTermOrders.orderBlockInterval;
+        orderPool0SalesRateEnding = longTermOrders.OrderPoolA.salesRateEndingPerBlock[blockNumber];
+        orderPool1SalesRateEnding = longTermOrders.OrderPoolB.salesRateEndingPerBlock[blockNumber];
     }
 
     function _safeTransfer(address token, address to, uint value) private {
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), 'UniswapV2: TRANSFER_FAILED');
+        require(success && (data.length == 0 || abi.decode(data, (bool))));
+        // TRANSFER_FAILED
     }
 
     constructor() public {
         factory = msg.sender;
         owner_address = IUniswapV2FactoryV5(factory).feeToSetter();
-    }
 
-    // called once by the factory at time of deployment
-    function initialize(address _token0, address _token1) external override {
-        require(msg.sender == factory, 'UniswapV2: FORBIDDEN');
-        // sufficient check
-        token0 = _token0;
-        token1 = _token1;
+        (token0, token1) = IUniswapV2PoolDeployer(msg.sender).parameters();
 
         // TWAMM
-        //        orderBlockInterval = _orderBlockInterval; // TODO: pass this variable in
-        longTermOrders.initialize(_token0, _token1, block.number, orderBlockInterval);
 
-        //Set whitelist status to "whitelistNewTwamms" in Factory
-        (bool success, bytes memory data) = factory.call(abi.encodeWithSignature("whitelistNewTwamms()"));
-        assert(success);
-        // "TWAMM: ERROR CHECKING GlOBAL WHITELIST STATUS"
-        //        whitelistDisabled = !(abi.decode(data, (bool)));
-        whitelistDisabled = true;
+        longTermOrders.initialize(token0, token1, block.number, orderBlockInterval);
     }
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
-        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, 'UniswapV2: OVERFLOW');
+        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max);
+        // OVERFLOW
         uint32 blockTimestamp = uint32(block.timestamp % 2 ** 32);
         uint32 timeElapsed = blockTimestamp - blockTimestampLast;
         // overflow is desired
@@ -188,7 +194,8 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         } else {
             liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
         }
-        require(liquidity > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED');
+        require(liquidity > 0);
+        // INSUFFICIENT_LIQUIDITY_MINTED
         _mint(to, liquidity);
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -216,7 +223,8 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply;
         // using balances ensures pro-rata distribution
-        require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
+        require(amount0 > 0 && amount1 > 0);
+        // INSUFFICIENT_LIQUIDITY_BURNED
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0);
         _safeTransfer(_token1, to, amount1);
@@ -231,17 +239,20 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external override lock execVirtualOrders {
-        require(amount0Out > 0 || amount1Out > 0, 'UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amount0Out > 0 || amount1Out > 0);
+        // INSUFFICIENT_OUTPUT_AMOUNT
         (uint112 _reserve0, uint112 _reserve1,) = getReserves();
         // gas savings
-        require(amount0Out < _reserve0 && amount1Out < _reserve1, 'UniswapV2: INSUFFICIENT_LIQUIDITY');
+        require(amount0Out < _reserve0 && amount1Out < _reserve1);
+        // INSUFFICIENT_LIQUIDITY
 
         uint balance0;
         uint balance1;
         {// scope for _token{0,1}, avoids stack too deep errors
             address _token0 = token0;
             address _token1 = token1;
-            require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
+            require(to != _token0 && to != _token1);
+            // INVALID_TO
             if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out);
             // optimistically transfer tokens
             if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out);
@@ -252,11 +263,12 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         }
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
-        require(amount0In > 0 || amount1In > 0, 'UniswapV2: INSUFFICIENT_INPUT_AMOUNT');
+        require(amount0In > 0 || amount1In > 0);
+        // INSUFFICIENT_INPUT_AMOUNT
         {// scope for reserve{0,1}Adjusted, avoids stack too deep errors
             uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
             uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
-            require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000 ** 2), 'UniswapV2: K');
+            require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000 ** 2), 'K');
         }
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -286,14 +298,14 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
 
     // EC5: Whitelist has not been disabled
     modifier onlyWhitelist() {
-        require(whitelistDisabled || msg.sender == owner_address, 'EC5');
+        require(whitelistDisabled || msg.sender == owner_address);
         _;
     }
 
     ///@notice opens longTermOrders to all users
     function disableWhitelist() public {
         //EC6: Only owner or factory can disable the whitelist
-        require(msg.sender == owner_address || msg.sender == factory, "EC6");
+        require(msg.sender == owner_address || msg.sender == factory);
         whitelistDisabled = true;
     }
 
@@ -334,41 +346,30 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         } else {
             twammReserve1 -= uint112(proceeds);
         }
-        //emit WithdrawProceedsFromLongTermOrder(msg.sender, orderId);
+        emit WithdrawProceedsFromLongTermOrder(msg.sender, orderId);
     }
 
     function executeVirtualOrdersInternal(uint256 blockNumber) internal {
 
         LongTermOrdersLib.ExecuteVirtualOrdersResult memory result;
-        result.previousReserve0 = result.newReserve0 = reserve0;
-        result.previousReserve1 = result.newReserve1 = reserve1;
+        result.newReserve0 = reserve0;
+        result.newReserve1 = reserve1;
+        result.newTwammReserve0 = twammReserve0;
+        result.newTwammReserve1 = twammReserve1;
 
         longTermOrders.executeVirtualOrdersUntilBlock(blockNumber, result);
 
-        reserve0 = result.newReserve0;
-        reserve1 = result.newReserve1;
-        twammReserve0 = twammReserve0 + uint112(result.receive0) - uint112(result.sold0);
-        twammReserve1 = twammReserve1 + uint112(result.receive1) - uint112(result.sold1);
+        reserve0 = uint112(result.newReserve0);
+        reserve1 = uint112(result.newReserve1);
+        twammReserve0 = uint112(result.newTwammReserve0);
+        twammReserve1 = uint112(result.newTwammReserve1);
 
-        console.log('##########################################');
-        console.log('result.previousReserve0 ', result.previousReserve0);
-        console.log('result.previousReserve1 ', result.previousReserve1);
-        console.log('result.newReserve0 ', result.newReserve0);
-        console.log('result.newReserve1 ', result.newReserve1);
-        console.log('result.sold0 ', result.sold0);
-        console.log('result.sold1 ', result.sold1);
-        console.log('result.receive0 ', result.receive0);
-        console.log('result.receive1 ', result.receive1);
-        console.log('twammReserve0 ', twammReserve0);
-        console.log('twammReserve1 ', twammReserve1);
-        console.log('balance0 ', IERC20V5(token0).balanceOf(address(this)));
-        console.log('balance1 ', IERC20V5(token1).balanceOf(address(this)));
     }
 
     ///@notice convenience function to execute virtual orders. Note that this already happens
     ///before most interactions with the AMM
-    function executeVirtualOrders(uint256 blockNumber) public lock onlyWhitelist {
-        require(blockNumber <= block.number, "BN");
+    function executeVirtualOrders(uint256 blockNumber) public lock {
+        require(blockNumber <= block.number);
         executeVirtualOrdersInternal(blockNumber);
     }
 }

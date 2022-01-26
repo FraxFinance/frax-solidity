@@ -34,6 +34,10 @@ describe("UniswapV2 Tests", function () {
             await token0.connect(user1).transfer(pair.address, token0Amount)
             await token1.connect(user1).transfer(pair.address, token1Amount)
             await pair.connect(user1).mint(user1.address)
+
+            // const longTermOrderAmount = expandTo18Decimals(1);
+            // await token0.connect(user2).approve(pair.address, longTermOrderAmount)
+            // await pair.connect(user2).longTermSwapFromAToB(longTermOrderAmount, 10)
         }
 
         beforeEach(async function () {
@@ -344,16 +348,16 @@ describe("UniswapV2 Tests", function () {
         })
 
         it('setFeeTo', async () => {
-            await expect(factory.connect(user2).setFeeTo(user2.address)).to.be.revertedWith('ECF4');//'UniswapV2: FORBIDDEN')
+            await expect(factory.connect(user2).setFeeTo(user2.address)).to.be.reverted;//'UniswapV2: FORBIDDEN')
             await factory.setFeeTo(user1.address)
             expect(await factory.feeTo()).to.eq(user1.address)
         })
 
         it('setFeeToSetter', async () => {
-            await expect(factory.connect(user2).setFeeToSetter(user2.address)).to.be.revertedWith('ECF4');//'UniswapV2: FORBIDDEN')
+            await expect(factory.connect(user2).setFeeToSetter(user2.address)).to.be.reverted;//'UniswapV2: FORBIDDEN')
             await factory.setFeeToSetter(user2.address)
             expect(await factory.feeToSetter()).to.eq(user2.address)
-            await expect(factory.setFeeToSetter(user1.address)).to.be.revertedWith('ECF4');//'UniswapV2: FORBIDDEN')
+            await expect(factory.setFeeToSetter(user1.address)).to.be.reverted;//'UniswapV2: FORBIDDEN')
         })
     });
 
@@ -482,6 +486,13 @@ describe("UniswapV2 Tests", function () {
                 constants.MaxUint256,
                 {value: WETHAmount}
             )
+
+            // const pairAddress = await factory.getPair(DTT.address, WETH.address);
+            // pair = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
+
+            // const longTermOrderAmount = expandTo18Decimals(1);
+            // await token0.connect(user2).approve(pair.address, longTermOrderAmount)
+            // await pair.connect(user2).longTermSwapFromAToB(longTermOrderAmount, 10)
         }
 
         let owner
@@ -1300,8 +1311,8 @@ async function setupContracts(createPair = true, deployDTT = false) {
     }
     await token0.transfer(user1.address, expandTo18Decimals(10000));
     await token1.transfer(user1.address, expandTo18Decimals(10000));
-    // await token0.transfer(user2.address, "10000000000000000000");
-    // await token1.transfer(user2.address, "10000000000000000000");
+    // await token0.transfer(user2.address, expandTo18Decimals(10000));
+    // await token1.transfer(user2.address, expandTo18Decimals(10000));
     // await token0.transfer(user3.address, "10000000000000000000");
     // await token1.transfer(user3.address, "10000000000000000000");
 
