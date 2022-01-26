@@ -159,7 +159,7 @@ describe("TWAMM", function () {
 
             await expect(
                 twamm.connect(addr1).executeVirtualOrders(await getBlockNumber())
-            ).to.be.revertedWith('EC5');
+            ).to.not.be.reverted; // anyone can call this function
 
             await twamm.disableWhitelist();
 
@@ -170,14 +170,16 @@ describe("TWAMM", function () {
         it("Factory toggle works on existing pairs", async function () {
 
             await factory.createPair(token0.address, token1.address);
-            const pairAddress = await factory.getPair(token0.address, token1.address);
+            let pairAddress = await factory.getPair(token0.address, token1.address);
             twamm = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
 
             await expect(
                 twamm.connect(addr1).executeVirtualOrders(await getBlockNumber())
-            ).to.be.revertedWith('EC5');
+            ).to.not.be.reverted; // anyone can call this function
 
-            await factory.removeTwammWhitelists(0, 1);
+            pairAddress= await factory.allPairs(0);
+            twamm = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
+            await twamm.disableWhitelist();
 
             await expect(
                 twamm.connect(addr1).executeVirtualOrders(await getBlockNumber())
@@ -186,9 +188,11 @@ describe("TWAMM", function () {
         it("Factory toggle works on new pairs", async function () {
 
             await factory.createPair(token0.address, token1.address);
-            await factory.removeTwammWhitelists(0, 1);
+            let pairAddress= await factory.allPairs(0);
+            let twamm = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
+            await twamm.disableWhitelist();
 
-            const pairAddress = await factory.getPair(token0.address, token1.address);
+            pairAddress = await factory.getPair(token0.address, token1.address);
             twamm = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
 
             await expect(
@@ -459,14 +463,14 @@ describe("TWAMM", function () {
                 await mineBlocks(3 * blockInterval)
 
                 const amountInWithFee = bigNumberify(amountIn).mul(997).div(1000);
-                const numerator = amountInWithFee.mul(100028179);
-                const denominator = bigNumberify(99971916).add(amountInWithFee);
+                const numerator = amountInWithFee.mul(100029189);
+                const denominator = bigNumberify(99971010).add(amountInWithFee);
                 const amountOut = numerator.div(denominator);
 
                 const beforeBalanceA = await tokenA.balanceOf(addr2.address);
                 const beforeBalanceB = await tokenB.balanceOf(addr2.address);
                 await tokenB.connect(addr2).transfer(twamm.address, amountIn);
-                await twamm.connect(addr2).swap(0, amountOut, addr2.address, '0x');
+                await (await twamm.connect(addr2).swap(amountOut, 0, addr2.address, '0x')).wait();
                 const afterBalanceA = await tokenA.balanceOf(addr2.address);
                 const afterBalanceB = await tokenB.balanceOf(addr2.address);
 

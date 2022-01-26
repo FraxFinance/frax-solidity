@@ -21,7 +21,7 @@ library UniswapV2Library {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'142ddecc609bb5b2d90f6c375831d77dcb286cbdf298e1c2d2d4b71e73984b87' // init code hash
+                hex'4258b682314293b92ecd894e0dedb83422ef982cb05d5927ba7288d56f6a4a64' // init code hash
             )))));
     }
 
@@ -30,6 +30,18 @@ library UniswapV2Library {
         (address token0,) = sortTokens(tokenA, tokenB);
 
         (uint reserve0, uint reserve1,) = IUniswapV2PairV5(pairFor(factory, tokenA, tokenB)).getReserves();
+
+        (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
+    }
+
+    function getReservesWithTwamm(address factory, address tokenA, address tokenB) internal returns (uint reserveA, uint reserveB) {
+        (address token0,) = sortTokens(tokenA, tokenB);
+
+        IUniswapV2PairV5 pair = IUniswapV2PairV5(pairFor(factory, tokenA, tokenB));
+
+        pair.executeVirtualOrders(block.number);
+
+        (uint reserve0, uint reserve1,) = pair.getReserves();
 
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
@@ -77,6 +89,32 @@ library UniswapV2Library {
         amounts = new uint[](path.length);
         amounts[amounts.length - 1] = amountOut;
         for (uint i = path.length - 1; i > 0; i--) {
+            (uint reserveIn, uint reserveOut) = getReserves(factory, path[i - 1], path[i]);
+            amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
+        }
+    }
+
+    // performs chained getAmountOut calculations on any number of pairs with Twamm
+    function getAmountsOutWithTwamm(address factory, uint amountIn, address[] memory path) internal returns (uint[] memory amounts) {
+        require(path.length >= 2, 'UniswapV2Library: INVALID_PATH');
+        amounts = new uint[](path.length);
+        amounts[0] = amountIn;
+        for (uint i; i < path.length - 1; i++) {
+            address pairAddress = UniswapV2Library.pairFor(factory, path[i], path[i + 1]);
+            IUniswapV2PairV5(pairAddress).executeVirtualOrders(block.number);
+            (uint reserveIn, uint reserveOut) = getReserves(factory, path[i], path[i + 1]);
+            amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut);
+        }
+    }
+
+    // performs chained getAmountIn calculations on any number of pairs with Twamm
+    function getAmountsInWithTwamm(address factory, uint amountOut, address[] memory path) internal returns (uint[] memory amounts) {
+        require(path.length >= 2, 'UniswapV2Library: INVALID_PATH');
+        amounts = new uint[](path.length);
+        amounts[amounts.length - 1] = amountOut;
+        for (uint i = path.length - 1; i > 0; i--) {
+            address pairAddress = UniswapV2Library.pairFor(factory, path[i - 1], path[i]);
+            IUniswapV2PairV5(pairAddress).executeVirtualOrders(block.number);
             (uint reserveIn, uint reserveOut) = getReserves(factory, path[i - 1], path[i]);
             amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
         }

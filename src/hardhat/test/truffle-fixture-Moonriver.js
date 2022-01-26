@@ -121,7 +121,6 @@ module.exports = async (deployer) => {
 
     // console.log(chalk.yellow('========== CrossChainBridgeBacker_MOON_AnySwap =========='));
     // // CrossChainBridgeBacker_MOON_AnySwap
-    // // Will start with Avalanche
     // cross_chain_bridge_backer_instance = await CrossChainBridgeBacker_MOON_AnySwap.new(
     //     THE_ACCOUNTS[1],
     //     CONTRACT_ADDRESSES.ethereum.misc.timelock,

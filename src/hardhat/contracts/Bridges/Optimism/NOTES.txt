@@ -1,0 +1,13 @@
+ETH FRAX to OPTIMISM
+1) (Approve) ???
+2) (Transfer) https://etherscan.io/tx/0x33e657c5cb4216e3f2faf69df8011b71b442a01de6be9da8abc6e4df5b5b0c28
+
+
+ETH FXS to OPTIMISM
+1) (Approve) https://etherscan.io/address/0xb37d31b2a74029b5951a2778f959282e2d518595#code
+2) (Transfer) https://etherscan.io/tx/0xec5c04ef260802927aa909650dca8ad654047c9d722368b9ff533281e62904af
+
+
+ETH USDC to OPTIMISM (DIFFERENT ADDRESS!!!!)
+1) (Approve) https://etherscan.io/tx/0x6b60dff6bf008c07c29f6a132d10a0422dffbcc22049c5880d46ccfc6628520f
+2) (Transfer) https://etherscan.io/tx/0x30039bba8f8a26ead40c9979eafc2caee170a020d3095a92c4d68dbbbff0d5d0

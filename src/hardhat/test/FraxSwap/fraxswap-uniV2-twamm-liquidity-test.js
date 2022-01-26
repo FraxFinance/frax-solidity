@@ -17,6 +17,63 @@ const MINIMUM_LIQUIDITY = utils.parseUnits(`${1000}`, 0);
 const user1Tokens = expandTo18Decimals(10000);
 const user2Tokens = expandTo18Decimals(1000);
 
+function getAmountOut(amountIn, reserveIn, reserveOut) {
+    const amountInWithFee = amountIn.mul(997);
+    const numerator = amountInWithFee.mul(reserveOut);
+    const denominator = reserveIn.mul(1000).add(amountInWithFee);
+    return numerator.div(denominator);
+}
+
+async function getAmountOutWithTwamm(amountIn, pair, isToken1 = false, fromBlock = null) {
+
+    const currentBlock = (await ethers.provider.getBlock("latest")).number;
+
+    const twammState = await pair.getTwammState(currentBlock);
+
+    tokenRate0 = twammState[0]
+    tokenRate1 = twammState[1]
+    lastVirtualOrderBlock = fromBlock ? fromBlock : twammState[2]
+
+    console.log(`tokenRate0: ${tokenRate0} tokenRate1: ${tokenRate1} lastVirtualOrderBlock: ${lastVirtualOrderBlock}`)
+
+    const nextBlockSwap = (await ethers.provider.getBlock("latest")).number + 1;
+
+    let [reserve0, reserve1, lastAmmUpdate] = await pair.getReserves()
+    const blocksEllapsed = nextBlockSwap - lastVirtualOrderBlock
+
+    // uint256 nextExpiryBlock = self.lastVirtualOrderBlock - (self.lastVirtualOrderBlock % self.orderBlockInterval) + self.orderBlockInterval;
+
+    console.log('blocksEllapsed', blocksEllapsed)
+    const twammSellingAmt0 = tokenRate0.mul(blocksEllapsed)
+    const twammSellingAmt1 = tokenRate1.mul(blocksEllapsed)
+
+    // TWAMM sell
+    let twammBoughtAmt1 = getAmountOut(twammSellingAmt0, reserve0, reserve1)
+
+    // update reserves
+    reserve0 = reserve0.add(twammSellingAmt0)
+    reserve1 = reserve1.sub(twammBoughtAmt1)
+
+    // EOA swap
+    let expectedOut
+    if (isToken1) {
+        expectedOut = getAmountOut(amountIn, reserve0, reserve1)
+    } else {
+        expectedOut = getAmountOut(amountIn, reserve1, reserve0)
+    }
+
+    console.log('***********')
+    console.log(`twammSellingAmt: ${utils.formatUnits(twammSellingAmt0, 0)}`)
+    console.log(`twammBoughtAmt: ${utils.formatUnits(twammBoughtAmt1, 0)}`)
+    // console.log(`twammBoughtAmt2: ${utils.formatUnits(twammBoughtAmt2, 0)}`)
+    console.log(`reserve0: ${utils.formatUnits(reserve0, 0)}`)
+    console.log(`reserve1: ${utils.formatUnits(reserve1, 0)}`)
+    console.log(`expectedOut: ${utils.formatUnits(expectedOut, 0)}`)
+    console.log('***********')
+
+    return [expectedOut, twammSellingAmt0, twammBoughtAmt1];
+}
+
 describe("UniswapV2 Tests", function () {
 
     const {AddressZero} = constants;
@@ -33,10 +90,20 @@ describe("UniswapV2 Tests", function () {
         let factory
         let pair
 
-        async function addLiquidity(pair, token0, token1, user1, token0Amount, token1Amount) {
+        const longTermOrderAmount = expandTo18Decimals(1);
+
+        async function addLiquidity(pair, token0, token1, user1, token0Amount, token1Amount, longtermOrder = true) {
+
+            await pair.disableWhitelist();
+
             await token0.connect(user1).transfer(pair.address, token0Amount)
             await token1.connect(user1).transfer(pair.address, token1Amount)
             await pair.connect(user1).mint(user1.address)
+
+            if (longtermOrder) {
+                await token0.connect(user2).approve(pair.address, longTermOrderAmount)
+                await pair.connect(user2).longTermSwapFromAToB(longTermOrderAmount, 10)
+            }
         }
 
         beforeEach(async function () {
@@ -88,15 +155,12 @@ describe("UniswapV2 Tests", function () {
             const token1Amount = expandTo18Decimals(10)
             await addLiquidity(pair, token0, token1, user1, token0Amount, token1Amount)
 
-            const longTermOrderAmount = expandTo18Decimals(1);
-            await token0.connect(user2).approve(pair.address, longTermOrderAmount)
-            await pair.connect(user2).longTermSwapFromAToB(longTermOrderAmount, 10)
-
-            await pair.sync();
-
             const swapAmount = expandTo18Decimals(1)
-            const expectedOutputAmount = bigNumberify('1662497915624478906')
+            let expectedOutputAmount = bigNumberify('1662497915624478906')
             await token0.connect(user1).transfer(pair.address, swapAmount)
+
+            const [expectedOut, twammSellingAmt0, twammBoughtAmt1] = await getAmountOutWithTwamm(swapAmount, pair)
+            expectedOutputAmount = expectedOut
 
             await expect(pair.connect(user1).swap(0, expectedOutputAmount, user1.address, '0x'))
                 .to.emit(token1, 'Transfer')
@@ -107,8 +171,8 @@ describe("UniswapV2 Tests", function () {
                 .withArgs(user1.address, swapAmount, 0, 0, expectedOutputAmount, user1.address)
 
             const reserves = await pair.getReserves()
-            expect(reserves[0]).to.eq(token0Amount.add(swapAmount))
-            expect(reserves[1]).to.eq(token1Amount.sub(expectedOutputAmount))
+            expect(reserves[0]).to.eq(token0Amount.add(swapAmount).add(twammSellingAmt0))
+            expect(reserves[1]).to.eq(token1Amount.sub(expectedOutputAmount).sub(twammBoughtAmt1))
             expect((await token0.balanceOf(pair.address)).sub(longTermOrderAmount)).to.eq(token0Amount.add(swapAmount))
             expect(await token1.balanceOf(pair.address)).to.eq(token1Amount.sub(expectedOutputAmount))
             const totalSupplyToken0 = await token0.totalSupply()
@@ -123,13 +187,13 @@ describe("UniswapV2 Tests", function () {
             const token1Amount = expandTo18Decimals(10)
             await addLiquidity(pair, token0, token1, user1, token0Amount, token1Amount)
 
-            const longTermOrderAmount = expandTo18Decimals(1);
-            await token0.connect(user2).approve(pair.address, longTermOrderAmount)
-            await pair.connect(user2).longTermSwapFromAToB(longTermOrderAmount, 10)
-
             const swapAmount = expandTo18Decimals(1)
-            const expectedOutputAmount = bigNumberify('453305446940074565')
+            let expectedOutputAmount = bigNumberify('453305446940074565')
             await token1.connect(user1).transfer(pair.address, swapAmount)
+
+            const [expectedOut, twammSellingAmt0, twammBoughtAmt1] = await getAmountOutWithTwamm(swapAmount, pair)
+            expectedOutputAmount = expectedOut
+
             await expect(pair.connect(user1).swap(expectedOutputAmount, 0, user1.address, '0x'))
                 .to.emit(token0, 'Transfer')
                 .withArgs(pair.address, user1.address, expectedOutputAmount)
@@ -139,8 +203,8 @@ describe("UniswapV2 Tests", function () {
                 .withArgs(user1.address, 0, swapAmount, expectedOutputAmount, 0, user1.address)
 
             const reserves = await pair.getReserves()
-            expect(reserves[0]).to.eq(token0Amount.sub(expectedOutputAmount))
-            expect(reserves[1]).to.eq(token1Amount.add(swapAmount))
+            expect(reserves[0]).to.eq(token0Amount.sub(expectedOutputAmount).add(twammSellingAmt0))
+            expect(reserves[1]).to.eq(token1Amount.add(swapAmount).sub(twammBoughtAmt1))
             expect((await token0.balanceOf(pair.address)).sub(longTermOrderAmount)).to.eq(token0Amount.sub(expectedOutputAmount))
             expect(await token1.balanceOf(pair.address)).to.eq(token1Amount.add(swapAmount))
             const totalSupplyToken0 = await token0.totalSupply()
@@ -181,10 +245,6 @@ describe("UniswapV2 Tests", function () {
             const token1Amount = expandTo18Decimals(3)
             await addLiquidity(pair, token0, token1, user1, token0Amount, token1Amount)
 
-            const longTermOrderAmount = expandTo18Decimals(1);
-            await token0.connect(user2).approve(pair.address, longTermOrderAmount)
-            await pair.connect(user2).longTermSwapFromAToB(longTermOrderAmount, 10)
-
             const expectedLiquidity = expandTo18Decimals(3)
             await pair.connect(user1).transfer(pair.address, expectedLiquidity.sub(MINIMUM_LIQUIDITY))
             await expect(pair.connect(user1).burn(user1.address))
@@ -211,10 +271,6 @@ describe("UniswapV2 Tests", function () {
 
         it('price{0,1}CumulativeLast', async () => {
 
-            const longTermOrderAmount = expandTo18Decimals(1);
-            await token0.connect(user2).approve(pair.address, longTermOrderAmount)
-            await pair.connect(user2).longTermSwapFromAToB(longTermOrderAmount, 10)
-
             const token0Amount = expandTo18Decimals(3)
             const token1Amount = expandTo18Decimals(3)
             await addLiquidity(pair, token0, token1, user1, token0Amount, token1Amount)
@@ -225,6 +281,9 @@ describe("UniswapV2 Tests", function () {
             // await mineBlock(provider, blockTimestamp + 1)
 
             await pair.sync()
+
+            console.log(`await pair.price0CumulativeLast(): ${await pair.price0CumulativeLast()}`)
+            console.log(`await pair.price1CumulativeLast(): ${await pair.price1CumulativeLast()}`)
 
             const initialPrice = encodePrice(token0Amount, token1Amount)
             expect(await pair.price0CumulativeLast()).to.eq(initialPrice[0])
@@ -275,13 +334,13 @@ describe("UniswapV2 Tests", function () {
         })
 
         it('feeTo:on', async () => {
-            const longTermOrderAmount = expandTo18Decimals(1);
-            await token0.connect(user2).approve(pair.address, longTermOrderAmount)
-            await pair.connect(user2).longTermSwapFromAToB(longTermOrderAmount, 10)
-
-            console.log(`reserve1: ${await pair.getReserves()}`)
-            console.log(`twammReserve0: ${await pair.twammReserve0()}`)
-            console.log(`twammReserve1: ${await pair.twammReserve1()}`)
+            // const longTermOrderAmount = expandTo18Decimals(1);
+            // await token0.connect(user2).approve(pair.address, longTermOrderAmount)
+            // await pair.connect(user2).longTermSwapFromAToB(longTermOrderAmount, 10)
+            //
+            // console.log(`reserve1: ${await pair.getReserves()}`)
+            // console.log(`twammReserve0: ${await pair.twammReserve0()}`)
+            // console.log(`twammReserve1: ${await pair.twammReserve1()}`)
 
             await factory.setFeeTo(user2.address)
 
@@ -379,16 +438,16 @@ describe("UniswapV2 Tests", function () {
         })
 
         it('setFeeTo', async () => {
-            await expect(factory.connect(user2).setFeeTo(user2.address)).to.be.revertedWith('ECF4');//'UniswapV2: FORBIDDEN')
+            await expect(factory.connect(user2).setFeeTo(user2.address)).to.be.reverted//With('ECF4');//'UniswapV2: FORBIDDEN')
             await factory.setFeeTo(user1.address)
             expect(await factory.feeTo()).to.eq(user1.address)
         })
 
         it('setFeeToSetter', async () => {
-            await expect(factory.connect(user2).setFeeToSetter(user2.address)).to.be.revertedWith('ECF4');//'UniswapV2: FORBIDDEN')
+            await expect(factory.connect(user2).setFeeToSetter(user2.address)).to.be.reverted//With('ECF4');//'UniswapV2: FORBIDDEN')
             await factory.setFeeToSetter(user2.address)
             expect(await factory.feeToSetter()).to.eq(user2.address)
-            await expect(factory.setFeeToSetter(user1.address)).to.be.revertedWith('ECF4');//'UniswapV2: FORBIDDEN')
+            await expect(factory.setFeeToSetter(user1.address)).to.be.reverted//With('ECF4');//'UniswapV2: FORBIDDEN')
         })
     });
 
@@ -879,7 +938,7 @@ async function setupContracts(createPair = true, deployDTT = false) {
     const [owner, user1, user2, user3] = await ethers.getSigners();
 
     // Deploy token0/token1 token and distribute
-    const DummyToken = await ethers.getContractFactory("contracts/Uniswap_V2_V8/periphery/test/ERC20PeriTest.sol:ERC20Test");
+    const DummyToken = await ethers.getContractFactory("contracts/Uniswap_V2_V8/periphery/test/ERC20PeriTest.sol:ERC20PeriTest");
     let token0 = await DummyToken.deploy(user1Tokens.add(user2Tokens));
     let token1 = await DummyToken.deploy(user1Tokens.add(user2Tokens));
     const weth9 = await (await ethers.getContractFactory("WETH9")).deploy();

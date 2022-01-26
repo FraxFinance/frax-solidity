@@ -448,8 +448,8 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
 
     function _getRewardExtraLogic(address rewardee, address destination_address) internal override {
         // Collect liquidity fees too
-        uint256 accumulated_token0 = 0;
-        uint256 accumulated_token1 = 0;
+        // uint256 accumulated_token0 = 0;
+        // uint256 accumulated_token1 = 0;
         LockedNFT memory thisNFT;
         for (uint256 i = 0; i < lockedNFTs[rewardee].length; i++) {
             thisNFT = lockedNFTs[rewardee][i];
@@ -462,9 +462,10 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
                     type(uint128).max,
                     type(uint128).max
                 );
-                (uint256 tok0_amt, uint256 tok1_amt) = stakingTokenNFT.collect(collect_params);
-                accumulated_token0 += tok0_amt;
-                accumulated_token1 += tok1_amt;
+                stakingTokenNFT.collect(collect_params);
+                // (uint256 tok0_amt, uint256 tok1_amt) = stakingTokenNFT.collect(collect_params);
+                // accumulated_token0 += tok0_amt;
+                // accumulated_token1 += tok1_amt;
             }
         }
     }

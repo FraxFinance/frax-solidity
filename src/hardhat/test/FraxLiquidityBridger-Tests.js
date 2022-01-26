@@ -34,32 +34,20 @@ const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPai
 const PIDController = artifacts.require("Oracle/PIDController.sol");
 const ReserveTracker = artifacts.require("Oracle/ReserveTracker.sol");
 
-// Chainlink Price Consumer
-const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
-
 // FRAX core
 const FRAXStablecoin = artifacts.require("Frax/IFrax");
 const FRAXShares = artifacts.require("FXS/FRAXShares");
-
-// Token vesting
-const TokenVesting = artifacts.require("FXS/TokenVesting.sol");
 
 // Governance related
 const GovernorAlpha = artifacts.require("Governance/GovernorAlpha");
 const Timelock = artifacts.require("Governance/Timelock");
 
 // Curve Metapool
-const MetaImplementationUSD = artifacts.require("Curve/IMetaImplementationUSD");
 const StableSwap3Pool = artifacts.require("Curve/IStableSwap3Pool");
 
 // Misc AMOs
-const OHM_AMO = artifacts.require("Misc_AMOs/OHM_AMO_V3.sol");
-const RariFuseLendingAMO_V2 = artifacts.require("Misc_AMOs/RariFuseLendingAMO_V2.sol");
-const ICErc20Delegator = artifacts.require("Misc_AMOs/rari/ICErc20Delegator.sol");
-const IComptroller = artifacts.require("Misc_AMOs/rari/IRariComptroller.sol");
 const FraxAMOMinter = artifacts.require("Frax/FraxAMOMinter");
-const FraxLiquidityBridger_ARBI_AnySwap = artifacts.require("Bridges/Avalanche/FraxLiquidityBridger_ARBI_AnySwap.sol");
-const FraxLiquidityBridger_HARM_Horizon = artifacts.require("Bridges/Avalanche/FraxLiquidityBridger_HARM_Horizon.sol");
+const FraxLiquidityBridger_MNBM_Nomad = artifacts.require("Bridges/Avalanche/FraxLiquidityBridger_MNBM_Nomad.sol");
 
 // Constants
 const BIG2 = new BigNumber("1e2");
@@ -79,7 +67,7 @@ let totalSupplyFXS;
 let globalCollateralRatio;
 let globalCollateralValue;
 
-contract('FraxLiquidityBridger_HARM_Horizon-Tests', async (accounts) => {
+contract('FraxLiquidityBridger-Tests', async (accounts) => {
 	CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
 
 	// Constants
@@ -95,19 +83,7 @@ contract('FraxLiquidityBridger_HARM_Horizon-Tests', async (accounts) => {
 	const ADDRESS_WITH_FRAX = '0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE';
 	const ADDRESS_WITH_USDC = '0x55FE002aefF02F77364de339a1292923A15844B8';
 
-	// Curve Metapool
-	let crv3Instance;
-	let frax_3crv_metapool_instance;
-	let daiInstance
-	let usdc_real_instance;
-	let usdt_real_instance;
-	let curve_factory_instance;
-	let stableswap3pool_instance;
-	let curve_amo_v3_instance;
-
 	// AMO
-	let stakedao_amo_instance;
-	let ohm_amo_instance;
 	let frax_bridger_instance;
 	let frax_amo_minter_instance;
 
@@ -116,51 +92,11 @@ contract('FraxLiquidityBridger_HARM_Horizon-Tests', async (accounts) => {
 	let fxs_instance;
 
 	// Initialize collateral instances
-	let wethInstance;
 	let usdc_instance;
-	let ohmInstance;
-
-	// Initialize oracle instances
-	let oracle_instance_FXS_WETH;
-
-	let pid_controller_instance;
-    let reserve_tracker_instance;
 
 	// Initialize pool instances
 	let pool_instance_V3;
 	
-	// Initialize pair addresses
-	let pair_addr_FRAX_WETH;
-	let pair_addr_FRAX_USDC;
-	let pair_addr_FXS_WETH;
-
-	// Initialize pair contracts
-	let pair_instance_FRAX_WETH;
-	let pair_instance_FRAX_USDC;
-	let pair_instance_FXS_WETH;
-	let pair_instance_FXS_USDC;
-
-	// Initialize pair orders
-	let isToken0Frax_FRAX_WETH;
-	let isToken0Frax_FRAX_USDC;
-	let isToken0Fxs_FXS_WETH;
-
-	// Initialize staking instances
-	let stakingInstance_FRAX_WETH;
-	let stakingInstance_FRAX_USDC;
-	let stakingInstance_FXS_WETH;
-
-	// Initialize running balances
-	let bal_frax = 0;
-	let bal_fxs = 0;
-	let col_bal_usdc = 0;
-	let col_rat = 1;
-	let pool_bal_usdc = 0;
-	let global_collateral_value = 0;
-
-	const USE_CALLS = false;
-	const MAX_SLIPPAGE = .025;
-
     beforeEach(async() => {
 
 		await hre.network.provider.request({
@@ -179,37 +115,14 @@ contract('FraxLiquidityBridger_HARM_Horizon-Tests', async (accounts) => {
 		STAKING_OWNER = accounts[6];
 		STAKING_REWARDS_DISTRIBUTOR = accounts[7];
 		INVESTOR_CUSTODIAN_ADDRESS = accounts[8];
-
-		crv3Instance = await ERC20.at("0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490");
-		daiInstance = await ERC20.at("0x6b175474e89094c44da98b954eedeac495271d0f");
-		usdc_real_instance = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-		usdt_real_instance = await ERC20.at('0xdac17f958d2ee523a2206206994597c13d831ec7');
-		// curve_factory_instance = await CurveFactory.at("0x0E94F085368949B2d85CA3740Ac2A9662FAE4942");
-		// frax_3crv_metapool_instance = await MetaImplementationUSD.at(METAPOOL_ADDRESS); // can break if deployment order changes
-		// frax_3crv_metapool_instance = await MetaImplementationUSD.deployed();
-		stableswap3pool_instance = await StableSwap3Pool.at('0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7');
-		ohmInstance = await ERC20.at(CONTRACT_ADDRESSES.ethereum.reward_tokens.ohm);
 	
 		// Fill core contract instances
 		frax_instance = await FRAXStablecoin.deployed();
 		fxs_instance = await FRAXShares.deployed();
-		wethInstance = await ERC20.at("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 		usdc_instance = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"); 
-
-		// Fill the Uniswap Router Instance
-		routerInstance = await IUniswapV2Router02.deployed(); 
-
-		// Fill the Timelock instance
-		timelockInstance = await Timelock.deployed(); 
 
 		// Fill oracle instances
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
-
-		pid_controller_instance = await PIDController.deployed(); 
-		reserve_tracker_instance = await ReserveTracker.deployed();
-
-		// Initialize the governance contract
-		governanceInstance = await GovernorAlpha.deployed();
 
 		// AMO minter
 		frax_amo_minter_instance = await FraxAMOMinter.deployed();
@@ -217,21 +130,8 @@ contract('FraxLiquidityBridger_HARM_Horizon-Tests', async (accounts) => {
 		// Initialize pool instances
 		pool_instance_V3 = await FraxPoolV3.deployed();
 		
-		// Initialize the Uniswap Factory instance
-		uniswapFactoryInstance = await IUniswapV2Factory.deployed(); 
-
-		// Initialize the Uniswap Libraries
-		// uniswapLibraryInstance = await UniswapV2OracleLibrary.deployed(); 
-		// uniswapOracleLibraryInstance = await UniswapV2Library.deployed(); 
-
-		// Get instances of the Uniswap pairs
-		pair_instance_FRAX_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FRAX/WETH"]);
-		pair_instance_FRAX_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FRAX/USDC"]);
-		pair_instance_FXS_WETH = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FXS/WETH"]);
-		//pair_instance_FXS_USDC = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Uniswap FXS/USDC"]);
-
 		// If truffle-fixture is used
-		frax_bridger_instance = await FraxLiquidityBridger_HARM_Horizon.deployed();
+		frax_bridger_instance = await FraxLiquidityBridger_MNBM_Nomad.deployed();
 
 	});
 	
@@ -332,8 +232,8 @@ contract('FraxLiquidityBridger_HARM_Horizon-Tests', async (accounts) => {
 		utilities.printTokenBalances('LIQUIDITY_BRIDGER', the_token_balances, null);
 
 
-		// console.log("======================MAKE SURE FRAX DIDN'T BRICK [TEST A REDEEM]=====================");
-		// // Makes sure the pool is working
+		console.log("======================MAKE SURE FRAX DIDN'T BRICK [TEST A REDEEM]=====================");
+		// Makes sure the pool is working
 
 		// // Refresh oracle
 		// try {
@@ -347,15 +247,15 @@ contract('FraxLiquidityBridger_HARM_Horizon-Tests', async (accounts) => {
 		// // Redeem threshold
 		// await hre.network.provider.request({
 		// 	method: "hardhat_impersonateAccount",
-		// 	params: [process.env.POOL_OWNER_ADDRESS]
+		// 	params: [process.env.COMPTROLLER_MSIG_ADDRESS]
 		// });
 	
 		// console.log("Set the redeem threshold to $1.01 now so redeems work");
-		// await pool_instance_V3.setPriceThresholds(1030000, 1010000, { from: process.env.POOL_OWNER_ADDRESS }); 
+		// await pool_instance_V3.setPriceThresholds(1030000, 1010000, { from: process.env.COMPTROLLER_MSIG_ADDRESS }); 
 	
 		// await hre.network.provider.request({
 		// 	method: "hardhat_stopImpersonatingAccount",
-		// 	params: [process.env.POOL_OWNER_ADDRESS]
+		// 	params: [process.env.COMPTROLLER_MSIG_ADDRESS]
 		// });
 
 		// // Do a redeem

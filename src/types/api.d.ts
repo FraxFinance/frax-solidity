@@ -150,6 +150,7 @@ declare global {
         fantom: Web3;
         harmony: Web3;
         moonriver: Web3;
+        optimism: Web3;
         polygon: Web3;
         solana: SolanaWeb3.Connection;
     }
@@ -164,6 +165,7 @@ declare global {
         fantom: number;
         harmony: number;
         moonriver: number;
+        optimism: number;
         polygon: number;
     }
     

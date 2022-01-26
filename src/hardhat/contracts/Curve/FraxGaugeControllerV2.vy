@@ -1,4 +1,4 @@
-# @version 0.2.12
+# @version 0.3.1
 
 """
 @title Gauge Controller
@@ -15,7 +15,7 @@
 # | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 # |                                                                  |
 # ====================================================================
-# ======================== FraxGaugeController =======================
+# ======================= FraxGaugeControllerV2 ======================
 # ====================================================================
 # Frax Finance: https://github.com/FraxFinance
 
@@ -43,15 +43,26 @@ struct Point:
     bias: uint256
     slope: uint256
 
+struct CorrectedPoint:
+    bias: uint256
+    slope: uint256
+    lock_end: uint256
+    fxs_amount: uint256
+
 struct VotedSlope:
     slope: uint256
     power: uint256
     end: uint256
 
+struct LockedBalance:
+    amount: int128
+    end: uint256
 
 interface VotingEscrow:
+    def balanceOf(addr: address,) -> uint256: view
     def get_last_user_slope(addr: address) -> int128: view
     def locked__end(addr: address) -> uint256: view
+    def locked(addr: address,) -> LockedBalance: view
 
 
 event CommitOwnership:
@@ -173,6 +184,33 @@ def apply_transfer_ownership():
     self.admin = _admin
     log ApplyOwnership(_admin)
 
+@internal
+@view
+def _get_corrected_info(addr: address) -> CorrectedPoint:
+    """
+    @notice Get the most recently recorded rate of voting power decrease for `addr`.
+            Corrected by VOTE_WEIGHT_MULTIPLIER (veFXS).
+    @param addr Address of the user wallet
+    @return CorrectedPoint
+    """
+    escrow: address = self.voting_escrow
+    vefxs_balance: uint256 = VotingEscrow(escrow).balanceOf(addr)
+    locked_balance: LockedBalance = VotingEscrow(escrow).locked(addr)
+    locked_end: uint256 = locked_balance.end
+    locked_fxs: uint256 = convert(locked_balance.amount, uint256)
+
+    corrected_slope: uint256 = 0
+
+    # Decay to 0. Decaying to 1 veFXS <> 1 FXS gives wrong expected results
+    if (locked_end > block.timestamp):
+        corrected_slope = vefxs_balance / (locked_end - block.timestamp)
+
+    return CorrectedPoint({bias: vefxs_balance, slope: corrected_slope, lock_end: locked_end, fxs_amount: locked_fxs})
+
+@view
+@external
+def get_corrected_info(addr: address) -> CorrectedPoint:
+    return self._get_corrected_info(addr)
 
 @external
 @view
@@ -513,9 +551,14 @@ def vote_for_gauge_weights(_gauge_addr: address, _user_weight: uint256):
     @param _gauge_addr Gauge which `msg.sender` votes for
     @param _user_weight Weight for a gauge in bps (units of 0.01%). Minimal is 0.01%. Ignored if 0
     """
-    escrow: address = self.voting_escrow
-    slope: uint256 = convert(VotingEscrow(escrow).get_last_user_slope(msg.sender), uint256)
-    lock_end: uint256 = VotingEscrow(escrow).locked__end(msg.sender)
+    # escrow: address = self.voting_escrow
+    # slope: uint256 = convert(VotingEscrow(escrow).get_last_user_slope(msg.sender), uint256)
+    # lock_end: uint256 = VotingEscrow(escrow).locked__end(msg.sender)
+
+    corrected_point: CorrectedPoint = self._get_corrected_info(msg.sender)
+    slope: uint256 = corrected_point.slope
+    lock_end: uint256 = corrected_point.lock_end
+
     _n_gauges: int128 = self.n_gauges
     next_time: uint256 = (block.timestamp + WEEK) / WEEK * WEEK
     assert lock_end > next_time, "Your token lock expires too soon"

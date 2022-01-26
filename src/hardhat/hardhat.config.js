@@ -39,9 +39,11 @@ module.exports = {
 				// url: `${process.env.BOBA_NETWORK_ENDPOINT}`, // Boba
 				// url: `${process.env.BSC_NETWORK_ENDPOINT}`, // BSC
 				url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}`, // Ethereum
+				// url: `${process.env.EVMOS_NETWORK_ENDPOINT}`, // Evmos
 				// url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}` // Ethereum (alternate)
 				// url: `${process.env.FANTOM_FORKING_NETWORK_ENDPOINT}`, // Fantom
 				// url: `${process.env.HARMONY_NETWORK_ENDPOINT}`, // Harmony
+				// url: `${process.env.MOONBEAM_NETWORK_ENDPOINT}`, // Moonbeam
 				// url: `${process.env.MOONRIVER_NETWORK_ENDPOINT}`, // Moonriver
 				// url: `${process.env.OPTIMISM_NETWORK_ENDPOINT}`, // Optimism
 				// url: `${process.env.POLYGON_NETWORK_ENDPOINT}`, // Polygon
@@ -111,6 +113,16 @@ module.exports = {
 			gasPrice: 150000000000,
 			gasMultiplier: 1.2
 		},
+		evmos: {
+			url: process.env.EVMOS_NETWORK_ENDPOINT,
+			accounts: {
+				mnemonic: process.env.EVMOS_MNEMONIC_PHRASE
+			},
+			chainId: 9001,
+			gas: "auto",
+			gasPrice: 5000000000, // 5 Gwei
+			gasMultiplier: 1.2
+		},
 		fantom: {
 			url: process.env.FANTOM_NETWORK_ENDPOINT,
 			accounts: {
@@ -129,6 +141,16 @@ module.exports = {
 			chainId: 1666600000,
 			gas: "auto",
 			gasPrice: 5000000000, // 5 Gwei
+			gasMultiplier: 1.2
+		},
+		moonbeam: {
+			url: process.env.MOONBEAM_NETWORK_ENDPOINT,
+			accounts: {
+				mnemonic: process.env.MOONBEAM_MNEMONIC_PHRASE
+			},
+			chainId: 1284,
+			gas: "auto",
+			gasPrice: 150000000000, // 150 Gwei
 			gasMultiplier: 1.2
 		},
 		moonriver: {
@@ -269,9 +291,9 @@ module.exports = {
 	},
 	etherscan: {
 		// apiKey: process.env.BSCSCAN_API_KEY // BSC
-		// apiKey: process.env.ETHERSCAN_API_KEY, // ETH Mainnet
+		apiKey: process.env.ETHERSCAN_API_KEY, // ETH Mainnet
 		// apiKey: process.env.FTMSCAN_API_KEY // Fantom
-		apiKey: process.env.OPTIMISM_API_KEY, // Optimism
+		// apiKey: process.env.OPTIMISM_API_KEY, // Optimism
 		// apiKey: process.env.POLYGONSCAN_API_KEY // Polygon
 	},
 
@@ -281,7 +303,9 @@ module.exports = {
 		disambiguatePaths: false,
 	},
     vyper: {
-		version: "0.2.15"
+		// version: "0.2.15"
+		// version: "0.2.16"
+		version: "0.3.1"
     }
 };
 
