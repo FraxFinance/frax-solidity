@@ -42,7 +42,7 @@ contract UniswapV2Router02V8 is IUniswapV2Router02V5 {
         if (IUniswapV2FactoryV5(factory).getPair(tokenA, tokenB) == address(0)) {
             IUniswapV2FactoryV5(factory).createPair(tokenA, tokenB);
         }
-        (uint reserveA, uint reserveB) = UniswapV2Library.getReservesWithTwamm(factory, tokenA, tokenB);
+        (uint reserveA, uint reserveB,,) = UniswapV2Library.getReservesWithTwamm(factory, tokenA, tokenB);
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
@@ -326,9 +326,8 @@ contract UniswapV2Router02V8 is IUniswapV2Router02V5 {
             uint amountInput;
             uint amountOutput;
             { // scope to avoid stack too deep errors
-                (uint reserveA, uint reserveB) =  UniswapV2Library.getReservesWithTwamm(factory, input, output);
-                (uint reserveInput, uint reserveOutput) = (reserveA, reserveB);
-                amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveInput);
+                (uint reserveInput, uint reserveOutput, uint twammReserveInput, uint twammReserveOutput) =  UniswapV2Library.getReservesWithTwamm(factory, input, output);
+                amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveInput).sub(twammReserveInput);
                 amountOutput = UniswapV2Library.getAmountOut(amountInput, reserveInput, reserveOutput);
             }
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOutput) : (amountOutput, uint(0));

@@ -7,12 +7,6 @@ contract UniswapV2FactoryV8 is IUniswapV2FactoryV5 {
     address public override feeTo;
     address public override feeToSetter;
 
-    struct Parameters {
-        address token0;
-        address token1;
-    }
-    Parameters public parameters;
-
     mapping(address => mapping(address => address)) public override getPair;
     address[] public override allPairs;
 
@@ -32,13 +26,12 @@ contract UniswapV2FactoryV8 is IUniswapV2FactoryV5 {
         require(token0 != address(0));
         //ECF3: UniswapV2: PAIR_EXISTS
         require(getPair[token0][token1] == address(0)); // single check is sufficient
-        parameters = Parameters({token0: token0, token1: token1});
         bytes memory bytecode = type(UniswapV2PairV8).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         assembly {
             pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
-        delete parameters;
+        IUniswapV2PairV5(pair).initialize(token0, token1);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);

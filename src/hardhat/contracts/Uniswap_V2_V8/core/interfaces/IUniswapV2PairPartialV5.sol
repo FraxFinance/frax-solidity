@@ -47,4 +47,9 @@ interface IUniswapV2PairPartialV5 {
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external;
     function skim(address to) external;
     function sync() external;
+    function initialize(address, address) external;
+
+    function getTwammReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast, uint112 _twammReserve0, uint112 _twammReserve1);
+    function executeVirtualOrders(uint256 blockNumber) external;
+    function twammUpToDate() external view returns(bool);
 }

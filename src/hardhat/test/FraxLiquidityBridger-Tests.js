@@ -47,7 +47,7 @@ const StableSwap3Pool = artifacts.require("Curve/IStableSwap3Pool");
 
 // Misc AMOs
 const FraxAMOMinter = artifacts.require("Frax/FraxAMOMinter");
-const FraxLiquidityBridger_MNBM_Nomad = artifacts.require("Bridges/Avalanche/FraxLiquidityBridger_MNBM_Nomad.sol");
+const FraxLiquidityBridger_OPTI_Celer = artifacts.require("Bridges/Avalanche/FraxLiquidityBridger_OPTI_Celer.sol");
 
 // Constants
 const BIG2 = new BigNumber("1e2");
@@ -131,7 +131,7 @@ contract('FraxLiquidityBridger-Tests', async (accounts) => {
 		pool_instance_V3 = await FraxPoolV3.deployed();
 		
 		// If truffle-fixture is used
-		frax_bridger_instance = await FraxLiquidityBridger_MNBM_Nomad.deployed();
+		frax_bridger_instance = await FraxLiquidityBridger_OPTI_Celer.deployed();
 
 	});
 	
@@ -235,56 +235,56 @@ contract('FraxLiquidityBridger-Tests', async (accounts) => {
 		console.log("======================MAKE SURE FRAX DIDN'T BRICK [TEST A REDEEM]=====================");
 		// Makes sure the pool is working
 
-		// // Refresh oracle
-		// try {
-		// 	await oracle_instance_FXS_WETH.update();
-		// }
-		// catch (err) {}
+		// Refresh oracle
+		try {
+			await oracle_instance_FXS_WETH.update();
+		}
+		catch (err) {}
 
-		// const fxs_per_usd_exch_rate = (new BigNumber(await pool_instance_V3.getFXSPrice()).div(BIG6).toNumber());
-		// console.log("fxs_per_usd_exch_rate: ", fxs_per_usd_exch_rate);
+		const fxs_per_usd_exch_rate = (new BigNumber(await pool_instance_V3.getFXSPrice()).div(BIG6).toNumber());
+		console.log("fxs_per_usd_exch_rate: ", fxs_per_usd_exch_rate);
 
-		// // Redeem threshold
-		// await hre.network.provider.request({
-		// 	method: "hardhat_impersonateAccount",
-		// 	params: [process.env.COMPTROLLER_MSIG_ADDRESS]
-		// });
+		// Redeem threshold
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [process.env.COMPTROLLER_MSIG_ADDRESS]
+		});
 	
-		// console.log("Set the redeem threshold to $1.01 now so redeems work");
-		// await pool_instance_V3.setPriceThresholds(1030000, 1010000, { from: process.env.COMPTROLLER_MSIG_ADDRESS }); 
+		console.log("Set the redeem threshold to $1.01 now so redeems work");
+		await pool_instance_V3.setPriceThresholds(1030000, 1010000, { from: process.env.COMPTROLLER_MSIG_ADDRESS }); 
 	
-		// await hre.network.provider.request({
-		// 	method: "hardhat_stopImpersonatingAccount",
-		// 	params: [process.env.COMPTROLLER_MSIG_ADDRESS]
-		// });
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [process.env.COMPTROLLER_MSIG_ADDRESS]
+		});
 
-		// // Do a redeem
-		// const redeem_amount = new BigNumber("1000e18");
-		// console.log(`Redeem amount: ${redeem_amount.div(BIG18)} FRAX`);
-		// await frax_instance.approve(pool_instance_V3.address, redeem_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await pool_instance_V3.redeemFrax(5, redeem_amount, 0, 0, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// Do a redeem
+		const redeem_amount = new BigNumber("1000e18");
+		console.log(`Redeem amount: ${redeem_amount.div(BIG18)} FRAX`);
+		await frax_instance.approve(pool_instance_V3.address, redeem_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await pool_instance_V3.redeemFrax(5, redeem_amount, 0, 0, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		// // Advance two blocks
-		// await time.increase(20);
-		// await time.advanceBlock();
-		// await time.increase(20);
-		// await time.advanceBlock();
+		// Advance two blocks
+		await time.increase(20);
+		await time.advanceBlock();
+		await time.increase(20);
+		await time.advanceBlock();
 
-		// // Collect the redemption
-		// await pool_instance_V3.collectRedemption(5, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		// Collect the redemption
+		await pool_instance_V3.collectRedemption(5, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		// // Note the collatDollarBalances
-		// console.log("Bridger collatDollarBalance:", new BigNumber((await frax_bridger_instance.dollarBalances.call())[1]).div(BIG18).toNumber());
-		// console.log("FraxPoolV3 collatDollarBalance:", new BigNumber(await pool_instance_V3.collatDollarBalance.call()).div(BIG18).toNumber());
-		// console.log("Minter collatDollarBalance:", new BigNumber(await frax_amo_minter_instance.collatDollarBalance.call()).div(BIG18).toNumber());
+		// Note the collatDollarBalances
+		console.log("Bridger collatDollarBalance:", new BigNumber((await frax_bridger_instance.dollarBalances.call())[1]).div(BIG18).toNumber());
+		console.log("FraxPoolV3 collatDollarBalance:", new BigNumber(await pool_instance_V3.collatDollarBalance.call()).div(BIG18).toNumber());
+		console.log("Minter collatDollarBalance:", new BigNumber(await frax_amo_minter_instance.collatDollarBalance.call()).div(BIG18).toNumber());
 
-		// console.log("Print some info");
-		// old_allocations = the_allocations;
-		// old_balances = the_token_balances;
-		// the_allocations = await frax_bridger_instance.showAllocations.call();
-		// the_token_balances = await frax_bridger_instance.showTokenBalances.call();
-		// utilities.printAllocations('LIQUIDITY_BRIDGER', the_allocations, old_allocations);
-		// utilities.printTokenBalances('LIQUIDITY_BRIDGER', the_token_balances, old_balances);
+		console.log("Print some info");
+		old_allocations = the_allocations;
+		old_balances = the_token_balances;
+		the_allocations = await frax_bridger_instance.showAllocations.call();
+		the_token_balances = await frax_bridger_instance.showTokenBalances.call();
+		utilities.printAllocations('LIQUIDITY_BRIDGER', the_allocations, old_allocations);
+		utilities.printTokenBalances('LIQUIDITY_BRIDGER', the_token_balances, old_balances);
 
 
 		console.log(chalk.hex("#ff8b3d").bold("=====================NOTE SOME STARTING BALANCES====================="));
@@ -371,9 +371,9 @@ contract('FraxLiquidityBridger-Tests', async (accounts) => {
 		console.log("FXS TokenType:", new BigNumber(await frax_bridger_instance.getTokenType.call(fxs_instance.address)).toNumber());
 		await frax_bridger_instance.bridge(fxs_instance.address, new BigNumber("1000e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
-		// console.log("Bridge USDC");
-		// console.log("USDC TokenType:", new BigNumber(await frax_bridger_instance.getTokenType.call(usdc_instance.address)).toNumber());
-		// await frax_bridger_instance.bridge(usdc_instance.address, new BigNumber("1000e6"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		console.log("Bridge USDC");
+		console.log("USDC TokenType:", new BigNumber(await frax_bridger_instance.getTokenType.call(usdc_instance.address)).toNumber());
+		await frax_bridger_instance.bridge(usdc_instance.address, new BigNumber("1000e6"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		console.log("Print some info");
 		old_allocations = the_allocations;

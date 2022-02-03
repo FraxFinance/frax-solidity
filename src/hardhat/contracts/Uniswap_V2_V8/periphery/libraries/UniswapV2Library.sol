@@ -21,7 +21,7 @@ library UniswapV2Library {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'4258b682314293b92ecd894e0dedb83422ef982cb05d5927ba7288d56f6a4a64' // init code hash
+                hex'6741cdfec9210ff63c300c5e88251e45f6143ab07c19cf76104ff8f0931ce740' // init code hash
             )))));
     }
 
@@ -34,16 +34,16 @@ library UniswapV2Library {
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
 
-    function getReservesWithTwamm(address factory, address tokenA, address tokenB) internal returns (uint reserveA, uint reserveB) {
+    function getReservesWithTwamm(address factory, address tokenA, address tokenB) internal returns (uint reserveA, uint reserveB, uint twammReserveA, uint twammReserveB) {
         (address token0,) = sortTokens(tokenA, tokenB);
 
         IUniswapV2PairV5 pair = IUniswapV2PairV5(pairFor(factory, tokenA, tokenB));
 
         pair.executeVirtualOrders(block.number);
 
-        (uint reserve0, uint reserve1,) = pair.getReserves();
+        (uint reserve0, uint reserve1,,uint twammReserve0, uint twammReserve1) = pair.getTwammReserves();
 
-        (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
+        (reserveA, reserveB, twammReserveA, twammReserveB) = tokenA == token0 ? (reserve0, reserve1, twammReserve0, twammReserve1) : (reserve1, reserve0, twammReserve1, twammReserve0);
     }
 
     // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
@@ -78,6 +78,7 @@ library UniswapV2Library {
         amounts = new uint[](path.length);
         amounts[0] = amountIn;
         for (uint i; i < path.length - 1; i++) {
+            require(IUniswapV2PairV5(UniswapV2Library.pairFor(factory, path[i], path[i + 1])).twammUpToDate(), 'twamm out of date');
             (uint reserveIn, uint reserveOut) = getReserves(factory, path[i], path[i + 1]);
             amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut);
         }
@@ -89,6 +90,7 @@ library UniswapV2Library {
         amounts = new uint[](path.length);
         amounts[amounts.length - 1] = amountOut;
         for (uint i = path.length - 1; i > 0; i--) {
+            require(IUniswapV2PairV5(UniswapV2Library.pairFor(factory, path[i - 1], path[i])).twammUpToDate(), 'twamm out of date');
             (uint reserveIn, uint reserveOut) = getReserves(factory, path[i - 1], path[i]);
             amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
         }

@@ -35,7 +35,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
     uint256 public seed_token_id; 
 
     // Combo Oracle related
-    ComboOracle_UniV2_UniV3 private comboOracleUniV2UniV3 = ComboOracle_UniV2_UniV3(0xD13c9a29eF6c5ADc7b43BBd5854B07bB9b099862);
+    ComboOracle_UniV2_UniV3 private comboOracleUniV2UniV3 = ComboOracle_UniV2_UniV3(0x1cBE07F3b3bf3BDe44d363cecAecfe9a98EC2dff);
 
     // Stake tracking
     mapping(address => LockedNFT[]) public lockedNFTs;
@@ -342,6 +342,10 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         // Update liquidities
         _total_liquidity_locked += addl_liq;
         _locked_liquidity[msg.sender] += addl_liq;
+        {
+            address the_proxy = staker_designated_proxies[msg.sender];
+            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += addl_liq;
+        }
 
         // Need to call to update the combined weights
         _updateRewardAndBalance(msg.sender, false);
@@ -362,7 +366,6 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) {
         require(stakingPaused == false || valid_migrators[msg.sender] == true, "Staking paused or in migration");
-        require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
         (, uint256 liquidity, int24 tick_lower, int24 tick_upper) = checkUniV3NFT(token_id, true); // Should throw if false
@@ -388,6 +391,10 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         // Update liquidities
         _total_liquidity_locked += liquidity;
         _locked_liquidity[staker_address] += liquidity;
+        {
+            address the_proxy = staker_designated_proxies[staker_address];
+            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += liquidity;
+        }
 
         // Need to call again to make sure everything is correct
         _updateRewardAndBalance(staker_address, false);
@@ -432,6 +439,10 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
             // Update liquidities
             _total_liquidity_locked -= theLiquidity;
             _locked_liquidity[staker_address] -= theLiquidity;
+            {
+                address the_proxy = staker_designated_proxies[staker_address];
+                if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= theLiquidity;
+            }
 
             // Remove the stake from the array
             delete lockedNFTs[staker_address][theArrayIndex];
