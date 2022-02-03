@@ -28,6 +28,8 @@ const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
 const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
 const IGUniPool = artifacts.require("Misc_AMOs/gelato/IGUniPool");
+const ITempleFraxAMMOps = artifacts.require("Misc_AMOs/temple/ITempleFraxAMMOps");
+const IVPool = artifacts.require("Misc_AMOs/vesper/IVPool");
 
 // Collateral Pools
 const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
@@ -43,12 +45,15 @@ const FRAXShares = artifacts.require("FXS/FRAXShares");
 
 // Staking contracts
 const FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI");
+const FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE");
+const FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX");
 
 // veFXS and gauge related
 const veFXS = artifacts.require("Curve/IveFXS");
 const veFXSBoost = artifacts.require("Curve/IVotingEscrowDelegation");
 const veFXSBoostDelegationProxy = artifacts.require("Curve/IDelegationProxy");
-const FraxGaugeController = artifacts.require("Curve/IFraxGaugeController");
+const FraxGaugeController = artifacts.require("Curve/FraxGaugeController");
+const FraxGaugeControllerV2 = artifacts.require("Curve/FraxGaugeControllerV2");
 const FraxGaugeFXSRewardsDistributor = artifacts.require("Curve/IFraxGaugeFXSRewardsDistributor");
 
 const BIG6 = new BigNumber("1e6");
@@ -71,11 +76,11 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 	let MIGRATOR_ADDRESS;
 
 	const ADDRESS_WITH_FRAX = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
+	const ADDRESS_LP_ADMIN = '0x4D6175d58C5AceEf30F546C0d5A557efFa53A950';
 	const ADDRESS_WITH_LP_TOKENS = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
 	const ADDRESS_WITH_FXS = '0xF977814e90dA44bFA03b6295A0616a897441aceC';
-	const ADDRESS_WITH_GEL = '0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27';
+	const ADDRESS_WITH_REW1 = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
 	const ADDRESS_WITH_VEFXS = '0xfF5B4BCbf765FE363269114e1c765229a29eDeFD';
-	const ADDRESS_VEFXS_WHALE = '0xb55794c3bef4651b6cBc78b64a2Ef6c5c67837C3';
 
 	// Initialize core contract instances
 	let frax_instance;
@@ -84,7 +89,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 	// Initialize collateral instances
 	let wethInstance;
 	let usdc_instance;
-	let gel_instance;
+	let rew1_instance;
 
 	// Initialize the Uniswap V3 Positions NFT
 	let uniswapV3PositionsNFTInstance;
@@ -102,13 +107,15 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 	let pair_instance_Saddle_D4;
 
 	// Initialize staking instances
-	let fraxUnifiedFarm_Gelato_FRAX_DAI_instance;
 	let staking_instance;
 
 	// Initialize veFXS and gauge-related instances
 	let veFXS_instance;
 	let frax_gauge_controller;
 	let gauge_rewards_distributor_instance;
+
+	// Misc
+	let temple_frax_amm_ops;
 
     beforeEach(async() => {
 
@@ -137,8 +144,6 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		fxs_instance = await FRAXShares.deployed();
 		wethInstance = await ERC20.at("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 		usdc_instance = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-		gel_instance = await ERC20.at("0x15b7c0c907e4c6b9adaaaabc300c08991d6cea05");
-
 
 		// Fill oracle instances
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
@@ -157,7 +162,9 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		// Get instances of the Uniswap pairs
 
 		// pair_instance_FRAX_SUSHI_Sushi = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Sushi FRAX/SUSHI"]);
-		pair_instance_Gelato_FRAX_DAI = await IGUniPool.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Gelato Uniswap FRAX/DAI"]);
+		// pair_instance_Gelato_FRAX_DAI = await IGUniPool.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Gelato Uniswap FRAX/DAI"]);
+		// pair_instance_Temple_FRAX_TEMPLE = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Temple FRAX/TEMPLE"]);
+		pair_instance_Vesper_FRAX = await IVPool.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Vesper Orbit FRAX"]);
 
 		// Get the mock CRVDAO Instance
 
@@ -165,22 +172,30 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		// uniswapV3PositionsNFTInstance = await FRAX3CRV_Mock.deployed(); 
 
 		// Fill the staking rewards instances
-		fraxUnifiedFarm_Gelato_FRAX_DAI_instance = await FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI.deployed();
+		// fraxUnifiedFarm_Gelato_FRAX_DAI_instance = await FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI.deployed();
+		// fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.deployed();
+		fraxUnifiedFarm_Vesper_FRAX_instance = await FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX.deployed();
 
 		// veFXS and gauge related
 		veFXS_instance = await veFXS.deployed();
 		frax_gauge_controller = await FraxGaugeController.deployed();
 		gauge_rewards_distributor_instance = await FraxGaugeFXSRewardsDistributor.deployed();
 
-		// Set which pairs to test
-		console.log(chalk.hex("#ff8b3d").bold("CHOOSING THE STAKING CONTRACT"))
-		// staking_instance = stakingInstanceMultiGauge_FXS_WETH;
-		staking_instance = fraxUnifiedFarm_Gelato_FRAX_DAI_instance;
+		// Misc
+		temple_frax_amm_ops = await ITempleFraxAMMOps.at("0xc8c3C72d667196bAd40dE3e5eaDC29E74431257B");
 
 		// Set which pairs to test
 		console.log(chalk.hex("#ff8b3d").bold("CHOOSING THE PAIR"))
 		// pair_instance = pair_instance_FXS_WETH_Sushi;
-		pair_instance = pair_instance_Gelato_FRAX_DAI;
+		pair_instance = pair_instance_Vesper_FRAX;
+
+		// Set which pairs to test
+		console.log(chalk.hex("#ff8b3d").bold("CHOOSING THE STAKING CONTRACT"))
+		// staking_instance = stakingInstanceMultiGauge_FXS_WETH;
+		staking_instance = fraxUnifiedFarm_Vesper_FRAX_instance;
+
+		const rew1_address = (await staking_instance.getAllRewardTokens.call())[1];
+		rew1_instance = await ERC20.at(rew1_address);
 	});
 	
 	afterEach(async() => {
@@ -193,12 +208,6 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 	it('Main test', async () => {
 		console.log(chalk.hex("#ff8b3d").bold("=========================Initialization========================="));
-
-		// Refresh oracle
-		try {
-			await oracle_instance_FXS_WETH.update();
-		}
-		catch (err) {}
 
 		// ---------------------------------------------------------------
 		console.log("Give the staking contract some FRAX, to be recovered later");
@@ -230,18 +239,33 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		});
 
 		// ---------------------------------------------------------------
-		console.log("Seed the staking contract with GEL");
+		console.log("Seed the staking contract with REW1 tokens");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_WITH_GEL]
+			params: [ADDRESS_WITH_REW1]
 		});
 
-		await gel_instance.transfer(staking_instance.address, new BigNumber("1000e18"), { from: ADDRESS_WITH_GEL });
+		await rew1_instance.transfer(staking_instance.address, new BigNumber("100e18"), { from: ADDRESS_WITH_REW1 });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_WITH_GEL]
+			params: [ADDRESS_WITH_REW1]
 		});
+
+		// // ---------------------------------------------------------------
+		// console.log("Pre-LP admin give");
+		// await hre.network.provider.request({
+		// 	method: "hardhat_impersonateAccount",
+		// 	params: [ADDRESS_LP_ADMIN]
+		// });
+
+		// await temple_frax_amm_ops.withdraw(pair_instance.address, accounts[1], new BigNumber("30e18"), { from: ADDRESS_LP_ADMIN });
+		// await temple_frax_amm_ops.withdraw(pair_instance.address, accounts[9], new BigNumber("30e18"), { from: ADDRESS_LP_ADMIN });
+
+		// await hre.network.provider.request({
+		// 	method: "hardhat_stopImpersonatingAccount",
+		// 	params: [ADDRESS_LP_ADMIN]
+		// });
 
 		// ---------------------------------------------------------------
 		console.log("Give LPs to test users");
@@ -250,8 +274,8 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_LP_TOKENS]
 		});
 
-		await pair_instance.transfer(accounts[1], new BigNumber("30e18"), { from: ADDRESS_WITH_LP_TOKENS });
-		await pair_instance.transfer(accounts[9], new BigNumber("30e18"), { from: ADDRESS_WITH_LP_TOKENS });
+		await pair_instance.transfer(accounts[1], new BigNumber("40e18"), { from: ADDRESS_WITH_LP_TOKENS });
+		await pair_instance.transfer(accounts[9], new BigNumber("40e18"), { from: ADDRESS_WITH_LP_TOKENS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -328,11 +352,17 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// Checkpoint the gauges
 		const current_timestamp_0 = (new BigNumber(await time.latest())).toNumber();
-		await frax_gauge_controller.gauge_relative_weight_write(staking_instance.address, current_timestamp_0, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write("0x3EF26504dbc8Dd7B7aa3E97Bc9f3813a9FC0B4B0", current_timestamp_0, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write("0xF22471AC2156B489CC4a59092c56713F813ff53e", current_timestamp_0, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write("0x3e14f6EEDCC5Bc1d0Fc7B20B45eAE7B1F74a6AeC", current_timestamp_0, { from: accounts[9] });
+		// await frax_gauge_controller.gauge_relative_weight_write(staking_instance.address, current_timestamp_0, { from: accounts[9] });
+		// await frax_gauge_controller.gauge_relative_weight_write("0x3EF26504dbc8Dd7B7aa3E97Bc9f3813a9FC0B4B0", current_timestamp_0, { from: accounts[9] });
+		// await frax_gauge_controller.gauge_relative_weight_write("0xF22471AC2156B489CC4a59092c56713F813ff53e", current_timestamp_0, { from: accounts[9] });
+		// await frax_gauge_controller.gauge_relative_weight_write("0x3e14f6EEDCC5Bc1d0Fc7B20B45eAE7B1F74a6AeC", current_timestamp_0, { from: accounts[9] });
 		
+		await frax_gauge_controller.gauge_relative_weight_write(staking_instance.address, { from: accounts[9] });
+		await frax_gauge_controller.gauge_relative_weight_write("0x3EF26504dbc8Dd7B7aa3E97Bc9f3813a9FC0B4B0", { from: accounts[9] });
+		await frax_gauge_controller.gauge_relative_weight_write("0xF22471AC2156B489CC4a59092c56713F813ff53e", { from: accounts[9] });
+		await frax_gauge_controller.gauge_relative_weight_write("0x3e14f6EEDCC5Bc1d0Fc7B20B45eAE7B1F74a6AeC", { from: accounts[9] });
+		
+
 		// Sync the contract
 		await staking_instance.sync_gauge_weights(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await staking_instance.sync({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -688,11 +718,17 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// Checkpoint the gauges again
 		const current_timestamp_re_checkpoint = (new BigNumber(await time.latest())).toNumber();
-		await frax_gauge_controller.gauge_relative_weight_write(staking_instance.address, current_timestamp_re_checkpoint, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write("0x3EF26504dbc8Dd7B7aa3E97Bc9f3813a9FC0B4B0", current_timestamp_re_checkpoint, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write("0xF22471AC2156B489CC4a59092c56713F813ff53e", current_timestamp_re_checkpoint, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write("0x3e14f6EEDCC5Bc1d0Fc7B20B45eAE7B1F74a6AeC", current_timestamp_re_checkpoint, { from: accounts[9] });
+		// await frax_gauge_controller.gauge_relative_weight_write(staking_instance.address, current_timestamp_re_checkpoint, { from: accounts[9] });
+		// await frax_gauge_controller.gauge_relative_weight_write("0x3EF26504dbc8Dd7B7aa3E97Bc9f3813a9FC0B4B0", current_timestamp_re_checkpoint, { from: accounts[9] });
+		// await frax_gauge_controller.gauge_relative_weight_write("0xF22471AC2156B489CC4a59092c56713F813ff53e", current_timestamp_re_checkpoint, { from: accounts[9] });
+		// await frax_gauge_controller.gauge_relative_weight_write("0x3e14f6EEDCC5Bc1d0Fc7B20B45eAE7B1F74a6AeC", current_timestamp_re_checkpoint, { from: accounts[9] });
 				
+		await frax_gauge_controller.gauge_relative_weight_write(staking_instance.address, { from: accounts[9] });
+		await frax_gauge_controller.gauge_relative_weight_write("0x3EF26504dbc8Dd7B7aa3E97Bc9f3813a9FC0B4B0", { from: accounts[9] });
+		await frax_gauge_controller.gauge_relative_weight_write("0xF22471AC2156B489CC4a59092c56713F813ff53e", { from: accounts[9] });
+		await frax_gauge_controller.gauge_relative_weight_write("0x3e14f6EEDCC5Bc1d0Fc7B20B45eAE7B1F74a6AeC", { from: accounts[9] });
+				
+
 		// Sync the contract
 		await staking_instance.sync_gauge_weights(1, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		await staking_instance.sync({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -835,47 +871,100 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		console.log(chalk.yellow.bold("===================================================================="));
 		console.log(chalk.yellow.bold("Proxy test"));
+		
+		console.log(`veFXS Proxy deposits 2.5 FXS for 4 years`);
+		const deposit_amount_e18 = new BigNumber("25e17");
+		let block_time_current_0 = (await time.latest()).toNumber();
+		let staking_end_time = block_time_current_0 + ((1461 * 86400) + 1);
+		await fxs_instance.approve(veFXS_instance.address, deposit_amount_e18, { from: accounts[4] });
+		await veFXS_instance.create_lock(deposit_amount_e18, staking_end_time, { from: accounts[4] });
 
+		const vefxs_multiplier_1_pre_proxy = new BigNumber(await staking_instance.veFXSMultiplier.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const vefxs_multiplier_9_pre_proxy = new BigNumber(await staking_instance.veFXSMultiplier.call(accounts[9])).div(BIG18);
-		console.log("veFXS multiplier [9]: ", vefxs_multiplier_9_pre_proxy.toString());
+		const min_vefxs_whale_pre_proxy = new BigNumber(await staking_instance.minVeFXSForMaxBoostProxy.call(accounts[4])).div(BIG18);
+		const lp_whale_pre_proxy = new BigNumber(await staking_instance.proxy_lp_balances.call(accounts[4])).div(BIG18);
+		const max_lp_whale_pre_proxy = new BigNumber(await staking_instance.maxLPForMaxBoost.call(accounts[4])).div(BIG18);
+		console.log("veFXS multiplier (pre proxy) [1]: ", vefxs_multiplier_1_pre_proxy.toString());
+		console.log("veFXS multiplier (pre proxy) [9]: ", vefxs_multiplier_9_pre_proxy.toString());
+		console.log("minVeFXSForMaxBoostProxy (veFXS whale): ", min_vefxs_whale_pre_proxy.toString());
+		console.log("LP balance (veFXS whale): ", lp_whale_pre_proxy.toString());
+		console.log("maxLPForMaxBoost (veFXS whale): ", max_lp_whale_pre_proxy.toString());
 
 		console.log(chalk.yellow("Add the veFXS whale as a valid proxy"));
-		await staking_instance.toggleValidVeFXSProxy(ADDRESS_VEFXS_WHALE, { from: STAKING_OWNER });
+		await staking_instance.toggleValidVeFXSProxy(accounts[4], { from: STAKING_OWNER });
 
-		await hre.network.provider.request({
-			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_VEFXS_WHALE]
-		});
+		console.log(chalk.yellow("veFXS whale allows accounts[1] and accounts[9] as a proxy-ee"));
+		await staking_instance.proxyToggleStaker(COLLATERAL_FRAX_AND_FXS_OWNER, { from: accounts[4] });
+		await staking_instance.proxyToggleStaker(accounts[9], { from: accounts[4] });
 
-		console.log(chalk.yellow("veFXS whale allows accounts[9] as a proxy-ee"));
-		await staking_instance.proxyToggleStaker(accounts[9], { from: ADDRESS_VEFXS_WHALE });
+		console.log(chalk.yellow("[1] and [9] use veFXS whale as proxy"));
+		await staking_instance.stakerSetVeFXSProxy(accounts[4], { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await staking_instance.stakerSetVeFXSProxy(accounts[4], { from: accounts[9] });
 
-		await hre.network.provider.request({
-			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_VEFXS_WHALE]
-		});
-
-		console.log(chalk.yellow("Staker uses veFXS whale as proxy"));
-		await staking_instance.stakerSetVeFXSProxy(ADDRESS_VEFXS_WHALE, { from: accounts[9] });
-
+		const vefxs_multiplier_1_post_proxy = new BigNumber(await staking_instance.veFXSMultiplier.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const vefxs_multiplier_9_post_proxy = new BigNumber(await staking_instance.veFXSMultiplier.call(accounts[9])).div(BIG18);
-		console.log("veFXS multiplier [9]: ", vefxs_multiplier_9_post_proxy.toString());
+		const min_vefxs_whale_post_proxy = new BigNumber(await staking_instance.minVeFXSForMaxBoostProxy.call(accounts[4])).div(BIG18);
+		const lp_whale_post_proxy = new BigNumber(await staking_instance.proxy_lp_balances.call(accounts[4])).div(BIG18);
+		const max_lp_whale_post_proxy = new BigNumber(await staking_instance.maxLPForMaxBoost.call(accounts[4])).div(BIG18);
+		console.log(chalk.yellow("These should be off mult_optn_1 in FraxUnifiedFarmTemplate.sol"));
+		console.log("veFXS multiplier (post proxy) [1]: ", vefxs_multiplier_1_post_proxy.toString());
+		console.log("veFXS multiplier (post proxy) [9]: ", vefxs_multiplier_9_post_proxy.toString());
+		console.log("minVeFXSForMaxBoostProxy (veFXS whale): ", min_vefxs_whale_post_proxy.toString());
+		console.log("LP balance (veFXS whale): ", lp_whale_post_proxy.toString());
+		console.log("maxLPForMaxBoost (veFXS whale): ", max_lp_whale_post_proxy.toString());
 
-		// Make sure the weight is higher now
-		assert(vefxs_multiplier_9_post_proxy.isGreaterThan(vefxs_multiplier_9_pre_proxy), `Proxing should have boosted the weight`);
+		// Make sure the multiplier is higher now
+		// Skip test for [1] since it is proxying now
+		// assert(vefxs_multiplier_1_post_proxy.isGreaterThanOrEqualTo(vefxs_multiplier_1_pre_proxy), `Proxying should have boosted the multiplier`);
+		assert(vefxs_multiplier_9_post_proxy.isGreaterThanOrEqualTo(vefxs_multiplier_9_pre_proxy), `Proxying should have boosted the multiplier`);
 
-		await hre.network.provider.request({
-			method: "hardhat_impersonateAccount",
-			params: [ADDRESS_VEFXS_WHALE]
-		});
+		// Add 1 more LP token to the lock
+		console.log(chalk.yellow("Add 1 more LP token for [9] to the lock to budge the veFXS multiplier"));
+		let add_more_before = await staking_instance.lockedStakes.call(accounts[9], 0);
+		const addl_amt = new BigNumber("1e18");
+		await pair_instance.approve(staking_instance.address, addl_amt, { from: accounts[9] });
+		await staking_instance.lockAdditional(add_more_before.kek_id, addl_amt, { from: accounts[9] });
 
-		console.log(chalk.yellow("veFXS whale disallows accounts[9] as a proxy-ee"));
-		await staking_instance.proxyToggleStaker(accounts[9], { from: ADDRESS_VEFXS_WHALE });
+		const vefxs_multiplier_1_post_proxy_addl = new BigNumber(await staking_instance.veFXSMultiplier.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const vefxs_multiplier_9_post_proxy_addl = new BigNumber(await staking_instance.veFXSMultiplier.call(accounts[9])).div(BIG18);
+		const min_vefxs_whale_post_proxy_addl = new BigNumber(await staking_instance.minVeFXSForMaxBoostProxy.call(accounts[4])).div(BIG18);
+		const lp_whale_post_proxy_addl = new BigNumber(await staking_instance.proxy_lp_balances.call(accounts[4])).div(BIG18);
+		const max_lp_whale_post_proxy_addl = new BigNumber(await staking_instance.maxLPForMaxBoost.call(accounts[4])).div(BIG18);
+		console.log("veFXS multiplier (after add) [1]: ", vefxs_multiplier_1_post_proxy_addl.toString());
+		console.log("veFXS multiplier (after add) [9]: ", vefxs_multiplier_9_post_proxy_addl.toString());
+		console.log("minVeFXSForMaxBoostProxy (veFXS whale): ", min_vefxs_whale_post_proxy_addl.toString());
+		console.log("LP balance (veFXS whale): ", lp_whale_post_proxy_addl.toString());
+		console.log("maxLPForMaxBoost (veFXS whale): ", max_lp_whale_post_proxy_addl.toString());
 
-		await hre.network.provider.request({
-			method: "hardhat_stopImpersonatingAccount",
-			params: [ADDRESS_VEFXS_WHALE]
-		});
+		// Make sure minVeFXSForMaxBoostProxy increases
+		assert(min_vefxs_whale_post_proxy_addl.isGreaterThan(min_vefxs_whale_post_proxy), `minVeFXSForMaxBoostProxy should have increased`);
+
+		// Add 5 more LP tokens to the lock.
+		console.log(chalk.yellow("Add 5 more LP tokens for [9]. Should push the multiplier below the max"));
+		let add_more_before_max = await staking_instance.lockedStakes.call(accounts[9], 0);
+		const addl_amt_max = new BigNumber("5e18");
+		await pair_instance.approve(staking_instance.address, addl_amt_max, { from: accounts[9] });
+		await staking_instance.lockAdditional(add_more_before_max.kek_id, addl_amt_max, { from: accounts[9] });
+
+		const vefxs_multiplier_1_post_proxy_addl_max = new BigNumber(await staking_instance.veFXSMultiplier.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const vefxs_multiplier_9_post_proxy_addl_max = new BigNumber(await staking_instance.veFXSMultiplier.call(accounts[9])).div(BIG18);
+		const min_vefxs_whale_post_proxy_addl_max = new BigNumber(await staking_instance.minVeFXSForMaxBoostProxy.call(accounts[4])).div(BIG18);
+		const lp_whale_post_proxy_addl_max = new BigNumber(await staking_instance.proxy_lp_balances.call(accounts[4])).div(BIG18);
+		const max_lp_whale_post_proxy_addl_max = new BigNumber(await staking_instance.maxLPForMaxBoost.call(accounts[4])).div(BIG18);
+		console.log("veFXS multiplier (after add max) [1]: ", vefxs_multiplier_1_post_proxy_addl_max.toString());
+		console.log("veFXS multiplier (after add max) [9]: ", vefxs_multiplier_9_post_proxy_addl_max.toString());
+		console.log("minVeFXSForMaxBoostProxy (veFXS whale): ", min_vefxs_whale_post_proxy_addl_max.toString());
+		console.log("LP balance (veFXS whale): ", lp_whale_post_proxy_addl_max.toString());
+		console.log("maxLPForMaxBoost (veFXS whale): ", max_lp_whale_post_proxy_addl_max.toString());
+
+		// Make sure the veFXS multiplier decreases
+		assert(vefxs_multiplier_1_post_proxy_addl_max.isLessThan(vefxs_multiplier_1_post_proxy_addl), `veFXS multiplier should have decreased`);
+		assert(vefxs_multiplier_9_post_proxy_addl_max.isLessThan(vefxs_multiplier_9_post_proxy_addl), `veFXS multiplier should have decreased`);
+
+
+		console.log(chalk.yellow("veFXS whale disallows accounts [1] and [9] as a proxy-ee"));
+		await staking_instance.proxyToggleStaker(COLLATERAL_FRAX_AND_FXS_OWNER, { from: accounts[4] });
+		await staking_instance.proxyToggleStaker(accounts[9], { from: accounts[4] });
 
 		const vefxs_multiplier_9_post_proxy_disallow = new BigNumber(await staking_instance.veFXSMultiplier.call(accounts[9])).div(BIG18);
 		console.log("veFXS multiplier [9]: ", vefxs_multiplier_9_post_proxy_disallow.toString());
@@ -888,7 +977,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		console.log(chalk.yellow.bold("Add more to a lock"));
 
 		// Print the info for the stake
-		const add_more_before = await staking_instance.lockedStakes.call(COLLATERAL_FRAX_AND_FXS_OWNER, 2);
+		add_more_before = await staking_instance.lockedStakes.call(COLLATERAL_FRAX_AND_FXS_OWNER, 2);
 		console.log("add_more_before: ", utilities.cleanLockedStake(add_more_before));
 
 		// Add 1 more LP token to the lock
@@ -907,43 +996,6 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		assert(add_liq_after.isGreaterThan(add_liq_before), `Liquidity did not increase`);
 	});
 
-	it("Blocks a greylisted address which tries to stake; SHOULD FAIL", async () => {
-		console.log(chalk.hex("#ff8b3d").bold("=========================Greylist Fail Test========================="));
-
-
-		console.log("greylistAddress(accounts[9])");
-		await staking_instance.greylistAddress(accounts[9], { from: STAKING_OWNER });
-		console.log("");
-		console.log("this should fail");
-		await pair_instance.approve(staking_instance.address, new BigNumber("1e18"), { from: accounts[9] });
-		
-		await expectRevert(
-			staking_instance.stakeLocked(new BigNumber("1e18"), 7 * 86400, { from: accounts[9] }),
-			"Address has been greylisted"
-		);
-	});
-
-	it("Ungreylists a greylisted address which tries to stake; SHOULD SUCCEED", async () => {
-		console.log(chalk.hex("#ff8b3d").bold("=========================Greylist Succeed Test========================="));
-
-		console.log("greylistAddress(accounts[9])");
-		await staking_instance.greylistAddress(accounts[9], { from: STAKING_OWNER });
-		// console.log("");
-		// console.log("this should succeed");
-		// await pair_instance.approve(staking_instance.address, new BigNumber("1e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await staking_instance.stakeLocked(new BigNumber("1e18"), 1 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	
-		// // Wait 2 days
-		// for (let j = 0; j < 2; j++){
-		// 	await time.increase(86400);
-		// 	await time.advanceBlock();
-		// }
-
-		// // Claim back the NFT and collect the rewards
-		// await staking_instance.withdrawLocked(TOKEN_ID_1_ALT_GOOD, COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await staking_instance.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	});
-
 	it("Communal / Token Manager Tests", async () => {
 		console.log(chalk.hex("#ff8b3d").bold("================Communal / Token Manager Tests================"));
 
@@ -952,7 +1004,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// Get FXS and SUSHI balances
 		const fxs_bal = new BigNumber(await fxs_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
-		const gel_bal = new BigNumber(await gel_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
+		const gel_bal = new BigNumber(await rew1_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
 		console.log("fxs_bal: ", fxs_bal);
 		console.log("gel_bal: ", gel_bal);
 
@@ -963,25 +1015,28 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		await staking_instance.setRewardVars(staking_reward_tokens_addresses[1], 1000, frax_gauge_controller.address, gauge_rewards_distributor_instance.address, { from: STAKING_OWNER });
 
 		for (let j = 0; j < staking_reward_tokens_addresses.length; j++){
+			const rew_tkn_addr = staking_reward_tokens_addresses[j];
+			const rew_tkn_symbol = utilities.rewardTokenSymbolFromAddress(rew_tkn_addr)
 			const token_manager_address = await staking_instance.rewardManagers.call(staking_reward_tokens_addresses[j]);
-			console.log(chalk.yellow.bold(`--------------${staking_reward_tokens_addresses[j]}--------------`));
-			console.log(`[${staking_reward_tokens_addresses[j]} Manager]: ${token_manager_address}`);
-			console.log(`[${staking_reward_tokens_addresses[j]} Address]: ${staking_reward_tokens_addresses[j]}`);
+
+			console.log(chalk.yellow.bold(`--------------${rew_tkn_addr} [${rew_tkn_symbol}]--------------`));
+			console.log(`[${rew_tkn_symbol} Manager]: ${token_manager_address}`);
+			console.log(`[${rew_tkn_symbol} Address]: ${rew_tkn_addr}`);
 
 			// Print the balance
-			const quick_instance = await ERC20.at(staking_reward_tokens_addresses[j]);
+			const quick_instance = await ERC20.at(rew_tkn_addr);
 			const current_balance = new BigNumber(await quick_instance.balanceOf(staking_instance.address));
 			console.log("Current balance:", current_balance.div(BIG18).toNumber());
 		
 			console.log("Try to set the reward rate with the wrong manager [SHOULD FAIL]");
 			await expectRevert(
-				staking_instance.setRewardVars(staking_reward_tokens_addresses[j], 0, ZERO_ADDRESS, ZERO_ADDRESS, { from: accounts[9] }),
+				staking_instance.setRewardVars(rew_tkn_addr, 0, ZERO_ADDRESS, ZERO_ADDRESS, { from: accounts[9] }),
 				"Not owner or tkn mgr"
 			);
 
 			console.log("Try to change the token manager with the wrong account [SHOULD FAIL]");
 			await expectRevert(
-				staking_instance.changeTokenManager(staking_reward_tokens_addresses[j], COLLATERAL_FRAX_AND_FXS_OWNER, { from: accounts[9] }),
+				staking_instance.changeTokenManager(rew_tkn_addr, COLLATERAL_FRAX_AND_FXS_OWNER, { from: accounts[9] }),
 				"Not owner or tkn mgr"
 			);
 
@@ -993,13 +1048,17 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 			console.log("Set the reward rate with the correct manager");
 			const gauge_ctr_add_to_use = (j == 0 ? frax_gauge_controller.address : ZERO_ADDRESS);
 			const gauge_rew_dist_add_to_use = (j == 0 ? gauge_rewards_distributor_instance.address : ZERO_ADDRESS);
-			await staking_instance.setRewardVars(staking_reward_tokens_addresses[j], 0, gauge_ctr_add_to_use, gauge_rew_dist_add_to_use, { from: token_manager_address });
+			await staking_instance.setRewardVars(rew_tkn_addr, 0, gauge_ctr_add_to_use, gauge_rew_dist_add_to_use, { from: token_manager_address });
 
 			console.log("Try recovering reward tokens as the reward manager");
-			await staking_instance.recoverERC20(staking_reward_tokens_addresses[j], test_recovery_amount, { from: token_manager_address });
+			const tkn_bal_before_rec = new BigNumber(await quick_instance.balanceOf(staking_instance.address));
+			console.log(`${rew_tkn_symbol} balance before: ${tkn_bal_before_rec.div(BIG18).toNumber()}`);
+			await staking_instance.recoverERC20(rew_tkn_addr, test_recovery_amount, { from: token_manager_address });
+			const tkn_bal_after_rec = new BigNumber(await quick_instance.balanceOf(staking_instance.address));
+			console.log(`${rew_tkn_symbol} balance after: ${tkn_bal_after_rec.div(BIG18).toNumber()}`);
 
 			console.log("Change the token manager");
-			await staking_instance.changeTokenManager(staking_reward_tokens_addresses[j], COLLATERAL_FRAX_AND_FXS_OWNER, { from: token_manager_address });
+			await staking_instance.changeTokenManager(rew_tkn_addr, COLLATERAL_FRAX_AND_FXS_OWNER, { from: token_manager_address });
 	
 			await hre.network.provider.request({
 				method: "hardhat_stopImpersonatingAccount",
@@ -1022,7 +1081,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		console.log("---------TRY TO ERC20 RECOVER A REWARD TOKEN AS THE OWNER [SHOULD FAIL]---------");
 		await expectRevert(
-			staking_instance.recoverERC20(gel_instance.address, test_amount_1, { from: STAKING_OWNER }),
+			staking_instance.recoverERC20(rew1_instance.address, test_amount_1, { from: STAKING_OWNER }),
 			"No valid tokens to recover"
 		);
 	});
@@ -1178,7 +1237,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		console.log("--------- TRY ADD A PROXY NOT AS GOVERNANCE ---------");
 		await expectRevert(
-			staking_instance.toggleValidVeFXSProxy(ADDRESS_VEFXS_WHALE, { from: accounts[9] }),
+			staking_instance.toggleValidVeFXSProxy(accounts[4], { from: accounts[9] }),
 			"Not owner or timelock"
 		);
 
@@ -1204,7 +1263,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		console.log("--------- TRY ALLOWING A VALID PROXY FOR A STAKER BEFORE THE PROXY TOGGLED THEM FIRST ---------");
 		await expectRevert(
 			staking_instance.stakerSetVeFXSProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: accounts[9] }),
-			"Proxy has not allowed you"
+			"Proxy has not allowed you yet"
 		);
 	});
 

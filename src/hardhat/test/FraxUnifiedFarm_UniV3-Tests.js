@@ -20,6 +20,7 @@ global.artifacts = artifacts;
 global.web3 = web3;
 
 const hre = require("hardhat");
+const { assert } = require('console');
 
 // Uniswap related
 const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
@@ -909,6 +910,8 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		// Make sure the weight is higher now
 		assert(vefxs_multiplier_9_post_proxy.isGreaterThan(vefxs_multiplier_9_pre_proxy), `Proxing should have boosted the weight`);
 
+		assert(false, "ADD MORE TESTS HERE");
+
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
 			params: [ADDRESS_VEFXS_WHALE]
@@ -986,43 +989,6 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		const add_liq_balof_ovr_diff = add_liq_balof_ovr_after.minus(add_liq_balof_ovr_before);
 		console.log("Add liq diff (balanceOf override): ", add_liq_balof_ovr_diff.toString());
 		assert(add_liq_balof_ovr_after.isGreaterThan(add_liq_balof_ovr_before), `Liquidity did not increase`);
-	});
-
-	it("Blocks a greylisted address which tries to stake; SHOULD FAIL", async () => {
-		console.log(chalk.hex("#ff8b3d").bold("=========================Greylist Fail Test========================="));
-
-
-		console.log("greylistAddress(accounts[9])");
-		await staking_instance.greylistAddress(accounts[9], { from: STAKING_OWNER });
-		console.log("");
-		console.log("this should fail");
-		await uniswapV3PositionsNFTInstance.approve(staking_instance.address, TOKEN_ID_9_INSIDE_WRONG_TICKS, { from: accounts[9] });
-		
-		await expectRevert(
-			staking_instance.stakeLocked(TOKEN_ID_9_INSIDE_WRONG_TICKS, 7 * 86400, { from: accounts[9] }),
-			"Address has been greylisted"
-		);
-	});
-
-	it("Ungreylists a greylisted address which tries to stake; SHOULD SUCCEED", async () => {
-		console.log(chalk.hex("#ff8b3d").bold("=========================Greylist Succeed Test========================="));
-
-		console.log("greylistAddress(accounts[9])");
-		await staking_instance.greylistAddress(accounts[9], { from: STAKING_OWNER });
-		// console.log("");
-		// console.log("this should succeed");
-		// await pair_instance.approve(staking_instance.address, new BigNumber("1e18"), { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		// await staking_instance.stakeLocked(new BigNumber("1e18"), 1 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	
-		// // Wait 2 days
-		// for (let j = 0; j < 2; j++){
-		// 	await time.increase(86400);
-		// 	await time.advanceBlock();
-		// }
-
-	// 	// // Claim back the NFT and collect the rewards
-	// 	// await staking_instance.withdrawLocked(TOKEN_ID_1_ALT_GOOD, COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-	// 	// await staking_instance.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
 	});
 
 	it("Communal / Token Manager Tests", async () => {
@@ -1351,7 +1317,7 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		console.log("--------- TRY ALLOWING A VALID PROXY FOR A STAKER BEFORE THE PROXY TOGGLED THEM FIRST ---------");
 		await expectRevert(
 			staking_instance.stakerSetVeFXSProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: accounts[9] }),
-			"Proxy has not allowed you"
+			"Proxy has not allowed you yet"
 		);
 	});
 

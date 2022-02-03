@@ -804,6 +804,26 @@ export const StakeChoices: StakeChoices = {
 		version: 101,
 		is_soon: false
 	},
+  "Temple FRAX/TEMPLE": {
+    lp_logo: "templedao",
+		slug: "Temple_FRAX_TEMPLE",
+		label: "Temple FRAX/TEMPLE",
+		chain: "ethereum",
+		info_link: "https://templedao.link/",
+		add_liq_link: "https://templedao.link/",
+		trade_link: "https://templedao.link/",
+		farming_link: "https://app.frax.finance/staking#Temple_FRAX_TEMPLE",
+    starting_block: 14123565,
+		staking_enabled: true,
+		vefxs_enabled: true,
+		external_contract: false,
+		is_gauged: true,
+		pool_tokens: ["FRAX"],
+		reward_tokens: ["FXS", "TEMPLE"],
+    reward_token_decimals: [18, 18],
+		reward_token_coingecko_slugs: ["frax-share", "temple"],
+		version: 102
+	},
 	"Tokemak FRAX Staking": {
 		lp_logo: "tokemak",
 		label: "Tokemak FRAX Staking",
@@ -1046,14 +1066,24 @@ export const StakeChoices: StakeChoices = {
 		reward_tokens: ['WEVE'],
 	  },
 	"Vesper Orbit FRAX": {
-		lp_logo: "vesper",
+    lp_logo: "vesper",
+		slug: "Vesper_Orbit_FRAX",
 		label: "Vesper Orbit FRAX",
 		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://orbit.vesper.finance/eth/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
-    staking_enabled: true,
+		info_link: "https://orbit.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+		add_liq_link: "https://orbit.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+		trade_link: "https://orbit.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+		farming_link: "https://app.frax.finance/staking#Vesper_Orbit_FRAX",
+    starting_block: 14122309,
+		staking_enabled: true,
+		vefxs_enabled: true,
+		external_contract: false,
+		is_gauged: true,
 		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"]
+		reward_tokens: ["FXS", "VSP"],
+    reward_token_decimals: [18, 18],
+		reward_token_coingecko_slugs: ["frax-share", "vesper-finance"],
+		version: 102
 	},
 	"Yearn crvFRAX Vault (V3)": {
 		lp_logo: "yearn",
@@ -1232,7 +1262,7 @@ export const CONTRACT_ADDRESSES = {
         harmony: "0x2dCCDB493827E15a5dC8f8b72147E6c4A5620857",
         moonbeam: "0x88A69B4E698A4B090DF6CF5Bd7B2D47325Ad30A3", // Nomad Bridge: send
         moonriver: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
-        optimism: "",
+        optimism: "0xB37D31b2A74029B5951a2778F959282E2D518595",
         polygon: "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77",
         solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
       },
@@ -1248,7 +1278,7 @@ export const CONTRACT_ADDRESSES = {
         harmony: "0x2dCCDB493827E15a5dC8f8b72147E6c4A5620857",
         moonbeam: "0x88A69B4E698A4B090DF6CF5Bd7B2D47325Ad30A3", // Nomad Bridge: send
         moonriver: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
-        optimism: "",
+        optimism: "0xB37D31b2A74029B5951a2778F959282E2D518595",
         polygon: "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77",
         solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
       },
@@ -1263,7 +1293,7 @@ export const CONTRACT_ADDRESSES = {
         harmony: "0x2dCCDB493827E15a5dC8f8b72147E6c4A5620857",
         moonbeam: "0x88A69B4E698A4B090DF6CF5Bd7B2D47325Ad30A3", // Nomad Bridge: send
         moonriver: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
-        optimism: "",
+        optimism: "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1",
         polygon: "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77",
         solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
       },
@@ -1272,7 +1302,7 @@ export const CONTRACT_ADDRESSES = {
           anySwap: "0xddf6b5B2BA110a0267BffB86AeAbFe2637cb8375"
         },
         aurora: {
-          nomad: "0xa5924D9baA4fed0fbd100CB47CBCb61eA5E33219"
+          
         },
         avalanche: {
           anySwap: "0xBA5478A712b5EA898AF03206ab4c7E0608C3e69D" // Old: 0x1c2eFc27f7E892c2A36B7dE78958F83a231b52f1
@@ -1293,13 +1323,13 @@ export const CONTRACT_ADDRESSES = {
           harmony_bridge: "0xF3A60f85CB6C560188A434e8F2a134f3E967d8b8"
         },
         moonbeam: {
-
+          nomad: "0xa5924D9baA4fed0fbd100CB47CBCb61eA5E33219"
         },
         moonriver: {
           anySwap: "0xc7F48Fb6Dbb6F8A3Eed90553017cDf5725Dc44ac"
         },
         optimism: {
-
+          celer: "0x7F35dc487A5422D6946aAD733C6018F163084ed0"
         },
         polygon: {
           maticBridge: "0x6e1A844AFff1aa2a8ba3127dB83088e196187110"
@@ -1389,7 +1419,9 @@ export const CONTRACT_ADDRESSES = {
       ohm_v2: "0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5",
       sdt: "0x73968b9a57c6e53d41345fd57a6e6ae27d6cdb2f",
       sushi: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
+      temple: "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7",
       tribe: "0xc7283b66eb1eb5fb86327f08e1b5816b0720212b",
+      vsp: "0x1b40183EFB4Dd766f11bDa7A7c3AD8982e998421",
       weth: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     },
     bearer_tokens: {
@@ -1453,6 +1485,7 @@ export const CONTRACT_ADDRESSES = {
       "Uniswap FRAX/FXS": "0xE1573B9D29e2183B1AF0e743Dc2754979A40D237",
       "Uniswap FXS/WETH": "0xecBa967D84fCF0405F6b32Bc45F4d36BfDBB2E81",
       "Uniswap FRAX/IQ": "0xd6c783b257e662ca949b441a4fcb08a53fc49914",
+      "Uniswap FRAX/TEMPLE": "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03", // THEIR CUSTOM AMM, NOT EXACT
       "Uniswap FRAX/OHM": "0x2dce0dda1c2f98e0f171de8333c3c6fe1bbf4877",
       "StakeDAO sdETH-FraxPut": "0x839A989bE40f2D60f00beEB648903732c041CBd7",
       "StakeDAO sdFRAX3CRV-f": "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7",
@@ -1464,6 +1497,8 @@ export const CONTRACT_ADDRESSES = {
       "Curve FRAX3CRV-f-2": "0xd632f22692fac7611d2aa1c0d552930d43caed3b", // Proxied For: https://etherscan.io/address/0x5f890841f657d90e081babdb532a05996af79fe6
       "Curve MIM3CRV": "0x5a6A4D54456819380173272A5E8E9B9904BdF41B",
       "Saddle alUSD/FEI/FRAX/LUSD": "0xd48cF4D7FB0824CC8bAe055dF3092584d0a1726A",
+      "Temple FRAX/TEMPLE": "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03",
+      "Vesper Orbit FRAX": "0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",      
     },
     staking_contracts: {
       "Gelato Uniswap FRAX/DAI": "0xcdfc491804A420b677f8e788B5157856910E2F6f",
@@ -1482,6 +1517,8 @@ export const CONTRACT_ADDRESSES = {
       "Sushi FRAX/SUSHI": "0xb4Ab0dE6581FBD3A02cF8f9f265138691c3A7d5D",
       "Sushi FXS/WETH": "", // Pre-gauge: "0x74C370990C1181303D20e9f0252437a97518B95B",
       "Saddle alUSD/FEI/FRAX/LUSD": "0x0639076265e9f88542C91DCdEda65127974A5CA5",
+      "Temple FRAX/TEMPLE": "0x016563F5EB22cF84fA0Ff8B593DdC5343ca15856",
+      "Vesper Orbit FRAX": "0xAE47146Fa8A920D220AC567366b1e6c170579993",
     },
     external_farm_tokens: {
       "1Swap FRAX/1S3P": "",
@@ -1598,6 +1635,7 @@ export const CONTRACT_ADDRESSES = {
     },
     reward_tokens: {
       weth: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+      SDL: "0x75c9bc761d88f70156daf83aa010e84680baf131",
     },
     bearer_tokens: {
       FRAX2pool: "0xf07d553B195080F84F582e88ecdD54bAa122b279",
@@ -2311,9 +2349,17 @@ export const CONTRACT_ADDRESSES = {
     },
     collaterals: {
       USDC: "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
+      optiUSDC: "0x7F5c764cBc14f9669B88837ca1490cCa17c31607"
     },
-    bridges: {},
-    bridge_backers: {},
+    bridges: {
+      celrFRAX: "0x61f85fF2a2f4289Be4bb9B72Fc7010B3142B5f41", // IPeggedTokenBridge burn
+      celrFXS: "0x61f85fF2a2f4289Be4bb9B72Fc7010B3142B5f41", // IPeggedTokenBridge burn
+      USDC: "0x4200000000000000000000000000000000000010", // IL2StandardBridge withdraw
+      optiUSDC: "0x4200000000000000000000000000000000000010", // IL2StandardBridge withdraw
+    },
+    bridge_backers: {
+      celer: "0x7F35dc487A5422D6946aAD733C6018F163084ed0"
+    },
     oracles: {
       single_assets: {
         FRAX: "0x7655a3dC27ae8df961939373E1df80875E23d502",

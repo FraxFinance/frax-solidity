@@ -1,13 +1,26 @@
 ETH FRAX to OPTIMISM
-1) (Approve) ???
-2) (Transfer) https://etherscan.io/tx/0x33e657c5cb4216e3f2faf69df8011b71b442a01de6be9da8abc6e4df5b5b0c28
-
+1) (approve) ???
+2) (deposit) https://etherscan.io/tx/0x33e657c5cb4216e3f2faf69df8011b71b442a01de6be9da8abc6e4df5b5b0c28
 
 ETH FXS to OPTIMISM
-1) (Approve) https://etherscan.io/address/0xb37d31b2a74029b5951a2778f959282e2d518595#code
-2) (Transfer) https://etherscan.io/tx/0xec5c04ef260802927aa909650dca8ad654047c9d722368b9ff533281e62904af
+1) (approve) https://etherscan.io/address/0xb37d31b2a74029b5951a2778f959282e2d518595#code
+2) (deposit) https://etherscan.io/tx/0xec5c04ef260802927aa909650dca8ad654047c9d722368b9ff533281e62904af
+
+ETH USDC to OPTIMISM (Optimism Gateway)
+1) (approve) https://etherscan.io/tx/0x6fc22d5e1b18d60292c6f34a2e1ba01e167484f6aa4efd0fbd4cc60e3a50b4b3
+2) (DepositERC20) https://etherscan.io/tx/0x3bdf86dd4030554a764734472a3faf56dccac2814f91e0c371be6eb4b3c1224e
 
 
-ETH USDC to OPTIMISM (DIFFERENT ADDRESS!!!!)
-1) (Approve) https://etherscan.io/tx/0x6b60dff6bf008c07c29f6a132d10a0422dffbcc22049c5880d46ccfc6628520f
-2) (Transfer) https://etherscan.io/tx/0x30039bba8f8a26ead40c9979eafc2caee170a020d3095a92c4d68dbbbff0d5d0
+==============================================================================
+OPTIMISM FRAX to ETH
+1) (approve) https://optimistic.etherscan.io/tx/0x7bf3fd22342a1bf5d5f6894ded9ca7ea34d8114d5525986a95f20fd66cc90f8d
+2) (burn) https://optimistic.etherscan.io/tx/0x011e2d01134eb0f38b2b5219c7872338d10a4eacb72a7d0f7a64a53973060525
+
+OPTIMISM FXS to ETH
+1) (approve)
+2) (burn)
+
+OPTIMISM USDC to ETH (Optimism Gateway)
+1) (withdraw) https://optimistic.etherscan.io/tx/0x15f6119bf164db156894cceb1db13de68be7455986d953567bf6beea7b7eda78
+
+

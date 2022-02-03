@@ -10,16 +10,6 @@ import './interfaces/IUniswapV2FactoryV5.sol';
 import './interfaces/IUniswapV2CalleeV5.sol';
 import "../twamm/LongTermOrders.sol";
 
-interface IUniswapV2PoolDeployer {
-    function parameters()
-    external
-    view
-    returns (
-        address token0,
-        address token1
-    );
-}
-
 contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     using SafeMath  for uint;
     using UQ112x112 for uint224;
@@ -30,10 +20,10 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     /// -----TWAMM Parameters -----
     /// ---------------------------
 
-    address public immutable owner_address;
+    address public owner_address;
 
     ///@notice interval between blocks that are eligible for order expiry
-    uint256 public orderBlockInterval = 10; // TODO: default it to 10 for now
+    uint256 public orderBlockInterval = 10;
 
     ///@notice false when longTermOrders are permissioned
     bool public whitelistDisabled;
@@ -72,9 +62,9 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     uint public constant override MINIMUM_LIQUIDITY = 10 ** 3;
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transfer(address,uint256)')));
 
-    address public immutable factory;
-    address public immutable token0;
-    address public immutable token1;
+    address public override factory;
+    address public override token0;
+    address public override token1;
 
     uint112 private reserve0;           // uses single storage slot, accessible via getReserves
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
@@ -98,6 +88,14 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         _reserve0 = reserve0;
         _reserve1 = reserve1;
         _blockTimestampLast = blockTimestampLast;
+    }
+
+    function getTwammReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast, uint112 _twammReserve0, uint112 _twammReserve1) {
+        _reserve0 = reserve0;
+        _reserve1 = reserve1;
+        _blockTimestampLast = blockTimestampLast;
+        _twammReserve0 = twammReserve0;
+        _twammReserve1 = twammReserve1;
     }
 
     function getTwammState(uint256 blockNumber) public view returns (
@@ -125,12 +123,18 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     constructor() public {
         factory = msg.sender;
         owner_address = IUniswapV2FactoryV5(factory).feeToSetter();
+    }
 
-        (token0, token1) = IUniswapV2PoolDeployer(msg.sender).parameters();
+    // called once by the factory at time of deployment
+    function initialize(address _token0, address _token1) external override {
+        require(msg.sender == factory);
+        // FORBIDDEN
+        // sufficient check
+        token0 = _token0;
+        token1 = _token1;
 
         // TWAMM
-
-        longTermOrders.initialize(token0, token1, block.number, orderBlockInterval);
+        longTermOrders.initialize(_token0, _token1, block.number, orderBlockInterval);
     }
 
     // update reserves and, on the first call per block, price accumulators
@@ -307,6 +311,10 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         //EC6: Only owner or factory can disable the whitelist
         require(msg.sender == owner_address || msg.sender == factory);
         whitelistDisabled = true;
+    }
+
+    function twammUpToDate() public view returns (bool){
+        return block.number <= longTermOrders.lastVirtualOrderBlock;
     }
 
     ///@notice create a long term order to swap from tokenA

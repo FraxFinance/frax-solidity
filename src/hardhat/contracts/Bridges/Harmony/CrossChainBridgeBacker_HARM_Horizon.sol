@@ -48,7 +48,6 @@ contract CrossChainBridgeBacker_HARM_Horizon is CrossChainBridgeBacker {
 
         if (token_type == 0){
             // 1FRAX -> L1 FRAX
-
             // Approve
             anyFRAX.approve(bridge_addresses[token_type], token_amount);
 
@@ -58,16 +57,15 @@ contract CrossChainBridgeBacker_HARM_Horizon is CrossChainBridgeBacker {
         else if (token_type == 1) {
             // 1FXS -> L1 FXS
             // Approve
-            anyFRAX.approve(bridge_addresses[token_type], token_amount);
+            anyFXS.approve(bridge_addresses[token_type], token_amount);
 
             // Burn
             IERC20HmyManager(bridge_addresses[token_type]).burnToken(address(anyFXS), token_amount, address_to_send_to);
         }
         else {
             // 1USDC -> L1 USDC
-
             // Approve
-            anyFRAX.approve(bridge_addresses[token_type], token_amount);
+            collateral_token.approve(bridge_addresses[token_type], token_amount);
 
             // Burn
             IERC20HmyManager(bridge_addresses[token_type]).burnToken(address(collateral_token), token_amount, address_to_send_to);

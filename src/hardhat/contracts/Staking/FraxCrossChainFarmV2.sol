@@ -10,7 +10,7 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ===================== FraxCrossChainFarmSushi ======================
+// ======================= FraxCrossChainFarmV2 =======================
 // ====================================================================
 // No veFXS logic
 // Because of lack of cross-chain reading of the gauge controller's emission rate,
@@ -35,16 +35,23 @@ pragma experimental ABIEncoderV2;
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
 import "../Curve/IveFXS.sol";
+import "../Curve/FraxCrossChainRewarder.sol";
 import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
-import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
+
+// import '../Misc_AMOs/impossible/IStableXPair.sol'; // Impossible
+// import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
+import '../Misc_AMOs/snowball/ILPToken.sol'; // Snowball S4D - [Part 1]
+import '../Misc_AMOs/snowball/ISwapFlashLoan.sol'; // Snowball S4D - [Part 2]
+// import '../Uniswap/Interfaces/IUniswapV2Pair.sol'; // Uniswap V2
+
 import "../Utils/ReentrancyGuard.sol";
 
 // Inheritance
 import "./Owned.sol";
 
-contract FraxCrossChainFarmSushi is Owned, ReentrancyGuard {
+contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -54,7 +61,13 @@ contract FraxCrossChainFarmSushi is Owned, ReentrancyGuard {
     IveFXS public veFXS;
     ERC20 public rewardsToken0;
     ERC20 public rewardsToken1;
-    IUniswapV2Pair public stakingToken;
+    
+    // IStableXPair public stakingToken; // Impossible
+    // IFeederPool public stakingToken; // mStable
+    ILPToken public stakingToken; // Snowball S4D
+    // IUniswapV2Pair public stakingToken; // Uniswap V2
+
+    FraxCrossChainRewarder public rewarder;
 
     // FRAX
     address public frax_address;
@@ -98,6 +111,7 @@ contract FraxCrossChainFarmSushi is Owned, ReentrancyGuard {
     mapping(address => uint256) public userRewardPerTokenPaid1;
     mapping(address => uint256) public rewards0;
     mapping(address => uint256) public rewards1;
+    uint256 public lastRewardPull;
 
     // Balance tracking
     uint256 private _total_liquidity_locked;
@@ -105,7 +119,7 @@ contract FraxCrossChainFarmSushi is Owned, ReentrancyGuard {
     mapping(address => uint256) private _locked_liquidity;
     mapping(address => uint256) private _combined_weights;
 
-    // Uniswap V2 ONLY
+    // Uniswap V2 / Impossible ONLY
     bool frax_is_token0;
 
     // Stake tracking
@@ -173,19 +187,26 @@ contract FraxCrossChainFarmSushi is Owned, ReentrancyGuard {
         address _rewardsToken1,
         address _stakingToken,
         address _frax_address,
-        address _timelock_address
+        address _timelock_address,
+        address _rewarder_address
     ) Owned(_owner){
         frax_address = _frax_address;
         rewardsToken0 = ERC20(_rewardsToken0);
         rewardsToken1 = ERC20(_rewardsToken1);
-        stakingToken = IUniswapV2Pair(_stakingToken);
-        timelock_address = _timelock_address;
+        
+        // stakingToken = IStableXPair(_stakingToken);
+        // stakingToken = IFeederPool(_stakingToken);
+        stakingToken = ILPToken(_stakingToken);
+        // stakingToken = IUniswapV2Pair(_stakingToken);
 
-        // Uniswap V2 ONLY
-        // Uniswap related. Need to know which token frax is (0 or 1)
-        address token0 = stakingToken.token0();
-        if (token0 == frax_address) frax_is_token0 = true;
-        else frax_is_token0 = false;
+        timelock_address = _timelock_address;
+        rewarder = FraxCrossChainRewarder(_rewarder_address);
+
+        // // Uniswap V2 / Impossible ONLY
+        // // Need to know which token frax is (0 or 1)
+        // address token0 = stakingToken.token0();
+        // if (token0 == frax_address) frax_is_token0 = true;
+        // else frax_is_token0 = false;
         
         // Other booleans
         migrationsOn = false;
@@ -243,16 +264,35 @@ contract FraxCrossChainFarmSushi is Owned, ReentrancyGuard {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
-        // Uniswap V2
+        // mStable
+        // ============================================
+        // {
+        //     uint256 total_frax_reserves;
+        //     (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
+        //     total_frax_reserves = uint256(vaultData.vaultBalance);
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        // }
+
+        // Snowball S4D
         // ============================================
         {
-            uint256 total_frax_reserves;
-            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-            if (frax_is_token0) total_frax_reserves = reserve0;
-            else total_frax_reserves = reserve1;
-
-            frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+            ISwapFlashLoan ISFL = ISwapFlashLoan(0xA0bE4f05E37617138Ec212D4fB0cD2A8778a535F);
+            uint256 total_frax = ISFL.getTokenBalance(ISFL.getTokenIndex(frax_address));
+            frax_per_lp_token = total_frax.mul(1e18).div(stakingToken.totalSupply());
         }
+
+        // Uniswap V2 & Impossible
+        // ============================================
+        // {
+        //     uint256 total_frax_reserves;
+        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+        //     if (frax_is_token0) total_frax_reserves = reserve0;
+        //     else total_frax_reserves = reserve1;
+
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        // }
+
+
 
         return frax_per_lp_token;
     }
@@ -538,6 +578,12 @@ contract FraxCrossChainFarmSushi is Owned, ReentrancyGuard {
 
     // Quasi-notifyRewardAmount() logic
     function syncRewards() internal {
+        // Bring in rewards, if applicable
+        if ((address(rewarder) != address(0)) && ((block.timestamp).sub(lastRewardPull) >= rewardsDuration)){
+            rewarder.distributeReward();
+            lastRewardPull = block.timestamp;
+        }
+
         // Get the current reward token balances
         uint256 curr_bal_0 = rewardsToken0.balanceOf(address(this));
         uint256 curr_bal_1 = rewardsToken1.balanceOf(address(this));
@@ -604,6 +650,12 @@ contract FraxCrossChainFarmSushi is Owned, ReentrancyGuard {
     function initializeDefault() external onlyByOwnGovCtrlr {
         require(!isInitialized, "Already initialized");
         isInitialized = true;
+
+        // Bring in rewards, if applicable
+        if (address(rewarder) != address(0)){
+            rewarder.distributeReward();
+            lastRewardPull = block.timestamp;
+        }
 
         emit DefaultInitialization();
     }

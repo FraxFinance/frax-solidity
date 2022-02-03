@@ -22,6 +22,7 @@ const CrossChainBridgeBacker_ARBI_AnySwap = artifacts.require("Bridges/Arbitrum/
 const CrossChainOracle = artifacts.require("Oracle/CrossChainOracle");
 
 // Staking contracts
+const FraxCCFarmV2_SaddleArbUSDv2 = artifacts.require("Staking/Variants/FraxCCFarmV2_SaddleArbUSDv2");
 
 // AMOs
 const SushiSwapLiquidityAMO_ARBI = artifacts.require("Misc_AMOs/__CROSSCHAIN/Arbitrum/SushiSwapLiquidityAMO_ARBI.sol");
@@ -49,6 +50,7 @@ module.exports = async (deployer) => {
     let cross_chain_oracle_instance;
     
 	// Staking
+    let fraxCCFarmV2_SaddleArbUSDv2_instance;
     
     // AMOs
     let curve_amo_arbi_instance;
@@ -75,6 +77,7 @@ module.exports = async (deployer) => {
 
     // AMOs
     sushiswap_liquidity_amo_arbi_instance = await SushiSwapLiquidityAMO_ARBI.at(CONTRACT_ADDRESSES.arbitrum.amos.sushiswap_liquidity);
+    curve_amo_arbi_instance = await CurveAMO_ARBI.at(CONTRACT_ADDRESSES.arbitrum.amos.curve);
 
     // ANY NEW CONTRACTS, PUT BELOW HERE
     // .new() calls and deployments
@@ -162,23 +165,35 @@ module.exports = async (deployer) => {
 	// 	]
     // );
 
-    console.log(chalk.yellow("========== CurveAMO_ARBI =========="));
-    curve_amo_arbi_instance = await CurveAMO_ARBI.new(
-        THE_ACCOUNTS[1],
-        THE_ACCOUNTS[10],
-        [
-            CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX,
-            CONTRACT_ADDRESSES.arbitrum.collaterals.arbiUSDC,
-            CONTRACT_ADDRESSES.arbitrum.collaterals.arbiUSDT,
-            CONTRACT_ADDRESSES.arbitrum.bridge_backers.anySwap,
-        ],
-        [
-            "0xf07d553B195080F84F582e88ecdD54bAa122b279",
-            "0xbF7E49483881C76487b0989CD7d9A8239B20CA41",
-            "0x7f90122BF0700F9E7e1F688fe926940E8839F353",
-            "0x7544Fe3d184b6B55D6B36c3FCA1157eE0Ba30287"
-        ]
+    console.log(chalk.yellow("========== FraxCCFarmV2_SaddleArbUSDv2 =========="));
+    // FraxCCFarmV2_SaddleArbUSDv2 
+    fraxCCFarmV2_SaddleArbUSDv2_instance = await FraxCCFarmV2_SaddleArbUSDv2.new(
+        THE_ACCOUNTS[1], 
+        CONTRACT_ADDRESSES.arbitrum.canonicals.FXS, // canFXS
+        CONTRACT_ADDRESSES.arbitrum.reward_tokens.SDL, // SDL
+        CONTRACT_ADDRESSES.arbitrum.bearer_tokens.saddleArbUSDv2,
+        CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX, // canFRAX
+        "0x0000000000000000000000000000000000000000", // Timelock
+        "0x0000000000000000000000000000000000000000", // Rewarder
     );
+
+    // console.log(chalk.yellow("========== CurveAMO_ARBI =========="));
+    // curve_amo_arbi_instance = await CurveAMO_ARBI.new(
+    //     THE_ACCOUNTS[1],
+    //     THE_ACCOUNTS[10],
+    //     [
+    //         CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX,
+    //         CONTRACT_ADDRESSES.arbitrum.collaterals.arbiUSDC,
+    //         CONTRACT_ADDRESSES.arbitrum.collaterals.arbiUSDT,
+    //         CONTRACT_ADDRESSES.arbitrum.bridge_backers.anySwap,
+    //     ],
+    //     [
+    //         "0xf07d553B195080F84F582e88ecdD54bAa122b279",
+    //         "0xbF7E49483881C76487b0989CD7d9A8239B20CA41",
+    //         "0x7f90122BF0700F9E7e1F688fe926940E8839F353",
+    //         "0x7544Fe3d184b6B55D6B36c3FCA1157eE0Ba30287"
+    //     ]
+    // );
     
     // ----------------------------------------------
     await hre.network.provider.request({
@@ -189,7 +204,7 @@ module.exports = async (deployer) => {
     console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_ARBI_AnySwap  =========='));
     // await cross_chain_bridge_backer_instance.addAMO(scream_amo_instance.address, false, { from: process.env.ARBITRUM_ONE_ADDRESS });
     // await cross_chain_bridge_backer_instance.addAMO(sushiswap_liquidity_amo_arbi_instance.address, false, { from: process.env.ARBITRUM_ONE_ADDRESS });
-    await cross_chain_bridge_backer_instance.addAMO(curve_amo_arbi_instance.address, false, { from: process.env.ARBITRUM_ONE_ADDRESS });
+    // await cross_chain_bridge_backer_instance.addAMO(curve_amo_arbi_instance.address, false, { from: process.env.ARBITRUM_ONE_ADDRESS });
 
     await hre.network.provider.request({
         method: "hardhat_stopImpersonatingAccount",
@@ -203,8 +218,9 @@ module.exports = async (deployer) => {
     anyFXS.setAsDeployed(anyFXS_instance);
     arbiUSDC.setAsDeployed(arbiUSDC_instance);
     arbiUSDT.setAsDeployed(arbiUSDT_instance);
-    CrossChainBridgeBacker_ARBI_AnySwap.setAsDeployed(cross_chain_bridge_backer_instance)
-    CrossChainOracle.setAsDeployed(cross_chain_oracle_instance)
+    CrossChainBridgeBacker_ARBI_AnySwap.setAsDeployed(cross_chain_bridge_backer_instance);
+    CrossChainOracle.setAsDeployed(cross_chain_oracle_instance);
+    FraxCCFarmV2_SaddleArbUSDv2.setAsDeployed(fraxCCFarmV2_SaddleArbUSDv2_instance);
     SushiSwapLiquidityAMO_ARBI.setAsDeployed(sushiswap_liquidity_amo_arbi_instance);
     CurveAMO_ARBI.setAsDeployed(curve_amo_arbi_instance);
 }

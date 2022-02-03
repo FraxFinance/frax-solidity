@@ -20,7 +20,7 @@ import "./FraxUnifiedFarmTemplate.sol";
 // -------------------- VARIES --------------------
 
 // G-UNI
-import "../Misc_AMOs/gelato/IGUniPool.sol";
+// import "../Misc_AMOs/gelato/IGUniPool.sol";
 
 // mStable
 // import '../Misc_AMOs/mstable/IFeederPool.sol';
@@ -34,6 +34,9 @@ import "../Misc_AMOs/gelato/IGUniPool.sol";
 // Uniswap V2
 // import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
 
+// Vesper
+import '../Misc_AMOs/vesper/IVPool.sol';
+
 // ------------------------------------------------
 
 contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
@@ -43,7 +46,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // -------------------- VARIES --------------------
 
     // G-UNI
-    IGUniPool public stakingToken;
+    // IGUniPool public stakingToken;
     
     // mStable
     // IFeederPool public stakingToken;
@@ -56,6 +59,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // Uniswap V2
     // IUniswapV2Pair public stakingToken;
+
+    // Vesper
+    IVPool public stakingToken;
 
     // ------------------------------------------------
 
@@ -89,9 +95,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // -------------------- VARIES --------------------
         // G-UNI
-        stakingToken = IGUniPool(_stakingToken);
-        address token0 = address(stakingToken.token0());
-        frax_is_token0 = token0 == frax_address;
+        // stakingToken = IGUniPool(_stakingToken);
+        // address token0 = address(stakingToken.token0());
+        // frax_is_token0 = token0 == frax_address;
 
         // mStable
         // stakingToken = IFeederPool(_stakingToken);
@@ -107,6 +113,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // address token0 = stakingToken.token0();
         // if (token0 == frax_address) frax_is_token0 = true;
         // else frax_is_token0 = false;
+
+        // Vesper
+        stakingToken = IVPool(_stakingToken);
+
         // ------------------------------------------------
 
     }
@@ -121,12 +131,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // G-UNI
         // ============================================
-        {
-            (uint256 reserve0, uint256 reserve1) = stakingToken.getUnderlyingBalances();
-            uint256 total_frax_reserves = frax_is_token0 ? reserve0 : reserve1;
+        // {
+        //     (uint256 reserve0, uint256 reserve1) = stakingToken.getUnderlyingBalances();
+        //     uint256 total_frax_reserves = frax_is_token0 ? reserve0 : reserve1;
 
-            frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
-        }
+        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
+        // }
 
         // mStable
         // ============================================
@@ -165,6 +175,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
         // }
+
+        // Vesper
+        // ============================================
+        frax_per_lp_token = stakingToken.pricePerShare();
 
         return frax_per_lp_token;
     }
@@ -296,6 +310,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Update liquidities
         _total_liquidity_locked += addl_liq;
         _locked_liquidity[msg.sender] += addl_liq;
+        {
+            address the_proxy = staker_designated_proxies[msg.sender];
+            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += addl_liq;
+        }
 
         // Need to call to update the combined weights
         _updateRewardAndBalance(msg.sender, false);
@@ -323,7 +341,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) {
         require(stakingPaused == false || valid_migrators[msg.sender] == true, "Staking paused or in migration");
-        require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
 
@@ -347,7 +364,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Update liquidities
         _total_liquidity_locked += liquidity;
         _locked_liquidity[staker_address] += liquidity;
-
+        {
+            address the_proxy = staker_designated_proxies[staker_address];
+            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += liquidity;
+        }
+        
         // Need to call again to make sure everything is correct
         _updateRewardAndBalance(staker_address, false);
 
@@ -381,6 +402,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             // Update liquidities
             _total_liquidity_locked = _total_liquidity_locked - liquidity;
             _locked_liquidity[staker_address] = _locked_liquidity[staker_address] - liquidity;
+            {
+                address the_proxy = staker_designated_proxies[staker_address];
+                if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= liquidity;
+            }
 
             // Remove the stake from the array
             delete lockedStakes[staker_address][theArrayIndex];
