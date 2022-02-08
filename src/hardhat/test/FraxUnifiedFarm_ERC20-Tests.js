@@ -871,11 +871,17 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		console.log(chalk.yellow.bold("===================================================================="));
 		console.log(chalk.yellow.bold("Proxy test"));
-		
-		console.log(`veFXS Proxy deposits 2.5 FXS for 4 years`);
+
+		console.log(chalk.yellow(`Print balances before`));
+		console.log("accounts[1] staked lockedLiquidityOf <BEFORE>:", (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
+		console.log("accounts[1] staked combinedWeightOf <BEFORE>:", (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
+		console.log("accounts[9] staked lockedLiquidityOf <BEFORE>:", (new BigNumber(await staking_instance.lockedLiquidityOf(accounts[9]))).div(BIG18).toNumber());
+		console.log("accounts[9] staked combinedWeightOf <BEFORE>:", (new BigNumber(await staking_instance.combinedWeightOf(accounts[9]))).div(BIG18).toNumber());
+
+		console.log(chalk.yellow(`veFXS Proxy deposits 2.5 FXS for 4 years`));
 		const deposit_amount_e18 = new BigNumber("25e17");
 		let block_time_current_0 = (await time.latest()).toNumber();
-		let staking_end_time = block_time_current_0 + ((1461 * 86400) + 1);
+		let staking_end_time = block_time_current_0 + (126144000);
 		await fxs_instance.approve(veFXS_instance.address, deposit_amount_e18, { from: accounts[4] });
 		await veFXS_instance.create_lock(deposit_amount_e18, staking_end_time, { from: accounts[4] });
 
@@ -906,7 +912,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		const min_vefxs_whale_post_proxy = new BigNumber(await staking_instance.minVeFXSForMaxBoostProxy.call(accounts[4])).div(BIG18);
 		const lp_whale_post_proxy = new BigNumber(await staking_instance.proxy_lp_balances.call(accounts[4])).div(BIG18);
 		const max_lp_whale_post_proxy = new BigNumber(await staking_instance.maxLPForMaxBoost.call(accounts[4])).div(BIG18);
-		console.log(chalk.yellow("These should be off mult_optn_1 in FraxUnifiedFarmTemplate.sol"));
+		console.log(chalk.yellow("Should be max boosted"));
 		console.log("veFXS multiplier (post proxy) [1]: ", vefxs_multiplier_1_post_proxy.toString());
 		console.log("veFXS multiplier (post proxy) [9]: ", vefxs_multiplier_9_post_proxy.toString());
 		console.log("minVeFXSForMaxBoostProxy (veFXS whale): ", min_vefxs_whale_post_proxy.toString());
@@ -919,7 +925,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		assert(vefxs_multiplier_9_post_proxy.isGreaterThanOrEqualTo(vefxs_multiplier_9_pre_proxy), `Proxying should have boosted the multiplier`);
 
 		// Add 1 more LP token to the lock
-		console.log(chalk.yellow("Add 1 more LP token for [9] to the lock to budge the veFXS multiplier"));
+		console.log(chalk.yellow("Add 1 more LP token for [9]. Should stay at max boost (still under LP limit)"));
 		let add_more_before = await staking_instance.lockedStakes.call(accounts[9], 0);
 		const addl_amt = new BigNumber("1e18");
 		await pair_instance.approve(staking_instance.address, addl_amt, { from: accounts[9] });
@@ -961,17 +967,27 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		assert(vefxs_multiplier_1_post_proxy_addl_max.isLessThan(vefxs_multiplier_1_post_proxy_addl), `veFXS multiplier should have decreased`);
 		assert(vefxs_multiplier_9_post_proxy_addl_max.isLessThan(vefxs_multiplier_9_post_proxy_addl), `veFXS multiplier should have decreased`);
 
-
 		console.log(chalk.yellow("veFXS whale disallows accounts [1] and [9] as a proxy-ee"));
 		await staking_instance.proxyToggleStaker(COLLATERAL_FRAX_AND_FXS_OWNER, { from: accounts[4] });
 		await staking_instance.proxyToggleStaker(accounts[9], { from: accounts[4] });
 
+		const vefxs_multiplier_1_post_proxy_disallow = new BigNumber(await staking_instance.veFXSMultiplier.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
 		const vefxs_multiplier_9_post_proxy_disallow = new BigNumber(await staking_instance.veFXSMultiplier.call(accounts[9])).div(BIG18);
-		console.log("veFXS multiplier [9]: ", vefxs_multiplier_9_post_proxy_disallow.toString());
+		const min_vefxs_whale_post_proxy_disallow = new BigNumber(await staking_instance.minVeFXSForMaxBoostProxy.call(accounts[4])).div(BIG18);
+		const lp_whale_post_proxy_disallow = new BigNumber(await staking_instance.proxy_lp_balances.call(accounts[4])).div(BIG18);
+		const max_lp_whale_post_proxy_disallow = new BigNumber(await staking_instance.maxLPForMaxBoost.call(accounts[4])).div(BIG18);
+		console.log("veFXS multiplier (after disallow) [1]: ", vefxs_multiplier_1_post_proxy_disallow.toString());
+		console.log("veFXS multiplier (after disallow) [9]: ", vefxs_multiplier_9_post_proxy_disallow.toString());
+		console.log("minVeFXSForMaxBoostProxy (veFXS whale): ", min_vefxs_whale_post_proxy_disallow.toString());
+		console.log("LP balance (veFXS whale): ", lp_whale_post_proxy_disallow.toString());
+		console.log("maxLPForMaxBoost (veFXS whale): ", max_lp_whale_post_proxy_disallow.toString());
 
 		// Make sure the weight went back to what it was before
-		assert(vefxs_multiplier_9_post_proxy_disallow.isEqualTo(vefxs_multiplier_9_pre_proxy), `Weight should be back to normal`);
+		assert(vefxs_multiplier_1_post_proxy_disallow.isEqualTo(vefxs_multiplier_1_pre_proxy), `Multiplier [1] should be back to normal`);
+		assert(vefxs_multiplier_9_post_proxy_disallow.isEqualTo(vefxs_multiplier_9_pre_proxy), `Multiplier [9] should be back to normal`);
 
+		// Make sure the proxy lp balance went back to what it was before
+		assert(lp_whale_post_proxy_disallow.isEqualTo(lp_whale_pre_proxy), `Proxy LP balance should be back to normal`);
 		
 		console.log(chalk.yellow.bold("===================================================================="));
 		console.log(chalk.yellow.bold("Add more to a lock"));
@@ -1056,6 +1072,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 			await staking_instance.recoverERC20(rew_tkn_addr, test_recovery_amount, { from: token_manager_address });
 			const tkn_bal_after_rec = new BigNumber(await quick_instance.balanceOf(staking_instance.address));
 			console.log(`${rew_tkn_symbol} balance after: ${tkn_bal_after_rec.div(BIG18).toNumber()}`);
+			assert(tkn_bal_before_rec.minus(tkn_bal_after_rec).isEqualTo(test_recovery_amount), "Reward token not recovered");
 
 			console.log("Change the token manager");
 			await staking_instance.changeTokenManager(rew_tkn_addr, COLLATERAL_FRAX_AND_FXS_OWNER, { from: token_manager_address });

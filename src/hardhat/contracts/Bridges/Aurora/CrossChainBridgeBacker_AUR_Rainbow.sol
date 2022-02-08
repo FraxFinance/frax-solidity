@@ -2,7 +2,7 @@
 pragma solidity >= 0.8.0;
 
 import "../CrossChainBridgeBacker.sol";
-import "../../Misc_AMOs/moonbeam/IBridgeRouter.sol";
+import "../../Misc_AMOs/aurora/IEvmErc20V2.sol";
 
 contract CrossChainBridgeBacker_AUR_Rainbow is CrossChainBridgeBacker {
     
@@ -29,8 +29,8 @@ contract CrossChainBridgeBacker_AUR_Rainbow is CrossChainBridgeBacker {
             // Approve
             anyFRAX.approve(bridge_addresses[token_type], token_amount);
 
-            // Burn
-            IBridgeRouter(bridge_addresses[token_type]).send(address(anyFRAX), token_amount, destination, recipient, false);
+            // withdrawToEthereum
+            IEvmErc20V2(bridge_addresses[token_type]).withdrawToEthereum(address_to_send_to, token_amount);
         }
         else if (token_type == 1) {
             // https://explorer.mainnet.aurora.dev/tx/0x139779a291c4c20f6e420c84faf2d280f28d85882fc40333a57aec0093674787/token-transfers
@@ -38,8 +38,8 @@ contract CrossChainBridgeBacker_AUR_Rainbow is CrossChainBridgeBacker {
             // Approve
             anyFRAX.approve(bridge_addresses[token_type], token_amount);
 
-            // Burn
-            IBridgeRouter(bridge_addresses[token_type]).send(address(anyFXS), token_amount, destination, recipient, false);
+            // withdrawToEthereum
+            IEvmErc20V2(bridge_addresses[token_type]).withdrawToEthereum(address_to_send_to, token_amount);
         }
         else {
             // https://explorer.mainnet.aurora.dev/tx/0xc7ca80ff924b3e5fdd63e8f9aa2c734ab9f6c09b8de4a5b7726849c6bf48f470/token-transfers
@@ -47,8 +47,8 @@ contract CrossChainBridgeBacker_AUR_Rainbow is CrossChainBridgeBacker {
             // Approve
             anyFRAX.approve(bridge_addresses[token_type], token_amount);
 
-            // Burn
-            IBridgeRouter(bridge_addresses[token_type]).send(address(collateral_token), token_amount, destination, recipient, false);
+            // withdrawToEthereum
+            IEvmErc20V2(bridge_addresses[token_type]).withdrawToEthereum(address_to_send_to, token_amount);
         }
     }
 }

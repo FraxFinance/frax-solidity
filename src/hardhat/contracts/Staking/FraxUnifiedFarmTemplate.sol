@@ -187,6 +187,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // Initialization
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp + rewardsDuration;
+        
+        // Update the fraxPerLPStored
+        fraxPerLPStored = fraxPerLPToken();
     }
 
     /* ============= VIEWS ============= */
@@ -249,18 +252,6 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
                                 + rewards[account][i];
             }
         }
-
-        // if (_combined_weights[account] == 0){
-        //     for (uint256 i = 0; i < rewardTokens.length; i++){ 
-        //         new_earned[i] = 0;
-        //     }
-        // }
-        // else {
-        //     for (uint256 i = 0; i < rewardTokens.length; i++){ 
-        //         new_earned[i] = ((_combined_weights[account] * (reward_arr[i] - userRewardsPerTokenPaid[account][i])) / 1e18)
-        //                         + rewards[account][i];
-        //     }
-        // }
     }
 
     // Total reward tokens emitted in the given period
@@ -392,13 +383,6 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         staker_allowed_migrators[msg.sender][migrator_address] = !staker_allowed_migrators[msg.sender][migrator_address]; 
     }
 
-    // Staker can allow a veFXS proxy (the proxy will have to toggle them first)
-    function stakerSetVeFXSProxy(address proxy_address) external {
-        require(valid_vefxs_proxies[proxy_address], "Invalid proxy");
-        require(proxy_allowed_stakers[proxy_address][msg.sender], "Proxy has not allowed you yet");
-        staker_designated_proxies[msg.sender] = proxy_address; 
-    }
-
     // Proxy can allow a staker to use their veFXS balance (the staker will have to reciprocally toggle them too)
     // Must come before stakerSetVeFXSProxy
     function proxyToggleStaker(address staker_address) external {
@@ -408,7 +392,20 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // Disable the staker's set proxy if it was the toggler and is currently on
         if (staker_designated_proxies[staker_address] == msg.sender){
             staker_designated_proxies[staker_address] = address(0); 
+
+            // Remove the LP as well
+            proxy_lp_balances[msg.sender] -= _locked_liquidity[staker_address];
         }
+    }
+
+    // Staker can allow a veFXS proxy (the proxy will have to toggle them first)
+    function stakerSetVeFXSProxy(address proxy_address) external {
+        require(valid_vefxs_proxies[proxy_address], "Invalid proxy");
+        require(proxy_allowed_stakers[proxy_address][msg.sender], "Proxy has not allowed you yet");
+        staker_designated_proxies[msg.sender] = proxy_address; 
+
+        // Add the the LP as well
+        proxy_lp_balances[proxy_address] += _locked_liquidity[msg.sender];
     }
 
     // ------ STAKING ------
@@ -494,7 +491,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         for (uint256 i = 0; i < rewardTokens.length; i++){ 
             rewards_before[i] = rewards[rewardee][i];
             rewards[rewardee][i] = 0;
-            TransferHelper.safeTransfer(rewardTokens[i], destination_address, rewards_before[i]);
+            if (rewards_before[i] > 0) TransferHelper.safeTransfer(rewardTokens[i], destination_address, rewards_before[i]);
         }
 
         // Handle additional reward logic

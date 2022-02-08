@@ -261,6 +261,24 @@ describe("TWAMM", function () {
 
             });
 
+            it("Single sided long term submitted amount too small", async function () {
+
+                const amountInA = 15;
+                await tokenA.transfer(addr1.address, amountInA);
+
+                //expected output
+                let tokenAReserve, tokenBReserve;
+                [tokenAReserve, tokenBReserve] = await twamm.getReserves();
+                const expectedOut =
+                    tokenBReserve
+                        .mul(amountInA)
+                        .div(tokenAReserve.add(amountInA));
+
+                //trigger long term order
+                await tokenA.connect(addr1).approve(twamm.address, amountInA);
+                await expect(twamm.connect(addr1).longTermSwapFromAToB(amountInA, 2)).to.be.reverted;
+            });
+
             it("Orders in both pools work as expected", async function () {
 
                 const amountIn = ethers.BigNumber.from(10000);

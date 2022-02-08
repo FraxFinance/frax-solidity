@@ -59,7 +59,7 @@ module.exports = async (deployer) => {
     cross_chain_canonical_fxs_instance = await CrossChainCanonicalFXS.at(CONTRACT_ADDRESSES.aurora.canonicals.FXS);
 
     // Bridges
-    cross_chain_bridge_backer_instance = await CrossChainBridgeBacker_AUR_Rainbow.at(CONTRACT_ADDRESSES.aurora.bridge_backers.rainbow);
+    // cross_chain_bridge_backer_instance = await CrossChainBridgeBacker_AUR_Rainbow.at(CONTRACT_ADDRESSES.aurora.bridge_backers.rainbow);
 
     // Oracles
     cross_chain_oracle_instance = await CrossChainOracle.at(CONTRACT_ADDRESSES.aurora.oracles.cross_chain_oracle); 
