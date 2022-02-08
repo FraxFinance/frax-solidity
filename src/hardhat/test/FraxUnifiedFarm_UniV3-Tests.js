@@ -910,7 +910,7 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		// Make sure the weight is higher now
 		assert(vefxs_multiplier_9_post_proxy.isGreaterThan(vefxs_multiplier_9_pre_proxy), `Proxing should have boosted the weight`);
 
-		assert(false, "ADD MORE TESTS HERE");
+		assert(false, "ADD MORE TESTS HERE. SEE THE ERC20 TESTS");
 
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",

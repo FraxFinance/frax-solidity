@@ -185,7 +185,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // ------ LIQUIDITY AND WEIGHTS ------
 
-    // Calculated the combined weight for an account
+    // Calculate the combined weight for an account
     function calcCurCombinedWeight(address account) public override view
         returns (
             uint256 old_combined_weight,

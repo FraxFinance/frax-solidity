@@ -1,11 +1,10 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "prb-math/contracts/PRBMathSD59x18.sol";
+import '../core/libraries/Math.sol';
 
 ///@notice This library handles the execution of long term orders.
 library ExecVirtualOrdersLib {
-    using PRBMathSD59x18 for int256;
 
     ///@notice computes the result of virtual trades by the token pools
     function computeVirtualBalances(
@@ -39,39 +38,16 @@ library ExecVirtualOrdersLib {
         }
         //when both pools sell, we use the TWAMM formula
         else {
-
-            //signed, fixed point arithmetic
-            int256 aIn = int256(tokenAIn * 997 / 1000).fromInt();
-            int256 bIn = int256(tokenBIn * 997 / 1000).fromInt();
-            int256 aStart = int256(tokenAStart).fromInt();
-            int256 bStart = int256(tokenBStart).fromInt();
-            int256 k = aStart.mul(bStart);
-
-            int256 c = computeC(aStart, bStart, aIn, bIn);
-            int256 endA = computeAmmEndTokenA(aIn, bIn, c, k, aStart, bStart);
-            int256 endB = aStart.div(endA).mul(bStart);
-
-            int256 outA = aStart + aIn - endA;
-            int256 outB = bStart + bIn - endB;
-
-            return (uint256(outA.toInt()), uint256(outB.toInt()), uint256(endA.toInt()), uint256(endB.toInt()));
-
+            uint256 aIn = tokenAIn * 997 / 1000;
+            uint256 bIn = tokenBIn * 997 / 1000;
+            uint256 k = tokenAStart * tokenBStart;
+            uint256 ammEndTokenBTmp = (tokenAStart * tokenAStart) / (tokenAStart + aIn);
+            ammEndTokenBTmp = (ammEndTokenBTmp * (tokenBStart + bIn)) / (tokenAStart + aIn);
+            ammEndTokenBTmp = (ammEndTokenBTmp * (tokenBStart + bIn));
+            ammEndTokenB = Math.sqrt(ammEndTokenBTmp);
+            ammEndTokenA = k / ammEndTokenB;
+            tokenAOut = tokenAStart + tokenAIn - ammEndTokenA;
+            tokenBOut = tokenBStart + tokenBIn - ammEndTokenB;
         }
-
-    }
-
-    //helper function for TWAMM formula computation, helps avoid stack depth errors
-    function computeC(int256 tokenAStart, int256 tokenBStart, int256 tokenAIn, int256 tokenBIn) internal pure returns (int256 c) {
-        int256 c1 = tokenAStart.sqrt().mul(tokenBIn.sqrt());
-        int256 c2 = tokenBStart.sqrt().mul(tokenAIn.sqrt());
-        c = (c1 - c2).div(c1 + c2);
-    }
-
-    //helper function for TWAMM formula computation, helps avoid stack depth errors
-    function computeAmmEndTokenA(int256 tokenAIn, int256 tokenBIn, int256 c, int256 k, int256 aStart, int256 bStart) internal pure returns (int256 ammEndTokenA) {
-        //rearranged for numerical stability
-        int256 exponent = (PRBMathSD59x18.fromInt(4).mul(tokenAIn).mul(tokenBIn).sqrt()).mul(aStart.sqrt().mul(bStart.sqrt()).inv()).exp();
-        int256 fraction = (exponent + c).div(exponent - c);
-        ammEndTokenA = fraction.mul(k.div(tokenBIn).sqrt().mul(tokenAIn.sqrt()));
     }
 }

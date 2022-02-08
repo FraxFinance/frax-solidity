@@ -1,15 +1,12 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "prb-math/contracts/PRBMathSD59x18.sol";
 import "../core/interfaces/IERC20V5.sol";
 import "./OrderPool.sol";
 import "./ExecVirtualOrders.sol";
 
-
 ///@notice This library handles the state and execution of long term orders. 
 library LongTermOrdersLib {
-    using PRBMathSD59x18 for int256;
     using OrderPoolLib for OrderPoolLib.OrderPool;
 
     ///@notice information associated with a long term order
@@ -89,6 +86,8 @@ library LongTermOrdersLib {
         uint256 orderExpiry = self.orderBlockInterval * (numberOfBlockIntervals + 1) + lastExpiryBlock;
         uint256 sellingRate = amount / (orderExpiry - currentBlock);
 
+        require(sellingRate > 0); // tokenRate cannot be zero
+
         //add order to correct pool
         OrderPoolLib.OrderPool storage OrderPool = from == self.tokenA ? self.OrderPoolA : self.OrderPoolB;
         // self.OrderPoolMap[from];
@@ -149,7 +148,7 @@ library LongTermOrdersLib {
         //initial amm balance
         // reserveResult.newReserve0
         // reserveResult.newReserve1
-
+        
         //updated balances from sales
         (uint256 tokenAOut, uint256 tokenBOut, uint256 ammEndTokenA, uint256 ammEndTokenB) = ExecVirtualOrdersLib.computeVirtualBalances(reserveResult.newReserve0, reserveResult.newReserve1, tokenASellAmount, tokenBSellAmount);
 

@@ -178,7 +178,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
 
     // ------ LIQUIDITY AND WEIGHTS ------
 
-    // Calculated the combined weight for an account
+    // Calculate the combined weight for an account
     function calcCurCombinedWeight(address account) public override view
         returns (
             uint256 old_combined_weight,
@@ -481,19 +481,20 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         }
     }
 
-     /* ========== RESTRICTED FUNCTIONS - Curator / migrator callable ========== */
+    /* ========== RESTRICTED FUNCTIONS - Curator / migrator callable ========== */
 
-    // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can).
-    function migrator_stakeLocked_for(address staker_address, uint256 token_id, uint256 secs, uint256 start_timestamp) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
-        _stakeLocked(staker_address, msg.sender, token_id, secs, start_timestamp);
-    }
+    // [DISABLED FOR SPACE CONCERNS. ALSO, HARD TO GET UNIQUE TOKEN IDS DURING MIGRATIONS?]
+    // // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can).
+    // function migrator_stakeLocked_for(address staker_address, uint256 token_id, uint256 secs, uint256 start_timestamp) external isMigrating {
+    //     require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
+    //     _stakeLocked(staker_address, msg.sender, token_id, secs, start_timestamp);
+    // }
 
-    // Used for migrations
-    function migrator_withdraw_locked(address staker_address, uint256 token_id) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
-        _withdrawLocked(staker_address, msg.sender, token_id);
-    }
+    // // Used for migrations
+    // function migrator_withdraw_locked(address staker_address, uint256 token_id) external isMigrating {
+    //     require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
+    //     _withdrawLocked(staker_address, msg.sender, token_id);
+    // }
     
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
 
