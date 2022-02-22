@@ -316,6 +316,25 @@ export const StakeChoices: StakeChoices = {
 	// 	pool_tokens: ["FRAX"],
 	// 	reward_tokens: ["FRAX"]
 	// },
+  'Curve VSTFRAX-f': {
+    lp_logo: 'curve_arbi_vstfrax',
+    slug: 'Curve_VSTFRAX_F',
+    label: 'Curve VSTFRAX-f',
+    chain: 'arbitrum',
+    info_link: 'https://arbitrum.curve.fi/factory/19',
+    add_liq_link: 'https://arbitrum.curve.fi/factory/19/deposit',
+    trade_link: 'https://arbitrum.curve.fi/factory/19',
+    farming_link: 'https://app.frax.finance/staking#Curve_VSTFRAX_F',
+    starting_block: 5752224,
+    staking_enabled: true,
+    external_contract: false,
+    is_gauged: true,
+    pool_tokens: ['FRAX', 'VST'],
+    reward_tokens: ['FXS', 'VSTA'],
+    reward_token_decimals: [18, 18],
+    reward_token_coingecko_slugs: ['frax-share', 'vesta-finance'],
+    version: 5,
+  },
 	"Curve FRAX3CRV-f-2": {
 		lp_logo: "curve",
 		slug: "Curve_FRAX3CRV_F_2",
@@ -1095,6 +1114,26 @@ export const StakeChoices: StakeChoices = {
 		pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
 		reward_tokens: ["FRAX3CRV-f"]
 	},
+  "Zenlink FRAX/GLMR": {
+		lp_logo: "zenlink",
+		label: "Zenlink FRAX/GLMR",
+		chain: "moonbeam",
+		external_contract: true,
+		farming_link: "https://dex.zenlink.pro/#/earn/stake",
+		staking_enabled: true,
+		pool_tokens: ["FRAX", "GLMR"],
+		reward_tokens: ["ZLK", "WGLMR"]
+	},
+  "Zenlink FRAX/FXS": {
+		lp_logo: "zenlink",
+		label: "Zenlink FRAX/FXS",
+		chain: "moonbeam",
+		external_contract: true,
+		farming_link: "https://dex.zenlink.pro/#/earn/stake",
+		staking_enabled: true,
+		pool_tokens: ["FRAX", "FXS"],
+		reward_tokens: ["ZLK", "WGLMR"]
+	},
 };
 
 export const StakeChoiceKeys = Object.keys(StakeChoices);
@@ -1302,7 +1341,7 @@ export const CONTRACT_ADDRESSES = {
           anySwap: "0xddf6b5B2BA110a0267BffB86AeAbFe2637cb8375"
         },
         aurora: {
-          
+          rainbow: "0xD4f638819Ed2c349E9Cfb6b5168d9e810a9D4f85"
         },
         avalanche: {
           anySwap: "0xBA5478A712b5EA898AF03206ab4c7E0608C3e69D" // Old: 0x1c2eFc27f7E892c2A36B7dE78958F83a231b52f1
@@ -1490,6 +1529,7 @@ export const CONTRACT_ADDRESSES = {
       "StakeDAO sdETH-FraxPut": "0x839A989bE40f2D60f00beEB648903732c041CBd7",
       "StakeDAO sdFRAX3CRV-f": "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7",
       "Sushi FRAX/SUSHI": "0xe06F8d30AC334c857Fc8c380C85969C150f38A6A",
+      "Sushi FXS/WETH": "0xeC8C342bc3E07F05B9a782bc34e7f04fB9B44502",
       // "Sushi FRAX/FXS": "0xc218001e3D102e3d1De9bf2c0F7D9626d76C6f30",
       // "Sushi FXS/WETH": "0x61eB53ee427aB4E007d78A9134AaCb3101A2DC23",
       // "Curve FRAX-DAI-USDC-USDT": "0x83D2944d5fC10A064451Dc5852f4F47759F249B6", // Proxied Implementation: https://etherscan.io/address/0x2c7796c0590cc100d70af473993890d457cb2ac9#code
@@ -1517,7 +1557,7 @@ export const CONTRACT_ADDRESSES = {
       "Sushi FRAX/SUSHI": "0xb4Ab0dE6581FBD3A02cF8f9f265138691c3A7d5D",
       "Sushi FXS/WETH": "", // Pre-gauge: "0x74C370990C1181303D20e9f0252437a97518B95B",
       "Saddle alUSD/FEI/FRAX/LUSD": "0x0639076265e9f88542C91DCdEda65127974A5CA5",
-      "Temple FRAX/TEMPLE": "0x016563F5EB22cF84fA0Ff8B593DdC5343ca15856",
+      "Temple FRAX/TEMPLE": "0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16", // Old1: "0x016563F5EB22cF84fA0Ff8B593DdC5343ca15856",
       "Vesper Orbit FRAX": "0x698137C473bc1F0Ea9b85adE45Caf64ef2DF48d6",
     },
     external_farm_tokens: {
@@ -1572,6 +1612,7 @@ export const CONTRACT_ADDRESSES = {
       "Yearn crvFRAX Vault (V3)": "",
     },
     middleman_gauges: {
+      "Curve VSTFRAX-f": "0x127963A74c07f72D862F2Bdc225226c3251BD117", // Arbitrum
       "mStable FRAX/mUSD": "0x3e14f6EEDCC5Bc1d0Fc7B20B45eAE7B1F74a6AeC", // Polygon
       "Sushi FRAX/FXS": "", // Polygon
       // "Snowball S4D": "0x66fD216bCBeb566EF038A116B7270f241005e186", // Avalanche
@@ -1637,6 +1678,7 @@ export const CONTRACT_ADDRESSES = {
       weth: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
       SPELL: "0x3E6648C5a70A150A88bCE65F4aD4d506Fe15d2AF",
       SDL: "0x75c9bc761d88f70156daf83aa010e84680baf131",
+      VSTA: "0xa684cd057951541187f288294a1e1C2646aA2d24"
     },
     bearer_tokens: {
       FRAX2pool: "0xf07d553B195080F84F582e88ecdD54bAa122b279",
@@ -1645,12 +1687,14 @@ export const CONTRACT_ADDRESSES = {
     },
     vamms: {},
     pair_tokens: {
+      "Curve VSTFRAX-f": "0x59bF0545FCa0E5Ad48E13DA269faCD2E8C886Ba4",
       "Sushi canFRAX/canFXS": "0xfb5DB4f55Bb97A608f6EE50864104457FA04DA4f",
       "Sushi canFRAX/WETH": "0xaebfda10b251d650126830b952ee74b4a599f71f",
       "Sushi canFRAX/arbiUSDC": "0x8286a9881CEe20E71ac1215f8D39De6853Dd9A8F",
       "Sushi canFXS/arbiUSDC": "0xC1C8136A948e6332db36E90aDD6fb004871176A2",
     },
     staking_contracts: {
+      "Curve VSTFRAX-f": "0x127963A74c07f72D862F2Bdc225226c3251BD117",
       "Olympus Pro FRAX Bond [Arbitrum]": "",
     },
   },

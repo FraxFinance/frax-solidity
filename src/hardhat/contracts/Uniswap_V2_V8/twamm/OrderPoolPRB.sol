@@ -1,11 +1,13 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
+import "prb-math/contracts/PRBMathUD60x18.sol";
+
 ///@notice An Order Pool is an abstraction for a pool of long term orders that sells a token at a constant rate to the embedded AMM. 
 ///the order pool handles the logic for distributing the proceeds from these sales to the owners of the long term orders through a modified 
 ///version of the staking algorithm from  https://uploads-ssl.webflow.com/5ad71ffeb79acc67c8bcdaba/5ad8d1193a40977462982470_scalable-reward-distribution-paper.pdf
 library OrderPoolLib {
-    uint256 constant Q112 = 2**112;
+    using PRBMathUD60x18 for uint256;
 
     ///@notice you can think of this as a staking pool where all long term orders are staked.
     /// The pool is paid when virtual long term orders are executed, and each order is paid proportionally
@@ -36,9 +38,8 @@ library OrderPoolLib {
     ///@notice distribute payment amount to pool (in the case of TWAMM, proceeds from trades against amm)
     function distributePayment(OrderPool storage self, uint256 amount) internal {
         if (self.currentSalesRate != 0) {
-	   unchecked { // Addition is with overflow
-	      self.rewardFactor += amount*Q112/self.currentSalesRate;
-	   }
+            //floating point arithmetic
+            self.rewardFactor += amount.fromUint().div(self.currentSalesRate.fromUint());
         }
     }
 
@@ -67,9 +68,7 @@ library OrderPoolLib {
         unsoldAmount = (expiry - block.number) * salesRate;
 
         //calculate amount of other token that was purchased
-        unchecked { // substraction is with underflow
-		purchasedAmount = ((self.rewardFactor - self.rewardFactorAtSubmission[orderId])*salesRate)/Q112;
-	}
+        purchasedAmount = (self.rewardFactor - self.rewardFactorAtSubmission[orderId]).mul(salesRate.fromUint()).toUint();
 
         //update state
         self.currentSalesRate -= salesRate;
@@ -90,17 +89,13 @@ library OrderPoolLib {
         //if order has expired, we need to calculate the reward factor at expiry
         if (block.number > orderExpiry) {
             uint256 rewardFactorAtExpiry = self.rewardFactorAtBlock[orderExpiry];
-            unchecked { // substraction is with underflow
-            	totalReward = ((rewardFactorAtExpiry - rewardFactorAtSubmission)*stakedAmount)/Q112;
-            }
+            totalReward = (rewardFactorAtExpiry - rewardFactorAtSubmission).mul(stakedAmount.fromUint()).toUint();
             //remove stake
             self.salesRate[orderId] = 0;
         }
         //if order has not yet expired, we just adjust the start 
         else {
-            unchecked { // substraction is with underflow
-            	totalReward = ((self.rewardFactor - rewardFactorAtSubmission)*stakedAmount)/Q112;
-            }
+            totalReward = (self.rewardFactor - rewardFactorAtSubmission).mul(stakedAmount.fromUint()).toUint();
             self.rewardFactorAtSubmission[orderId] = self.rewardFactor;
         }
     }

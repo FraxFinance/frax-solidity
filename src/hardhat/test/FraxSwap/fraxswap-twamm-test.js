@@ -1,15 +1,33 @@
 const {expect} = require("chai");
 const {ethers} = require("hardhat");
 const uniswapV2PairV8 = require('../../artifacts/contracts/Uniswap_V2_V8/core/UniswapV2PairV8.sol/UniswapV2PairV8');
-const {
-    bigNumberify
-} = require('./utilities');
+const {bigNumberify, expandTo18Decimals} = require('./utilities');
+const {calculateTwammExpected} = require('./twamm-utils')
 
 async function getBlockNumber() {
     return (await ethers.provider.getBlock("latest")).number
 }
 
-describe("TWAMM", function () {
+function outputErrorDiffPct(A, B) {
+    const bigger = A > B ? A : B;
+    const smaller = A < B ? A : B;
+    return `diff: ${ethers.utils.formatUnits(bigger.mul(10000).div(smaller).sub(10000), 2)} %`
+}
+
+function outputRatio(A, B) {
+    return ethers.utils.formatUnits(A.mul(10000).div(B), 4)
+}
+
+const transactionInSingleBlock = async (func) => {
+    await network.provider.send("evm_setAutomine", [false]);
+    await func();
+    await network.provider.send("evm_setAutomine", [true]);
+    await network.provider.send("evm_mine")
+}
+
+const initialLiquidityProvided = expandTo18Decimals(100000);
+
+const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multiplier} longterm swap ratio: ${outputRatio(expandTo18Decimals(10 * multiplier), initialLiquidityProvided)}`, function () {
 
     let tokenA;
     let tokenB;
@@ -21,126 +39,11 @@ describe("TWAMM", function () {
     let addr2;
     let addrs;
 
-    const blockInterval = 10;
+    let blockInterval = 10;
 
-    const initialLiquidityProvided = 100000000;
-    const ERC20Supply = ethers.utils.parseUnits("100");
-
-
-    // describe("Basic AMM", function () {
-
-    //     describe("Providing Liquidity", function () {
-
-    //         it("Should mint correct number of LP tokens", async function () {
-
-    //             const LPBalance = await twamm.balanceOf(owner.address);
-
-    //             expect(LPBalance).to.eq(initialLiquidityProvided);
-    //             //Currently doesn't subtract out MINIMUM_LIQUIDITY = 10 ** 3
-    //         });
-
-    //         it("can't provide initial liquidity twice", async function () {
-
-    //             const amount = 10000;
-    //             await tokenA.transfer(twamm.address, amount);
-    //             await tokenB.transfer(twamm.address, amount);
-    //             await expect(
-    //                 twamm.mint(owner.address)
-    //             ).to.be.revertedWith('EC4');
-    //             //No longer relevant
-    //         });
-
-    //     //     it("LP token value is constant after mint", async function () {
-
-    //     //         let totalSupply = await twamm.totalSupply();
-
-    //     //         let tokenAReserve, tokenBReserve;
-    //     //         [tokenAReserve, tokenBReserve] = await twamm.getReserves();
-
-    //     //         const initialTokenAPerLP = tokenAReserve / totalSupply;
-    //     //         const initialTokenBPerLP = tokenBReserve / totalSupply;
-
-    //     //         const newLPTokens = 10000;
-    //     //         await twamm.mint(newLPTokens);
-
-    //     //         totalSupply = await twamm.totalSupply();
-
-    //     //         tokenAReserve = await twamm.tokenAReserves();
-    //     //         tokenBReserve = await twamm.tokenBReserves();
-
-    //     //         const finalTokenAPerLP = tokenAReserve / totalSupply;
-    //     //         const finalTokenBPerLP = tokenBReserve / totalSupply;
-
-    //     //         expect(finalTokenAPerLP).to.eq(initialTokenAPerLP);
-    //     //         expect(finalTokenBPerLP).to.eq(initialTokenBPerLP);
-    //     //     });
-    //     // });
-
-    //     // describe("Removing Liquidity", function () {
-
-    //     //     it("LP token value is constant after removing", async function () {
-
-    //     //         let totalSupply = await twamm.totalSupply();
-
-    //     //         let tokenAReserve = await twamm.tokenAReserves();
-    //     //         let tokenBReserve = await twamm.tokenBReserves();
-
-    //     //         const initialTokenAPerLP = tokenAReserve / totalSupply;
-    //     //         const initialTokenBPerLP = tokenBReserve / totalSupply;
-
-    //     //         const liquidityToRemove = initialLiquidityProvided / 2;
-    //     //         await twamm.removeLiquidity(liquidityToRemove);
-
-    //     //         totalSupply = await twamm.totalSupply();
-
-    //     //         tokenAReserve = await twamm.tokenAReserves();
-    //     //         tokenBReserve = await twamm.tokenBReserves();
-
-    //     //         const finalTokenAPerLP = tokenAReserve / totalSupply;
-    //     //         const finalTokenBPerLP = tokenBReserve / totalSupply;
-
-    //     //         expect(finalTokenAPerLP).to.eq(initialTokenAPerLP);
-    //     //         expect(finalTokenBPerLP).to.eq(initialTokenBPerLP);
-    //     //     });
-
-    //     //     it("can't remove more than available liquidity", async function () {
-
-    //     //         let totalSupply = await twamm.totalSupply();
-
-    //     //         const liquidityToRemove = initialLiquidityProvided * 2;
+    const ERC20Supply = expandTo18Decimals(1e22);
 
 
-    //     //         await expect(
-    //     //             twamm.removeLiquidity(liquidityToRemove)
-    //     //         ).to.be.revertedWith('EC2');
-    //     //     });
-    //     // });
-
-
-    //     // describe("Swapping", function () {
-
-    //     //     it("swaps expected amount", async function () {
-    //     //         const amountInA = ethers.utils.parseUnits("1");
-    //     //         const tokenAReserve = await twamm.tokenAReserves();
-    //     //         const tokenBReserve = await twamm.tokenBReserves();
-    //     //         const expectedOutBeforeFees =
-    //     //             tokenBReserve
-    //     //                 .mul(amountInA)
-    //     //                 .div(tokenAReserve.add(amountInA));
-
-    //     //         //adjust for LP fee of 0.3%
-    //     //         const expectedOutput = expectedOutBeforeFees.mul(1000 - 3).div(1000);
-
-    //     //         const beforeBalanceB = await tokenB.balanceOf(owner.address);
-    //     //         await twamm.swapFromAToB(amountInA);
-    //     //         const afterBalanceB = await tokenB.balanceOf(owner.address);
-    //     //         const actualOutput = afterBalanceB.sub(beforeBalanceB);
-
-    //     //         expect(actualOutput).to.eq(expectedOutput);
-
-    //     //     });
-    //     });
-    // });
     describe("Whitelist", function () {
         beforeEach(async function () {
             [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
@@ -177,7 +80,7 @@ describe("TWAMM", function () {
                 twamm.connect(addr1).executeVirtualOrders(await getBlockNumber())
             ).to.not.be.reverted; // anyone can call this function
 
-            pairAddress= await factory.allPairs(0);
+            pairAddress = await factory.allPairs(0);
             twamm = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
             await twamm.disableWhitelist();
 
@@ -188,7 +91,7 @@ describe("TWAMM", function () {
         it("Factory toggle works on new pairs", async function () {
 
             await factory.createPair(token0.address, token1.address);
-            let pairAddress= await factory.allPairs(0);
+            let pairAddress = await factory.allPairs(0);
             let twamm = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
             await twamm.disableWhitelist();
 
@@ -199,10 +102,8 @@ describe("TWAMM", function () {
                 twamm.connect(addr1).executeVirtualOrders(await getBlockNumber())
             ).to.not.be.reverted;
 
-
         });
     });
-
 
     describe("TWAMM Functionality ", function () {
 
@@ -215,6 +116,17 @@ describe("TWAMM", function () {
             tokenB = setupCnt.token1;
             factory = setupCnt.factory;
             twamm = setupCnt.pair;
+
+            const [
+                token0Rate,
+                token1Rate,
+                lastVirtualOrderBlock,
+                orderBlockInterval,
+                rewardFactorPool0,
+                rewardFactorPool1
+            ] = await twamm.getTwammState(await getBlockNumber())
+
+            blockInterval = orderBlockInterval;
 
             await twamm.disableWhitelist();
 
@@ -231,16 +143,18 @@ describe("TWAMM", function () {
 
             it("Single sided long term order behaves like normal swap", async function () {
 
-                const amountInA = 10000;
+                const amountInA = expandTo18Decimals(10 * multiplier);
                 await tokenA.transfer(addr1.address, amountInA);
+
+                const amountInAMinusFee = amountInA.mul(997).div(1000)
 
                 //expected output
                 let tokenAReserve, tokenBReserve;
                 [tokenAReserve, tokenBReserve] = await twamm.getReserves();
                 const expectedOut =
                     tokenBReserve
-                        .mul(amountInA)
-                        .div(tokenAReserve.add(amountInA));
+                        .mul(amountInAMinusFee)
+                        .div(tokenAReserve.add(amountInAMinusFee));
 
                 //trigger long term order
                 await tokenA.connect(addr1).approve(twamm.address, amountInA);
@@ -257,13 +171,14 @@ describe("TWAMM", function () {
                 const actualOutput = afterBalanceB.sub(beforeBalanceB);
 
                 //since we are breaking up order, match is not exact
-                expect(actualOutput).to.be.closeTo(expectedOut, ethers.utils.parseUnits('100', 'wei'));
+                expect(actualOutput).to.be.closeTo(expectedOut, amountInA.mul(1).div(10000000));
 
             });
 
             it("Single sided long term submitted amount too small", async function () {
 
-                const amountInA = 15;
+                const amountInA = bigNumberify(15);
+                const amountInAMinusFee = amountInA.mul(997).div(1000)
                 await tokenA.transfer(addr1.address, amountInA);
 
                 //expected output
@@ -271,8 +186,8 @@ describe("TWAMM", function () {
                 [tokenAReserve, tokenBReserve] = await twamm.getReserves();
                 const expectedOut =
                     tokenBReserve
-                        .mul(amountInA)
-                        .div(tokenAReserve.add(amountInA));
+                        .mul(amountInAMinusFee)
+                        .div(tokenAReserve.add(amountInAMinusFee));
 
                 //trigger long term order
                 await tokenA.connect(addr1).approve(twamm.address, amountInA);
@@ -281,7 +196,7 @@ describe("TWAMM", function () {
 
             it("Orders in both pools work as expected", async function () {
 
-                const amountIn = ethers.BigNumber.from(10000);
+                const amountIn = expandTo18Decimals(10 * multiplier);
                 await tokenA.transfer(addr1.address, amountIn);
                 await tokenB.transfer(addr2.address, amountIn);
 
@@ -306,44 +221,35 @@ describe("TWAMM", function () {
 
                 //pool is balanced, and both orders execute same amount in opposite directions,
                 //so we expect final balances to be roughly equal
-                expect(amountABought).to.be.closeTo(amountBBought, amountIn / 100)
+                //including the fee
+                expect(amountABought.add(amountBBought).div(2)).to.be.closeTo(amountIn, amountIn.mul(998).div(1000))
             });
 
             it("Swap amounts are consistent with twamm formula", async function () {
 
-                const tokenAIn = 10000 * 997 / 1000;
-                const tokenBIn = 2000 * 997 / 1000;
+                const tokenAIn = expandTo18Decimals(10 * multiplier);
+                const tokenBIn = expandTo18Decimals(2 * multiplier);
+
                 await tokenA.transfer(addr1.address, tokenAIn);
                 await tokenB.transfer(addr2.address, tokenBIn);
                 await tokenA.connect(addr1).approve(twamm.address, tokenAIn);
                 await tokenB.connect(addr2).approve(twamm.address, tokenBIn);
 
-                let tokenAReserve, tokenBReserve;
-                [tokenAReserve, tokenBReserve] = await twamm.getReserves();
+                let tokenAReserveRet, tokenBReserveRet;
+                [tokenAReserveRet, tokenBReserveRet] = await twamm.getReserves();
 
-                const k = tokenAReserve * tokenBReserve;
-                const c = (
-                    Math.sqrt(tokenAReserve * tokenBIn) - Math.sqrt(tokenBReserve * tokenAIn)
-                ) / (
-                    Math.sqrt(tokenAReserve * tokenBIn) + Math.sqrt(tokenBReserve * tokenAIn)
-                );
-
-                const exponent = 2 * Math.sqrt(tokenAIn * tokenBIn / k);
-
-                const finalAReserveExpected = (
-                    Math.sqrt(k * tokenAIn / tokenBIn)
-                    * (Math.exp(exponent) + c)
-                    / (Math.exp(exponent) - c)
-                )
-
-                const finalBReserveExpected = k / finalAReserveExpected;
-
-                const tokenAOut = Math.abs(tokenAReserve - finalAReserveExpected + tokenAIn);
-                const tokenBOut = Math.abs(tokenBReserve - finalBReserveExpected + tokenBIn);
+                const [
+                    finalAReserveExpectedBN,
+                    finalBReserveExpectedBN,
+                    tokenAOutBN,
+                    tokenBOutBN
+                ] = calculateTwammExpected(tokenAIn, tokenBIn, tokenAReserveRet, tokenBReserveRet)
 
                 //trigger long term orders
-                await twamm.connect(addr1).longTermSwapFromAToB(tokenAIn, 2);
-                await twamm.connect(addr2).longTermSwapFromBToA(tokenBIn, 2);
+                await transactionInSingleBlock(async () => {
+                    await twamm.connect(addr1).longTermSwapFromAToB(tokenAIn, 10);
+                    await twamm.connect(addr2).longTermSwapFromBToA(tokenBIn, 10);
+                })
 
                 //move blocks forward, and execute virtual orders
                 await mineBlocks(22 * blockInterval)
@@ -356,22 +262,22 @@ describe("TWAMM", function () {
                 const amountABought = await tokenA.balanceOf(addr2.address);
                 const amountBBought = await tokenB.balanceOf(addr1.address);
 
-                // const finalAReserveActual = (await twamm.tokenAReserves());
-                // const finalBReserveActual = (await twamm.tokenBReserves());
-
                 let [finalAReserveActual, finalBReserveActual] = await twamm.getReserves();
 
-                //expect results to be close to calculation
-                expect(finalAReserveActual.toNumber()).to.be.closeTo(finalAReserveExpected, finalAReserveExpected / 99);
-                expect(finalBReserveActual.toNumber()).to.be.closeTo(finalBReserveExpected, finalBReserveExpected / 99);
+                const finalAReserveActualBN = bigNumberify(finalAReserveActual.toString());
+                const finalBReserveActualBN = bigNumberify(finalBReserveActual.toString());
 
-                expect(amountABought.toNumber()).to.be.closeTo(tokenAOut, tokenAOut / 80);
-                expect(amountBBought.toNumber()).to.be.closeTo(tokenBOut, tokenBOut / 80);
+                //expect results to be close to calculation
+                expect(finalAReserveActualBN, outputErrorDiffPct(finalAReserveActualBN, finalAReserveExpectedBN)).to.be.closeTo(finalAReserveExpectedBN, finalAReserveExpectedBN.div(99));
+                expect(finalBReserveActualBN, outputErrorDiffPct(finalBReserveActualBN, finalBReserveExpectedBN)).to.be.closeTo(finalBReserveExpectedBN, finalBReserveExpectedBN.div(99));
+
+                expect(amountABought, outputErrorDiffPct(amountABought, tokenAOutBN)).to.be.closeTo(tokenAOutBN, tokenAOutBN.div(80));
+                expect(amountBBought, outputErrorDiffPct(amountBBought, tokenBOutBN)).to.be.closeTo(tokenBOutBN, tokenBOutBN.div(80));
             });
 
             it("Multiple orders in both pools work as expected", async function () {
 
-                const amountIn = 10000;
+                const amountIn = expandTo18Decimals(10 * multiplier);
                 await tokenA.transfer(addr1.address, amountIn);
                 await tokenB.transfer(addr2.address, amountIn);
 
@@ -380,13 +286,15 @@ describe("TWAMM", function () {
                 await tokenB.connect(addr2).approve(twamm.address, amountIn);
 
                 //trigger long term orders
-                await twamm.connect(addr1).longTermSwapFromAToB(amountIn / 2, 2);
-                await twamm.connect(addr2).longTermSwapFromBToA(amountIn / 2, 3);
-                await twamm.connect(addr1).longTermSwapFromAToB(amountIn / 2, 4);
-                await twamm.connect(addr2).longTermSwapFromBToA(amountIn / 2, 5);
+                await transactionInSingleBlock(async () => {
+                    await twamm.connect(addr1).longTermSwapFromAToB(amountIn.div(2), 2);
+                    await twamm.connect(addr2).longTermSwapFromBToA(amountIn.div(2), 3);
+                    await twamm.connect(addr1).longTermSwapFromAToB(amountIn.div(2), 4);
+                    await twamm.connect(addr2).longTermSwapFromBToA(amountIn.div(2), 5);
+                });
 
                 //move blocks forward, and execute virtual orders
-                await mineBlocks(6 * blockInterval)
+                await mineBlocks(6 * blockInterval);
                 await twamm.connect(addr1).executeVirtualOrders(await getBlockNumber());
 
                 //withdraw proceeds 
@@ -399,13 +307,15 @@ describe("TWAMM", function () {
                 const amountBBought = await tokenB.balanceOf(addr1.address);
 
                 //pool is balanced, and orders execute same amount in opposite directions,
-                //so we expect final balances to be roughly equal
-                expect(amountABought).to.be.closeTo(amountBBought, amountIn / 100)
+                //so we expect final balances to be roughly equal minus the fees
+                expect(amountABought.add(amountBBought).div(2),
+                    outputErrorDiffPct(amountABought.add(amountBBought).div(2), amountIn.mul(997).div(1000))
+                ).to.be.closeTo(amountIn.mul(997).div(1000), amountIn.div(1000))
             });
 
             it("Normal swap works as expected while long term orders are active", async function () {
 
-                const amountIn = 10000;
+                const amountIn = expandTo18Decimals(20 * multiplier);
                 await tokenA.transfer(addr1.address, amountIn);
                 await tokenB.transfer(addr2.address, amountIn);
 
@@ -414,23 +324,26 @@ describe("TWAMM", function () {
                 await tokenB.connect(addr2).approve(twamm.address, amountIn);
 
                 //trigger long term orders
-                await twamm.connect(addr1).longTermSwapFromAToB(amountIn, 10);
-                await twamm.connect(addr2).longTermSwapFromBToA(amountIn, 10);
+                await transactionInSingleBlock(async () => {
+                    await twamm.connect(addr1).longTermSwapFromAToB(amountIn, 10);
+                    await twamm.connect(addr2).longTermSwapFromBToA(amountIn, 10);
+                });
 
                 //move blocks forward, and execute virtual orders
                 await mineBlocks(3 * blockInterval)
                 await twamm.connect(addr1).executeVirtualOrders(await getBlockNumber());
 
-                //withdraw proceeds 
-                await twamm.connect(addr1).withdrawProceedsFromLongTermSwap(0);
-                await twamm.connect(addr2).withdrawProceedsFromLongTermSwap(1);
+                await transactionInSingleBlock(async () => {
+                    await twamm.connect(addr1).withdrawProceedsFromLongTermSwap(0);
+                    await twamm.connect(addr2).withdrawProceedsFromLongTermSwap(1);
+                });
 
                 const amountABought = await tokenA.balanceOf(addr2.address);
                 const amountBBought = await tokenB.balanceOf(addr1.address);
 
                 //pool is balanced, and both orders execute same amount in opposite directions,
                 //so we expect final balances to be roughly equal
-                expect(amountABought).to.be.closeTo(amountBBought, amountIn / 80)
+                expect(amountABought, outputErrorDiffPct(amountABought, amountBBought)).to.be.closeTo(amountBBought, amountIn.div(80))
             });
         });
 
@@ -439,7 +352,7 @@ describe("TWAMM", function () {
 
             it("Order can be cancelled", async function () {
 
-                const amountIn = 100000;
+                const amountIn = expandTo18Decimals(10 * multiplier);
                 await tokenA.transfer(addr1.address, amountIn);
                 await tokenA.connect(addr1).approve(twamm.address, amountIn);
 
@@ -467,7 +380,7 @@ describe("TWAMM", function () {
 
             it("proceeds can be withdrawn while order is still active", async function () {
 
-                const amountIn = 100000;
+                const amountIn = expandTo18Decimals(10 * multiplier);
                 await tokenA.transfer(addr1.address, amountIn);
                 await tokenA.connect(addr1).approve(twamm.address, amountIn);
 
@@ -499,67 +412,67 @@ describe("TWAMM", function () {
 
         });
 
-
     });
+
+    async function setupContracts(createPair = true) {
+        const [owner, user1, user2, user3] = await ethers.getSigners();
+
+        // Deploy token0/token1 token and distribute
+        const DummyToken = await ethers.getContractFactory("contracts/Uniswap_V2_V8/periphery/test/ERC20PeriTest.sol:ERC20PeriTest");
+        let token0 = await DummyToken.deploy(ERC20Supply);
+        let token1 = await DummyToken.deploy(ERC20Supply);
+        const weth9 = await (await ethers.getContractFactory("WETH9")).deploy();
+
+        if (token1.address.toUpperCase() < token0.address.toUpperCase()) {
+            var temp = token1;
+            token1 = token0;
+            token0 = temp;
+        }
+
+        const FraxswapFactory = await ethers.getContractFactory("UniswapV2FactoryV8");
+        const factory = await FraxswapFactory.deploy(owner.address);
+        await factory.deployed();
+
+        let pair;
+        if (createPair) {
+            await factory.createPair(token0.address, token1.address);
+            const pairAddress = await factory.getPair(token0.address, token1.address);
+            pair = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
+        }
+
+        const FraxswapRouter = await ethers.getContractFactory("UniswapV2Router02V8");
+        const router = await FraxswapRouter.deploy(factory.address, weth9.address);
+        await router.deployed();
+
+        return {
+            token0,
+            token1,
+            weth9,
+            factory,
+            pair,
+            router
+        }
+    }
 });
+
+describe("Multiple TWAMM Tests", function () {
+    allTwammTests(1)
+    allTwammTests(10)
+    allTwammTests(100)
+    allTwammTests(1000)
+    allTwammTests(2000)
+    allTwammTests(3000)
+    allTwammTests(4000)
+    allTwammTests(5000)
+    allTwammTests(6000)
+    allTwammTests(7000)
+    allTwammTests(8000)
+    allTwammTests(9000)
+})
+
 
 async function mineBlocks(blockNumber) {
     for (let i = 0; i < blockNumber; i++) {
         await network.provider.send("evm_mine")
-    }
-}
-
-async function setupContracts(createPair = true, deployDTT = false) {
-    const [owner, user1, user2, user3] = await ethers.getSigners();
-
-    // Deploy token0/token1 token and distribute
-    const DummyToken = await ethers.getContractFactory("contracts/Uniswap_V2_V8/periphery/test/ERC20PeriTest.sol:ERC20PeriTest");
-    let token0 = await DummyToken.deploy("10000000000000000000000");
-    let token1 = await DummyToken.deploy("10000000000000000000000");
-    const weth9 = await (await ethers.getContractFactory("WETH9")).deploy();
-
-    let deflatingERC20;
-    if (deployDTT) {
-        deflatingERC20 = await (await ethers.getContractFactory(
-            "contracts/Uniswap_V2_V8/periphery/test/DeflatingERC20.sol:DeflatingERC20"
-        )).deploy(expandTo18Decimals(10000));
-        await deflatingERC20.transfer(user1.address, expandTo18Decimals(10000));
-    }
-
-    if (token1.address.toUpperCase() < token0.address.toUpperCase()) {
-        var temp = token1;
-        token1 = token0;
-        token0 = temp;
-    }
-    // await token0.transfer(owner.address, "10000000000000000000000");
-    // await token1.transfer(owner.address, "10000000000000000000000");
-    // await token0.transfer(user2.address, "10000000000000000000");
-    // await token1.transfer(user2.address, "10000000000000000000");
-    // await token0.transfer(user3.address, "10000000000000000000");
-    // await token1.transfer(user3.address, "10000000000000000000");
-
-    const FraxswapFactory = await ethers.getContractFactory("UniswapV2FactoryV8");
-    const factory = await FraxswapFactory.deploy(owner.address);
-    await factory.deployed();
-
-    let pair;
-    if (createPair) {
-        await factory.createPair(token0.address, token1.address);
-        const pairAddress = await factory.getPair(token0.address, token1.address);
-        pair = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
-    }
-
-    const FraxswapRouter = await ethers.getContractFactory("UniswapV2Router02V8");
-    const router = await FraxswapRouter.deploy(factory.address, weth9.address);
-    await router.deployed();
-
-    return {
-        token0,
-        token1,
-        weth9,
-        deflatingERC20,
-        factory,
-        pair,
-        router
     }
 }

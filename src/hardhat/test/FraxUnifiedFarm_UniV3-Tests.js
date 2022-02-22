@@ -300,7 +300,7 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 			params: [COMPTROLLER_ADDRESS]
 		});
 
-		await frax_gauge_controller.add_gauge(staking_instance.address, 0, 2000, { from: COMPTROLLER_ADDRESS });
+		await frax_gauge_controller.add_gauge(staking_instance.address, 0, 1000, { from: COMPTROLLER_ADDRESS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",

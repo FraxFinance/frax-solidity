@@ -110,7 +110,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 150000000000,
+			gasPrice: 125000000000,
 			gasMultiplier: 1.2
 		},
 		evmos: {
@@ -140,7 +140,7 @@ module.exports = {
 			},
 			chainId: 1666600000,
 			gas: "auto",
-			gasPrice: 5000000000, // 5 Gwei
+			gasPrice: 50000000000, // 50 Gwei
 			gasMultiplier: 1.2
 		},
 		moonbeam: {
@@ -180,7 +180,7 @@ module.exports = {
 			},
 			chainId: 137,
 			gas: "auto",
-			gasPrice: 50000000000, // 50 Gwei
+			gasPrice: 150000000000, // 150 Gwei
 			gasMultiplier: 1.2
 		},
 		ropsten: {
@@ -217,6 +217,15 @@ module.exports = {
 			},
 			{
 				version: "0.6.11",
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 100000
+					}
+				  }
+			},
+			{
+				version: "0.6.12",
 				settings: {
 					optimizer: {
 						enabled: true,

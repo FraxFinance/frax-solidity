@@ -66,11 +66,11 @@ function encodePrice(reserve0, reserve1) {
 }
 
 function expandTo18Decimals(amount) {
-    return utils.parseUnits(`${amount}`, 18);
+    return utils.parseUnits(`${amount.toLocaleString('fullwide', {useGrouping: false})}`, 18);
 }
 
 function bigNumberify(amount) {
-    return utils.parseUnits(`${amount}`, 0);
+    return utils.parseUnits(`${amount.toLocaleString('fullwide', {useGrouping: false})}`, 0);
 }
 
 module.exports = {

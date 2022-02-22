@@ -25,17 +25,17 @@ import "./FraxUnifiedFarmTemplate.sol";
 // mStable
 // import '../Misc_AMOs/mstable/IFeederPool.sol';
 
-// // StakeDAO sdETH-FraxPut
+// StakeDAO sdETH-FraxPut
 // import '../Misc_AMOs/stakedao/IOpynPerpVault.sol';
 
 // StakeDAO Vault
 // import '../Misc_AMOs/stakedao/IStakeDaoVault.sol';
 
 // Uniswap V2
-// import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
+import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
 
 // Vesper
-import '../Misc_AMOs/vesper/IVPool.sol';
+// import '../Misc_AMOs/vesper/IVPool.sol';
 
 // ------------------------------------------------
 
@@ -58,10 +58,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // IStakeDaoVault public stakingToken;
 
     // Uniswap V2
-    // IUniswapV2Pair public stakingToken;
+    IUniswapV2Pair public stakingToken;
 
     // Vesper
-    IVPool public stakingToken;
+    // IVPool public stakingToken;
 
     // ------------------------------------------------
 
@@ -109,16 +109,13 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // stakingToken = IStakeDaoVault(_stakingToken);
 
         // Uniswap V2
-        // stakingToken = IUniswapV2Pair(_stakingToken);
-        // address token0 = stakingToken.token0();
-        // if (token0 == frax_address) frax_is_token0 = true;
-        // else frax_is_token0 = false;
+        stakingToken = IUniswapV2Pair(_stakingToken);
+        address token0 = stakingToken.token0();
+        if (token0 == frax_address) frax_is_token0 = true;
+        else frax_is_token0 = false;
 
         // Vesper
-        stakingToken = IVPool(_stakingToken);
-
-        // ------------------------------------------------
-
+        // stakingToken = IVPool(_stakingToken);
     }
 
     /* ============= VIEWS ============= */
@@ -167,18 +164,18 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // Uniswap V2
         // ============================================
-        // {
-        //     uint256 total_frax_reserves;
-        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-        //     if (frax_is_token0) total_frax_reserves = reserve0;
-        //     else total_frax_reserves = reserve1;
+        {
+            uint256 total_frax_reserves;
+            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+            if (frax_is_token0) total_frax_reserves = reserve0;
+            else total_frax_reserves = reserve1;
 
-        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
-        // }
+            frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
+        }
 
         // Vesper
         // ============================================
-        frax_per_lp_token = stakingToken.pricePerShare();
+        // frax_per_lp_token = stakingToken.pricePerShare();
 
         return frax_per_lp_token;
     }
@@ -311,7 +308,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         _total_liquidity_locked += addl_liq;
         _locked_liquidity[msg.sender] += addl_liq;
         {
-            address the_proxy = staker_designated_proxies[msg.sender];
+            address the_proxy = getProxyFor(msg.sender);
             if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += addl_liq;
         }
 
@@ -365,7 +362,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         _total_liquidity_locked += liquidity;
         _locked_liquidity[staker_address] += liquidity;
         {
-            address the_proxy = staker_designated_proxies[staker_address];
+            address the_proxy = getProxyFor(staker_address);
             if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += liquidity;
         }
         
@@ -403,7 +400,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             _total_liquidity_locked = _total_liquidity_locked - liquidity;
             _locked_liquidity[staker_address] = _locked_liquidity[staker_address] - liquidity;
             {
-                address the_proxy = staker_designated_proxies[staker_address];
+                address the_proxy = getProxyFor(staker_address);
                 if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= liquidity;
             }
 

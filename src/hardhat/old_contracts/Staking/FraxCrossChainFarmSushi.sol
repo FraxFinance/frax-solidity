@@ -10,7 +10,7 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================= FraxCrossChainFarmV2 =======================
+// ===================== FraxCrossChainFarmSushi ======================
 // ====================================================================
 // No veFXS logic
 // Because of lack of cross-chain reading of the gauge controller's emission rate,
@@ -35,28 +35,16 @@ pragma experimental ABIEncoderV2;
 import "../Math/Math.sol";
 import "../Math/SafeMath.sol";
 import "../Curve/IveFXS.sol";
-import "../Curve/FraxCrossChainRewarder.sol";
-import "../ERC20/__CROSSCHAIN/IanyFXS.sol";
-import "../ERC20/__CROSSCHAIN/CrossChainCanonicalFXS.sol";
 import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
-
-import '../Misc_AMOs/curve/I2pool.sol'; // Curve 2-token
-// import '../Misc_AMOs/curve/I3pool.sol'; // Curve 3-token
-// import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
-// import '../Misc_AMOs/impossible/IStableXPair.sol'; // Impossible
-// import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
-// import '../Misc_AMOs/snowball/ILPToken.sol'; // Snowball S4D - [Part 1]
-// import '../Misc_AMOs/snowball/ISwapFlashLoan.sol'; // Snowball S4D - [Part 2]
-// import '../Uniswap/Interfaces/IUniswapV2Pair.sol'; // Uniswap V2
-
+import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
 import "../Utils/ReentrancyGuard.sol";
 
 // Inheritance
 import "./Owned.sol";
 
-contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
+contract FraxCrossChainFarmSushi is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -64,18 +52,9 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
 
     // Instances
     IveFXS public veFXS;
-    IanyFXS public bridgeFXS;
-    CrossChainCanonicalFXS public rewardsToken0; // Assumed to be canFXS
+    ERC20 public rewardsToken0;
     ERC20 public rewardsToken1;
-    
-    I2pool public stakingToken; // Curve 2-token
-    // I3pool public stakingToken; // Curve 3-token
-    // IStableXPair public stakingToken; // Impossible
-    // IFeederPool public stakingToken; // mStable
-    // ILPToken public stakingToken; // Snowball S4D
-    // IUniswapV2Pair public stakingToken; // Uniswap V2
-
-    FraxCrossChainRewarder public rewarder;
+    IUniswapV2Pair public stakingToken;
 
     // FRAX
     address public frax_address;
@@ -119,8 +98,6 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
     mapping(address => uint256) public userRewardPerTokenPaid1;
     mapping(address => uint256) public rewards0;
     mapping(address => uint256) public rewards1;
-    uint256 public lastRewardPull;
-    mapping(address => uint256) internal lastRewardClaimTime; // staker addr -> timestamp
 
     // Balance tracking
     uint256 private _total_liquidity_locked;
@@ -128,17 +105,20 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
     mapping(address => uint256) private _locked_liquidity;
     mapping(address => uint256) private _combined_weights;
 
-    // Uniswap V2 / Impossible ONLY
+    // Uniswap V2 ONLY
     bool frax_is_token0;
 
     // Stake tracking
-    mapping(address => LockedStake[]) public lockedStakes;
+    mapping(address => LockedStake[]) private lockedStakes;
 
     // List of valid migrators (set by governance)
     mapping(address => bool) public valid_migrators;
 
     // Stakers set which migrator(s) they want to use
     mapping(address => mapping(address => bool)) public staker_allowed_migrators;
+
+    // Greylisting of bad addresses
+    mapping(address => bool) public greylist;
 
     // Administrative booleans
     bool public migrationsOn; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
@@ -189,34 +169,23 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
 
     constructor (
         address _owner,
-        address _bridge_token,
         address _rewardsToken0,
         address _rewardsToken1,
         address _stakingToken,
         address _frax_address,
-        address _timelock_address,
-        address _rewarder_address
+        address _timelock_address
     ) Owned(_owner){
         frax_address = _frax_address;
-        bridgeFXS = IanyFXS(_bridge_token);
-        rewardsToken0 = CrossChainCanonicalFXS(_rewardsToken0);
+        rewardsToken0 = ERC20(_rewardsToken0);
         rewardsToken1 = ERC20(_rewardsToken1);
-        
-        stakingToken = I2pool(_stakingToken);
-        // stakingToken = I3pool(_stakingToken);
-        // stakingToken = IStableXPair(_stakingToken);
-        // stakingToken = IFeederPool(_stakingToken);
-        // stakingToken = ILPToken(_stakingToken);
-        // stakingToken = IUniswapV2Pair(_stakingToken);
-
+        stakingToken = IUniswapV2Pair(_stakingToken);
         timelock_address = _timelock_address;
-        rewarder = FraxCrossChainRewarder(_rewarder_address);
 
-        // Uniswap V2 / Impossible ONLY
-        // Need to know which token frax is (0 or 1)
-        // address token0 = stakingToken.token0();
-        // if (token0 == frax_address) frax_is_token0 = true;
-        // else frax_is_token0 = false;
+        // Uniswap V2 ONLY
+        // Uniswap related. Need to know which token frax is (0 or 1)
+        address token0 = stakingToken.token0();
+        if (token0 == frax_address) frax_is_token0 = true;
+        else frax_is_token0 = false;
         
         // Other booleans
         migrationsOn = false;
@@ -274,68 +243,16 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
-
-        // Curve 2-token
+        // Uniswap V2
         // ============================================
         {
-            address coin0 = stakingToken.coins(0);
             uint256 total_frax_reserves;
-            if (coin0 == frax_address) {
-                total_frax_reserves = stakingToken.balances(0);
-            }
-            else {
-                total_frax_reserves = stakingToken.balances(1);
-            }
+            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+            if (frax_is_token0) total_frax_reserves = reserve0;
+            else total_frax_reserves = reserve1;
+
             frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
         }
-
-        // Curve 3-token
-        // ============================================
-        {
-            address coin0 = stakingToken.coins(0);
-            address coin1 = stakingToken.coins(1);
-            uint256 total_frax_reserves;
-            if (coin0 == frax_address) {
-                total_frax_reserves = stakingToken.balances(0);
-            }
-            else if (coin1 == frax_address) {
-                total_frax_reserves = stakingToken.balances(1);
-            }
-            else {
-                total_frax_reserves = stakingToken.balances(2);
-            }
-            frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
-        }
-
-        // mStable
-        // ============================================
-        // {
-        //     uint256 total_frax_reserves;
-        //     (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
-        //     total_frax_reserves = uint256(vaultData.vaultBalance);
-        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
-        // }
-
-        // Saddle / Snowball S4D
-        // ============================================
-        // {
-        //     ISwapFlashLoan ISFL = ISwapFlashLoan(0xfeEa4D1BacB0519E8f952460A70719944fe56Ee0);
-        //     uint256 total_frax = ISFL.getTokenBalance(ISFL.getTokenIndex(frax_address));
-        //     frax_per_lp_token = total_frax.mul(1e18).div(stakingToken.totalSupply());
-        // }
-
-        // Uniswap V2 & Impossible
-        // ============================================
-        // {
-        //     uint256 total_frax_reserves;
-        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-        //     if (frax_is_token0) total_frax_reserves = reserve0;
-        //     else total_frax_reserves = reserve1;
-
-        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
-        // }
-
-
 
         return frax_per_lp_token;
     }
@@ -368,7 +285,6 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
         else return 0;
     }
 
-    // Calculate the combined weight for an account
     function calcCurCombinedWeight(address account) public view
         returns (
             uint256 old_combined_weight,
@@ -382,14 +298,14 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
         // Get the veFXS multipliers
         // For the calculations, use the midpoint (analogous to midpoint Riemann sum)
         new_vefxs_multiplier = veFXSMultiplier(account);
-
+        
         uint256 midpoint_vefxs_multiplier;
         if (_locked_liquidity[account] == 0 && _combined_weights[account] == 0) {
             // This is only called for the first stake to make sure the veFXS multiplier is not cut in half
             midpoint_vefxs_multiplier = new_vefxs_multiplier;
         }
         else {
-            midpoint_vefxs_multiplier = (new_vefxs_multiplier + _vefxsMultiplierStored[account]) / 2;
+            midpoint_vefxs_multiplier = ((new_vefxs_multiplier).add(_vefxsMultiplierStored[account])).div(2);
         }
 
         // Loop through the locked stakes, first by getting the liquidity * lock_multiplier portion
@@ -398,26 +314,14 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
             LockedStake memory thisStake = lockedStakes[account][i];
             uint256 lock_multiplier = thisStake.lock_multiplier;
 
-            // If the lock is expired
-            if (thisStake.ending_timestamp <= block.timestamp) {
-                // If the lock expired in the time since the last claim, the weight needs to be proportionately averaged this time
-                if (lastRewardClaimTime[account] < thisStake.ending_timestamp){
-                    uint256 time_before_expiry = thisStake.ending_timestamp - lastRewardClaimTime[account];
-                    uint256 time_after_expiry = block.timestamp - thisStake.ending_timestamp;
-
-                    // Get the weighted-average lock_multiplier
-                    uint256 numerator = (lock_multiplier * time_before_expiry) + (MULTIPLIER_PRECISION * time_after_expiry);
-                    lock_multiplier = numerator / (time_before_expiry + time_after_expiry);
-                }
-                // Otherwise, it needs to just be 1x
-                else {
-                    lock_multiplier = MULTIPLIER_PRECISION;
-                }
+            // If the lock period is over, drop the lock multiplier down to 1x for the weight calculations
+            if (thisStake.ending_timestamp <= block.timestamp){
+                lock_multiplier = MULTIPLIER_PRECISION;
             }
 
             uint256 liquidity = thisStake.liquidity;
-            uint256 combined_boosted_amount = (liquidity * (lock_multiplier + midpoint_vefxs_multiplier)) / MULTIPLIER_PRECISION;
-            new_combined_weight = new_combined_weight + combined_boosted_amount;
+            uint256 combined_boosted_amount = liquidity.mul(lock_multiplier.add(midpoint_vefxs_multiplier)).div(MULTIPLIER_PRECISION);
+            new_combined_weight = new_combined_weight.add(combined_boosted_amount);
         }
     }
 
@@ -457,18 +361,6 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function _getStake(address staker_address, bytes32 kek_id) internal view returns (LockedStake memory locked_stake, uint256 arr_idx) {
-        for (uint256 i = 0; i < lockedStakes[staker_address].length; i++){ 
-            if (kek_id == lockedStakes[staker_address][i].kek_id){
-                locked_stake = lockedStakes[staker_address][i];
-                arr_idx = i;
-                break;
-            }
-        }
-        require(locked_stake.kek_id == kek_id, "Stake not found");
-        
-    }
-
     function _updateRewardAndBalance(address account, bool sync_too) internal {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
         if (sync_too){
@@ -502,37 +394,6 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
             }
 
         }
-    }
-
-    // Add additional LPs to an existing locked stake
-    function lockAdditional(bytes32 kek_id, uint256 addl_liq) updateRewardAndBalance(msg.sender, true) public {
-        // Get the stake and its index
-        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
-
-        // Calculate the new amount
-        uint256 new_amt = thisStake.liquidity + addl_liq;
-
-        // Checks
-        require(addl_liq >= 0, "Must be nonzero");
-
-        // Pull the tokens from the sender
-        TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);
-
-        // Update the stake
-        lockedStakes[msg.sender][theArrayIndex] = LockedStake(
-            kek_id,
-            thisStake.start_timestamp,
-            new_amt,
-            thisStake.ending_timestamp,
-            thisStake.lock_multiplier
-        );
-
-        // Update liquidities
-        _total_liquidity_locked += addl_liq;
-        _locked_liquidity[msg.sender] += addl_liq;
-
-        // Need to call to update the combined weights
-        _updateRewardAndBalance(msg.sender, false);
     }
 
     function _syncEarned(address account) internal {
@@ -574,6 +435,7 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
     ) internal updateRewardAndBalance(staker_address, true) {
         require(!stakingPaused || valid_migrators[msg.sender] == true, "Staking paused or in migration");
         require(liquidity > 0, "Must stake more than zero");
+        require(greylist[staker_address] == false, "Address has been greylisted");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
 
@@ -612,7 +474,16 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
         // Collect rewards first and then update the balances
         _getReward(staker_address, destination_address);
 
-        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(staker_address, kek_id);
+        LockedStake memory thisStake;
+        thisStake.liquidity = 0;
+        uint theArrayIndex;
+        for (uint i = 0; i < lockedStakes[staker_address].length; i++){ 
+            if (kek_id == lockedStakes[staker_address][i].kek_id){
+                thisStake = lockedStakes[staker_address][i];
+                theArrayIndex = i;
+                break;
+            }
+        }
         require(thisStake.kek_id == kek_id, "Stake not found");
         require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true || valid_migrators[msg.sender] == true, "Stake is still locked!");
 
@@ -663,22 +534,10 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
             ttlRew1Paid += reward1;
             emit RewardPaid(rewardee, reward1, address(rewardsToken1), destination_address);
         }
-
-        // Update the last reward claim time
-        lastRewardClaimTime[rewardee] = block.timestamp;
     }
 
     // Quasi-notifyRewardAmount() logic
     function syncRewards() internal {
-        // Bring in rewards, if applicable
-        if ((address(rewarder) != address(0)) && ((block.timestamp).sub(lastRewardPull) >= rewardsDuration)){
-            rewarder.distributeReward();
-            lastRewardPull = block.timestamp;
-        }
-
-        // Swap bridge tokens
-        sweepBridgeTokens();
-
         // Get the current reward token balances
         uint256 curr_bal_0 = rewardsToken0.balanceOf(address(this));
         uint256 curr_bal_1 = rewardsToken1.balanceOf(address(this));
@@ -726,28 +585,14 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
         }
     }
 
-    // Since bridge FXS is dropped in, it needs to be exchanged for canFXS
-    function sweepBridgeTokens() public {
-        // Get the balance of bridge tokens
-        uint256 bridge_tkn_bal = bridgeFXS.balanceOf(address(this));
-
-        if (bridge_tkn_bal > 0) {
-            // Approve
-            bridgeFXS.approve(address(rewardsToken0), bridge_tkn_bal);
-
-            // Swap for canFXS
-            rewardsToken0.exchangeOldForCanonical(address(bridgeFXS), bridge_tkn_bal);
-        }
-    }
 
     function sync() public {
         require(isInitialized, "Contract not initialized");
 
-        // Swap bridge tokens
         // Make sure the rewardRates are synced to the current FXS balance
         syncRewards();
 
-        // Rolling 7 days rewards period
+        // Rolling 8 days rewards period
         lastUpdateTime = block.timestamp;
         periodFinish = (block.timestamp).add(rewardsDuration);
     }
@@ -759,12 +604,6 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
     function initializeDefault() external onlyByOwnGovCtrlr {
         require(!isInitialized, "Already initialized");
         isInitialized = true;
-
-        // Bring in rewards, if applicable
-        if (address(rewarder) != address(0)){
-            rewarder.distributeReward();
-            lastRewardPull = block.timestamp;
-        }
 
         emit DefaultInitialization();
     }
@@ -828,6 +667,10 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
 
         emit LockedStakeTimeForMaxMultiplier(lock_time_for_max_multiplier);
         emit LockedStakeMinTime(_lock_time_min);
+    }
+
+    function greylistAddress(address _address) external onlyByOwnGov {
+        greylist[_address] = !(greylist[_address]);
     }
 
     function unlockStakes() external onlyByOwnGov {

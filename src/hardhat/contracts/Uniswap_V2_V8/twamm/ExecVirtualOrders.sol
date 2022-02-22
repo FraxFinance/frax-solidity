@@ -8,10 +8,11 @@ library ExecVirtualOrdersLib {
 
     ///@notice computes the result of virtual trades by the token pools
     function computeVirtualBalances(
-        uint256 tokenAStart
-    , uint256 tokenBStart
-    , uint256 tokenAIn
-    , uint256 tokenBIn) internal pure returns (uint256 tokenAOut, uint256 tokenBOut, uint256 ammEndTokenA, uint256 ammEndTokenB)
+        uint256 tokenAStart,
+        uint256 tokenBStart,
+        uint256 tokenAIn,
+        uint256 tokenBIn)
+    internal pure returns (uint256 tokenAOut, uint256 tokenBOut, uint256 ammEndTokenA, uint256 ammEndTokenB)
     {
         tokenAOut = 0;
         tokenBOut = 0;
@@ -41,13 +42,10 @@ library ExecVirtualOrdersLib {
             uint256 aIn = tokenAIn * 997 / 1000;
             uint256 bIn = tokenBIn * 997 / 1000;
             uint256 k = tokenAStart * tokenBStart;
-            uint256 ammEndTokenBTmp = (tokenAStart * tokenAStart) / (tokenAStart + aIn);
-            ammEndTokenBTmp = (ammEndTokenBTmp * (tokenBStart + bIn)) / (tokenAStart + aIn);
-            ammEndTokenBTmp = (ammEndTokenBTmp * (tokenBStart + bIn));
-            ammEndTokenB = Math.sqrt(ammEndTokenBTmp);
+            ammEndTokenB = tokenAStart * (tokenBStart + bIn) / (tokenAStart + aIn);
             ammEndTokenA = k / ammEndTokenB;
-            tokenAOut = tokenAStart + tokenAIn - ammEndTokenA;
-            tokenBOut = tokenBStart + tokenBIn - ammEndTokenB;
+            tokenAOut = tokenAStart + aIn - ammEndTokenA;
+            tokenBOut = tokenBStart + bIn - ammEndTokenB;
         }
     }
 }

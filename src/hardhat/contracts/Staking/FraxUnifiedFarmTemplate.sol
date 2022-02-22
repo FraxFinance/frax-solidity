@@ -57,7 +57,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // Frax related
     address internal constant frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
     bool internal frax_is_token0;
-    uint256 private fraxPerLPStored;
+    uint256 public fraxPerLPStored;
 
     // Constant for various precisions
     uint256 internal constant MULTIPLIER_PRECISION = 1e18;
@@ -187,9 +187,6 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // Initialization
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp + rewardsDuration;
-        
-        // Update the fraxPerLPStored
-        fraxPerLPStored = fraxPerLPToken();
     }
 
     /* ============= VIEWS ============= */
@@ -340,10 +337,22 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         return (proxyStakedFrax(proxy_address) * vefxs_per_frax_for_max_boost) / MULTIPLIER_PRECISION;
     }
 
+    function getProxyFor(address addr) public view returns (address){
+        if (valid_vefxs_proxies[addr]) {
+            // If addr itself is a proxy, return that.
+            // If it farms itself directly, it should use the shared LP tally in proxyStakedFrax
+            return addr;
+        }
+        else {
+            // Otherwise, return the proxy, or address(0)
+            return staker_designated_proxies[addr];
+        }
+    }
+
     function veFXSMultiplier(address account) public view returns (uint256 vefxs_multiplier) {
         // Use either the user's or their proxy's veFXS balance
         uint256 vefxs_bal_to_use = 0;
-        address the_proxy = staker_designated_proxies[account];
+        address the_proxy = getProxyFor(account);
         vefxs_bal_to_use = (the_proxy == address(0)) ? veFXS.balanceOf(account) : veFXS.balanceOf(the_proxy);
 
         // First option based on fraction of total veFXS supply, with an added scale factor
@@ -568,6 +577,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     function sync() public {
         // Sync the gauge weight, if applicable
         sync_gauge_weights(false);
+
+        // Update the fraxPerLPStored
+        fraxPerLPStored = fraxPerLPToken();
 
         if (block.timestamp >= periodFinish) {
             retroCatchUp();

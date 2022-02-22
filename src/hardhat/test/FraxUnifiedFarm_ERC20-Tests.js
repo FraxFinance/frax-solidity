@@ -163,8 +163,8 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// pair_instance_FRAX_SUSHI_Sushi = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Sushi FRAX/SUSHI"]);
 		// pair_instance_Gelato_FRAX_DAI = await IGUniPool.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Gelato Uniswap FRAX/DAI"]);
-		// pair_instance_Temple_FRAX_TEMPLE = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Temple FRAX/TEMPLE"]);
-		pair_instance_Vesper_FRAX = await IVPool.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Vesper Orbit FRAX"]);
+		pair_instance_Temple_FRAX_TEMPLE = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Temple FRAX/TEMPLE"]);
+		// pair_instance_Vesper_FRAX = await IVPool.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Vesper Orbit FRAX"]);
 
 		// Get the mock CRVDAO Instance
 
@@ -173,8 +173,8 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// Fill the staking rewards instances
 		// fraxUnifiedFarm_Gelato_FRAX_DAI_instance = await FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI.deployed();
-		// fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.deployed();
-		fraxUnifiedFarm_Vesper_FRAX_instance = await FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX.deployed();
+		fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.deployed();
+		// fraxUnifiedFarm_Vesper_FRAX_instance = await FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX.deployed();
 
 		// veFXS and gauge related
 		veFXS_instance = await veFXS.deployed();
@@ -186,13 +186,11 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// Set which pairs to test
 		console.log(chalk.hex("#ff8b3d").bold("CHOOSING THE PAIR"))
-		// pair_instance = pair_instance_FXS_WETH_Sushi;
-		pair_instance = pair_instance_Vesper_FRAX;
+		pair_instance = pair_instance_Temple_FRAX_TEMPLE;
 
 		// Set which pairs to test
 		console.log(chalk.hex("#ff8b3d").bold("CHOOSING THE STAKING CONTRACT"))
-		// staking_instance = stakingInstanceMultiGauge_FXS_WETH;
-		staking_instance = fraxUnifiedFarm_Vesper_FRAX_instance;
+		staking_instance = fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance;
 
 		const rew1_address = (await staking_instance.getAllRewardTokens.call())[1];
 		rew1_instance = await ERC20.at(rew1_address);
@@ -253,19 +251,19 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		});
 
 		// // ---------------------------------------------------------------
-		// console.log("Pre-LP admin give");
-		// await hre.network.provider.request({
-		// 	method: "hardhat_impersonateAccount",
-		// 	params: [ADDRESS_LP_ADMIN]
-		// });
+		console.log("Pre-LP admin give");
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [ADDRESS_LP_ADMIN]
+		});
 
-		// await temple_frax_amm_ops.withdraw(pair_instance.address, accounts[1], new BigNumber("30e18"), { from: ADDRESS_LP_ADMIN });
-		// await temple_frax_amm_ops.withdraw(pair_instance.address, accounts[9], new BigNumber("30e18"), { from: ADDRESS_LP_ADMIN });
+		await temple_frax_amm_ops.withdraw(pair_instance.address, accounts[1], new BigNumber("30e18"), { from: ADDRESS_LP_ADMIN });
+		await temple_frax_amm_ops.withdraw(pair_instance.address, accounts[9], new BigNumber("30e18"), { from: ADDRESS_LP_ADMIN });
 
-		// await hre.network.provider.request({
-		// 	method: "hardhat_stopImpersonatingAccount",
-		// 	params: [ADDRESS_LP_ADMIN]
-		// });
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [ADDRESS_LP_ADMIN]
+		});
 
 		// ---------------------------------------------------------------
 		console.log("Give LPs to test users");
@@ -290,7 +288,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 			params: [COMPTROLLER_ADDRESS]
 		});
 
-		await frax_gauge_controller.add_gauge(staking_instance.address, 0, 2000, { from: COMPTROLLER_ADDRESS });
+		await frax_gauge_controller.add_gauge(staking_instance.address, 0, 1000, { from: COMPTROLLER_ADDRESS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",

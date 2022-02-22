@@ -47,6 +47,7 @@ const StableSwap3Pool = artifacts.require("Curve/IStableSwap3Pool");
 
 // Misc AMOs
 const FraxAMOMinter = artifacts.require("Frax/FraxAMOMinter");
+const FraxLiquidityBridger_AUR_Rainbow = artifacts.require("Bridges/Aurora/FraxLiquidityBridger_AUR_Rainbow.sol");
 const FraxLiquidityBridger_OPTI_Celer = artifacts.require("Bridges/Avalanche/FraxLiquidityBridger_OPTI_Celer.sol");
 
 // Constants
@@ -131,7 +132,7 @@ contract('FraxLiquidityBridger-Tests', async (accounts) => {
 		pool_instance_V3 = await FraxPoolV3.deployed();
 		
 		// If truffle-fixture is used
-		frax_bridger_instance = await FraxLiquidityBridger_OPTI_Celer.deployed();
+		frax_bridger_instance = await FraxLiquidityBridger_AUR_Rainbow.deployed();
 
 	});
 	

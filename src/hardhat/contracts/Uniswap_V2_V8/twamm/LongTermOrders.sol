@@ -37,7 +37,7 @@ library LongTermOrdersLib {
         OrderPoolLib.OrderPool OrderPoolA;
         OrderPoolLib.OrderPool OrderPoolB;
 
-        ///@notice incrementing counter for order ids
+        ///@notice incrementing counter for order ids, this is the next order id
         uint256 orderId;
 
         ///@notice mapping from order ids to Orders
@@ -52,11 +52,11 @@ library LongTermOrdersLib {
     }
 
     ///@notice initialize state
-    function initialize(LongTermOrders storage self
-    , address tokenA
-    , address tokenB
-    , uint256 lastVirtualOrderBlock
-    , uint256 orderBlockInterval) internal {
+    function initialize(LongTermOrders storage self,
+        address tokenA,
+        address tokenB,
+        uint256 lastVirtualOrderBlock,
+        uint256 orderBlockInterval) internal {
         self.tokenA = tokenA;
         self.tokenB = tokenB;
         self.lastVirtualOrderBlock = lastVirtualOrderBlock;
@@ -90,7 +90,6 @@ library LongTermOrdersLib {
 
         //add order to correct pool
         OrderPoolLib.OrderPool storage OrderPool = from == self.tokenA ? self.OrderPoolA : self.OrderPoolB;
-        // self.OrderPoolMap[from];
         OrderPool.depositOrder(self.orderId, sellingRate, orderExpiry);
 
         //add to order map
@@ -105,13 +104,11 @@ library LongTermOrdersLib {
         Order storage order = self.orderMap[orderId];
 
         OrderPoolLib.OrderPool storage OrderPool = order.sellTokenId == self.tokenA ? self.OrderPoolA : self.OrderPoolB;
-        // self.OrderPoolMap[order.sellTokenId];
         (unsoldAmount, purchasedAmount) = OrderPool.cancelOrder(orderId);
         buyToken = order.buyTokenId;
         sellToken = order.sellTokenId;
 
-        require(order.owner == msg.sender && (unsoldAmount > 0 || purchasedAmount > 0));
-        //transfer to owner
+        require(order.owner == msg.sender && (unsoldAmount > 0 || purchasedAmount > 0)); //transfer to owner
         IERC20V5(order.buyTokenId).transfer(msg.sender, purchasedAmount);
         IERC20V5(order.sellTokenId).transfer(msg.sender, unsoldAmount);
     }
@@ -123,12 +120,10 @@ library LongTermOrdersLib {
         Order storage order = self.orderMap[orderId];
 
         OrderPoolLib.OrderPool storage OrderPool = order.sellTokenId == self.tokenA ? self.OrderPoolA : self.OrderPoolB;
-        // self.OrderPoolMap[order.sellTokenId];
         proceeds = OrderPool.withdrawProceeds(orderId);
         proceedToken = order.buyTokenId;
 
-        require(order.owner == msg.sender && proceeds > 0);
-        //transfer to owner
+        require(order.owner == msg.sender && proceeds > 0); //transfer to owner
         IERC20V5(order.buyTokenId).transfer(msg.sender, proceeds);
     }
 
@@ -148,7 +143,7 @@ library LongTermOrdersLib {
         //initial amm balance
         // reserveResult.newReserve0
         // reserveResult.newReserve1
-        
+
         //updated balances from sales
         (uint256 tokenAOut, uint256 tokenBOut, uint256 ammEndTokenA, uint256 ammEndTokenB) = ExecVirtualOrdersLib.computeVirtualBalances(reserveResult.newReserve0, reserveResult.newReserve1, tokenASellAmount, tokenBSellAmount);
 
