@@ -416,7 +416,7 @@ contract FraxPoolV3 is Owned {
     ) {
         require(redeemPaused[col_idx] == false, "Redeeming is paused");
 
-        // Prevent unneccessary redemptions that could adversely affect the FXS price
+        // Prevent unnecessary redemptions that could adversely affect the FXS price
         require(getFRAXPrice() <= redeem_price_threshold, "Frax price too high");
 
         uint256 global_collateral_ratio = FRAX.global_collateral_ratio();
