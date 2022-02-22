@@ -282,10 +282,10 @@ contract('FraxUniV3Farm_Stable_FRAX_USDC-Tests', async (accounts) => {
 		await frax_gauge_controller.add_type("Liquidity", new BigNumber("1e18"), { from: DEPLOYER_ADDRESS });
 
 		// Add this UniV3 Farm as a gauge
-		await frax_gauge_controller.add_gauge(fraxFarmInstance_FRAX_USDC.address, 0, 2000, { from: ORIGINAL_FRAX_ONE_ADDRESS });
+		await frax_gauge_controller.add_gauge(fraxFarmInstance_FRAX_USDC.address, 0, 1000, { from: ORIGINAL_FRAX_ONE_ADDRESS });
 
 		// Add the FRAX-WETH contract as a gauge (to take up weight)
-		await frax_gauge_controller.add_gauge(stakingInstance_FRAX_WETH.address, 0, 500, { from: ORIGINAL_FRAX_ONE_ADDRESS });
+		await frax_gauge_controller.add_gauge(stakingInstance_FRAX_WETH.address, 0, 1000, { from: ORIGINAL_FRAX_ONE_ADDRESS });
 
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",

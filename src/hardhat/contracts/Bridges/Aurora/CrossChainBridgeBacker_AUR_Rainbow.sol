@@ -22,6 +22,7 @@ contract CrossChainBridgeBacker_AUR_Rainbow is CrossChainBridgeBacker {
     // Override with logic specific to this chain
     function _bridgingLogic(uint256 token_type, address address_to_send_to, uint256 token_amount) internal override {
         // [Aurora]
+        // To claim on mainnet, use https://rainbowbridge.app/restore
         if (token_type == 0){
             // https://explorer.mainnet.aurora.dev/tx/0x80f263c57867558a61a575821a0a913c00d7b7a2a72482dbceee97c297bfe476/token-transfers
             // rnbwFRAX -> L1 FRAX

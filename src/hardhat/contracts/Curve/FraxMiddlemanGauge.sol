@@ -171,6 +171,11 @@ contract FraxMiddlemanGauge is Owned, ReentrancyGuard {
             // lockToken
             IERC20EthManager(bridge_address).lockToken(reward_token_address, reward_amount, address_to_send_to);
         }
+        else if (bridge_type == 6) {
+            // Arbitrum [Multichain / Anyswap]
+            // Bridge is 0x183D0dC5867c01bFB1dbBc41d6a9d3dE6e044626
+            TransferHelper.safeTransfer(reward_token_address, bridge_address, reward_amount);
+        }
 
         fake_nonce += 1;
     }
@@ -207,6 +212,7 @@ contract FraxMiddlemanGauge is Owned, ReentrancyGuard {
         // 3: Polygon
         // 4: Solana
         // 5: Harmony
+        // 6: Arbitrum
         bridge_type = _bridge_type;
 
         // Overridden cross-chain destination address

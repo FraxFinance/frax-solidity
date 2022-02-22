@@ -392,7 +392,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         _total_liquidity_locked += liquidity;
         _locked_liquidity[staker_address] += liquidity;
         {
-            address the_proxy = staker_designated_proxies[staker_address];
+            address the_proxy = getProxyFor(staker_address);
             if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += liquidity;
         }
 
@@ -440,7 +440,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
             _total_liquidity_locked -= theLiquidity;
             _locked_liquidity[staker_address] -= theLiquidity;
             {
-                address the_proxy = staker_designated_proxies[staker_address];
+                address the_proxy = getProxyFor(staker_address);
                 if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= theLiquidity;
             }
 

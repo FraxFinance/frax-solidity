@@ -35,7 +35,7 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     uint112 public twammReserve1;
 
     modifier execVirtualOrders() {
-        executeVirtualOrdersInternal(block.number, false);
+        executeVirtualOrdersInternal(block.number);
         _;
     }
 
@@ -95,22 +95,6 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         _blockTimestampLast = blockTimestampLast;
         _twammReserve0 = twammReserve0;
         _twammReserve1 = twammReserve1;
-    }
-
-    function getTwammState(uint256 blockNumber) public view returns (
-        uint256 token0Rate,
-        uint256 token1Rate,
-        uint256 lastVirtualOrderBlock,
-        uint256 orderBlockInterval,
-        uint256 orderPool0SalesRateEnding,
-        uint256 orderPool1SalesRateEnding
-    ){
-        token0Rate = longTermOrders.OrderPoolA.currentSalesRate;
-        token1Rate = longTermOrders.OrderPoolB.currentSalesRate;
-        lastVirtualOrderBlock = longTermOrders.lastVirtualOrderBlock;
-        orderBlockInterval = longTermOrders.orderBlockInterval;
-        orderPool0SalesRateEnding = longTermOrders.OrderPoolA.salesRateEndingPerBlock[blockNumber];
-        orderPool1SalesRateEnding = longTermOrders.OrderPoolB.salesRateEndingPerBlock[blockNumber];
     }
 
     function _safeTransfer(address token, address to, uint value) private {
@@ -295,8 +279,7 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     ///@notice create a long term order to swap from tokenA
     ///@param amountAIn total amount of token A to swap
     ///@param numberOfBlockIntervals number of block intervals over which to execute long term order
-    function longTermSwapFromAToB(uint256 amountAIn, uint256 numberOfBlockIntervals) external lock onlyWhitelist {
-        executeVirtualOrdersInternal(block.number, true);
+    function longTermSwapFromAToB(uint256 amountAIn, uint256 numberOfBlockIntervals) external lock onlyWhitelist execVirtualOrders {
         twammReserve0 += uint112(amountAIn);
         require(reserve0 + twammReserve0 <= type(uint112).max); // OVERFLOW
         uint256 orderId = longTermOrders.longTermSwapFromAToB(amountAIn, numberOfBlockIntervals);
@@ -306,8 +289,7 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     ///@notice create a long term order to swap from tokenB
     ///@param amountBIn total amount of tokenB to swap
     ///@param numberOfBlockIntervals number of block intervals over which to execute long term order
-    function longTermSwapFromBToA(uint256 amountBIn, uint256 numberOfBlockIntervals) external lock onlyWhitelist {
-        executeVirtualOrdersInternal(block.number, true);
+    function longTermSwapFromBToA(uint256 amountBIn, uint256 numberOfBlockIntervals) external lock onlyWhitelist execVirtualOrders {
         twammReserve1 += uint112(amountBIn);
         require(reserve1 + twammReserve1 <= type(uint112).max); // OVERFLOW
         uint256 orderId = longTermOrders.longTermSwapFromBToA(amountBIn, numberOfBlockIntervals);
@@ -315,8 +297,7 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     }
 
     ///@notice stop the execution of a long term order
-    function cancelLongTermSwap(uint256 orderId) external lock onlyWhitelist {
-        executeVirtualOrdersInternal(block.number, true);
+    function cancelLongTermSwap(uint256 orderId) external lock onlyWhitelist execVirtualOrders {
         (address sellToken, uint256 unsoldAmount, address buyToken, uint256 purchasedAmount) = longTermOrders.cancelLongTermSwap(orderId);
 
         bool isToken0 = buyToken == token0;
@@ -327,8 +308,7 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     }
 
     ///@notice withdraw proceeds from a long term swap
-    function withdrawProceedsFromLongTermSwap(uint256 orderId) external lock onlyWhitelist {
-        executeVirtualOrdersInternal(block.number, true);
+    function withdrawProceedsFromLongTermSwap(uint256 orderId) external lock onlyWhitelist execVirtualOrders {
         (address proceedToken, uint256 proceeds) = longTermOrders.withdrawProceedsFromLongTermSwap(orderId);
         if (proceedToken == token0) {
             twammReserve0 -= uint112(proceeds);
@@ -338,7 +318,7 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         emit WithdrawProceedsFromLongTermOrder(msg.sender, orderId);
     }
 
-    function executeVirtualOrdersInternal(uint256 blockNumber, bool runUpdate) internal {
+    function executeVirtualOrdersInternal(uint256 blockNumber) internal {
 
         LongTermOrdersLib.ExecuteVirtualOrdersResult memory result;
         result.newReserve0 = reserve0;
@@ -351,10 +331,15 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         uint112 newReserve0 = uint112(result.newReserve0);
         uint112 newReserve1 = uint112(result.newReserve1);
 
+        uint32 blockTimestamp = uint32(block.timestamp % 2 ** 32);
+        uint32 timeElapsed;
+        unchecked{
+            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        }
         // update reserve0 and reserve1
-        if (runUpdate && (newReserve0 != reserve0 || newReserve1 != reserve1)) {
+        if ( timeElapsed > 0 && (newReserve0 != reserve0 || newReserve1 != reserve1)) {
             _update(newReserve0, newReserve1, reserve0, reserve1);
-        }else{
+        } else {
             reserve0 = newReserve0;
             reserve1 = newReserve1;
         }
@@ -368,6 +353,49 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
     ///before most interactions with the AMM
     function executeVirtualOrders(uint256 blockNumber) public override lock {
         require(blockNumber <= block.number);
-        executeVirtualOrdersInternal(blockNumber, true);
+        executeVirtualOrdersInternal(blockNumber);
+    }
+
+    /// ---------------------------
+    /// ------- TWAMM Views -------
+    /// ---------------------------
+
+    function getTwammState(uint256 blockNumber) public view returns (
+        uint256 token0Rate,
+        uint256 token1Rate,
+        uint256 lastVirtualOrderBlock,
+        uint256 orderBlockInterval,
+        uint256 rewardFactorPool0,
+        uint256 rewardFactorPool1
+    ){
+        token0Rate = longTermOrders.OrderPoolA.currentSalesRate;
+        token1Rate = longTermOrders.OrderPoolB.currentSalesRate;
+        lastVirtualOrderBlock = longTermOrders.lastVirtualOrderBlock;
+        orderBlockInterval = longTermOrders.orderBlockInterval;
+        rewardFactorPool0 = longTermOrders.OrderPoolA.rewardFactor;
+        rewardFactorPool1 = longTermOrders.OrderPoolB.rewardFactor;
+    }
+
+    function getTwammSalesRateEnding(uint256 blockNumber) public view returns (
+        uint256 orderPool0SalesRateEnding,
+        uint256 orderPool1SalesRateEnding
+    ){
+        orderPool0SalesRateEnding = longTermOrders.OrderPoolA.salesRateEndingPerBlock[blockNumber];
+        orderPool1SalesRateEnding = longTermOrders.OrderPoolB.salesRateEndingPerBlock[blockNumber];
+    }
+
+    function getTwammRewardFactor(uint256 blockNumber) public view returns (
+        uint256 rewardFactorPool0AtBlock,
+        uint256 rewardFactorPool1AtBlock
+    ){
+        rewardFactorPool0AtBlock = longTermOrders.OrderPoolA.rewardFactorAtBlock[blockNumber];
+        rewardFactorPool1AtBlock = longTermOrders.OrderPoolB.rewardFactorAtBlock[blockNumber];
+    }
+
+    function getTwammOrder(uint256 orderId) public view returns (
+        LongTermOrdersLib.Order memory order
+    ){
+        require(orderId < longTermOrders.orderId);
+        order = longTermOrders.orderMap[orderId];
     }
 }

@@ -22,6 +22,7 @@ const CrossChainBridgeBacker_ARBI_AnySwap = artifacts.require("Bridges/Arbitrum/
 const CrossChainOracle = artifacts.require("Oracle/CrossChainOracle");
 
 // Staking contracts
+const FraxCCFarmV2_ArbiCurveVSTFRAX = artifacts.require("Staking/Variants/FraxCCFarmV2_ArbiCurveVSTFRAX");
 const FraxCCFarmV2_SaddleArbUSDv2 = artifacts.require("Staking/Variants/FraxCCFarmV2_SaddleArbUSDv2");
 
 // AMOs
@@ -50,6 +51,7 @@ module.exports = async (deployer) => {
     let cross_chain_oracle_instance;
     
 	// Staking
+    let FraxCCFarmV2_ArbiCurveVSTFRAX_instance;
     let fraxCCFarmV2_SaddleArbUSDv2_instance;
     
     // AMOs
@@ -165,17 +167,33 @@ module.exports = async (deployer) => {
 	// 	]
     // );
 
+    console.log(chalk.yellow("========== FraxCCFarmV2_ArbiCurveVSTFRAX =========="));
+    // FraxCCFarmV2_ArbiCurveVSTFRAX 
+    FraxCCFarmV2_ArbiCurveVSTFRAX_instance = await FraxCCFarmV2_ArbiCurveVSTFRAX.new(
+        THE_ACCOUNTS[6], 
+        CONTRACT_ADDRESSES.arbitrum.bridge_tokens.anyFXS, // anyFXS
+        CONTRACT_ADDRESSES.arbitrum.canonicals.FXS, // canFXS
+        CONTRACT_ADDRESSES.arbitrum.reward_tokens.VSTA, 
+        CONTRACT_ADDRESSES.arbitrum.pair_tokens["Curve VSTFRAX-f"],
+        CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX, // canFRAX
+        "0x0000000000000000000000000000000000000000", // Timelock
+        "0x0000000000000000000000000000000000000000", // Rewarder
+    );
+
     console.log(chalk.yellow("========== FraxCCFarmV2_SaddleArbUSDv2 =========="));
     // FraxCCFarmV2_SaddleArbUSDv2 
     fraxCCFarmV2_SaddleArbUSDv2_instance = await FraxCCFarmV2_SaddleArbUSDv2.new(
-        THE_ACCOUNTS[1], 
+        THE_ACCOUNTS[6], 
+        CONTRACT_ADDRESSES.arbitrum.bridge_tokens.anyFXS, // anyFXS
         CONTRACT_ADDRESSES.arbitrum.canonicals.FXS, // canFXS
-        CONTRACT_ADDRESSES.arbitrum.reward_tokens.SDL, // SDL
+        CONTRACT_ADDRESSES.arbitrum.reward_tokens.SPELL, // Should be SDL, but run tests with SPELL
         CONTRACT_ADDRESSES.arbitrum.bearer_tokens.saddleArbUSDv2,
         CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX, // canFRAX
         "0x0000000000000000000000000000000000000000", // Timelock
         "0x0000000000000000000000000000000000000000", // Rewarder
     );
+
+
 
     // console.log(chalk.yellow("========== CurveAMO_ARBI =========="));
     // curve_amo_arbi_instance = await CurveAMO_ARBI.new(
@@ -220,6 +238,7 @@ module.exports = async (deployer) => {
     arbiUSDT.setAsDeployed(arbiUSDT_instance);
     CrossChainBridgeBacker_ARBI_AnySwap.setAsDeployed(cross_chain_bridge_backer_instance);
     CrossChainOracle.setAsDeployed(cross_chain_oracle_instance);
+    FraxCCFarmV2_ArbiCurveVSTFRAX.setAsDeployed(FraxCCFarmV2_ArbiCurveVSTFRAX_instance);
     FraxCCFarmV2_SaddleArbUSDv2.setAsDeployed(fraxCCFarmV2_SaddleArbUSDv2_instance);
     SushiSwapLiquidityAMO_ARBI.setAsDeployed(sushiswap_liquidity_amo_arbi_instance);
     CurveAMO_ARBI.setAsDeployed(curve_amo_arbi_instance);

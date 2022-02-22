@@ -1,5 +1,9 @@
 const {ethers} = require("hardhat");
 const {constants, BigNumber, utils} = require('ethers');
+const {bigNumberify, expandTo18Decimals} = require('./utilities');
+const {create, all} = require('mathjs')
+const bigmath = new create(all, {number: 'BigNumber'});
+const {sqrt, exp, abs} = bigmath;
 
 function getAmountOut(amountIn, reserveIn, reserveOut) {
     const amountInWithFee = amountIn.mul(997);
@@ -8,35 +12,40 @@ function getAmountOut(amountIn, reserveIn, reserveOut) {
     return numerator.div(denominator);
 }
 
-async function getAmountOutWithTwamm(amountIn, pair, isToken1 = false, fromBlock = null) {
+async function getAmountOutWithTwamm(amountIn, pair, isToken1 = false) {
 
     const currentBlock = (await ethers.provider.getBlock("latest")).number;
 
-    const twammState = await pair.getTwammState(currentBlock);
+    const [
+        token0Rate,
+        token1Rate,
+        lastVirtualOrderBlock,
+        orderBlockInterval,
+        rewardFactorPool0,
+        rewardFactorPool1,
+    ] = await pair.getTwammState(currentBlock);
 
-    tokenRate0 = twammState[0]
-    tokenRate1 = twammState[1]
-    lastVirtualOrderBlock = fromBlock ? fromBlock : twammState[2]
-
-    console.log(`tokenRate0: ${tokenRate0} tokenRate1: ${tokenRate1} lastVirtualOrderBlock: ${lastVirtualOrderBlock}`)
+    const [
+        reserve0,
+        reserve1,
+        lastAmmUpdate,
+        twammReserve0,
+        twammReserve1
+    ] = await pair.getTwammReserves()
 
     const nextBlockSwap = (await ethers.provider.getBlock("latest")).number + 1;
-
-    let [reserve0, reserve1, lastAmmUpdate, twammReserve0, twammReserve1] = await pair.getTwammReserves()
     const blocksEllapsed = nextBlockSwap - lastVirtualOrderBlock
 
-    // uint256 nextExpiryBlock = self.lastVirtualOrderBlock - (self.lastVirtualOrderBlock % self.orderBlockInterval) + self.orderBlockInterval;
-
-    console.log('blocksEllapsed', blocksEllapsed)
+    // TWAMM sell
     const twammSellingAmt0 = tokenRate0.mul(blocksEllapsed)
     const twammSellingAmt1 = tokenRate1.mul(blocksEllapsed)
 
-    // TWAMM sell
+    // TWAMM bought
     let twammBoughtAmt1 = getAmountOut(twammSellingAmt0, reserve0, reserve1)
 
     // update reserves
-    reserve0 = reserve0.add(twammSellingAmt0)
-    reserve1 = reserve1.sub(twammBoughtAmt1)
+    const newReserve0 = reserve0.add(twammSellingAmt0)
+    const newReserve1 = reserve1.sub(twammBoughtAmt1)
 
     // EOA swap
     let expectedOut
@@ -46,19 +55,54 @@ async function getAmountOutWithTwamm(amountIn, pair, isToken1 = false, fromBlock
         expectedOut = getAmountOut(amountIn, reserve1, reserve0)
     }
 
-    console.log('***********')
-    console.log(`twammSellingAmt: ${utils.formatUnits(twammSellingAmt0, 0)}`)
-    console.log(`twammBoughtAmt: ${utils.formatUnits(twammBoughtAmt1, 0)}`)
-    // console.log(`twammBoughtAmt2: ${utils.formatUnits(twammBoughtAmt2, 0)}`)
-    console.log(`reserve0: ${utils.formatUnits(reserve0, 0)}`)
-    console.log(`reserve1: ${utils.formatUnits(reserve1, 0)}`)
-    console.log(`expectedOut: ${utils.formatUnits(expectedOut, 0)}`)
-    console.log('***********')
+    return [expectedOut, twammSellingAmt0, twammBoughtAmt1, reserve0, reserve1, newReserve0, newReserve1, twammReserve0, twammReserve1];
+}
 
-    return [expectedOut, twammSellingAmt0, twammBoughtAmt1, reserve0, reserve1, twammReserve0, twammReserve1];
+function calculateTwammExpected(tokenAIn, tokenBIn, tokenAReserveRet, tokenBReserveRet) {
+
+    const tokenAInWithFee = bigmath.bignumber(tokenAIn.toString()).mul(997).div(1000);
+    const tokenBInWithFee = bigmath.bignumber(tokenBIn.toString()).mul(997).div(1000);
+    let tokenAReserve = bigmath.bignumber(tokenAReserveRet.toString())
+    let tokenBReserve = bigmath.bignumber(tokenBReserveRet.toString())
+
+    const k = tokenAReserve.mul(tokenBReserve);
+
+    const c = (sqrt(tokenAReserve.mul(tokenBInWithFee)).sub(sqrt(tokenBReserve.mul(tokenAInWithFee)))).div(
+        (sqrt(tokenAReserve.mul(tokenBInWithFee)).add(sqrt(tokenBReserve.mul(tokenAInWithFee))))
+    );
+    //     (
+    //     Math.sqrt(tokenAReserve * tokenBIn) - Math.sqrt(tokenBReserve * tokenAIn)
+    // ) / (
+    //     Math.sqrt(tokenAReserve * tokenBIn) + Math.sqrt(tokenBReserve * tokenAIn)
+    // );
+
+    const exponent = sqrt(tokenAInWithFee.mul(tokenBInWithFee).div(k)).mul(2)
+    // 2 * Math.sqrt(tokenAIn * tokenBIn / k);
+
+
+    const finalAReserveExpected = sqrt(k.mul(tokenAInWithFee).div(tokenBInWithFee)).mul(exp(exponent).add(c)).div(exp(exponent).sub(c))
+    //     (
+    //     Math.sqrt(k * tokenAIn / tokenBIn)
+    //     * (Math.exp(exponent) + c)
+    //     / (Math.exp(exponent) - c)
+    // )
+
+    const finalBReserveExpected = k.div(finalAReserveExpected);
+
+    const tokenAOut = abs(tokenAReserve.sub(finalAReserveExpected).add(tokenAInWithFee));
+    const tokenBOut = abs(tokenBReserve.sub(finalBReserveExpected).add(tokenBInWithFee));
+
+    const finalAReserveExpectedBN = bigNumberify(bigmath.format(bigmath.round(finalAReserveExpected), {notation: 'fixed'}));
+    const finalBReserveExpectedBN = bigNumberify(bigmath.format(bigmath.round(finalBReserveExpected), {notation: 'fixed'}));
+
+    const tokenAOutBN = bigNumberify(bigmath.format(bigmath.round(tokenAOut), {notation: 'fixed'}))
+    const tokenBOutBN = bigNumberify(bigmath.format(bigmath.round(tokenBOut), {notation: 'fixed'}))
+
+    return [finalAReserveExpectedBN, finalBReserveExpectedBN, tokenAOutBN, tokenBOutBN]
 }
 
 module.exports = {
     getAmountOut,
-    getAmountOutWithTwamm
+    getAmountOutWithTwamm,
+    calculateTwammExpected
 }

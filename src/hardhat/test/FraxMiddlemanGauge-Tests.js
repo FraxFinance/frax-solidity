@@ -19,6 +19,8 @@ global.web3 = web3;
 
 const hre = require("hardhat");
 
+const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
+
 // Uniswap related
 const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
 const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
@@ -42,15 +44,8 @@ const FRAXShares = artifacts.require("FXS/FRAXShares");
 // Staking contracts
 const FraxUniV3Farm_Stable_FRAX_DAI = artifacts.require("Staking/Variants/FraxUniV3Farm_Stable_FRAX_DAI");
 const FraxUniV3Farm_Stable_FRAX_USDC = artifacts.require("Staking/Variants/FraxUniV3Farm_Stable_FRAX_USDC");
+const FraxMiddlemanGauge_ARBI_Curve_VSTFRAX = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_ARBI_Curve_VSTFRAX");
 const FraxMiddlemanGauge_FRAX_mUSD = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_FRAX_mUSD");
-
-// Rewards token related
-const SushiToken = artifacts.require("ERC20/Variants/SushiToken");
-// const FRAX3CRV_Mock = artifacts.require("ERC20/Variants/FRAX3CRV_Mock");
-const FRAX3CRV_V2_Mock = artifacts.require("ERC20/Variants/FRAX3CRV_V2_Mock");
-
-// Token vesting
-const TokenVesting = artifacts.require("FXS/TokenVesting.sol");
 
 // Governance related
 const GovernorAlpha = artifacts.require("Governance/GovernorAlpha");
@@ -58,7 +53,7 @@ const Timelock = artifacts.require("Governance/Timelock");
 
 // veFXS / gauge related
 const veFXS = artifacts.require("Curve/IveFXS");
-const FraxGaugeController = artifacts.require("Curve/IFraxGaugeController");
+const FraxGaugeControllerV2 = artifacts.require("Curve/FraxGaugeControllerV2");
 const FraxGaugeFXSRewardsDistributor = artifacts.require("Curve/IFraxGaugeFXSRewardsDistributor");
 
 const BIG6 = new BigNumber("1e6");
@@ -74,12 +69,13 @@ let totalSupplyFXS;
 let globalCollateralRatio;
 let globalCollateralValue;
 
-contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
+contract('FraxMiddlemanGauge-Tests', async (accounts) => {
 	CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
 
 	// Constants
 	let ORIGINAL_FRAX_ONE_ADDRESS;
 	let COLLATERAL_FRAX_AND_FXS_OWNER;
+    let COMPTROLLER_ADDRESS;
 	let ORACLE_ADDRESS;
 	let POOL_CREATOR;
 	let TIMELOCK_ADMIN;
@@ -88,8 +84,8 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 	let STAKING_REWARDS_DISTRIBUTOR;
 	let INVESTOR_CUSTODIAN_ADDRESS;
 	let MIGRATOR_ADDRESS;
-	const ADDRESS_WITH_FXS = '0xF977814e90dA44bFA03b6295A0616a897441aceC';
-	const ADDRESS_WITH_VEFXS = '0xb55794c3bef4651b6cBc78b64a2Ef6c5c67837C3';
+	const ADDRESS_WITH_FXS = '0xf977814e90da44bfa03b6295a0616a897441acec';
+	const ADDRESS_WITH_VEFXS = '0xa448833bEcE66fD8803ac0c390936C79b5FD6eDf';
 	const ADDRESS_WITH_CRV_DAO = '0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8';
 	const ADDRESS_WITH_FRAX3CRV_V2 = '0x36a87d1e3200225f881488e4aeedf25303febcae';
 	
@@ -97,58 +93,15 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 	let frax_instance;
 	let fxs_instance;
 
-	// Initialize collateral instances
-	let wethInstance;
-	let usdc_instance;
-	let sushi_instance;
-	let mockFRAX3CRVInstance;
-	let mockFRAX3CRV_V2Instance;
-
-	// Initialize oracle instances
-	
-	let oracle_instance_FXS_WETH;
-	let oracle_instance_FXS_USDC;
-
-	// Initialize pool instances
-	let pool_instance_USDC;
-	
-
-	// Initialize pair addresses
-	let pair_addr_FRAX_WETH;
-	let pair_addr_FRAX_USDC;
-	let pair_addr_FXS_WETH;
-
-	// Initialize Uniswap pair contracts
-	let pair_instance_FRAX_WETH;
-	let pair_instance_FRAX_USDC;
-	let pair_instance_FXS_WETH;
-
-	// Initialize Sushi pair contracts
-	let pair_instance_FRAX_FXS_Sushi;
-	let pair_instance_FXS_WETH_Sushi;
-
-	// Initialize pair orders
-	let isToken0Frax_FRAX_WETH;
-	let isToken0Frax_FRAX_USDC;
-	let isToken0Fxs_FXS_WETH;
-
-	// Initialize staking instances
-	let stakingInstance_FRAX_WETH;
-	let stakingInstance_FRAX_USDC;
-	let stakingInstance_FXS_WETH;
-
-    // let stakingInstanceDual_FRAX_FXS_Sushi;
-	// let stakingInstanceDual_FXS_WETH_Sushi;
-	// let stakingInstanceDual_FRAX3CRV;
 	let stakingInstanceDualV2_FRAX3CRV_V2;
 	let fraxFarmInstance_FRAX_DAI;
 	let fraxFarmInstance_FRAX_USDC;
 	let middlemanGauge_ARBI_Curve_VSTFRAX;
-	let middlemanGauge_FRAX_mUSD;
+	let middleman_instance;
 
 	// Initialize veFXS related instances
 	let veFXS_instance;
-	let frax_gauge_controller;
+	let frax_gauge_controller_v2;
 	let gauge_rewards_distributor_instance;
 
     beforeEach(async() => {
@@ -160,6 +113,7 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 
 		// Constants
 		ORIGINAL_FRAX_ONE_ADDRESS = process.env.FRAX_ONE_ADDRESS;
+        COMPTROLLER_ADDRESS = "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27";
 		DEPLOYER_ADDRESS = accounts[0];
 		COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
 		ORACLE_ADDRESS = accounts[2];
@@ -177,32 +131,17 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 		wethInstance = await ERC20.at("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 		usdc_instance = await ERC20.at("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
 
-		// Fill the Uniswap Router Instance
-		routerInstance = await IUniswapV2Router02.deployed(); 
-
-		// Fill the Timelock instance
-		timelockInstance = await Timelock.deployed(); 
-
-		// Fill oracle instances
-		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
-	
-		// Initialize the governance contract
-		governanceInstance = await GovernorAlpha.deployed();
-
-		// Initialize pool instances
-		pool_instance_USDC = await Pool_USDC.deployed();
-		
-		// Initialize the Uniswap Factory instance
-		uniswapFactoryInstance = await IUniswapV2Factory.deployed();
-
 		// Fill the staking rewards instances
 		fraxFarmInstance_FRAX_DAI = await FraxUniV3Farm_Stable_FRAX_DAI.deployed();
 		fraxFarmInstance_FRAX_USDC = await FraxUniV3Farm_Stable_FRAX_USDC.deployed();
-		middlemanGauge_FRAX_mUSD = await FraxMiddlemanGauge_FRAX_mUSD.deployed();
+
+        // Fill the middleman gauge instance
+        middleman_instance = await FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.deployed();
+		// middleman_instance = await FraxMiddlemanGauge_FRAX_mUSD.deployed();
 
 		// Initialize veFXS related instances
 		veFXS_instance = await veFXS.deployed();
-		frax_gauge_controller = await FraxGaugeController.deployed();
+		frax_gauge_controller_v2 = await FraxGaugeControllerV2.deployed();
 		gauge_rewards_distributor_instance = await FraxGaugeFXSRewardsDistributor.deployed();
 	}); 
 	
@@ -232,7 +171,7 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 
 		// Move to the end of the gauge controller period
 		const current_timestamp_0 = (new BigNumber(await time.latest())).toNumber();
-		const time_total = await frax_gauge_controller.time_total.call();
+		const time_total = await frax_gauge_controller_v2.time_total.call();
 
 		const increase_time_0 = (time_total - current_timestamp_0);
 		console.log("increase_time_0 (days): ", increase_time_0 / 86400);
@@ -259,11 +198,56 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FXS]
 		});
 
-		await fxs_instance.transfer(gauge_rewards_distributor_instance.address, new BigNumber("1000000e18"), { from: ADDRESS_WITH_FXS });
+		await fxs_instance.transfer(gauge_rewards_distributor_instance.address, new BigNumber("500000e18"), { from: ADDRESS_WITH_FXS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
 			params: [ADDRESS_WITH_FXS]
+		});
+
+        // ---------------------------------------------------------------
+		console.log("Add this farm as a gauge");
+
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [COMPTROLLER_ADDRESS]
+		});
+
+		await frax_gauge_controller_v2.add_gauge(middleman_instance.address, 0, 1000, { from: COMPTROLLER_ADDRESS });
+
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [COMPTROLLER_ADDRESS]
+		});
+
+		// ---------------------------------------------------------------
+		console.log("Vote for the farm");
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [ADDRESS_WITH_VEFXS]
+		});
+
+		// Vote for this farm
+		// 10000 = 100% of your weight. 1 = 0.01% of your weight
+		await frax_gauge_controller_v2.vote_for_gauge_weights(middleman_instance.address, 9000, { from: ADDRESS_WITH_VEFXS });
+		
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [ADDRESS_WITH_VEFXS]
+		});
+
+		// ---------------------------------------------------------------
+		console.log("Add the gauge info to the rewards distributor");
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [COMPTROLLER_ADDRESS]
+		});
+
+		await gauge_rewards_distributor_instance.setGaugeState(middleman_instance.address, 1, 1, { from: COMPTROLLER_ADDRESS });
+
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [COMPTROLLER_ADDRESS]
 		});
 
 		// Advance 7 days
@@ -279,17 +263,17 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 
 		// Checkpoint the gauges
 		const current_timestamp_0 = (new BigNumber(await time.latest())).toNumber();
-		await frax_gauge_controller.gauge_relative_weight_write(fraxFarmInstance_FRAX_DAI.address, current_timestamp_0, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write(fraxFarmInstance_FRAX_USDC.address, current_timestamp_0, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write(middlemanGauge_FRAX_mUSD.address, current_timestamp_0, { from: accounts[9] });
+		await frax_gauge_controller_v2.gauge_relative_weight_write(fraxFarmInstance_FRAX_DAI.address, { from: accounts[9] });
+		await frax_gauge_controller_v2.gauge_relative_weight_write(fraxFarmInstance_FRAX_USDC.address, { from: accounts[9] });
+		await frax_gauge_controller_v2.gauge_relative_weight_write(middleman_instance.address, { from: accounts[9] });
 
 		// Get estimated rewards
 		const estimated_rewards_0_frax_dai = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(fraxFarmInstance_FRAX_DAI.address)).div(BIG18).toNumber();
 		const estimated_rewards_0_frax_usdc = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(fraxFarmInstance_FRAX_USDC.address)).div(BIG18).toNumber();
-		const estimated_rewards_0_musd_frax = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(middlemanGauge_FRAX_mUSD.address)).div(BIG18).toNumber();
+		const estimated_rewards_0_middleman = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(middleman_instance.address)).div(BIG18).toNumber();
 		console.log("estimated_rewards_0_frax_dai: ", estimated_rewards_0_frax_dai);
 		console.log("estimated_rewards_0_frax_usdc: ", estimated_rewards_0_frax_usdc);
-		console.log("estimated_rewards_0_musd_frax: ", estimated_rewards_0_musd_frax);
+		console.log("estimated_rewards_0_middleman: ", estimated_rewards_0_middleman);
 
 		// Since withdrawLocked does getReward, accounts[9] should collect now as well
 		console.log("Distribute rewards");
@@ -297,7 +281,7 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 		// Distribute the rewards
 		await gauge_rewards_distributor_instance.distributeReward(fraxFarmInstance_FRAX_DAI.address, { from: accounts[9] });
 		await gauge_rewards_distributor_instance.distributeReward(fraxFarmInstance_FRAX_USDC.address, { from: accounts[9] });
-		await gauge_rewards_distributor_instance.distributeReward(middlemanGauge_FRAX_mUSD.address, { from: accounts[9] });
+		await gauge_rewards_distributor_instance.distributeReward(middleman_instance.address, { from: accounts[9] });
 
 		// Note balances afterwards. Should have FRAX and USDC LP fees too
 		const fxs_bal_distributor_after_reward_0 = new BigNumber(await fxs_instance.balanceOf.call(gauge_rewards_distributor_instance.address)).div(BIG18).toNumber();
@@ -316,17 +300,17 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 
 		// Checkpoint the gauges
 		const current_timestamp_1 = (new BigNumber(await time.latest())).toNumber();
-		await frax_gauge_controller.gauge_relative_weight_write(fraxFarmInstance_FRAX_DAI.address, current_timestamp_1, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write(fraxFarmInstance_FRAX_USDC.address, current_timestamp_1, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write(middlemanGauge_FRAX_mUSD.address, current_timestamp_1, { from: accounts[9] });
+		await frax_gauge_controller_v2.gauge_relative_weight_write(fraxFarmInstance_FRAX_DAI.address, { from: accounts[9] });
+		await frax_gauge_controller_v2.gauge_relative_weight_write(fraxFarmInstance_FRAX_USDC.address, { from: accounts[9] });
+		await frax_gauge_controller_v2.gauge_relative_weight_write(middleman_instance.address, { from: accounts[9] });
 
 		// Get estimated rewards
 		const estimated_rewards_1_frax_dai = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(fraxFarmInstance_FRAX_DAI.address)).div(BIG18).toNumber();
 		const estimated_rewards_1_frax_usdc = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(fraxFarmInstance_FRAX_USDC.address)).div(BIG18).toNumber();
-		const estimated_rewards_1_musd_frax = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(middlemanGauge_FRAX_mUSD.address)).div(BIG18).toNumber();
+		const estimated_rewards_1_middleman = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(middleman_instance.address)).div(BIG18).toNumber();
 		console.log("estimated_rewards_1_frax_dai: ", estimated_rewards_1_frax_dai);
 		console.log("estimated_rewards_1_frax_usdc: ", estimated_rewards_1_frax_usdc);
-		console.log("estimated_rewards_1_musd_frax: ", estimated_rewards_1_musd_frax);
+		console.log("estimated_rewards_1_middleman: ", estimated_rewards_1_middleman);
 
 		// Since withdrawLocked does getReward, accounts[9] should collect now as well
 		console.log("Distribute rewards. Should distribute nothing");
@@ -334,7 +318,7 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 		// Distribute the rewards
 		await gauge_rewards_distributor_instance.distributeReward(fraxFarmInstance_FRAX_DAI.address, { from: accounts[9] });
 		await gauge_rewards_distributor_instance.distributeReward(fraxFarmInstance_FRAX_USDC.address, { from: accounts[9] });
-		await gauge_rewards_distributor_instance.distributeReward(middlemanGauge_FRAX_mUSD.address, { from: accounts[9] });
+		await gauge_rewards_distributor_instance.distributeReward(middleman_instance.address, { from: accounts[9] });
 
 		// Note balances afterwards. Should have FRAX and USDC LP fees too
 		const fxs_bal_distributor_after_reward_1 = new BigNumber(await fxs_instance.balanceOf.call(gauge_rewards_distributor_instance.address)).div(BIG18).toNumber();
@@ -353,17 +337,17 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 
 		// Checkpoint the gauges
 		const current_timestamp_2 = (new BigNumber(await time.latest())).toNumber();
-		await frax_gauge_controller.gauge_relative_weight_write(fraxFarmInstance_FRAX_DAI.address, current_timestamp_2, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write(fraxFarmInstance_FRAX_USDC.address, current_timestamp_2, { from: accounts[9] });
-		await frax_gauge_controller.gauge_relative_weight_write(middlemanGauge_FRAX_mUSD.address, current_timestamp_2, { from: accounts[9] });
+		await frax_gauge_controller_v2.gauge_relative_weight_write(fraxFarmInstance_FRAX_DAI.address, { from: accounts[9] });
+		await frax_gauge_controller_v2.gauge_relative_weight_write(fraxFarmInstance_FRAX_USDC.address, { from: accounts[9] });
+		await frax_gauge_controller_v2.gauge_relative_weight_write(middleman_instance.address, { from: accounts[9] });
 
 		// Get estimated rewards
 		const estimated_rewards_2_frax_dai = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(fraxFarmInstance_FRAX_DAI.address)).div(BIG18).toNumber();
 		const estimated_rewards_2_frax_usdc = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(fraxFarmInstance_FRAX_USDC.address)).div(BIG18).toNumber();
-		const estimated_rewards_2_musd_frax = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(middlemanGauge_FRAX_mUSD.address)).div(BIG18).toNumber();
+		const estimated_rewards_2_middleman = new BigNumber(await gauge_rewards_distributor_instance.currentReward.call(middleman_instance.address)).div(BIG18).toNumber();
 		console.log("estimated_rewards_2_frax_dai: ", estimated_rewards_2_frax_dai);
 		console.log("estimated_rewards_2_frax_usdc: ", estimated_rewards_2_frax_usdc);
-		console.log("estimated_rewards_2_musd_frax: ", estimated_rewards_2_musd_frax);
+		console.log("estimated_rewards_2_middleman: ", estimated_rewards_2_middleman);
 
 		// Since withdrawLocked does getReward, accounts[9] should collect now as well
 		console.log("Distribute rewards.");
@@ -371,7 +355,7 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 		// NOTE, USE of newer contract here (0x3EF26504dbc8Dd7B7aa3E97Bc9f3813a9FC0B4B0) with the newer farm soon
 		await gauge_rewards_distributor_instance.distributeReward(fraxFarmInstance_FRAX_DAI.address, { from: accounts[9] });
 		await gauge_rewards_distributor_instance.distributeReward(fraxFarmInstance_FRAX_USDC.address, { from: accounts[9] });
-		await gauge_rewards_distributor_instance.distributeReward(middlemanGauge_FRAX_mUSD.address, { from: accounts[9] });
+		await gauge_rewards_distributor_instance.distributeReward(middleman_instance.address, { from: accounts[9] });
 
 		// Note balances afterwards. Should have FRAX and USDC LP fees too
 		const fxs_bal_distributor_after_reward_2 = new BigNumber(await fxs_instance.balanceOf.call(gauge_rewards_distributor_instance.address)).div(BIG18).toNumber();
@@ -404,7 +388,7 @@ contract('FraxGaugeFXSRewardsDistributor-Tests', async (accounts) => {
 		);
 
 		await expectRevert(
-			gauge_rewards_distributor_instance.distributeReward(middlemanGauge_FRAX_mUSD.address, { from: accounts[9] }),
+			gauge_rewards_distributor_instance.distributeReward(middleman_instance.address, { from: accounts[9] }),
 			"Distributions are off"
 		);
 

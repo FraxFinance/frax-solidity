@@ -25,9 +25,11 @@ const CrossChainCanonicalFXS = artifacts.require("ERC20/__CROSSCHAIN/CrossChainC
 const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 
 // LP Pairs
+const I2pool = artifacts.require("Misc_AMOs/curve/I2pool");
 const ISaddleLPToken = artifacts.require("Misc_AMOs/saddle/ISaddleLPToken");
 
 // Staking contracts
+const FraxCCFarmV2_ArbiCurveVSTFRAX = artifacts.require("Staking/Variants/FraxCCFarmV2_ArbiCurveVSTFRAX");
 const FraxCCFarmV2_SaddleArbUSDv2 = artifacts.require("Staking/Variants/FraxCCFarmV2_SaddleArbUSDv2");
 
 const BIG6 = new BigNumber("1e6");
@@ -53,7 +55,7 @@ contract('FraxCrossChainFarmV2-Tests', async (accounts) => {
 	let STAKING_REWARDS_DISTRIBUTOR;
 	let INVESTOR_CUSTODIAN_ADDRESS;
 	let MIGRATOR_ADDRESS;
-	const ADDRESS_WITH_FXS = '0x36A87d1E3200225f881488E4AEedF25303FebcAe';
+	const ADDRESS_WITH_FXS = '0xbCa9a9Aab13a68d311160D4f997E3D783Da865Fb';
 	const ADDRESS_WITH_REW1_TKN = '0xbCa9a9Aab13a68d311160D4f997E3D783Da865Fb';
 	const ADDRESS_WITH_LP_TOKENS = '0xbCa9a9Aab13a68d311160D4f997E3D783Da865Fb';
 
@@ -94,11 +96,12 @@ contract('FraxCrossChainFarmV2-Tests', async (accounts) => {
 		canFRAX_instance = await CrossChainCanonicalFRAX.deployed();
 		canFXS_instance = await CrossChainCanonicalFXS.deployed();
 
-		// Get instances of the mStable pairs 
-		lp_tkn_instance = await ISaddleLPToken.at(CHAIN_ADDRESSES.bearer_tokens.saddleArbUSDv2);
+		// Get instances of the Curve pair 
+		lp_tkn_instance = await I2pool.at(CHAIN_ADDRESSES.pair_tokens["Curve VSTFRAX-f"]);
+		// lp_tkn_instance = await ISaddleLPToken.at(CHAIN_ADDRESSES.bearer_tokens.saddleArbUSDv2);
 
 		// Fill the staking rewards instances
-		staking_instance = await FraxCCFarmV2_SaddleArbUSDv2.deployed();
+		staking_instance = await FraxCCFarmV2_ArbiCurveVSTFRAX.deployed();
 
 		// Fill reward token instance
 		const rew1_address = await staking_instance.rewardsToken1.call();

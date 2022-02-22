@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "../FraxCrossChainFarmV2.sol";
 
-contract FraxCCFarmV2_SaddleArbUSDv2 is FraxCrossChainFarmV2 {
+contract FraxCCFarmV2_ArbiCurveVSTFRAX is FraxCrossChainFarmV2 {
     constructor (
         address _owner,
         address _bridge_token,
