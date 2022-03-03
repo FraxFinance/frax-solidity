@@ -10,8 +10,16 @@ contract UniswapV2FactoryV8 is IUniswapV2FactoryV5 {
     mapping(address => mapping(address => address)) public override getPair;
     address[] public override allPairs;
 
+    bool public override twammWhitelistDisabled = false;
+
     constructor(address _feeToSetter) {
         feeToSetter = _feeToSetter;
+    }
+
+    ///@notice Throws if called by any account other than the feeToSetter.
+    modifier onlyFTS() {
+        require(msg.sender == feeToSetter, "Not feeToSetter");
+        _;
     }
 
     function allPairsLength() external override view returns (uint) {
@@ -31,22 +39,29 @@ contract UniswapV2FactoryV8 is IUniswapV2FactoryV5 {
         assembly {
             pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
-        IUniswapV2PairV5(pair).initialize(token0, token1);
+        IUniswapV2PairV5(pair).initialize(token0, token1, twammWhitelistDisabled);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
         emit PairCreated(token0, token1, pair, allPairs.length);
     }
 
-    function setFeeTo(address _feeTo) external override {
+    function setTwammWhitelistDisabled(bool _twammWhitelistDisabled) external override onlyFTS {
         //ECF4: FORBIDDEN
-        require(msg.sender == feeToSetter);
+        twammWhitelistDisabled = _twammWhitelistDisabled;
+    }
+
+    function setFeeTo(address _feeTo) external override onlyFTS {
+        //ECF4: FORBIDDEN
         feeTo = _feeTo;
     }
 
-    function setFeeToSetter(address _feeToSetter) external override {
+    function setFeeToSetter(address _feeToSetter) external override onlyFTS {
         //ECF4: FORBIDDEN
-        require(msg.sender == feeToSetter);
         feeToSetter = _feeToSetter;
+    }
+
+    function getFactorySettings() public view  returns (address, bool){
+        return (feeTo, twammWhitelistDisabled);
     }
 }

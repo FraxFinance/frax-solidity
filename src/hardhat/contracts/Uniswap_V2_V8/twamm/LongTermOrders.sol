@@ -1,15 +1,21 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "../core/interfaces/IERC20V5.sol";
-import "./OrderPool.sol";
 import "./ExecVirtualOrders.sol";
 
 ///@notice This library handles the state and execution of long term orders. 
 library LongTermOrdersLib {
-    using OrderPoolLib for OrderPoolLib.OrderPool;
+
+    using LongTermOrdersLib for OrderPool;
+
+    /// ---------------------------
+    /// ----- LongTerm Orders -----
+    /// ---------------------------
+
+    uint112 internal constant SELL_RATE_ADDITIONAL_PRECISION = 1000000;
 
     ///@notice information associated with a long term order
+    ///fields should NOT be changed after Order struct is created
     struct Order {
         uint256 id;
         uint256 expirationBlock;
@@ -22,20 +28,20 @@ library LongTermOrdersLib {
     ///@notice structure contains full state related to long term orders
     struct LongTermOrders {
 
-        ///@notice minimum block interval between order expiries
-        uint256 orderBlockInterval;
+        ///@notice minimum time interval between order expiries
+        uint256 orderTimeInterval;
 
-        ///@notice last virtual orders were executed immediately before this block
-        uint256 lastVirtualOrderBlock;
+        ///@notice last virtual orders were executed immediately before this block.timestamp
+        uint256 lastVirtualOrderTimestamp;
 
         ///@notice token pair being traded in embedded amm
-        address tokenA;
-        address tokenB;
+        address token0;
+        address token1;
 
         ///@notice mapping from token address to pool that is selling that token
         ///we maintain two order pools, one for each token that is tradable in the AMM
-        OrderPoolLib.OrderPool OrderPoolA;
-        OrderPoolLib.OrderPool OrderPoolB;
+        OrderPool OrderPool0;
+        OrderPool OrderPool1;
 
         ///@notice incrementing counter for order ids, this is the next order id
         uint256 orderId;
@@ -47,144 +53,262 @@ library LongTermOrdersLib {
     struct ExecuteVirtualOrdersResult {
         uint112 newReserve0;
         uint112 newReserve1;
-        uint newTwammReserve0;
-        uint newTwammReserve1;
+        uint256 newTwammReserve0;
+        uint256 newTwammReserve1;
     }
 
     ///@notice initialize state
-    function initialize(LongTermOrders storage self,
-        address tokenA,
-        address tokenB,
-        uint256 lastVirtualOrderBlock,
-        uint256 orderBlockInterval) internal {
-        self.tokenA = tokenA;
-        self.tokenB = tokenB;
-        self.lastVirtualOrderBlock = lastVirtualOrderBlock;
-        self.orderBlockInterval = orderBlockInterval;
+    function initialize(LongTermOrders storage longTermOrders,
+        address token0,
+        address token1,
+        uint256 lastVirtualOrderTimestamp,
+        uint256 orderTimeInterval) internal {
+        longTermOrders.token0 = token0;
+        longTermOrders.token1 = token1;
+        longTermOrders.lastVirtualOrderTimestamp = lastVirtualOrderTimestamp;
+        longTermOrders.orderTimeInterval = orderTimeInterval;
     }
 
-    ///@notice swap token A for token B. Amount represents total amount being sold, numberOfBlockIntervals determines when order expires
-    function longTermSwapFromAToB(LongTermOrders storage self, uint256 amountA, uint256 numberOfBlockIntervals) internal returns (uint256) {
-        return performLongTermSwap(self, self.tokenA, self.tokenB, amountA, numberOfBlockIntervals);
+    ///@notice get the OrderPool for this token
+    function getOrderPool(LongTermOrders storage longTermOrders, address token) internal view returns (OrderPool storage orderPool) {
+        orderPool = token == longTermOrders.token0 ? longTermOrders.OrderPool0 : longTermOrders.OrderPool1;
     }
 
-    ///@notice swap token B for token A. Amount represents total amount being sold, numberOfBlockIntervals determines when order expires
-    function longTermSwapFromBToA(LongTermOrders storage self, uint256 amountB, uint256 numberOfBlockIntervals) internal returns (uint256) {
-        return performLongTermSwap(self, self.tokenB, self.tokenA, amountB, numberOfBlockIntervals);
+    ///@notice swap token 0 for token 1. Amount represents total amount being sold, numberOfBlockIntervals determines when order expires
+    function longTermSwapFrom0To1(LongTermOrders storage longTermOrders, uint256 amount0, uint256 numberOfTimeIntervals) internal returns (uint256) {
+        return performLongTermSwap(longTermOrders, longTermOrders.token0, longTermOrders.token1, amount0, numberOfTimeIntervals);
+    }
+
+    ///@notice swap token 1 for token 0. Amount represents total amount being sold, numberOfBlockIntervals determines when order expires
+    function longTermSwapFrom1To0(LongTermOrders storage longTermOrders, uint256 amount1, uint256 numberOfTimeIntervals) internal returns (uint256) {
+        return performLongTermSwap(longTermOrders, longTermOrders.token1, longTermOrders.token0, amount1, numberOfTimeIntervals);
     }
 
     ///@notice adds long term swap to order pool
-    function performLongTermSwap(LongTermOrders storage self, address from, address to, uint256 amount, uint256 numberOfBlockIntervals) private returns (uint256) {
+    function performLongTermSwap(LongTermOrders storage longTermOrders, address from, address to, uint256 amount, uint256 numberOfTimeIntervals) private returns (uint256) {
         // make sure to update virtual order state (before calling this function)
 
-        // transfer sale amount to contract
-        IERC20V5(from).transferFrom(msg.sender, address(this), amount);
-
         //determine the selling rate based on number of blocks to expiry and total amount
-        uint256 currentBlock = block.number;
-        uint256 lastExpiryBlock = currentBlock - (currentBlock % self.orderBlockInterval);
-        uint256 orderExpiry = self.orderBlockInterval * (numberOfBlockIntervals + 1) + lastExpiryBlock;
-        uint256 sellingRate = amount / (orderExpiry - currentBlock);
+        uint256 currentTime = block.timestamp;
+        uint256 lastExpiryBlock = currentTime - (currentTime % longTermOrders.orderTimeInterval);
+        uint256 orderExpiry = longTermOrders.orderTimeInterval * (numberOfTimeIntervals + 1) + lastExpiryBlock;
+        uint256 sellingRate = SELL_RATE_ADDITIONAL_PRECISION * amount / (orderExpiry - currentTime);
 
         require(sellingRate > 0); // tokenRate cannot be zero
 
         //add order to correct pool
-        OrderPoolLib.OrderPool storage OrderPool = from == self.tokenA ? self.OrderPoolA : self.OrderPoolB;
-        OrderPool.depositOrder(self.orderId, sellingRate, orderExpiry);
+        OrderPool storage orderPool = getOrderPool(longTermOrders, from);
+        orderPoolDepositOrder(orderPool, longTermOrders.orderId, sellingRate, orderExpiry);
 
         //add to order map
-        self.orderMap[self.orderId] = Order(self.orderId, orderExpiry, sellingRate, msg.sender, from, to);
-        return self.orderId++;
+        longTermOrders.orderMap[longTermOrders.orderId] = Order(longTermOrders.orderId, orderExpiry, sellingRate, msg.sender, from, to);
+        return longTermOrders.orderId++;
     }
 
     ///@notice cancel long term swap, pay out unsold tokens and well as purchased tokens
-    function cancelLongTermSwap(LongTermOrders storage self, uint256 orderId) internal returns (address sellToken, uint256 unsoldAmount, address buyToken, uint256 purchasedAmount) {
+    function cancelLongTermSwap(LongTermOrders storage longTermOrders, uint256 orderId) internal returns (address sellToken, uint256 unsoldAmount, address buyToken, uint256 purchasedAmount) {
         // make sure to update virtual order state (before calling this function)
 
-        Order storage order = self.orderMap[orderId];
-
-        OrderPoolLib.OrderPool storage OrderPool = order.sellTokenId == self.tokenA ? self.OrderPoolA : self.OrderPoolB;
-        (unsoldAmount, purchasedAmount) = OrderPool.cancelOrder(orderId);
+        Order storage order = longTermOrders.orderMap[orderId];
         buyToken = order.buyTokenId;
         sellToken = order.sellTokenId;
 
-        require(order.owner == msg.sender && (unsoldAmount > 0 || purchasedAmount > 0)); //transfer to owner
-        IERC20V5(order.buyTokenId).transfer(msg.sender, purchasedAmount);
-        IERC20V5(order.sellTokenId).transfer(msg.sender, unsoldAmount);
+        OrderPool storage orderPool = getOrderPool(longTermOrders, sellToken);
+        (unsoldAmount, purchasedAmount) = orderPoolCancelOrder(orderPool, orderId, longTermOrders.lastVirtualOrderTimestamp);
+
+        require(order.owner == msg.sender && (unsoldAmount > 0 || purchasedAmount > 0)); // owner and amounts check
     }
 
     ///@notice withdraw proceeds from a long term swap (can be expired or ongoing)
-    function withdrawProceedsFromLongTermSwap(LongTermOrders storage self, uint256 orderId) internal returns (address proceedToken, uint256 proceeds) {
+    function withdrawProceedsFromLongTermSwap(LongTermOrders storage longTermOrders, uint256 orderId) internal returns (address proceedToken, uint256 proceeds) {
         // make sure to update virtual order state (before calling this function)
 
-        Order storage order = self.orderMap[orderId];
-
-        OrderPoolLib.OrderPool storage OrderPool = order.sellTokenId == self.tokenA ? self.OrderPoolA : self.OrderPoolB;
-        proceeds = OrderPool.withdrawProceeds(orderId);
+        Order storage order = longTermOrders.orderMap[orderId];
         proceedToken = order.buyTokenId;
 
-        require(order.owner == msg.sender && proceeds > 0); //transfer to owner
-        IERC20V5(order.buyTokenId).transfer(msg.sender, proceeds);
+        OrderPool storage orderPool = getOrderPool(longTermOrders, order.sellTokenId);
+        proceeds = orderPoolWithdrawProceeds(orderPool, orderId, longTermOrders.lastVirtualOrderTimestamp);
+
+        require(order.owner == msg.sender && proceeds > 0); // owner and amounts check
     }
 
+    ///@notice executes all virtual orders between current lastVirtualOrderTimestamp and blockTimestamp
+    //also handles orders that expire at end of final blockTimestamp. This assumes that no orders expire inside the given interval
+    function executeVirtualTradesAndOrderExpiries(LongTermOrders storage longTermOrders, ExecuteVirtualOrdersResult memory reserveResult, uint256 blockTimestamp) private {
 
-    ///@notice executes all virtual orders between current lastVirtualOrderBlock and blockNumber
-    //also handles orders that expire at end of final block. This assumes that no orders expire inside the given interval
-    function executeVirtualTradesAndOrderExpiries(LongTermOrders storage self, ExecuteVirtualOrdersResult memory reserveResult, uint256 blockNumber) private {
-
-        OrderPoolLib.OrderPool storage OrderPoolA = self.OrderPoolA;
-        OrderPoolLib.OrderPool storage OrderPoolB = self.OrderPoolB;
+        OrderPool storage orderPool0 = longTermOrders.OrderPool0;
+        OrderPool storage orderPool1 = longTermOrders.OrderPool1;
 
         //amount sold from virtual trades
-        uint256 blockNumberIncrement = blockNumber - self.lastVirtualOrderBlock;
-        uint256 tokenASellAmount = OrderPoolA.currentSalesRate * blockNumberIncrement;
-        uint256 tokenBSellAmount = OrderPoolB.currentSalesRate * blockNumberIncrement;
+        uint256 blockTimestampEllapsed = blockTimestamp - longTermOrders.lastVirtualOrderTimestamp;
+        uint256 token0SellAmount = orderPool0.currentSalesRate * blockTimestampEllapsed / SELL_RATE_ADDITIONAL_PRECISION;
+        uint256 token1SellAmount = orderPool1.currentSalesRate * blockTimestampEllapsed / SELL_RATE_ADDITIONAL_PRECISION;
 
         //initial amm balance
         // reserveResult.newReserve0
         // reserveResult.newReserve1
 
         //updated balances from sales
-        (uint256 tokenAOut, uint256 tokenBOut, uint256 ammEndTokenA, uint256 ammEndTokenB) = ExecVirtualOrdersLib.computeVirtualBalances(reserveResult.newReserve0, reserveResult.newReserve1, tokenASellAmount, tokenBSellAmount);
+        (uint256 token0Out, uint256 token1Out, uint256 ammEndToken0, uint256 ammEndToken1) = ExecVirtualOrdersLib.computeVirtualBalances(reserveResult.newReserve0, reserveResult.newReserve1, token0SellAmount, token1SellAmount);
 
         //update balances reserves
-        reserveResult.newReserve0 = uint112(ammEndTokenA);
-        reserveResult.newReserve1 = uint112(ammEndTokenB);
-        reserveResult.newTwammReserve0 = reserveResult.newTwammReserve0 + tokenAOut - tokenASellAmount;
-        reserveResult.newTwammReserve1 = reserveResult.newTwammReserve1 + tokenBOut - tokenBSellAmount;
+        reserveResult.newReserve0 = uint112(ammEndToken0);
+        reserveResult.newReserve1 = uint112(ammEndToken1);
+        reserveResult.newTwammReserve0 = reserveResult.newTwammReserve0 + token0Out - token0SellAmount;
+        reserveResult.newTwammReserve1 = reserveResult.newTwammReserve1 + token1Out - token1SellAmount;
 
         //distribute proceeds to pools
-        OrderPoolA.distributePayment(tokenBOut);
-        OrderPoolB.distributePayment(tokenAOut);
+        orderPoolDistributePayment(orderPool0, token1Out);
+        orderPoolDistributePayment(orderPool1, token0Out);
 
         //handle orders expiring at end of interval
-        OrderPoolA.updateStateFromBlockExpiry(blockNumber);
-        OrderPoolB.updateStateFromBlockExpiry(blockNumber);
+        orderPoolUpdateStateFromBlockExpiry(orderPool0, blockTimestamp);
+        orderPoolUpdateStateFromBlockExpiry(orderPool1, blockTimestamp);
 
         //update last virtual trade block
-        self.lastVirtualOrderBlock = blockNumber;
+        longTermOrders.lastVirtualOrderTimestamp = blockTimestamp;
     }
 
-    ///@notice executes all virtual orders until current block is reached.
-    function executeVirtualOrdersUntilBlock(LongTermOrders storage self, uint256 blockNumber, ExecuteVirtualOrdersResult memory reserveResult) internal {
-        uint256 nextExpiryBlock = self.lastVirtualOrderBlock - (self.lastVirtualOrderBlock % self.orderBlockInterval) + self.orderBlockInterval;
-        //iterate through blocks eligible for order expiries, moving state forward
+    ///@notice executes all virtual orders until blockTimestamp is reached.
+    function executeVirtualOrdersUntilBlock(LongTermOrders storage longTermOrders, uint256 blockTimestamp, ExecuteVirtualOrdersResult memory reserveResult) internal {
+        uint256 nextExpiryBlockTimestamp = longTermOrders.lastVirtualOrderTimestamp - (longTermOrders.lastVirtualOrderTimestamp % longTermOrders.orderTimeInterval) + longTermOrders.orderTimeInterval;
+        //iterate through time intervals eligible for order expiries, moving state forward
 
-        OrderPoolLib.OrderPool storage OrderPoolA = self.OrderPoolA;
-        OrderPoolLib.OrderPool storage OrderPoolB = self.OrderPoolB;
+        OrderPool storage orderPool0 = longTermOrders.OrderPool0;
+        OrderPool storage orderPool1 = longTermOrders.OrderPool1;
 
-        while (nextExpiryBlock < blockNumber) {
+        while (nextExpiryBlockTimestamp < blockTimestamp) {
             // Optimization for skipping blocks with no expiry
-            if (self.OrderPoolA.salesRateEndingPerBlock[nextExpiryBlock] > 0
-                || self.OrderPoolB.salesRateEndingPerBlock[nextExpiryBlock] > 0) {
-                executeVirtualTradesAndOrderExpiries(self, reserveResult, nextExpiryBlock);
+            if (orderPool0.salesRateEndingPerBlock[nextExpiryBlockTimestamp] > 0
+                || orderPool1.salesRateEndingPerBlock[nextExpiryBlockTimestamp] > 0) {
+                executeVirtualTradesAndOrderExpiries(longTermOrders, reserveResult, nextExpiryBlockTimestamp);
             }
-            nextExpiryBlock += self.orderBlockInterval;
+            nextExpiryBlockTimestamp += longTermOrders.orderTimeInterval;
         }
-        //finally, move state to current block if necessary
-        if (self.lastVirtualOrderBlock != blockNumber) {
-            executeVirtualTradesAndOrderExpiries(self, reserveResult, blockNumber);
+        //finally, move state to current blockTimestamp if necessary
+        if (longTermOrders.lastVirtualOrderTimestamp != blockTimestamp) {
+            executeVirtualTradesAndOrderExpiries(longTermOrders, reserveResult, blockTimestamp);
         }
     }
 
+    /// ---------------------------
+    /// -------- OrderPool --------
+    /// ---------------------------
+
+    ///@notice An Order Pool is an abstraction for a pool of long term orders that sells a token at a constant rate to the embedded AMM.
+    ///the order pool handles the logic for distributing the proceeds from these sales to the owners of the long term orders through a modified
+    ///version of the staking algorithm from  https://uploads-ssl.webflow.com/5ad71ffeb79acc67c8bcdaba/5ad8d1193a40977462982470_scalable-reward-distribution-paper.pdf
+
+    uint256 constant Q112 = 2**112;
+
+    ///@notice you can think of this as a staking pool where all long term orders are staked.
+    /// The pool is paid when virtual long term orders are executed, and each order is paid proportionally
+    /// by the order's sale rate per time intervals
+    struct OrderPool {
+        ///@notice current rate that tokens are being sold (per time interval)
+        uint256 currentSalesRate;
+
+        ///@notice sum of (salesProceeds_k / salesRate_k) over every period k. Stored as a fixed precision floating point number
+        uint256 rewardFactor;
+
+        ///@notice this maps time interval numbers to the cumulative sales rate of orders that expire on that block (time interval)
+        mapping(uint256 => uint256) salesRateEndingPerBlock;
+
+        ///@notice map order ids to the block timestamp in which they expire
+        mapping(uint256 => uint256) orderExpiry;
+
+        ///@notice map order ids to their sales rate
+        mapping(uint256 => uint256) salesRate;
+
+        ///@notice reward factor per order at time of submission
+        mapping(uint256 => uint256) rewardFactorAtSubmission;
+
+        ///@notice reward factor at a specific time interval
+        mapping(uint256 => uint256) rewardFactorAtBlock;
+    }
+
+    ///@notice distribute payment amount to pool (in the case of TWAMM, proceeds from trades against amm)
+    function orderPoolDistributePayment(OrderPool storage orderPool, uint256 amount) internal {
+        if (orderPool.currentSalesRate != 0) {
+            unchecked { // Addition is with overflow
+                orderPool.rewardFactor += amount * Q112 * SELL_RATE_ADDITIONAL_PRECISION / orderPool.currentSalesRate;
+            }
+        }
+    }
+
+    ///@notice deposit an order into the order pool.
+    function orderPoolDepositOrder(OrderPool storage orderPool, uint256 orderId, uint256 amountPerBlock, uint256 orderExpiry) internal {
+        orderPool.currentSalesRate += amountPerBlock;
+        orderPool.rewardFactorAtSubmission[orderId] = orderPool.rewardFactor;
+        orderPool.orderExpiry[orderId] = orderExpiry;
+        orderPool.salesRate[orderId] = amountPerBlock;
+        orderPool.salesRateEndingPerBlock[orderExpiry] += amountPerBlock;
+    }
+
+    ///@notice when orders expire after a given block, we need to update the state of the pool
+    function orderPoolUpdateStateFromBlockExpiry(OrderPool storage orderPool, uint256 blockTimestamp) internal {
+        orderPool.currentSalesRate -= orderPool.salesRateEndingPerBlock[blockTimestamp];
+        orderPool.rewardFactorAtBlock[blockTimestamp] = orderPool.rewardFactor;
+    }
+
+    ///@notice cancel order and remove from the order pool
+    function orderPoolCancelOrder(OrderPool storage orderPool, uint256 orderId, uint256 blockTimestamp) internal returns (uint256 unsoldAmount, uint256 purchasedAmount) {
+        uint256 expiry = orderPool.orderExpiry[orderId];
+        require(expiry > blockTimestamp);
+
+        //calculate amount that wasn't sold, and needs to be returned
+        uint256 salesRate = orderPool.salesRate[orderId];
+        unsoldAmount = (expiry - blockTimestamp) * salesRate / SELL_RATE_ADDITIONAL_PRECISION;
+
+        //calculate amount of other token that was purchased
+        unchecked { // subtraction is with underflow
+            purchasedAmount = ((orderPool.rewardFactor - orderPool.rewardFactorAtSubmission[orderId]) * salesRate / SELL_RATE_ADDITIONAL_PRECISION) / Q112;
+        }
+
+        //update state
+        orderPool.currentSalesRate -= salesRate;
+        orderPool.salesRate[orderId] = 0;
+        orderPool.orderExpiry[orderId] = 0;
+        orderPool.salesRateEndingPerBlock[expiry] -= salesRate;
+    }
+
+    ///@notice withdraw proceeds from pool for a given order. This can be done before or after the order has expired.
+    //If the order has expired, we calculate the reward factor at time of expiry. If order has not yet expired, we
+    //use current reward factor, and update the reward factor at time of staking (effectively creating a new order)
+    function orderPoolWithdrawProceeds(OrderPool storage orderPool, uint256 orderId, uint256 blockTimestamp) internal returns (uint256 totalReward) {
+        bool orderExpired;
+        (orderExpired, totalReward) = orderPoolGetProceeds(orderPool, orderId, blockTimestamp);
+
+        if (orderExpired) {
+            //remove stake
+            orderPool.salesRate[orderId] = 0;
+        }
+        //if order has not yet expired, we just adjust the start
+        else {
+            orderPool.rewardFactorAtSubmission[orderId] = orderPool.rewardFactor;
+        }
+    }
+
+    ///@notice view function for getting the current proceeds for the given order
+    function orderPoolGetProceeds(OrderPool storage orderPool, uint256 orderId, uint256 blockTimestamp) internal view returns (bool orderExpired, uint256 totalReward) {
+        uint256 stakedAmount = orderPool.salesRate[orderId];
+        require(stakedAmount > 0);
+        uint256 orderExpiry = orderPool.orderExpiry[orderId];
+        uint256 rewardFactorAtSubmission = orderPool.rewardFactorAtSubmission[orderId];
+
+        //if order has expired, we need to calculate the reward factor at expiry
+        if (blockTimestamp > orderExpiry) {
+            uint256 rewardFactorAtExpiry = orderPool.rewardFactorAtBlock[orderExpiry];
+            unchecked { // subtraction is with underflow
+                totalReward = ((rewardFactorAtExpiry - rewardFactorAtSubmission) * stakedAmount / SELL_RATE_ADDITIONAL_PRECISION) / Q112;
+            }
+            orderExpired = true;
+        }
+        else {
+            unchecked { // subtraction is with underflow
+                totalReward = ((orderPool.rewardFactor - rewardFactorAtSubmission) * stakedAmount / SELL_RATE_ADDITIONAL_PRECISION) / Q112;
+            }
+            orderExpired = false;
+        }
+    }
 }

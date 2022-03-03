@@ -203,7 +203,7 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         rewarder = FraxCrossChainRewarder(_rewarder_address);
 
         // // Uniswap V2 / Impossible ONLY
-        // // Need to know which token frax is (0 or 1)
+        // // Need to know which token FRAX is (0 or 1)
         // address token0 = stakingToken.token0();
         // if (token0 == frax_address) frax_is_token0 = true;
         // else frax_is_token0 = false;

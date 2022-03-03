@@ -23,7 +23,7 @@ async function getAmountOutWithTwamm(amountIn, pair, isToken1 = false) {
         orderBlockInterval,
         rewardFactorPool0,
         rewardFactorPool1,
-    ] = await pair.getTwammState(currentBlock);
+    ] = await pair.getTwammState();
 
     const [
         reserve0,

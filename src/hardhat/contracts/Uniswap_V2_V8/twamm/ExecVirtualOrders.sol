@@ -8,44 +8,43 @@ library ExecVirtualOrdersLib {
 
     ///@notice computes the result of virtual trades by the token pools
     function computeVirtualBalances(
-        uint256 tokenAStart,
-        uint256 tokenBStart,
-        uint256 tokenAIn,
-        uint256 tokenBIn)
-    internal pure returns (uint256 tokenAOut, uint256 tokenBOut, uint256 ammEndTokenA, uint256 ammEndTokenB)
+        uint256 token0Start,
+        uint256 token1Start,
+        uint256 token0In,
+        uint256 token1In)
+    internal pure returns (uint256 token0Out, uint256 token1Out, uint256 ammEndToken0, uint256 ammEndToken1)
     {
-        tokenAOut = 0;
-        tokenBOut = 0;
+        token0Out = 0;
+        token1Out = 0;
         //if no tokens are sold to the pool, we don't need to execute any orders
-        if (tokenAIn == 0 && tokenBIn == 0) {
-            ammEndTokenA = tokenAStart;
-            ammEndTokenB = tokenBStart;
+        if (token0In == 0 && token1In == 0) {
+            ammEndToken0 = token0Start;
+            ammEndToken1 = token1Start;
         }
         //in the case where only one pool is selling, we just perform a normal swap
-        else if (tokenAIn == 0) {
+        else if (token0In == 0) {
             //constant product formula
-            uint tokenBInWithFee = tokenBIn * 997;
-            tokenAOut = tokenAStart * tokenBInWithFee / ((tokenBStart * 1000) + tokenBInWithFee);
-            ammEndTokenA = tokenAStart - tokenAOut;
-            ammEndTokenB = tokenBStart + tokenBIn;
-
+            uint token1InWithFee = token1In * 997;
+            token0Out = token0Start * token1InWithFee / ((token1Start * 1000) + token1InWithFee);
+            ammEndToken0 = token0Start - token0Out;
+            ammEndToken1 = token1Start + token1In;
         }
-        else if (tokenBIn == 0) {
+        else if (token1In == 0) {
             //contant product formula
-            uint tokenAInWithFee = tokenAIn * 997;
-            tokenBOut = tokenBStart * tokenAInWithFee / ((tokenAStart * 1000) + tokenAInWithFee);
-            ammEndTokenA = tokenAStart + tokenAIn;
-            ammEndTokenB = tokenBStart - tokenBOut;
+            uint token0InWithFee = token0In * 997;
+            token1Out = token1Start * token0InWithFee / ((token0Start * 1000) + token0InWithFee);
+            ammEndToken0 = token0Start + token0In;
+            ammEndToken1 = token1Start - token1Out;
         }
         //when both pools sell, we use the TWAMM formula
         else {
-            uint256 aIn = tokenAIn * 997 / 1000;
-            uint256 bIn = tokenBIn * 997 / 1000;
-            uint256 k = tokenAStart * tokenBStart;
-            ammEndTokenB = tokenAStart * (tokenBStart + bIn) / (tokenAStart + aIn);
-            ammEndTokenA = k / ammEndTokenB;
-            tokenAOut = tokenAStart + aIn - ammEndTokenA;
-            tokenBOut = tokenBStart + bIn - ammEndTokenB;
+            uint256 aIn = token0In * 997 / 1000;
+            uint256 bIn = token1In * 997 / 1000;
+            uint256 k = token0Start * token1Start;
+            ammEndToken1 = token0Start * (token1Start + bIn) / (token0Start + aIn);
+            ammEndToken0 = k / ammEndToken1;
+            token0Out = token0Start + aIn - ammEndToken0;
+            token1Out = token1Start + bIn - ammEndToken1;
         }
     }
 }

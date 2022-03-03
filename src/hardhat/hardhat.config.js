@@ -42,11 +42,13 @@ module.exports = {
 				// url: `${process.env.EVMOS_NETWORK_ENDPOINT}`, // Evmos
 				// url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}` // Ethereum (alternate)
 				// url: `${process.env.FANTOM_FORKING_NETWORK_ENDPOINT}`, // Fantom
+				// url: `${process.env.FUSE_NETWORK_ENDPOINT}`, // Fuse
 				// url: `${process.env.HARMONY_NETWORK_ENDPOINT}`, // Harmony
 				// url: `${process.env.MOONBEAM_NETWORK_ENDPOINT}`, // Moonbeam
 				// url: `${process.env.MOONRIVER_NETWORK_ENDPOINT}`, // Moonriver
 				// url: `${process.env.OPTIMISM_NETWORK_ENDPOINT}`, // Optimism
 				// url: `${process.env.POLYGON_NETWORK_ENDPOINT}`, // Polygon
+				// url: `${process.env.ZKSYNC_NETWORK_ENDPOINT}`, // zkSync
 				
 			},
 			accounts: {
@@ -113,16 +115,16 @@ module.exports = {
 			gasPrice: 125000000000,
 			gasMultiplier: 1.2
 		},
-		evmos: {
-			url: process.env.EVMOS_NETWORK_ENDPOINT,
-			accounts: {
-				mnemonic: process.env.EVMOS_MNEMONIC_PHRASE
-			},
-			chainId: 9001,
-			gas: "auto",
-			gasPrice: 5000000000, // 5 Gwei
-			gasMultiplier: 1.2
-		},
+		// evmos: {
+		// 	url: process.env.EVMOS_NETWORK_ENDPOINT,
+		// 	accounts: {
+		// 		mnemonic: process.env.EVMOS_MNEMONIC_PHRASE
+		// 	},
+		// 	chainId: 9001,
+		// 	gas: "auto",
+		// 	gasPrice: 5000000000, // 5 Gwei
+		// 	gasMultiplier: 1.2
+		// },
 		fantom: {
 			url: process.env.FANTOM_NETWORK_ENDPOINT,
 			accounts: {
@@ -133,6 +135,16 @@ module.exports = {
 			gasPrice: 300000000000, // 300 Gwei
 			gasMultiplier: 1.2
 		},
+		// fuse: {
+		// 	url: process.env.FUSE_NETWORK_ENDPOINT,
+		// 	accounts: {
+		// 		mnemonic: process.env.FUSE_MNEMONIC_PHRASE
+		// 	},
+		// 	chainId: 122,
+		// 	gas: "auto",
+		// 	gasPrice: 5000000000, // 5 Gwei
+		// 	gasMultiplier: 1.2
+		// },
 		harmony: {
 			url: process.env.HARMONY_NETWORK_ENDPOINT,
 			accounts: {
@@ -180,7 +192,7 @@ module.exports = {
 			},
 			chainId: 137,
 			gas: "auto",
-			gasPrice: 150000000000, // 150 Gwei
+			gasPrice: 50000000000, // 50 Gwei
 			gasMultiplier: 1.2
 		},
 		ropsten: {
@@ -202,7 +214,17 @@ module.exports = {
 			gas: "auto",
 			gasPrice: "auto",
 			gasMultiplier: 1.2
-		}
+		},
+		// zksync: {
+		// 	url: process.env.ZKSYNC_NETWORK_ENDPOINT,
+		// 	accounts: {
+		// 		mnemonic: process.env.ZKSYNC_MNEMONIC_PHRASE
+		// 	},
+		// 	chainId: 123456,
+		// 	gas: "auto",
+		// 	gasPrice: 5000000000, // 5 Gwei
+		// 	gasMultiplier: 1.2
+		// },
     },
 	solidity: {
 		compilers: [
