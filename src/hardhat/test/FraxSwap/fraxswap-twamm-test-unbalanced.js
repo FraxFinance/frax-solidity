@@ -1,6 +1,6 @@
 const {expect} = require("chai");
 const {ethers} = require("hardhat");
-const UniV2TWAMMPair = require('../../artifacts/contracts/Uniswap_V2_V8/core/UniV2TWAMMPair.sol/UniV2TWAMMPair');
+const UniV2TWAMMPair = require('../../artifacts/contracts/Uniswap_V2_TWAMM/core/UniV2TWAMMPair.sol/UniV2TWAMMPair');
 const {bigNumberify, expandTo18Decimals} = require('./utilities');
 const {calculateTwammExpected} = require('./twamm-utils')
 
@@ -107,7 +107,7 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
         const [owner, user1, user2, user3] = await ethers.getSigners();
 
         // Deploy token0/token1 token and distribute
-        const DummyToken = await ethers.getContractFactory("contracts/Uniswap_V2_V8/periphery/test/ERC20PeriTest.sol:ERC20PeriTest");
+        const DummyToken = await ethers.getContractFactory("contracts/Uniswap_V2_TWAMM/periphery/test/ERC20PeriTest.sol:ERC20PeriTest");
         let token0 = await DummyToken.deploy(ERC20Supply);
         let token1 = await DummyToken.deploy(ERC20Supply);
         const weth9 = await (await ethers.getContractFactory("WETH9")).deploy();

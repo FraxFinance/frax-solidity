@@ -10,7 +10,7 @@ const {
     getApprovalDigest
 } = require('./utilities');
 
-const UniV2TWAMMPair = require('../../artifacts/contracts/Uniswap_V2_V8/core/UniV2TWAMMPair.sol/UniV2TWAMMPair');
+const UniV2TWAMMPair = require('../../artifacts/contracts/Uniswap_V2_TWAMM/core/UniV2TWAMMPair.sol/UniV2TWAMMPair');
 
 const MINIMUM_LIQUIDITY = utils.parseUnits(`${1000}`, 0);
 
@@ -378,7 +378,7 @@ describe("UniswapV2 Tests", function () {
             user1 = signers[1];
             user2 = signers[2];
 
-            const TOKEN = await ethers.getContractFactory("contracts/Uniswap_V2_V8/core/test/ERC20CoreTest.sol:ERC20CoreTest")
+            const TOKEN = await ethers.getContractFactory("contracts/Uniswap_V2_TWAMM/core/test/ERC20CoreTest.sol:ERC20CoreTest")
             token = await TOKEN.connect(user1).deploy(TOTAL_SUPPLY)
             await token.deployed();
 
@@ -791,12 +791,12 @@ describe("UniswapV2 Tests", function () {
                 router = setupCnt.router;
 
                 DTT = await (await ethers.getContractFactory(
-                    "contracts/Uniswap_V2_V8/periphery/test/DeflatingERC20.sol:DeflatingERC20"
+                    "contracts/Uniswap_V2_TWAMM/periphery/test/DeflatingERC20.sol:DeflatingERC20"
                 )).deploy(expandTo18Decimals(10000));
                 await DTT.transfer(user1.address, expandTo18Decimals(10000));
 
                 DTT2 = await (await ethers.getContractFactory(
-                    "contracts/Uniswap_V2_V8/periphery/test/DeflatingERC20.sol:DeflatingERC20"
+                    "contracts/Uniswap_V2_TWAMM/periphery/test/DeflatingERC20.sol:DeflatingERC20"
                 )).deploy(expandTo18Decimals(10000));
                 await DTT2.transfer(user1.address, expandTo18Decimals(10000));
 
@@ -1291,7 +1291,7 @@ async function setupContracts(createPair = true, deployDTT = false) {
     const [owner, user1, user2, user3] = await ethers.getSigners();
 
     // Deploy token0/token1 token and distribute
-    const DummyToken = await ethers.getContractFactory("contracts/Uniswap_V2_V8/periphery/test/ERC20PeriTest.sol:ERC20PeriTest");
+    const DummyToken = await ethers.getContractFactory("contracts/Uniswap_V2_TWAMM/periphery/test/ERC20PeriTest.sol:ERC20PeriTest");
     let token0 = await DummyToken.deploy(expandTo18Decimals(10000));
     let token1 = await DummyToken.deploy(expandTo18Decimals(10000));
     const weth9 = await (await ethers.getContractFactory("WETH9")).deploy();
@@ -1299,7 +1299,7 @@ async function setupContracts(createPair = true, deployDTT = false) {
     let deflatingERC20;
     if (deployDTT) {
         deflatingERC20 = await (await ethers.getContractFactory(
-            "contracts/Uniswap_V2_V8/periphery/test/DeflatingERC20.sol:DeflatingERC20"
+            "contracts/Uniswap_V2_TWAMM/periphery/test/DeflatingERC20.sol:DeflatingERC20"
         )).deploy(expandTo18Decimals(10000));
         await deflatingERC20.transfer(user1.address, expandTo18Decimals(10000));
     }

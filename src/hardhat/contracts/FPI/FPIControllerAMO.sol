@@ -31,8 +31,8 @@ import "../Frax/IFraxAMOMinter.sol";
 import "../Staking/Owned.sol";
 import "../Oracle/AggregatorV3Interface.sol";
 import "../Oracle/CPITrackerOracle.sol";
-import "../Uniswap_V2_V8/periphery/libraries/UniswapV2LiquidityMathLibraryMini.sol";
-import "../Uniswap_V2_V8/core/interfaces/IUniV2TWAMMPair.sol";
+import "../Uniswap_V2_TWAMM/periphery/libraries/UniswapV2LiquidityMathLibraryMini.sol";
+import "../Uniswap_V2_TWAMM/core/interfaces/IUniV2TWAMMPair.sol";
 
 contract FPIControllerAMO is Owned {
 
