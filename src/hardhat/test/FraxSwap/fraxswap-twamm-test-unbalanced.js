@@ -1,6 +1,6 @@
 const {expect} = require("chai");
 const {ethers} = require("hardhat");
-const uniswapV2PairV8 = require('../../artifacts/contracts/Uniswap_V2_V8/core/UniswapV2PairV8.sol/UniswapV2PairV8');
+const UniV2TWAMMPair = require('../../artifacts/contracts/Uniswap_V2_V8/core/UniV2TWAMMPair.sol/UniV2TWAMMPair');
 const {bigNumberify, expandTo18Decimals} = require('./utilities');
 const {calculateTwammExpected} = require('./twamm-utils')
 
@@ -118,7 +118,7 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
             token0 = temp;
         }
 
-        const FraxswapFactory = await ethers.getContractFactory("UniswapV2FactoryV8");
+        const FraxswapFactory = await ethers.getContractFactory("UniV2TWAMMFactory");
         const factory = await FraxswapFactory.deploy(owner.address);
         await factory.deployed();
 
@@ -126,10 +126,10 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
         if (createPair) {
             await factory.createPair(token0.address, token1.address);
             const pairAddress = await factory.getPair(token0.address, token1.address);
-            pair = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
+            pair = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
         }
 
-        const FraxswapRouter = await ethers.getContractFactory("UniswapV2Router02V8");
+        const FraxswapRouter = await ethers.getContractFactory("UniV2TWAMMRouter");
         const router = await FraxswapRouter.deploy(factory.address, weth9.address);
         await router.deployed();
 

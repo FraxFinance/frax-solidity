@@ -1,9 +1,34 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
+
+// ====================================================================
+// |     ______                   _______                             |
+// |    / _____________ __  __   / ____(_____  ____ _____  ________   |
+// |   / /_  / ___/ __ `| |/_/  / /_  / / __ \/ __ `/ __ \/ ___/ _ \  |
+// |  / __/ / /  / /_/ _>  <   / __/ / / / / / /_/ / / / / /__/  __/  |
+// | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
+// |                                                                  |
+// ====================================================================
+// ========================= UniV2TWAMMERC20 ==========================
+// ====================================================================
+// TWAMM ERC-20
+// Inspired by https://www.paradigm.xyz/2021/07/twamm
+// https://github.com/para-dave/twamm
+
+// Frax Finance: https://github.com/FraxFinance
+
+// Primary Author(s)
+// Rich Gee: https://github.com/zer0blockchain
+// Dennis: https://github.com/denett
+
+// Reviewer(s) / Contributor(s)
+// Travis Moore: https://github.com/FortisFortuna
+// Sam Kazemian: https://github.com/samkazemian
 
 import './interfaces/IUniswapV2ERC20V5.sol';
 import './libraries/SafeMath.sol';
 
-contract UniswapV2ERC20V8 is IUniswapV2ERC20V5 {
+contract UniV2TWAMMERC20 is IUniswapV2ERC20V5 {
     using SafeMath for uint;
 
     string public constant override name = 'FraxSwap V1';

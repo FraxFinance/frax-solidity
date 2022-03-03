@@ -2,14 +2,14 @@ pragma solidity ^0.8.4;
 
 import "hardhat/console.sol";
 import '../Uniswap_V2_V8/core/interfaces/IUniswapV2PairV5.sol';
-import '../Uniswap_V2_V8/core/UniswapV2ERC20V8.sol';
+import '../Uniswap_V2_V8/core/UniV2TWAMMERC20.sol';
 import '../Math/Math.sol';
 import '../Math/UQ112x112.sol';
 import '../Uniswap_V2_V8/core/interfaces/IERC20V5.sol';
 import '../Uniswap_V2_V8/core/interfaces/IUniswapV2FactoryV5.sol';
 import '../Uniswap_V2_V8/core/interfaces/IUniswapV2CalleeV5.sol';
 
-contract FraxswapRangePair is UniswapV2ERC20V8 {
+contract FraxswapRangePair is UniV2TWAMMERC20 {
     using SafeMath  for uint;
     using UQ112x112 for uint224;
 

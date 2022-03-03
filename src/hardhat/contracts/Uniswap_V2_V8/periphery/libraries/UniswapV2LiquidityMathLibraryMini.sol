@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import '../../core/interfaces/IUniswapV2PairV5.sol';
+import '../../core/interfaces/IUniV2TWAMMPair.sol';
 import '../../core/interfaces/IUniswapV2FactoryV5.sol';
 import '../../libraries/Babylonian.sol';
 import '../../libraries/FullMath.sol';

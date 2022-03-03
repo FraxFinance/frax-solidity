@@ -1,6 +1,6 @@
 pragma solidity >=0.6.6;
 
-import '../../core/interfaces/IUniswapV2PairV5.sol';
+import '../../core/interfaces/IUniV2TWAMMPair.sol';
 import '../..//libraries/Babylonian.sol';
 import '../..//libraries/TransferHelper.sol';
 
@@ -8,7 +8,7 @@ import '../libraries/UniswapV2LiquidityMathLibrary.sol';
 import '../interfaces/IERC20.sol';
 import '../interfaces/IUniswapV2Router01V5.sol';
 import '../libraries/SafeMath.sol';
-import '../libraries/UniswapV2Library.sol';
+import '../libraries/UniV2TWAMMLibrary.sol';
 
 contract ExampleSwapToPrice {
     using SafeMath for uint256;
@@ -42,7 +42,7 @@ contract ExampleSwapToPrice {
         bool aToB;
         uint256 amountIn;
         {
-            (uint256 reserveA, uint256 reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB);
+            (uint256 reserveA, uint256 reserveB) = UniV2TWAMMLibrary.getReserves(factory, tokenA, tokenB);
             (aToB, amountIn) = UniswapV2LiquidityMathLibrary.computeProfitMaximizingTrade(
                 truePriceTokenA, truePriceTokenB,
                 reserveA, reserveB

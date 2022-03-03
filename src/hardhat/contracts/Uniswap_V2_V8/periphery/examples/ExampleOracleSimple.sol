@@ -1,11 +1,11 @@
 pragma solidity >=0.6.6;
 
 import '../../core/interfaces/IUniswapV2FactoryV5.sol';
-import '../../core/interfaces/IUniswapV2PairV5.sol';
+import '../../core/interfaces/IUniV2TWAMMPair.sol';
 import '../../libraries/FixedPoint.sol';
 
 import '../libraries/UniswapV2OracleLibrary.sol';
-import '../libraries/UniswapV2Library.sol';
+import '../libraries/UniV2TWAMMLibrary.sol';
 
 // fixed window oracle that recomputes the average price for the entire period once every period
 // note that the price average is only guaranteed to be over at least 1 period, but may be over a longer period
@@ -14,7 +14,7 @@ contract ExampleOracleSimple {
 
     uint public constant PERIOD = 24 hours;
 
-    IUniswapV2PairV5 immutable pair;
+    IUniV2TWAMMPair immutable pair;
     address public immutable token0;
     address public immutable token1;
 
@@ -25,7 +25,7 @@ contract ExampleOracleSimple {
     FixedPoint.uq112x112 public price1Average;
 
     constructor(address factory, address tokenA, address tokenB) public {
-        IUniswapV2PairV5 _pair = IUniswapV2PairV5(UniswapV2Library.pairFor(factory, tokenA, tokenB));
+        IUniV2TWAMMPair _pair = IUniV2TWAMMPair(UniV2TWAMMLibrary.pairFor(factory, tokenA, tokenB));
         pair = _pair;
         token0 = _pair.token0();
         token1 = _pair.token1();
