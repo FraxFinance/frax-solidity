@@ -175,7 +175,7 @@ contract StakingRewardsDualV4 is Owned, ReentrancyGuard {
         // 1 token1 a day
         rewardRate1 = (uint256(365e18)).div(365 * 86400); 
 
-        // Uniswap related. Need to know which token frax is (0 or 1)
+        // Uniswap related. Need to know which token FRAX is (0 or 1)
         address token0 = stakingToken.token0();
         if (token0 == _frax_address) frax_is_token0 = true;
         else frax_is_token0 = false;

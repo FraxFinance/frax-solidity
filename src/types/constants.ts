@@ -1180,6 +1180,8 @@ export const CONTRACT_ADDRESSES = {
       FRAX: "0x853d955aCEf822Db058eb8505911ED77F175b99e",
       FXS: "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
       FXB: "",
+      FPI: "0x76c8ceF5B18994a85bC2bE1991E5B9C716626767",
+      FPIS: "0xDB68c6264e9D0f8a6Df1fA5a89F205Da38698D15",
       vesting: "NOT_DEPLOYED_YET",
       veFXS: "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0", // Old: "0xcb75A1655c84589652D0f3A4605e5dDA8431F0a6"
       veFXS_whitelist_checker: "",
@@ -1198,6 +1200,7 @@ export const CONTRACT_ADDRESSES = {
     oracles_other: {
       combo_oracle: "0x878f2059435a19C79c20318ee57657bF4543B6d4", // "0xbdCB57c9d35e8D41babCBcA67416ee6622274caf",
       combo_oracle_univ2_univ3: "0x1cBE07F3b3bf3BDe44d363cecAecfe9a98EC2dff", // "0xD13c9a29eF6c5ADc7b43BBd5854B07bB9b099862", 
+      cpi_tracker: "0x90E7eFdcA79de10F1713c59BC3AE9B076e753490"
     },
     retired_oracles: {
       FXS_USDC: "0x1F70Af31D041f9C183E23EC6809c04eb8CA006a4", //V1: 0x28fdA30a6Cf71d5fC7Ce17D6d20c788D98Ff2c46
@@ -1298,12 +1301,14 @@ export const CONTRACT_ADDRESSES = {
         ethereum: "0x4f60a160D8C2DDdaAfe16FCC57566dB84D674BD6", // Mainnet anyFRAX (for the router)
         evmos: "",
         fantom: "0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE", // anySwap: Dump into bridge
+        fuse: "",
         harmony: "0xB37D31b2A74029B5951a2778F959282E2D518595", // Celer: IOriginalTokenVault deposit
         moonbeam: "0x88A69B4E698A4B090DF6CF5Bd7B2D47325Ad30A3", // Nomad Bridge: send
         moonriver: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
         optimism: "0xB37D31b2A74029B5951a2778F959282E2D518595",
         polygon: "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77",
-        solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
+        solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585",
+        zksync: "",
       },
       fxs: {
         arbitrum: "0x183D0dC5867c01bFB1dbBc41d6a9d3dE6e044626", // anySwap: Dump into bridge
@@ -1314,12 +1319,14 @@ export const CONTRACT_ADDRESSES = {
         ethereum: "0x685b63CFE0179b3EFb70A01dCb1D648549AA192d", // Mainnet anyFXS (for the router)
         evmos: "",
         fantom: "0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE", // anySwap: Dump into bridge
+        fuse: "",
         harmony: "0xB37D31b2A74029B5951a2778F959282E2D518595", // Celer: IOriginalTokenVault deposit
         moonbeam: "0x88A69B4E698A4B090DF6CF5Bd7B2D47325Ad30A3", // Nomad Bridge: send
         moonriver: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
         optimism: "0xB37D31b2A74029B5951a2778F959282E2D518595",
         polygon: "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77",
-        solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
+        solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585",
+        zksync: "",
       },
       collateral: {
         arbitrum: "0xcEe284F754E854890e311e3280b767F80797180d", // Arbitrum One Bridge: outboundTransfer
@@ -1329,12 +1336,14 @@ export const CONTRACT_ADDRESSES = {
         bsc: "0x533e3c0e6b48010873B947bddC4721b1bDFF9648", // Not used
         evmos: "",
         fantom: "0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE", // anySwap: Dump into bridge
+        fuse: "",
         harmony: "0xB37D31b2A74029B5951a2778F959282E2D518595",  // Not used
         moonbeam: "0x88A69B4E698A4B090DF6CF5Bd7B2D47325Ad30A3", // Nomad Bridge: send
         moonriver: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
         optimism: "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1",
         polygon: "0xA0c68C638235ee32657e8f720a23ceC1bFc77C77",
-        solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585"
+        solana: "0x3ee18B2214AFF97000D974cf647E7C347E8fa585",
+        zksync: "",
       },
       liquidity_bridgers: {
         arbitrum: {
@@ -2163,6 +2172,51 @@ export const CONTRACT_ADDRESSES = {
       "veDAO FRAX": "0xE04C26444d37fE103B9cc8033c99b09D47056f51",
     },
   },
+  fuse: {
+    chain_id: 122,
+    main: {
+      FRAX: '',
+      FXS: '',
+    },
+    canonicals: {
+      FRAX: '',
+      FXS: '',
+    },
+    bridge_tokens: {},
+    collaterals: {
+      USDC: '',
+    },
+    bridges: {},
+    bridge_backers: {},
+    oracles: {
+      single_assets: {
+        FRAX: '',
+        FXS: '',
+        USDC: '',
+      },
+      cross_chain_oracle: '',
+    },
+    oracles_other: {
+      combo_oracle: '',
+      combo_oracle_univ2_univ3: '',
+    },
+    multisigs: {
+      Comptrollers: '',
+    },
+    uniswap: {
+      v2_router: '',
+      v3_factory: '0x0000000000000000000000000000000000000000',
+      v3_nft_manager: '0x0000000000000000000000000000000000000000',
+      v3_router: '0x0000000000000000000000000000000000000000',
+    },
+    amos: {},
+    reward_tokens: {
+      WETH: '',
+    },
+    vamms: {},
+    pair_tokens: {},
+    staking_contracts: {},
+  },
   harmony: {
     chain_id: 1666600000,
     main: {
@@ -2561,6 +2615,51 @@ export const CONTRACT_ADDRESSES = {
     pair_tokens: {
       "Saber wFRAX/USDC": "FRXsjEv4jF3r72FgbCXu8uLbPoZGLmCmg3EN1S3cfC4x",
     },
+  },
+  zksync: {
+    chain_id: 122,
+    main: {
+      FRAX: '',
+      FXS: '',
+    },
+    canonicals: {
+      FRAX: '',
+      FXS: '',
+    },
+    bridge_tokens: {},
+    collaterals: {
+      USDC: '',
+    },
+    bridges: {},
+    bridge_backers: {},
+    oracles: {
+      single_assets: {
+        FRAX: '',
+        FXS: '',
+        USDC: '',
+      },
+      cross_chain_oracle: '',
+    },
+    oracles_other: {
+      combo_oracle: '',
+      combo_oracle_univ2_univ3: '',
+    },
+    multisigs: {
+      Comptrollers: '',
+    },
+    uniswap: {
+      v2_router: '',
+      v3_factory: '0x0000000000000000000000000000000000000000',
+      v3_nft_manager: '0x0000000000000000000000000000000000000000',
+      v3_router: '0x0000000000000000000000000000000000000000',
+    },
+    amos: {},
+    reward_tokens: {
+      WETH: '',
+    },
+    vamms: {},
+    pair_tokens: {},
+    staking_contracts: {},
   },
 }
 

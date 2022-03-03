@@ -182,7 +182,7 @@ contract FraxCrossChainFarmSushi is Owned, ReentrancyGuard {
         timelock_address = _timelock_address;
 
         // Uniswap V2 ONLY
-        // Uniswap related. Need to know which token frax is (0 or 1)
+        // Uniswap related. Need to know which token FRAX is (0 or 1)
         address token0 = stakingToken.token0();
         if (token0 == frax_address) frax_is_token0 = true;
         else frax_is_token0 = false;

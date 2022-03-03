@@ -9,10 +9,10 @@ pragma solidity ^0.8.0;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ================================ FPI ===============================
+// =============================== FPIS ===============================
 // ====================================================================
-// Frax Price Index
-// Initial peg target is the US CPI-U (Consumer Price Index, All Urban Consumers)
+// Frax Price Index Share
+// FPI Utility Token
 
 // Frax Finance: https://github.com/FraxFinance
 
@@ -27,17 +27,36 @@ pragma solidity ^0.8.0;
 
 import "../ERC20/ERC20PermissionedMint.sol";
 
-contract FPI is ERC20PermissionedMint {
+contract FPIS is ERC20PermissionedMint {
+
+    // Core
+    ERC20PermissionedMint public FPI_TKN;
 
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
       address _creator_address,
-      address _timelock_address
+      address _timelock_address,
+      address _fpi_address
     ) 
-    ERC20PermissionedMint(_creator_address, _timelock_address, "Frax Price Index", "FPI") 
+    ERC20PermissionedMint(_creator_address, _timelock_address, "Frax Price Index Share", "FPIS") 
     {
+      FPI_TKN = ERC20PermissionedMint(_fpi_address);
+      
       _mint(_creator_address, 100000000e18); // Genesis mint
     }
 
+
+    /* ========== RESTRICTED FUNCTIONS ========== */
+
+    function setFPIAddress(address fpi_contract_address) external onlyByOwnGov {
+        require(fpi_contract_address != address(0), "Zero address detected");
+
+        FPI_TKN = ERC20PermissionedMint(fpi_contract_address);
+
+        emit FPIAddressSet(fpi_contract_address);
+    }
+
+    /* ========== EVENTS ========== */
+    event FPIAddressSet(address addr);
 }

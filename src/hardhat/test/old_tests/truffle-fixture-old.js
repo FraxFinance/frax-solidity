@@ -42,6 +42,7 @@ const PIDController = artifacts.require("Oracle/PIDController");
 const ReserveTracker = artifacts.require("Oracle/ReserveTracker");
 const FRAXOracleWrapper = artifacts.require("Oracle/FRAXOracleWrapper");
 const FXSOracleWrapper = artifacts.require("Oracle/FXSOracleWrapper");
+const CPITrackerOracle = artifacts.require("Oracle/CPITrackerOracle");
 
 // Chainlink Price Consumer
 const ChainlinkETHUSDPriceConsumer = artifacts.require("Oracle/ChainlinkETHUSDPriceConsumer");
@@ -70,6 +71,7 @@ const FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI = artifacts.require("Staking/Variant
 const FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE");
 const FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX");
 const FraxUnifiedFarm_UniV3_FRAX_RAI = artifacts.require("Staking/Variants/FraxUnifiedFarm_UniV3_FRAX_RAI");
+const FraxMiddlemanGauge_ARBI_Curve_VSTFRAX = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_ARBI_Curve_VSTFRAX");
 const FraxMiddlemanGauge_FRAX_mUSD = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_FRAX_mUSD");
 
 
@@ -117,9 +119,9 @@ const CurveMetapoolLockerAMO = artifacts.require("Misc_AMOs/CurveMetapoolLockerA
 const RariFuseLendingAMO_V2 = artifacts.require("Misc_AMOs/RariFuseLendingAMO_V2");
 const UniV3LiquidityAMO_V2 = artifacts.require("Misc_AMOs/UniV3LiquidityAMO_V2");
 const FraxAMOMinter = artifacts.require("Frax/FraxAMOMinter");
-// const FraxLiquidityBridger_AUR_Rainbow = artifacts.require("Bridges/Aurora/FraxLiquidityBridger_AUR_Rainbow");
+const FraxLiquidityBridger_AUR_Rainbow = artifacts.require("Bridges/Aurora/FraxLiquidityBridger_AUR_Rainbow");
 const FraxLiquidityBridger_MNBM_Nomad = artifacts.require("Bridges/Moonbeam/FraxLiquidityBridger_MNBM_Nomad");
-const FraxLiquidityBridger_OPTI_Celer = artifacts.require("Bridges/Moonbeam/FraxLiquidityBridger_OPTI_Celer");
+const FraxLiquidityBridger_OPTI_Celer = artifacts.require("Bridges/Optimism/FraxLiquidityBridger_OPTI_Celer");
 const AaveAMO = artifacts.require("Misc_AMOs/AaveAMO");
 const TokenTrackerV2 = artifacts.require("Misc_AMOs/TokenTrackerV2");
 const MSIGHelper = artifacts.require("Misc_AMOs/MSIGHelper");
@@ -171,6 +173,7 @@ module.exports = async (deployer) => {
 
     let frax_oracle_wrapper_instance;
     let fxs_oracle_wrapper_instance;
+    let cpi_tracker_oracle_instance;
 
     let stakingInstanceDualV5_FRAX_OHM;
     let communalFarmInstance_Saddle_D4;
@@ -182,6 +185,7 @@ module.exports = async (deployer) => {
     let fraxUnifiedFarm_Vesper_FRAX_instance;
     let fraxUnifiedFarm_UniV3_FRAX_RAI_instance;
     let fraxCrossChainFarm_FRAX_mUSD;
+    let middlemanGauge_ARBI_Curve_VSTFRAX;
     let middlemanGauge_FRAX_mUSD;
 
 	let pool_instance_USDC;
@@ -278,9 +282,14 @@ module.exports = async (deployer) => {
     communalFarmInstance_Saddle_D4 = await CommunalFarm_SaddleD4.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Saddle alUSD/FEI/FRAX/LUSD']);
     fraxUniV3Farm_Stable_FRAX_DAI = await FraxUniV3Farm_Stable_FRAX_DAI.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Uniswap V3 FRAX/DAI']);
     fraxUniV3Farm_Stable_FRAX_USDC = await FraxUniV3Farm_Stable_FRAX_USDC.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Uniswap V3 FRAX/USDC']);
+    middlemanGauge_ARBI_Curve_VSTFRAX = await FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.at(CONTRACT_ADDRESSES.ethereum.middleman_gauges['Curve VSTFRAX-f']);
     middlemanGauge_FRAX_mUSD = await FraxMiddlemanGauge_FRAX_mUSD.at(CONTRACT_ADDRESSES.ethereum.middleman_gauges['mStable FRAX/mUSD']);
+    
     // fraxUniV3Farm_Stable_FRAX_DAI = await FraxUniV3Farm_Stable_FRAX_DAI.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Uniswap V3 FRAX/DAI']);
     stakingInstanceMultiGauge_FRAX_SUSHI = await StakingRewardsMultiGauge_FRAX_SUSHI.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Sushi FRAX/SUSHI']);
+    fraxUnifiedFarm_Gelato_FRAX_DAI_instance = await FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Gelato Uniswap FRAX/DAI']);
+    fraxUnifiedFarm_Vesper_FRAX_instance = await FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Vesper Orbit FRAX']);
+    fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Temple FRAX/TEMPLE']);
 
     pool_instance_USDC = await Pool_USDC.at(CONTRACT_ADDRESSES.ethereum.pools.USDC_V2);
     pool_instance_v3 = await FraxPoolV3.at(CONTRACT_ADDRESSES.ethereum.pools.V3);
@@ -332,8 +341,21 @@ module.exports = async (deployer) => {
     // // Add in a gauge type
     // await frax_gauge_controller_v2.add_type("Ethereum Mainnet", "1000000000000000000", { from: THE_ACCOUNTS[0] });
 
+    // console.log(chalk.yellow("========== FraxMiddlemanGauge_ARBI_Curve_VSTFRAX =========="));
+    // middlemanGauge_ARBI_Curve_VSTFRAX = await FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.new(
+    //     THE_ACCOUNTS[1], 
+    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
+    //     CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_rewards_distributor, 
+    //     CONTRACT_ADDRESSES.ethereum.bridges.fxs.arbitrum,
+    //     6,
+	// 	CONTRACT_ADDRESSES.arbitrum.staking_contracts['Curve VSTFRAX-f'],
+    //     "",
+    //     "Arbitrum Curve VSTFRAX-f Middleman Gauge",
+    // );
+
+
     // console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE =========="));
-    // // FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE 
+    // // // FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE 
     // fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.new(
     //     THE_ACCOUNTS[6], 
     //     [
@@ -360,32 +382,32 @@ module.exports = async (deployer) => {
     // );
 
 
-    console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX =========="));
+    // console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX =========="));
     // FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX 
-    fraxUnifiedFarm_Vesper_FRAX_instance = await FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX.new(
-        THE_ACCOUNTS[6], 
-        [
-            "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
-            "0x1b40183EFB4Dd766f11bDa7A7c3AD8982e998421" // VSP
-        ], 
-        [
-            "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
-            "0x9520b477Aa81180E6DdC006Fc09Fb6d3eb4e807A" // Vesper Msig
-        ],
-        [
-            11574074074074, 
-            0
-        ],
-        [
-            "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
-            "0x0000000000000000000000000000000000000000"
-        ],
-        [
-            "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
-            "0x0000000000000000000000000000000000000000"
-        ],
-        CONTRACT_ADDRESSES.ethereum.pair_tokens['Vesper Orbit FRAX'],
-    );
+    // fraxUnifiedFarm_Vesper_FRAX_instance = await FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX.new(
+    //     THE_ACCOUNTS[6], 
+    //     [
+    //         "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
+    //         "0x1b40183EFB4Dd766f11bDa7A7c3AD8982e998421" // VSP
+    //     ], 
+    //     [
+    //         "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
+    //         "0x9520b477Aa81180E6DdC006Fc09Fb6d3eb4e807A" // Vesper Msig
+    //     ],
+    //     [
+    //         11574074074074, 
+    //         0
+    //     ],
+    //     [
+    //         "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
+    //         "0x0000000000000000000000000000000000000000"
+    //     ],
+    //     [
+    //         "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
+    //         "0x0000000000000000000000000000000000000000"
+    //     ],
+    //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Vesper Orbit FRAX'],
+    // );
 
     console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI =========="));
     // FraxUnifiedFarm_ERC20_Gelato_FRAX_DAI 
@@ -534,8 +556,14 @@ module.exports = async (deployer) => {
     //     ]
     // );
 
-    
 
+    console.log(chalk.yellow('========== CPITrackerOracle =========='));
+    // CPITrackerOracle
+    cpi_tracker_oracle_instance = await CPITrackerOracle.new(
+        THE_ACCOUNTS[1],
+        CONTRACT_ADDRESSES.ethereum.misc.timelock
+    );
+    
     // console.log(chalk.yellow('========== RariFuseLendingAMO_V2 =========='));
     // // RariFuseLendingAMO_V2
     // rari_amo_instance = await RariFuseLendingAMO_V2.new(
@@ -568,24 +596,24 @@ module.exports = async (deployer) => {
     //     frax_amo_minter_instance.address
     // );
 
-    // console.log(chalk.yellow('========== FraxLiquidityBridger_AUR_Rainbow =========='));
-    // // FraxLiquidityBridger_AUR_Rainbow
-    // frax_liquidity_bridger_aur_rainbow_instance = await FraxLiquidityBridger_AUR_Rainbow.new(
-    //     THE_ACCOUNTS[1],
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     frax_amo_minter_instance.address,
-    //     [
-    //         CONTRACT_ADDRESSES.ethereum.bridges.frax.aurora,
-    //         CONTRACT_ADDRESSES.ethereum.bridges.fxs.aurora,
-    //         CONTRACT_ADDRESSES.ethereum.bridges.collateral.aurora
-    //     ],
-    //     "0x0000000000000000000000000000000000000000", // Aurora goes to same address on other side
-    //     "",
-    //     "FRAX Aurora Rainbow Liquidity Bridger",
-    // );
-    // const account_id = (`aurora:${frax_liquidity_bridger_aur_rainbow_instance.address.replace("0x", "")}`).toLowerCase();
-    // console.log("account_id: ", account_id);
-    // await frax_liquidity_bridger_aur_rainbow_instance.setAccountID(account_id, false, { from: THE_ACCOUNTS[1] });
+    console.log(chalk.yellow('========== FraxLiquidityBridger_AUR_Rainbow =========='));
+    // FraxLiquidityBridger_AUR_Rainbow
+    frax_liquidity_bridger_aur_rainbow_instance = await FraxLiquidityBridger_AUR_Rainbow.new(
+        THE_ACCOUNTS[1],
+        CONTRACT_ADDRESSES.ethereum.misc.timelock,
+        frax_amo_minter_instance.address,
+        [
+            CONTRACT_ADDRESSES.ethereum.bridges.frax.aurora,
+            CONTRACT_ADDRESSES.ethereum.bridges.fxs.aurora,
+            CONTRACT_ADDRESSES.ethereum.bridges.collateral.aurora
+        ],
+        "0x0000000000000000000000000000000000000000", // Aurora goes to same address on other side
+        "",
+        "FRAX Aurora Rainbow Liquidity Bridger",
+    );
+    const account_id = (`aurora:${frax_liquidity_bridger_aur_rainbow_instance.address.replace("0x", "")}`).toLowerCase();
+    console.log("account_id: ", account_id);
+    await frax_liquidity_bridger_aur_rainbow_instance.setAccountID(account_id, false, { from: THE_ACCOUNTS[1] });
 
     // console.log(chalk.yellow('========== FraxLiquidityBridger_OPTI_Celer =========='));
     // // FraxLiquidityBridger_OPTI_Celer
@@ -661,7 +689,7 @@ module.exports = async (deployer) => {
     // await frax_amo_minter_instance.addAMO(MIM_Convex_AMO_instance.address, 0, { from: COMPTROLLER_ADDRESS });
 
     console.log("Add the liquidity bridgers to the AMO Minter");
-    // await frax_amo_minter_instance.addAMO(frax_liquidity_bridger_aur_rainbow_instance.address, 0, { from: COMPTROLLER_ADDRESS });
+    await frax_amo_minter_instance.addAMO(frax_liquidity_bridger_aur_rainbow_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(frax_liquidity_bridger_mnbm_nomad_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(frax_liquidity_bridger_opti_celer_instance.address, 0, { from: COMPTROLLER_ADDRESS });
 
@@ -738,6 +766,7 @@ module.exports = async (deployer) => {
     ComboOracle_UniV2_UniV3.setAsDeployed(combo_oracle_instance_univ2_univ3);
     FRAXOracleWrapper.setAsDeployed(frax_oracle_wrapper_instance);
     FXSOracleWrapper.setAsDeployed(fxs_oracle_wrapper_instance);
+    CPITrackerOracle.setAsDeployed(cpi_tracker_oracle_instance);
     UniswapPairOracle_FRAX_USDC.setAsDeployed(oracle_instance_FRAX_USDC);
     UniswapPairOracle_FXS_WETH.setAsDeployed(oracle_instance_FXS_WETH);
     UniswapPairOracle_USDC_WETH.setAsDeployed(oracle_instance_USDC_WETH);
@@ -766,6 +795,7 @@ module.exports = async (deployer) => {
     console.log(chalk.yellow("--------DEPLOY STAKING CONTRACTS--------"));
     CommunalFarm_SaddleD4.setAsDeployed(communalFarmInstance_Saddle_D4);
     FraxCrossChainFarm_FRAX_mUSD.setAsDeployed(fraxCrossChainFarm_FRAX_mUSD);
+    FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.setAsDeployed(middlemanGauge_ARBI_Curve_VSTFRAX);
     FraxMiddlemanGauge_FRAX_mUSD.setAsDeployed(middlemanGauge_FRAX_mUSD);
     FraxUniV3Farm_Stable_FRAX_USDC.setAsDeployed(fraxUniV3Farm_Stable_FRAX_USDC);
     FraxUniV3Farm_Stable_FRAX_DAI.setAsDeployed(fraxUniV3Farm_Stable_FRAX_DAI);
@@ -777,7 +807,7 @@ module.exports = async (deployer) => {
     FraxUnifiedFarm_UniV3_FRAX_RAI.setAsDeployed(fraxUnifiedFarm_UniV3_FRAX_RAI_instance);
     
     console.log(chalk.yellow("--------DEPLOY LIQUIDITY BRIDGER CONTRACTS--------"));
-    // FraxLiquidityBridger_AUR_Rainbow.setAsDeployed(frax_liquidity_bridger_aur_rainbow_instance);
+    FraxLiquidityBridger_AUR_Rainbow.setAsDeployed(frax_liquidity_bridger_aur_rainbow_instance);
     // FraxLiquidityBridger_MNBM_Nomad.setAsDeployed(frax_liquidity_bridger_mnbm_nomad_instance);
     // FraxLiquidityBridger_OPTI_Celer.setAsDeployed(frax_liquidity_bridger_opti_celer_instance);
 }
