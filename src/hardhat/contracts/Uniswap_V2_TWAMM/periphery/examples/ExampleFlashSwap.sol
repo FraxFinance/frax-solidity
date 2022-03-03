@@ -2,7 +2,7 @@ pragma solidity >=0.6.6;
 
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol';
 
-import '../libraries/UniswapV2Library.sol';
+import '../libraries/UniV2TWAMMLibrary.sol';
 import '../interfaces/V1/IUniswapV1Factory.sol';
 import '../interfaces/V1/IUniswapV1Exchange.sol';
 import '../interfaces/IUniswapV2Router01V5.sol';
@@ -30,9 +30,9 @@ contract ExampleFlashSwap is IUniswapV2Callee {
         uint amountToken;
         uint amountETH;
         { // scope for token{0,1}, avoids stack too deep errors
-        address token0 = IUniswapV2PairV5(msg.sender).token0();
-        address token1 = IUniswapV2PairV5(msg.sender).token1();
-        assert(msg.sender == UniswapV2Library.pairFor(factory, token0, token1)); // ensure that msg.sender is actually a V2 pair
+        address token0 = IUniV2TWAMMPair(msg.sender).token0();
+        address token1 = IUniV2TWAMMPair(msg.sender).token1();
+        assert(msg.sender == UniV2TWAMMLibrary.pairFor(factory, token0, token1)); // ensure that msg.sender is actually a V2 pair
         assert(amount0 == 0 || amount1 == 0); // this strategy is unidirectional
         path[0] = amount0 == 0 ? token0 : token1;
         path[1] = amount0 == 0 ? token1 : token0;
@@ -48,7 +48,7 @@ contract ExampleFlashSwap is IUniswapV2Callee {
             (uint minETH) = abi.decode(data, (uint)); // slippage parameter for V1, passed in by caller
             token.approve(address(exchangeV1), amountToken);
             uint amountReceived = exchangeV1.tokenToEthSwapInput(amountToken, minETH, type(uint).max);
-            uint amountRequired = UniswapV2Library.getAmountsIn(factory, amountToken, path)[0];
+            uint amountRequired = UniV2TWAMMLibrary.getAmountsIn(factory, amountToken, path)[0];
             assert(amountReceived > amountRequired); // fail if we didn't get enough ETH back to repay our flash loan
             WETH.deposit{value: amountRequired}();
             assert(WETH.transfer(msg.sender, amountRequired)); // return WETH to V2 pair
@@ -58,7 +58,7 @@ contract ExampleFlashSwap is IUniswapV2Callee {
             (uint minTokens) = abi.decode(data, (uint)); // slippage parameter for V1, passed in by caller
             WETH.withdraw(amountETH);
             uint amountReceived = exchangeV1.ethToTokenSwapInput{value: amountETH}(minTokens, type(uint).max);
-            uint amountRequired = UniswapV2Library.getAmountsIn(factory, amountETH, path)[0];
+            uint amountRequired = UniV2TWAMMLibrary.getAmountsIn(factory, amountETH, path)[0];
             assert(amountReceived > amountRequired); // fail if we didn't get enough tokens back to repay our flash loan
             assert(token.transfer(msg.sender, amountRequired)); // return tokens to V2 pair
             assert(token.transfer(sender, amountReceived - amountRequired)); // keep the rest! (tokens)

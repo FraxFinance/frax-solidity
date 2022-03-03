@@ -31,9 +31,8 @@ import "../Frax/IFraxAMOMinter.sol";
 import "../Staking/Owned.sol";
 import "../Oracle/AggregatorV3Interface.sol";
 import "../Oracle/CPITrackerOracle.sol";
-import "../Uniswap/TransferHelper.sol";
-import "../Uniswap_V2_V8/periphery/libraries/UniswapV2LiquidityMathLibraryMini.sol";
-import "../Uniswap_V2_V8/core/UniswapV2PairV8.sol";
+import "../Uniswap_V2_TWAMM/periphery/libraries/UniswapV2LiquidityMathLibraryMini.sol";
+import "../Uniswap_V2_TWAMM/core/interfaces/IUniV2TWAMMPair.sol";
 
 contract FPIControllerAMO is Owned {
 
@@ -41,7 +40,7 @@ contract FPIControllerAMO is Owned {
     address public timelock_address;
     FPI public FPI_TKN = FPI(0x76c8ceF5B18994a85bC2bE1991E5B9C716626767);
     IFrax public FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
-    UniswapV2PairV8 public TWAMM = UniswapV2PairV8(0x0000000000000000000000000000000000000000);
+    IUniV2TWAMMPair public TWAMM = IUniV2TWAMMPair(0x0000000000000000000000000000000000000000);
     IFraxAMOMinter public amo_minter = IFraxAMOMinter(0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241);
 
     // Oracles
@@ -344,7 +343,7 @@ contract FPIControllerAMO is Owned {
     }
 
     function setTWAMMAndSwapPeriod(address _twamm_addr, uint256 _swap_period) external onlyByOwnGov {
-        TWAMM = UniswapV2PairV8(_twamm_addr);
+        TWAMM = IUniV2TWAMMPair(_twamm_addr);
         swap_period = _swap_period;
         num_twamm_intervals = _swap_period / TWAMM.orderTimeInterval();
     }

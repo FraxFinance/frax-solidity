@@ -1,16 +1,41 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import './interfaces/IUniswapV2PairV5.sol';
+// ====================================================================
+// |     ______                   _______                             |
+// |    / _____________ __  __   / ____(_____  ____ _____  ________   |
+// |   / /_  / ___/ __ `| |/_/  / /_  / / __ \/ __ `/ __ \/ ___/ _ \  |
+// |  / __/ / /  / /_/ _>  <   / __/ / / / / / /_/ / / / / /__/  __/  |
+// | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
+// |                                                                  |
+// ====================================================================
+// ========================== UniV2TWAMMPair ==========================
+// ====================================================================
+// TWAMM LP Pair Token
+// Inspired by https://www.paradigm.xyz/2021/07/twamm
+// https://github.com/para-dave/twamm
+
+// Frax Finance: https://github.com/FraxFinance
+
+// Primary Author(s)
+// Rich Gee: https://github.com/zer0blockchain
+// Dennis: https://github.com/denett
+
+// Reviewer(s) / Contributor(s)
+// Travis Moore: https://github.com/FortisFortuna
+// Sam Kazemian: https://github.com/samkazemian
+
 import './interfaces/IUniswapV2PairPartialV5.sol';
-import './UniswapV2ERC20V8.sol';
+import './UniV2TWAMMERC20.sol';
 import './libraries/Math.sol';
 import './libraries/UQ112x112.sol';
 import './interfaces/IERC20V5.sol';
 import './interfaces/IUniswapV2FactoryV5.sol';
 import './interfaces/IUniswapV2CalleeV5.sol';
+import '../libraries/TransferHelper.sol';
 import "../twamm/LongTermOrders.sol";
 
-contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
+contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     using SafeMath  for uint;
     using UQ112x112 for uint224;
     using LongTermOrdersLib for LongTermOrdersLib.LongTermOrders;
@@ -213,7 +238,6 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
 
-
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
@@ -317,7 +341,7 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         uint bal0 = IERC20V5(token0).balanceOf(address(this));
 
         // transfer amount to contract
-        IERC20V5(token0).transferFrom(msg.sender, address(this), amount0In);
+        TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0In);
 
         // balance change
         return IERC20V5(token0).balanceOf(address(this)) - bal0;
@@ -329,7 +353,7 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         uint bal1 = IERC20V5(token1).balanceOf(address(this));
 
         // transfer amount to contract
-        IERC20V5(token1).transferFrom(msg.sender, address(this), amount1In);
+        TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1In);
 
         // balance change
         return IERC20V5(token1).balanceOf(address(this)) - bal1;
@@ -368,8 +392,8 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         twammReserve1 -= uint112(buyToken0 ? unsoldAmount : purchasedAmount);
 
         // transfer to owner of order
-        IERC20V5(buyToken).transfer(msg.sender, purchasedAmount);
-        IERC20V5(sellToken).transfer(msg.sender, unsoldAmount);
+        _safeTransfer(buyToken, msg.sender, purchasedAmount);
+        _safeTransfer(sellToken, msg.sender, unsoldAmount);
 
         emit CancelLongTermOrder(msg.sender, orderId, sellToken, unsoldAmount, buyToken, purchasedAmount);
     }
@@ -384,7 +408,7 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         }
 
         // transfer to owner of order
-        IERC20V5(proceedToken).transfer(msg.sender, proceeds);
+        _safeTransfer(proceedToken, msg.sender, proceeds);
 
         emit WithdrawProceedsFromLongTermOrder(msg.sender, orderId, proceedToken, proceeds);
     }
@@ -453,14 +477,14 @@ contract UniswapV2PairV8 is IUniswapV2PairPartialV5, UniswapV2ERC20V8 {
         uint256 token0Rate,
         uint256 token1Rate,
         uint256 lastVirtualOrderTimestamp,
-        uint256 orderTimeInterval,
+        uint256 orderTimeInterval_rtn,
         uint256 rewardFactorPool0,
         uint256 rewardFactorPool1
     ){
         token0Rate = longTermOrders.OrderPool0.currentSalesRate;
         token1Rate = longTermOrders.OrderPool1.currentSalesRate;
         lastVirtualOrderTimestamp = longTermOrders.lastVirtualOrderTimestamp;
-        orderTimeInterval = longTermOrders.orderTimeInterval;
+        orderTimeInterval_rtn = longTermOrders.orderTimeInterval;
         rewardFactorPool0 = longTermOrders.OrderPool0.rewardFactor;
         rewardFactorPool1 = longTermOrders.OrderPool1.rewardFactor;
     }

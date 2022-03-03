@@ -1,12 +1,12 @@
 pragma solidity ^0.8.0;
 
-import '../../core/interfaces/IUniswapV2PairV5.sol';
+import '../../core/interfaces/IUniV2TWAMMPair.sol';
 import '../../core/interfaces/IUniswapV2FactoryV5.sol';
 import '../../libraries/Babylonian.sol';
 import '../../libraries/FullMath.sol';
 
 import './SafeMath.sol';
-import './UniswapV2Library.sol';
+import './UniV2TWAMMLibrary.sol';
 
 // library containing some math for dealing with the liquidity shares of a pair, e.g. computing their exact value
 // in terms of the underlying tokens
@@ -48,7 +48,7 @@ library UniswapV2LiquidityMathLibrary {
         uint256 truePriceTokenB
     ) view internal returns (uint256 reserveA, uint256 reserveB) {
         // first get reserves before the swap
-        (reserveA, reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB);
+        (reserveA, reserveB) = UniV2TWAMMLibrary.getReserves(factory, tokenA, tokenB);
 
         require(reserveA > 0 && reserveB > 0, 'UniswapV2ArbitrageLibrary: ZERO_PAIR_RESERVES');
 
@@ -61,11 +61,11 @@ library UniswapV2LiquidityMathLibrary {
 
         // now affect the trade to the reserves
         if (aToB) {
-            uint amountOut = UniswapV2Library.getAmountOut(amountIn, reserveA, reserveB);
+            uint amountOut = UniV2TWAMMLibrary.getAmountOut(amountIn, reserveA, reserveB);
             reserveA += amountIn;
             reserveB -= amountOut;
         } else {
-            uint amountOut = UniswapV2Library.getAmountOut(amountIn, reserveB, reserveA);
+            uint amountOut = UniV2TWAMMLibrary.getAmountOut(amountIn, reserveB, reserveA);
             reserveB += amountIn;
             reserveA -= amountOut;
         }
@@ -103,8 +103,8 @@ library UniswapV2LiquidityMathLibrary {
         address tokenB,
         uint256 liquidityAmount
     ) internal view returns (uint256 tokenAAmount, uint256 tokenBAmount) {
-        (uint256 reservesA, uint256 reservesB) = UniswapV2Library.getReserves(factory, tokenA, tokenB);
-        IUniswapV2PairV5 pair = IUniswapV2PairV5(UniswapV2Library.pairFor(factory, tokenA, tokenB));
+        (uint256 reservesA, uint256 reservesB) = UniV2TWAMMLibrary.getReserves(factory, tokenA, tokenB);
+        IUniV2TWAMMPair pair = IUniV2TWAMMPair(UniV2TWAMMLibrary.pairFor(factory, tokenA, tokenB));
         bool feeOn = IUniswapV2FactoryV5(factory).feeTo() != address(0);
         uint kLast = feeOn ? pair.kLast() : 0;
         uint totalSupply = pair.totalSupply();
@@ -125,7 +125,7 @@ library UniswapV2LiquidityMathLibrary {
         uint256 tokenBAmount
     ) {
         bool feeOn = IUniswapV2FactoryV5(factory).feeTo() != address(0);
-        IUniswapV2PairV5 pair = IUniswapV2PairV5(UniswapV2Library.pairFor(factory, tokenA, tokenB));
+        IUniV2TWAMMPair pair = IUniV2TWAMMPair(UniV2TWAMMLibrary.pairFor(factory, tokenA, tokenB));
         uint kLast = feeOn ? pair.kLast() : 0;
         uint totalSupply = pair.totalSupply();
 

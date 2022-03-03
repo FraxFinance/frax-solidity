@@ -10,7 +10,7 @@ const {
     getApprovalDigest
 } = require('./utilities');
 
-const uniswapV2PairV8 = require('../../artifacts/contracts/Uniswap_V2_V8/core/UniswapV2PairV8.sol/UniswapV2PairV8');
+const UniV2TWAMMPair = require('../../artifacts/contracts/Uniswap_V2_TWAMM/core/UniV2TWAMMPair.sol/UniV2TWAMMPair');
 
 const MINIMUM_LIQUIDITY = utils.parseUnits(`${1000}`, 0);
 
@@ -18,7 +18,7 @@ describe("UniswapV2 Tests", function () {
 
     const {AddressZero} = constants;
 
-    describe("Core Tests - UniswapV2PairV8", function () {
+    describe("Core Tests - UniV2TWAMMPair", function () {
 
         let owner
         let user1
@@ -162,7 +162,7 @@ describe("UniswapV2 Tests", function () {
             const tx = await pair.connect(user1).swap(expectedOutputAmount, 0, user1.address, '0x')
             const receipt = await tx.wait()
             // expect(receipt.gasUsed).to.eq(73462) // previous gas usage
-            expect(receipt.gasUsed).to.eq(120414)
+            expect(parseInt(receipt.gasUsed)).to.be.lessThan(200000)
         });
 
         it('burn', async () => {
@@ -277,7 +277,7 @@ describe("UniswapV2 Tests", function () {
 
     });
 
-    describe("Core Tests - UniswapV2FactoryV8", function () {
+    describe("Core Tests - UniV2TWAMMFactory", function () {
 
         const TEST_ADDRESSES = [
             '0x1000000000000000000000000000000000000000',
@@ -294,7 +294,7 @@ describe("UniswapV2 Tests", function () {
         let pair
 
         async function createPair(tokens) {
-            const create2Address = getCreate2Address(factory.address, tokens, uniswapV2PairV8.bytecode)
+            const create2Address = getCreate2Address(factory.address, tokens, UniV2TWAMMPair.bytecode)
             await expect(factory.createPair(...tokens))
                 .to.emit(factory, 'PairCreated')
                 .withArgs(TEST_ADDRESSES[0], TEST_ADDRESSES[1], create2Address, bigNumberify(1))
@@ -306,7 +306,7 @@ describe("UniswapV2 Tests", function () {
             expect(await factory.allPairs(0)).to.eq(create2Address)
             expect(await factory.allPairsLength()).to.eq(1)
 
-            const pair = new ethers.Contract(create2Address, uniswapV2PairV8.abi).connect(owner);
+            const pair = new ethers.Contract(create2Address, UniV2TWAMMPair.abi).connect(owner);
             expect(await pair.factory()).to.eq(factory.address)
             expect(await pair.token0()).to.eq(TEST_ADDRESSES[0])
             expect(await pair.token1()).to.eq(TEST_ADDRESSES[1])
@@ -344,7 +344,7 @@ describe("UniswapV2 Tests", function () {
             const tx = await factory.createPair(...TEST_ADDRESSES)
             const receipt = await tx.wait()
             // expect(receipt.gasUsed).to.eq(2512920) // previous gas usage
-            expect(receipt.gasUsed).to.eq(5023127)
+            expect(parseInt(receipt.gasUsed)).to.be.lessThan(5000000)
         })
 
         it('setFeeTo', async () => {
@@ -378,7 +378,7 @@ describe("UniswapV2 Tests", function () {
             user1 = signers[1];
             user2 = signers[2];
 
-            const TOKEN = await ethers.getContractFactory("contracts/Uniswap_V2_V8/core/test/ERC20CoreTest.sol:ERC20CoreTest")
+            const TOKEN = await ethers.getContractFactory("contracts/Uniswap_V2_TWAMM/core/test/ERC20CoreTest.sol:ERC20CoreTest")
             token = await TOKEN.connect(user1).deploy(TOTAL_SUPPLY)
             await token.deployed();
 
@@ -473,7 +473,7 @@ describe("UniswapV2 Tests", function () {
         // })
     });
 
-    describe("Periphery Tests - UniswapV2Router02V8", function () {
+    describe("Periphery Tests - UniV2TWAMMRouter", function () {
 
         async function addLiquidity(router, user1, DTT, DTTAmount, WETHAmount) {
             await DTT.connect(user1).approve(router.address, constants.MaxUint256)
@@ -488,7 +488,7 @@ describe("UniswapV2 Tests", function () {
             )
 
             // const pairAddress = await factory.getPair(DTT.address, WETH.address);
-            // pair = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
+            // pair = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
 
             // const longTermOrderAmount = expandTo18Decimals(1);
             // await token0.connect(user2).approve(pair.address, longTermOrderAmount)
@@ -518,45 +518,45 @@ describe("UniswapV2 Tests", function () {
             router = setupCnt.router;
         });
 
-        describe("UniswapV2Router02V8", function () {
+        describe("UniV2TWAMMRouter", function () {
 
             it('quote', async () => {
                 expect(await router.quote(bigNumberify(1), bigNumberify(100), bigNumberify(200))).to.eq(bigNumberify(2))
                 expect(await router.quote(bigNumberify(2), bigNumberify(200), bigNumberify(100))).to.eq(bigNumberify(1))
                 await expect(router.quote(bigNumberify(0), bigNumberify(100), bigNumberify(200))).to.be.revertedWith(
-                    'UniswapV2Library: INSUFFICIENT_AMOUNT'
+                    'UniV2TWAMMLibrary: INSUFFICIENT_AMOUNT'
                 )
                 await expect(router.quote(bigNumberify(1), bigNumberify(0), bigNumberify(200))).to.be.revertedWith(
-                    'UniswapV2Library: INSUFFICIENT_LIQUIDITY'
+                    'UniV2TWAMMLibrary: INSUFFICIENT_LIQUIDITY'
                 )
                 await expect(router.quote(bigNumberify(1), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
-                    'UniswapV2Library: INSUFFICIENT_LIQUIDITY'
+                    'UniV2TWAMMLibrary: INSUFFICIENT_LIQUIDITY'
                 )
             })
 
             it('getAmountOut', async () => {
                 expect(await router.getAmountOut(bigNumberify(2), bigNumberify(100), bigNumberify(100))).to.eq(bigNumberify(1))
                 await expect(router.getAmountOut(bigNumberify(0), bigNumberify(100), bigNumberify(100))).to.be.revertedWith(
-                    'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT'
+                    'UniV2TWAMMLibrary: INSUFFICIENT_INPUT_AMOUNT'
                 )
                 await expect(router.getAmountOut(bigNumberify(2), bigNumberify(0), bigNumberify(100))).to.be.revertedWith(
-                    'UniswapV2Library: INSUFFICIENT_LIQUIDITY'
+                    'UniV2TWAMMLibrary: INSUFFICIENT_LIQUIDITY'
                 )
                 await expect(router.getAmountOut(bigNumberify(2), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
-                    'UniswapV2Library: INSUFFICIENT_LIQUIDITY'
+                    'UniV2TWAMMLibrary: INSUFFICIENT_LIQUIDITY'
                 )
             })
 
             it('getAmountIn', async () => {
                 expect(await router.getAmountIn(bigNumberify(1), bigNumberify(100), bigNumberify(100))).to.eq(bigNumberify(2))
                 await expect(router.getAmountIn(bigNumberify(0), bigNumberify(100), bigNumberify(100))).to.be.revertedWith(
-                    'UniswapV2Library: INSUFFICIENT_OUTPUT_AMOUNT'
+                    'UniV2TWAMMLibrary: INSUFFICIENT_OUTPUT_AMOUNT'
                 )
                 await expect(router.getAmountIn(bigNumberify(1), bigNumberify(0), bigNumberify(100))).to.be.revertedWith(
-                    'UniswapV2Library: INSUFFICIENT_LIQUIDITY'
+                    'UniV2TWAMMLibrary: INSUFFICIENT_LIQUIDITY'
                 )
                 await expect(router.getAmountIn(bigNumberify(1), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
-                    'UniswapV2Library: INSUFFICIENT_LIQUIDITY'
+                    'UniV2TWAMMLibrary: INSUFFICIENT_LIQUIDITY'
                 )
             })
 
@@ -575,7 +575,7 @@ describe("UniswapV2 Tests", function () {
                 )
 
                 await expect(router.getAmountsOut(bigNumberify(2), [token0.address])).to.be.revertedWith(
-                    'UniswapV2Library: INVALID_PATH'
+                    'UniV2TWAMMLibrary: INVALID_PATH'
                 )
                 const path = [token0.address, token1.address]
                 expect(await router.getAmountsOut(bigNumberify(2), path)).to.deep.eq([bigNumberify(2), bigNumberify(1)])
@@ -596,7 +596,7 @@ describe("UniswapV2 Tests", function () {
                 )
 
                 await expect(router.getAmountsIn(bigNumberify(1), [token0.address])).to.be.revertedWith(
-                    'UniswapV2Library: INVALID_PATH'
+                    'UniV2TWAMMLibrary: INVALID_PATH'
                 )
                 const path = [token0.address, token1.address]
                 expect(await router.getAmountsIn(bigNumberify(1), path)).to.deep.eq([bigNumberify(2), bigNumberify(1)])
@@ -623,7 +623,7 @@ describe("UniswapV2 Tests", function () {
 
                 await factory.createPair(DTT.address, WETH.address);
                 const pairAddress = await factory.getPair(DTT.address, WETH.address);
-                pair = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
+                pair = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
             });
 
             afterEach(async function () {
@@ -791,18 +791,18 @@ describe("UniswapV2 Tests", function () {
                 router = setupCnt.router;
 
                 DTT = await (await ethers.getContractFactory(
-                    "contracts/Uniswap_V2_V8/periphery/test/DeflatingERC20.sol:DeflatingERC20"
+                    "contracts/Uniswap_V2_TWAMM/periphery/test/DeflatingERC20.sol:DeflatingERC20"
                 )).deploy(expandTo18Decimals(10000));
                 await DTT.transfer(user1.address, expandTo18Decimals(10000));
 
                 DTT2 = await (await ethers.getContractFactory(
-                    "contracts/Uniswap_V2_V8/periphery/test/DeflatingERC20.sol:DeflatingERC20"
+                    "contracts/Uniswap_V2_TWAMM/periphery/test/DeflatingERC20.sol:DeflatingERC20"
                 )).deploy(expandTo18Decimals(10000));
                 await DTT2.transfer(user1.address, expandTo18Decimals(10000));
 
                 await factory.createPair(DTT.address, DTT2.address);
                 const pairAddress = await factory.getPair(DTT.address, DTT2.address);
-                pair = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
+                pair = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
             })
 
             afterEach(async function () {
@@ -1076,38 +1076,38 @@ describe("UniswapV2 Tests", function () {
 
                     it('gas current price', async () => {
                         expect(
-                            await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
+                            parseInt(await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
                                 token0.address,
                                 token1.address,
                                 1,
                                 100,
                                 expandTo18Decimals(5)
-                            )
-                        ).to.eq('12705')
+                            ))
+                        ).to.be.lessThan(25000)
                     })
 
                     it('gas higher price', async () => {
                         expect(
-                            await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
+                            parseInt(await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
                                 token0.address,
                                 token1.address,
                                 1,
                                 105,
                                 expandTo18Decimals(5)
-                            )
-                        ).to.eq('13478')
+                            ))
+                        ).to.be.lessThan(25000)
                     })
 
                     it('gas lower price', async () => {
                         expect(
-                            await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
+                            parseInt(await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
                                 token0.address,
                                 token1.address,
                                 1,
                                 95,
                                 expandTo18Decimals(5)
-                            )
-                        ).to.eq('13523')
+                            ))
+                        ).to.be.lessThan(25000)
                     })
 
                     describe('after a swap', () => {
@@ -1206,38 +1206,38 @@ describe("UniswapV2 Tests", function () {
 
                     it('gas current price', async () => {
                         expect(
-                            await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
+                            parseInt(await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
                                 token0.address,
                                 token1.address,
                                 1,
                                 100,
                                 expandTo18Decimals(5)
-                            )
-                        ).to.eq('16938')
+                            ))
+                        ).to.be.lessThan(50000)
                     })
 
                     it('gas higher price', async () => {
                         expect(
-                            await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
+                            parseInt(await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
                                 token0.address,
                                 token1.address,
                                 1,
                                 105,
                                 expandTo18Decimals(5)
-                            )
-                        ).to.eq('18475')
+                            ))
+                        ).to.be.lessThan(50000)
                     })
 
                     it('gas lower price', async () => {
                         expect(
-                            await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
+                            parseInt(await computeLiquidityValue.getGasCostOfGetLiquidityValueAfterArbitrageToPrice(
                                 token0.address,
                                 token1.address,
                                 1,
                                 95,
                                 expandTo18Decimals(5)
-                            )
-                        ).to.eq('18406')
+                            ))
+                        ).to.be.lessThan(50000)
                     })
 
                     describe('after a swap', () => {
@@ -1291,7 +1291,7 @@ async function setupContracts(createPair = true, deployDTT = false) {
     const [owner, user1, user2, user3] = await ethers.getSigners();
 
     // Deploy token0/token1 token and distribute
-    const DummyToken = await ethers.getContractFactory("contracts/Uniswap_V2_V8/periphery/test/ERC20PeriTest.sol:ERC20PeriTest");
+    const DummyToken = await ethers.getContractFactory("contracts/Uniswap_V2_TWAMM/periphery/test/ERC20PeriTest.sol:ERC20PeriTest");
     let token0 = await DummyToken.deploy(expandTo18Decimals(10000));
     let token1 = await DummyToken.deploy(expandTo18Decimals(10000));
     const weth9 = await (await ethers.getContractFactory("WETH9")).deploy();
@@ -1299,7 +1299,7 @@ async function setupContracts(createPair = true, deployDTT = false) {
     let deflatingERC20;
     if (deployDTT) {
         deflatingERC20 = await (await ethers.getContractFactory(
-            "contracts/Uniswap_V2_V8/periphery/test/DeflatingERC20.sol:DeflatingERC20"
+            "contracts/Uniswap_V2_TWAMM/periphery/test/DeflatingERC20.sol:DeflatingERC20"
         )).deploy(expandTo18Decimals(10000));
         await deflatingERC20.transfer(user1.address, expandTo18Decimals(10000));
     }
@@ -1316,7 +1316,7 @@ async function setupContracts(createPair = true, deployDTT = false) {
     // await token0.transfer(user3.address, "10000000000000000000");
     // await token1.transfer(user3.address, "10000000000000000000");
 
-    const FraxswapFactory = await ethers.getContractFactory("UniswapV2FactoryV8");
+    const FraxswapFactory = await ethers.getContractFactory("UniV2TWAMMFactory");
     const factory = await FraxswapFactory.deploy(owner.address);
     await factory.deployed();
 
@@ -1324,10 +1324,10 @@ async function setupContracts(createPair = true, deployDTT = false) {
     if (createPair) {
         await factory.createPair(token0.address, token1.address);
         const pairAddress = await factory.getPair(token0.address, token1.address);
-        pair = new ethers.Contract(pairAddress, uniswapV2PairV8.abi).connect(owner);
+        pair = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
     }
 
-    const FraxswapRouter = await ethers.getContractFactory("UniswapV2Router02V8");
+    const FraxswapRouter = await ethers.getContractFactory("UniV2TWAMMRouter");
     const router = await FraxswapRouter.deploy(factory.address, weth9.address);
     await router.deployed();
 
