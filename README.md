@@ -29,3 +29,6 @@ Frax is the first fractional-algorithmic stablecoin protocol. Frax is open-sourc
   * <b>Swap-based Monetary Policy</b> – Frax uses principles from automated market makers like Uniswap to create swap-based price discovery and real-time stabilization incentives through arbitrage.
   
 
+## Running tests
+cd ./src/hardhat
+npx hardhat test ./test/FraxSwap/fraxswap-twamm-test.js
