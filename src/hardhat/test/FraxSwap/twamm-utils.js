@@ -20,7 +20,7 @@ async function getAmountOutWithTwamm(amountIn, pair, isToken1 = false) {
         token0Rate,
         token1Rate,
         lastVirtualOrderBlock,
-        orderBlockInterval,
+        orderTimeInterval,
         rewardFactorPool0,
         rewardFactorPool1,
     ] = await pair.getTwammState();
@@ -34,11 +34,11 @@ async function getAmountOutWithTwamm(amountIn, pair, isToken1 = false) {
     ] = await pair.getTwammReserves()
 
     const nextBlockSwap = (await ethers.provider.getBlock("latest")).number + 1;
-    const blocksEllapsed = nextBlockSwap - lastVirtualOrderBlock
+    const blocksElapsed = nextBlockSwap - lastVirtualOrderBlock
 
     // TWAMM sell
-    const twammSellingAmt0 = tokenRate0.mul(blocksEllapsed)
-    const twammSellingAmt1 = tokenRate1.mul(blocksEllapsed)
+    const twammSellingAmt0 = tokenRate0.mul(blocksElapsed)
+    const twammSellingAmt1 = tokenRate1.mul(blocksElapsed)
 
     // TWAMM bought
     let twammBoughtAmt1 = getAmountOut(twammSellingAmt0, reserve0, reserve1)

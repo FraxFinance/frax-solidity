@@ -468,4 +468,18 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
     {
         return UniV2TWAMMLibrary.getAmountsIn(factory, amountOut, path);
     }
+
+    function getAmountsOutWithTwamm(uint amountIn, address[] memory path)
+    public
+    returns (uint[] memory amounts)
+    {
+        return UniV2TWAMMLibrary.getAmountsOutWithTwamm(factory, amountIn, path);
+    }
+
+    function getAmountsInWithTwamm(uint amountOut, address[] memory path)
+    public
+    returns (uint[] memory amounts)
+    {
+        return UniV2TWAMMLibrary.getAmountsInWithTwamm(factory, amountOut, path);
+    }
 }

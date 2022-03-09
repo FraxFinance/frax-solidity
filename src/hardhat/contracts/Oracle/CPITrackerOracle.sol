@@ -44,6 +44,7 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
     // Data
     uint256 public price_starting_dollars = 1e18;
     uint256 public stored_result = 27880200000; // Dec 2021 CPI-U, 278.802 * 100000000
+    uint256 public target_result = 27880200000; // Dec 2021 CPI-U, 278.802 * 100000000
 
     // Chainlink
     address public oracle;
@@ -54,6 +55,7 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
     uint256 public stored_year = 2021;
     uint256 public stored_month = 12;
     uint256 public lastUpdateTime;
+    uint256 public ramp_period = 28 * 86400;
 
     // Misc
     string[13] public month_names;
@@ -102,19 +104,19 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
 
         // CPI [Ethereum]
         // =================================
-        setPublicChainlinkToken();
-        time_contract = BokkyPooBahsDateTimeContract(0x90503D86E120B3B309CEBf00C2CA013aB3624736);
-        oracle = 0x049Bd8C3adC3fE7d3Fc2a44541d955A537c2A484;
-        jobId = "74295b9df3264781bf904d9e596a2e57";
-        fee = 1e18; // 1 LINK
+        // setPublicChainlinkToken();
+        // time_contract = BokkyPooBahsDateTimeContract(0x90503D86E120B3B309CEBf00C2CA013aB3624736);
+        // oracle = 0x049Bd8C3adC3fE7d3Fc2a44541d955A537c2A484;
+        // jobId = "74295b9df3264781bf904d9e596a2e57";
+        // fee = 1e18; // 1 LINK
 
         // CPI [Polygon Mainnet]
         // =================================
-        // setChainlinkToken(0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39);
-        // time_contract = BokkyPooBahsDateTimeContract(0x998da4fCB229Db1AA84395ef6f0c6be6Ef3dbE58);
-        // oracle = 0x9B44870bcc35734c08e40F847cC068c0bA618194;
-        // jobId = "8107f18343a24980b2fe7d3c8f32630f";
-        // fee = 1e17; // 0.1 LINK
+        setChainlinkToken(0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39);
+        time_contract = BokkyPooBahsDateTimeContract(0x998da4fCB229Db1AA84395ef6f0c6be6Ef3dbE58);
+        oracle = 0x9B44870bcc35734c08e40F847cC068c0bA618194;
+        jobId = "8107f18343a24980b2fe7d3c8f32630f";
+        fee = 1e17; // 0.1 LINK
 
         // CPI [Polygon Mumbai]
         // =================================
@@ -176,6 +178,8 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
      */
     function fulfill(bytes32 _requestId, uint256 result) public recordChainlinkFulfillment(_requestId)
     {
+        revert("NEED TO ADD 28 DAY RAMPING CODE");
+
         // Update the starting dollars amount
         price_starting_dollars = (price_starting_dollars * result) / stored_result;
 

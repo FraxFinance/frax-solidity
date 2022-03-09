@@ -15,17 +15,17 @@ library LongTermOrdersLib {
     ///@notice information associated with a long term order 
     struct Order {
         uint256 id;
-        uint256 expirationBlock;
+        uint256 expirationTimestamp;
         uint256 saleRate;
         address owner; 
-        address sellTokenId;
-        address buyTokenId;
+        address sellTokenAddr;
+        address buyTokenAddr;
     }
     
     ///@notice structure contains full state related to long term orders
     struct LongTermOrders {
         ///@notice minimum block interval between order expiries 
-        uint256 orderBlockInterval;
+        uint256 orderTimeInterval;
 
         ///@notice last virtual orders were executed immediately before this block
         uint256 lastVirtualOrderBlock;
@@ -50,25 +50,25 @@ library LongTermOrdersLib {
                         , address tokenA
                         , address tokenB
                         , uint256 lastVirtualOrderBlock
-                        , uint256 orderBlockInterval) internal {
+                        , uint256 orderTimeInterval) internal {
         self.tokenA = tokenA;
         self.tokenB = tokenB;
         self.lastVirtualOrderBlock = lastVirtualOrderBlock;
-        self.orderBlockInterval = orderBlockInterval;
+        self.orderTimeInterval = orderTimeInterval;
     }
 
-    ///@notice swap token A for token B. Amount represents total amount being sold, numberOfBlockIntervals determines when order expires 
-    function longTermSwapFromAToB(LongTermOrders storage self, uint256 amountA, uint256 numberOfBlockIntervals,  mapping(address => uint256) storage reserveMap) internal returns (uint256) {
-        return performLongTermSwap(self, self.tokenA, self.tokenB, amountA, numberOfBlockIntervals, reserveMap);
+    ///@notice swap token A for token B. Amount represents total amount being sold, numberOfTimeIntervals determines when order expires 
+    function longTermSwapFromAToB(LongTermOrders storage self, uint256 amountA, uint256 numberOfTimeIntervals,  mapping(address => uint256) storage reserveMap) internal returns (uint256) {
+        return performLongTermSwap(self, self.tokenA, self.tokenB, amountA, numberOfTimeIntervals, reserveMap);
     }
 
-    ///@notice swap token B for token A. Amount represents total amount being sold, numberOfBlockIntervals determines when order expires 
-    function longTermSwapFromBToA(LongTermOrders storage self, uint256 amountB, uint256 numberOfBlockIntervals,  mapping(address => uint256) storage reserveMap) internal returns (uint256) {
-        return performLongTermSwap(self, self.tokenB, self.tokenA, amountB, numberOfBlockIntervals, reserveMap);
+    ///@notice swap token B for token A. Amount represents total amount being sold, numberOfTimeIntervals determines when order expires 
+    function longTermSwapFromBToA(LongTermOrders storage self, uint256 amountB, uint256 numberOfTimeIntervals,  mapping(address => uint256) storage reserveMap) internal returns (uint256) {
+        return performLongTermSwap(self, self.tokenB, self.tokenA, amountB, numberOfTimeIntervals, reserveMap);
     }
 
     ///@notice adds long term swap to order pool
-    function performLongTermSwap(LongTermOrders storage self, address from, address to, uint256 amount, uint256 numberOfBlockIntervals,  mapping(address => uint256) storage reserveMap) private returns (uint256) {
+    function performLongTermSwap(LongTermOrders storage self, address from, address to, uint256 amount, uint256 numberOfTimeIntervals,  mapping(address => uint256) storage reserveMap) private returns (uint256) {
         //update virtual order state 
         executeVirtualOrdersUntilCurrentBlock(self, reserveMap);
         
@@ -77,8 +77,8 @@ library LongTermOrdersLib {
 
         //determine the selling rate based on number of blocks to expiry and total amount 
         uint256 currentBlock = block.number;
-        uint256 lastExpiryBlock = currentBlock - (currentBlock % self.orderBlockInterval);
-        uint256 orderExpiry = self.orderBlockInterval * (numberOfBlockIntervals + 1) + lastExpiryBlock;
+        uint256 lastExpiryTimestamp = currentBlock - (currentBlock % self.orderTimeInterval);
+        uint256 orderExpiry = self.orderTimeInterval * (numberOfTimeIntervals + 1) + lastExpiryTimestamp;
         uint256 sellingRate = amount / (orderExpiry - currentBlock);
 
         //add order to correct pool
@@ -98,13 +98,13 @@ library LongTermOrdersLib {
         Order storage order = self.orderMap[orderId];
         require(order.owner == msg.sender, 'sender must be order owner');
 
-        OrderPoolLib.OrderPool storage OrderPool = self.OrderPoolMap[order.sellTokenId];
+        OrderPoolLib.OrderPool storage OrderPool = self.OrderPoolMap[order.sellTokenAddr];
         (uint256 unsoldAmount, uint256 purchasedAmount) = OrderPool.cancelOrder(orderId);
 
         require(unsoldAmount > 0 || purchasedAmount > 0, 'no proceeds to withdraw');
         //transfer to owner
-        ERC20(order.buyTokenId).transfer(msg.sender, purchasedAmount);
-        ERC20(order.sellTokenId).transfer(msg.sender, unsoldAmount);
+        ERC20(order.buyTokenAddr).transfer(msg.sender, purchasedAmount);
+        ERC20(order.sellTokenAddr).transfer(msg.sender, unsoldAmount);
     }
 
     ///@notice withdraw proceeds from a long term swap (can be expired or ongoing) 
@@ -115,12 +115,12 @@ library LongTermOrdersLib {
         Order storage order = self.orderMap[orderId];
         require(order.owner == msg.sender, 'sender must be order owner');
 
-        OrderPoolLib.OrderPool storage OrderPool = self.OrderPoolMap[order.sellTokenId];
+        OrderPoolLib.OrderPool storage OrderPool = self.OrderPoolMap[order.sellTokenAddr];
         uint256 proceeds = OrderPool.withdrawProceeds(orderId);
 
         require(proceeds > 0, 'no proceeds to withdraw');
         //transfer to owner
-        ERC20(order.buyTokenId).transfer(msg.sender, proceeds);
+        ERC20(order.buyTokenAddr).transfer(msg.sender, proceeds);
     }
 
 
@@ -161,11 +161,11 @@ library LongTermOrdersLib {
 
     ///@notice executes all virtual orders until current block is reached. 
     function executeVirtualOrdersUntilCurrentBlock(LongTermOrders storage self, mapping(address => uint256) storage reserveMap) internal {
-        uint256 nextExpiryBlock = self.lastVirtualOrderBlock - (self.lastVirtualOrderBlock % self.orderBlockInterval) + self.orderBlockInterval;
+        uint256 nextExpiryBlock = self.lastVirtualOrderBlock - (self.lastVirtualOrderBlock % self.orderTimeInterval) + self.orderTimeInterval;
         //iterate through blocks eligible for order expiries, moving state forward
         while(nextExpiryBlock < block.number) {
             executeVirtualTradesAndOrderExpiries(self, reserveMap, nextExpiryBlock);
-            nextExpiryBlock += self.orderBlockInterval;
+            nextExpiryBlock += self.orderTimeInterval;
         }
         //finally, move state to current block if necessary 
         if(self.lastVirtualOrderBlock != block.number) {

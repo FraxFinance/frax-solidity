@@ -47,5 +47,5 @@ interface IUniswapV2PairV5 {
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external;
     function skim(address to) external;
     function sync() external;
-    function initialize(address, address, bool) external;
+    function initialize(address, address) external;
 }

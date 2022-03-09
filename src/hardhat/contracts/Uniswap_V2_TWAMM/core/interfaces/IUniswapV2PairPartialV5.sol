@@ -47,9 +47,11 @@ interface IUniswapV2PairPartialV5 {
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external;
     function skim(address to) external;
     function sync() external;
-    function initialize(address, address, bool) external;
+    function initialize(address, address) external;
 
     // TWAMM
+
+    function orderTimeInterval() external returns (uint256);
 
     function getTWAPHistoryLength() external view returns (uint);
     function getTwammReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast, uint112 _twammReserve0, uint112 _twammReserve1);
@@ -60,11 +62,12 @@ interface IUniswapV2PairPartialV5 {
     function withdrawProceedsFromLongTermSwap(uint256 orderId) external;
     function executeVirtualOrders(uint256 blockTimestamp) external;
 
+    function getNextOrderID() external view returns (uint256);
     function twammUpToDate() external view returns (bool);
-    function getTwammState() external view returns (uint256 token0Rate, uint256 token1Rate, uint256 lastVirtualOrderTimestamp, uint256 orderTimeInterval, uint256 rewardFactorPool0, uint256 rewardFactorPool1);
+    function getTwammState() external view returns (uint256 token0Rate, uint256 token1Rate, uint256 lastVirtualOrderTimestamp, uint256 orderTimeInterval_rtn, uint256 rewardFactorPool0, uint256 rewardFactorPool1);
     function getTwammSalesRateEnding(uint256 _blockTimestamp) external view returns (uint256 orderPool0SalesRateEnding, uint256 orderPool1SalesRateEnding);
-    function getTwammRewardFactor(uint256 _blockTimestamp) external view returns (uint256 rewardFactorPool0AtBlock, uint256 rewardFactorPool1AtBlock);
-    function getTwammOrder(uint256 orderId) external view returns (uint256 id, uint256 expirationBlock, uint256 saleRate, address owner, address sellTokenId, address buyTokenId);
+    function getTwammRewardFactor(uint256 _blockTimestamp) external view returns (uint256 rewardFactorPool0AtTimestamp, uint256 rewardFactorPool1AtTimestamp);
+    function getTwammOrder(uint256 orderId) external view returns (uint256 id, uint256 expirationTimestamp, uint256 saleRate, address owner, address sellTokenAddr, address buyTokenAddr);
     function getTwammOrderProceeds(uint256 orderId, uint256 blockTimestamp) external view returns (bool orderExpired, uint256 totalReward);
 
     function togglePauseNewSwaps() external;

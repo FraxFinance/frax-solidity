@@ -14,8 +14,4 @@ interface IUniswapV2FactoryV5 {
 
     function setFeeTo(address) external;
     function setFeeToSetter(address) external;
-
-    function setTwammWhitelistDisabled(bool) external;
-    function twammWhitelistDisabled() external view returns (bool);
-    function getFactorySettings() external view  returns (address, bool);
 }

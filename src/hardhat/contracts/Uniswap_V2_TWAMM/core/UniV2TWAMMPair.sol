@@ -50,16 +50,13 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     ///@notice time interval that are eligible for order expiry (to align expiries)
     uint256 public orderTimeInterval = 3600;
 
-    ///@notice false when longTermOrders are permissioned
-    bool public whitelistDisabled;
-
     ///@notice data structure to handle long term orders
     LongTermOrdersLib.LongTermOrders internal longTermOrders;
 
     uint112 public twammReserve0;
     uint112 public twammReserve1;
 
-    bool newSwapsPaused = false;
+    bool public newSwapsPaused;
 
     modifier execVirtualOrders() {
         executeVirtualOrdersInternal(block.timestamp);
@@ -96,7 +93,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     event CancelLongTermOrder(address indexed addr, uint256 orderId, address sellToken, uint256 unsoldAmount, address buyToken, uint256 purchasedAmount);
 
     ///@notice An event emitted when a long term swap is withdrawn
-    event WithdrawProceedsFromLongTermOrder(address indexed addr, uint256 orderId, address indexed proceedToken, uint256 proceeds);
+    event WithdrawProceedsFromLongTermOrder(address indexed addr, uint256 orderId, address indexed proceedToken, uint256 proceeds, bool orderExpired);
 
     /// -------------------------------
     /// -----UNISWAPV2 Parameters -----
@@ -115,6 +112,9 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     uint32  private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
     uint public override kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+
+    // Track order IDs
+    mapping(address => uint256[]) public orderIDsForUser;
 
     TWAPObservation[] public TWAPObservationHistory;
 
@@ -135,10 +135,29 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
 
     uint private unlocked = 1;
     modifier lock() {
-        require(unlocked == 1, 'EC16'); // LOCKED
+        require(unlocked == 1); // LOCKED
         unlocked = 0;
         _;
         unlocked = 1;
+    }
+
+    function getOrderIDsForUser(address user) external view returns (uint256[] memory) {
+        return orderIDsForUser[user];
+    }
+
+    function getOrderIDsForUserLength(address user) external view returns (uint256) {
+        return orderIDsForUser[user].length;
+    }
+
+    function getDetailedOrdersForUser(address user, uint256 offset, uint256 limit) external view returns (LongTermOrdersLib.Order[] memory detailed_orders) {
+        uint256[] memory order_ids = orderIDsForUser[user];
+        uint256 length_remaining = order_ids.length - offset;
+        uint256 limit_to_use = Math.min(limit, length_remaining);
+        detailed_orders = new LongTermOrdersLib.Order[](limit_to_use);
+
+        for (uint256 i = 0; i < limit_to_use; i++){ 
+            detailed_orders[i] = longTermOrders.orderMap[order_ids[offset + i]];
+        }
     }
 
     function getReserves() public override view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
@@ -166,13 +185,11 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     }
 
     // called once by the factory at time of deployment
-    function initialize(address _token0, address _token1, bool _whitelistDisabled) external override {
+    function initialize(address _token0, address _token1) external override {
         require(msg.sender == factory); // FORBIDDEN
         // sufficient check
         token0 = _token0;
         token1 = _token1;
-
-        whitelistDisabled = _whitelistDisabled;
 
         // TWAMM
         longTermOrders.initialize(_token0, _token1, block.timestamp, orderTimeInterval);
@@ -207,7 +224,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
 
     // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
     function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
-        (address feeTo, bool twammWhitelistDisabled) = IUniswapV2FactoryV5(factory).getFactorySettings();
+        address feeTo = IUniswapV2FactoryV5(factory).feeTo();
         feeOn = feeTo != address(0);
         uint _kLast = kLast; // gas savings
         if (feeOn) {
@@ -223,10 +240,6 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
             }
         } else if (_kLast != 0) {
             kLast = 0;
-        }
-        // set the whitelist flag if it's different
-        if(twammWhitelistDisabled != whitelistDisabled){
-            whitelistDisabled = twammWhitelistDisabled;
         }
     }
 
@@ -329,20 +342,12 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
 
     // TWAMM
 
-    // EC5: Whitelist has not been disabled
-    modifier onlyWhitelist() {
-        require(whitelistDisabled || msg.sender == owner_address);
-        _;
-    }
-
     ///@notice calculate the amount in for token0 using the balance diff to handle feeOnTransfer tokens
     function transferAmount0In(uint amount0In) internal returns(uint256){
         // prev balance
         uint bal0 = IERC20V5(token0).balanceOf(address(this));
-
         // transfer amount to contract
         TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0In);
-
         // balance change
         return IERC20V5(token0).balanceOf(address(this)) - bal0;
     }
@@ -351,10 +356,8 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     function transferAmount1In(uint amount1In) internal returns(uint256){
         // prev balance
         uint bal1 = IERC20V5(token1).balanceOf(address(this));
-
         // transfer amount to contract
         TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1In);
-
         // balance change
         return IERC20V5(token1).balanceOf(address(this)) - bal1;
     }
@@ -362,29 +365,29 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     ///@notice create a long term order to swap from token0
     ///@param amount0In total amount of token0 to swap
     ///@param numberOfTimeIntervals number of time intervals over which to execute long term order
-    function longTermSwapFrom0To1(uint256 amount0In, uint256 numberOfTimeIntervals) external lock onlyWhitelist isNotPaused execVirtualOrders returns (uint256 orderId) {
-
+    function longTermSwapFrom0To1(uint256 amount0In, uint256 numberOfTimeIntervals) external lock isNotPaused execVirtualOrders returns (uint256 orderId) {
         uint amount0 = transferAmount0In(amount0In);
         twammReserve0 += uint112(amount0);
         require(reserve0 + twammReserve0 <= type(uint112).max); // OVERFLOW
         orderId = longTermOrders.longTermSwapFrom0To1(amount0, numberOfTimeIntervals);
+        orderIDsForUser[msg.sender].push(orderId);
         emit LongTermSwap0To1(msg.sender, orderId, amount0, numberOfTimeIntervals);
     }
 
     ///@notice create a long term order to swap from token1
     ///@param amount1In total amount of token1 to swap
     ///@param numberOfTimeIntervals number of time intervals over which to execute long term order
-    function longTermSwapFrom1To0(uint256 amount1In, uint256 numberOfTimeIntervals) external lock onlyWhitelist isNotPaused execVirtualOrders returns (uint256 orderId) {
-
+    function longTermSwapFrom1To0(uint256 amount1In, uint256 numberOfTimeIntervals) external lock isNotPaused execVirtualOrders returns (uint256 orderId) {
         uint amount1 = transferAmount1In(amount1In);
         twammReserve1 += uint112(amount1);
         require(reserve1 + twammReserve1 <= type(uint112).max); // OVERFLOW
         orderId = longTermOrders.longTermSwapFrom1To0(amount1, numberOfTimeIntervals);
+        orderIDsForUser[msg.sender].push(orderId);
         emit LongTermSwap1To0(msg.sender, orderId, amount1, numberOfTimeIntervals);
     }
 
     ///@notice stop the execution of a long term order
-    function cancelLongTermSwap(uint256 orderId) external lock onlyWhitelist execVirtualOrders {
+    function cancelLongTermSwap(uint256 orderId) external lock execVirtualOrders {
         (address sellToken, uint256 unsoldAmount, address buyToken, uint256 purchasedAmount) = longTermOrders.cancelLongTermSwap(orderId);
 
         bool buyToken0 = buyToken == token0;
@@ -395,12 +398,15 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         _safeTransfer(buyToken, msg.sender, purchasedAmount);
         _safeTransfer(sellToken, msg.sender, unsoldAmount);
 
+        // update order. Used for tracking
+        longTermOrders.orderMap[orderId].isComplete = true;
+
         emit CancelLongTermOrder(msg.sender, orderId, sellToken, unsoldAmount, buyToken, purchasedAmount);
     }
 
     ///@notice withdraw proceeds from a long term swap
-    function withdrawProceedsFromLongTermSwap(uint256 orderId) external lock onlyWhitelist execVirtualOrders {
-        (address proceedToken, uint256 proceeds) = longTermOrders.withdrawProceedsFromLongTermSwap(orderId);
+    function withdrawProceedsFromLongTermSwap(uint256 orderId) external lock execVirtualOrders {
+        (address proceedToken, uint256 proceeds, bool orderExpired) = longTermOrders.withdrawProceedsFromLongTermSwap(orderId);
         if (proceedToken == token0) {
             twammReserve0 -= uint112(proceeds);
         } else {
@@ -410,7 +416,10 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         // transfer to owner of order
         _safeTransfer(proceedToken, msg.sender, proceeds);
 
-        emit WithdrawProceedsFromLongTermOrder(msg.sender, orderId, proceedToken, proceeds);
+        // update order. Used for tracking
+        if (orderExpired) longTermOrders.orderMap[orderId].isComplete = true;
+
+        emit WithdrawProceedsFromLongTermOrder(msg.sender, orderId, proceedToken, proceeds, orderExpired);
     }
 
     ///@notice execute virtual orders in the twamm, bring it up to the blockNumber passed in
@@ -429,7 +438,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         result.newTwammReserve0 = twammReserve0;
         result.newTwammReserve1 = twammReserve1;
 
-        longTermOrders.executeVirtualOrdersUntilBlock(blockTimestamp, result);
+        longTermOrders.executeVirtualOrdersUntilTimestamp(blockTimestamp, result);
 
         twammReserve0 = uint112(result.newTwammReserve0);
         twammReserve1 = uint112(result.newTwammReserve1);
@@ -454,7 +463,8 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     ///@notice convenience function to execute virtual orders. Note that this already happens
     ///before most interactions with the AMM
     function executeVirtualOrders(uint256 blockTimestamp) public override lock {
-        require(blockTimestamp <= block.timestamp);
+        // blockTimestamp is valid
+        require(longTermOrders.lastVirtualOrderTimestamp <= blockTimestamp && blockTimestamp <= block.timestamp);
         executeVirtualOrdersInternal(blockTimestamp);
     }
 
@@ -463,17 +473,42 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     /// ---------------------------
 
     ///@notice util function for getting the next orderId
-    function getNextOrderID() public view returns (uint256){
+    function getNextOrderID() public override view returns (uint256){
         return longTermOrders.orderId;
     }
 
     ///@notice util function for checking if the twamm is up to date
     function twammUpToDate() public override view returns (bool) {
-        return block.timestamp <= longTermOrders.lastVirtualOrderTimestamp;
+        return block.timestamp == longTermOrders.lastVirtualOrderTimestamp;
+    }
+
+    function getReserveAfterTwamm(uint256 blockTimestamp) public view returns (
+        uint112 _reserve0, uint112 _reserve1,
+        uint256 lastVirtualOrderTimestamp,
+        uint112 _twammReserve0, uint112 _twammReserve1
+    ) {
+
+        lastVirtualOrderTimestamp = longTermOrders.lastVirtualOrderTimestamp;
+
+        uint112 bal0 = reserve0 + twammReserve0; // save the balance of token0
+        uint112 bal1 = reserve1 + twammReserve1; // save the balance of token1
+
+        LongTermOrdersLib.ExecuteVirtualOrdersResult memory result;
+        result.newReserve0 = reserve0;
+        result.newReserve1 = reserve1;
+        result.newTwammReserve0 = twammReserve0;
+        result.newTwammReserve1 = twammReserve1;
+
+        longTermOrders.executeVirtualOrdersUntilTimestampView(blockTimestamp, result);
+
+        _reserve0 = uint112(bal0 - result.newTwammReserve0);
+        _reserve1 = uint112(bal1 - result.newTwammReserve1);
+        _twammReserve0 = uint112(result.newTwammReserve0);
+        _twammReserve1 = uint112(result.newTwammReserve1);
     }
 
     ///@notice returns the current state of the twamm
-    function getTwammState() public view returns (
+    function getTwammState() public override view returns (
         uint256 token0Rate,
         uint256 token1Rate,
         uint256 lastVirtualOrderTimestamp,
@@ -490,46 +525,46 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     }
 
     ///@notice returns salesRates ending on this blockTimestamp
-    function getTwammSalesRateEnding(uint256 _blockTimestamp) public view returns (
+    function getTwammSalesRateEnding(uint256 _blockTimestamp) public override view returns (
         uint256 orderPool0SalesRateEnding,
         uint256 orderPool1SalesRateEnding
     ){
-        uint256 lastExpiryBlock = _blockTimestamp - (_blockTimestamp % longTermOrders.orderTimeInterval);
-        orderPool0SalesRateEnding = longTermOrders.OrderPool0.salesRateEndingPerBlock[lastExpiryBlock];
-        orderPool1SalesRateEnding = longTermOrders.OrderPool1.salesRateEndingPerBlock[lastExpiryBlock];
+        uint256 lastExpiryTimestamp = _blockTimestamp - (_blockTimestamp % longTermOrders.orderTimeInterval);
+        orderPool0SalesRateEnding = longTermOrders.OrderPool0.salesRateEndingPerTimeInterval[lastExpiryTimestamp];
+        orderPool1SalesRateEnding = longTermOrders.OrderPool1.salesRateEndingPerTimeInterval[lastExpiryTimestamp];
     }
 
     ///@notice returns reward factors at this blockTimestamp
-    function getTwammRewardFactor(uint256 _blockTimestamp) public view returns (
-        uint256 rewardFactorPool0AtBlock,
-        uint256 rewardFactorPool1AtBlock
+    function getTwammRewardFactor(uint256 _blockTimestamp) public override view returns (
+        uint256 rewardFactorPool0AtTimestamp,
+        uint256 rewardFactorPool1AtTimestamp
     ){
-        uint256 lastExpiryBlock = _blockTimestamp - (_blockTimestamp % longTermOrders.orderTimeInterval);
-        rewardFactorPool0AtBlock = longTermOrders.OrderPool0.rewardFactorAtBlock[lastExpiryBlock];
-        rewardFactorPool1AtBlock = longTermOrders.OrderPool1.rewardFactorAtBlock[lastExpiryBlock];
+        uint256 lastExpiryTimestamp = _blockTimestamp - (_blockTimestamp % longTermOrders.orderTimeInterval);
+        rewardFactorPool0AtTimestamp = longTermOrders.OrderPool0.rewardFactorAtTimestamp[lastExpiryTimestamp];
+        rewardFactorPool1AtTimestamp = longTermOrders.OrderPool1.rewardFactorAtTimestamp[lastExpiryTimestamp];
     }
 
     ///@notice returns the twamm Order struct
-    function getTwammOrder(uint256 orderId) public view returns (
+    function getTwammOrder(uint256 orderId) public override view returns (
         uint256 id,
-        uint256 expirationBlock,
+        uint256 expirationTimestamp,
         uint256 saleRate,
         address owner,
-        address sellTokenId,
-        address buyTokenId
+        address sellTokenAddr,
+        address buyTokenAddr
     ){
         require(orderId < longTermOrders.orderId);
         LongTermOrdersLib.Order storage order = longTermOrders.orderMap[orderId];
-        return (order.id, order.expirationBlock, order.saleRate, order.owner, order.sellTokenId, order.buyTokenId);
+        return (order.id, order.expirationTimestamp, order.saleRate, order.owner, order.sellTokenAddr, order.buyTokenAddr);
     }
 
     ///@notice returns the twamm Order withdrawable proceeds
-    function getTwammOrderProceeds(uint256 orderId, uint256 blockTimestamp) public view returns (
+    function getTwammOrderProceeds(uint256 orderId, uint256 blockTimestamp) public override view returns (
         bool orderExpired,
         uint256 totalReward
     ){
         require(orderId < longTermOrders.orderId);
-        LongTermOrdersLib.OrderPool storage orderPool = LongTermOrdersLib.getOrderPool(longTermOrders, longTermOrders.orderMap[orderId].sellTokenId);
+        LongTermOrdersLib.OrderPool storage orderPool = LongTermOrdersLib.getOrderPool(longTermOrders, longTermOrders.orderMap[orderId].sellTokenAddr);
         (orderExpired, totalReward) = LongTermOrdersLib.orderPoolGetProceeds(orderPool, orderId, blockTimestamp);
     }
 
@@ -538,7 +573,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     /* ========== RESTRICTED FUNCTIONS - Owner only ========== */
 
     // Only callable once
-    function togglePauseNewSwaps() external onlyOwner {
+    function togglePauseNewSwaps() external override onlyOwner {
         // Pause / unpause new swaps
         newSwapsPaused = !newSwapsPaused;
     }
