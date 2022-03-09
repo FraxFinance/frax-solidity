@@ -33,7 +33,7 @@ contract TWAMM is ERC20 {
     /// ---------------------------
 
     ///@notice interval between blocks that are eligible for order expiry 
-    uint256 public orderBlockInterval;
+    uint256 public orderTimeInterval;
 
     ///@notice false when longTermOrders are permissioned 
     bool public whitelistDisabled;
@@ -77,14 +77,14 @@ contract TWAMM is ERC20 {
                 ,string memory _symbol
                 ,address _tokenA
                 ,address _tokenB
-                ,uint256 _orderBlockInterval
+                ,uint256 _orderTimeInterval
                 ,address _owner_address
     ) ERC20(_name, _symbol) {
         
         tokenA = _tokenA;
         tokenB = _tokenB;
-        orderBlockInterval = _orderBlockInterval;
-        longTermOrders.initialize(_tokenA, _tokenB, block.number, _orderBlockInterval);
+        orderTimeInterval = _orderTimeInterval;
+        longTermOrders.initialize(_tokenA, _tokenB, block.number, _orderTimeInterval);
         whitelistDisabled = false;
         owner_address = _owner_address;
 
@@ -176,9 +176,9 @@ contract TWAMM is ERC20 {
 
     ///@notice create a long term order to swap from tokenA 
     ///@param amountAIn total amount of token A to swap 
-    ///@param numberOfBlockIntervals number of block intervals over which to execute long term order
-    function longTermSwapFromAToB(uint256 amountAIn, uint256 numberOfBlockIntervals) external onlyWhitelist {
-        uint256 orderId =  longTermOrders.longTermSwapFromAToB(amountAIn, numberOfBlockIntervals, reserveMap);
+    ///@param numberOfTimeIntervals number of block intervals over which to execute long term order
+    function longTermSwapFromAToB(uint256 amountAIn, uint256 numberOfTimeIntervals) external onlyWhitelist {
+        uint256 orderId =  longTermOrders.longTermSwapFromAToB(amountAIn, numberOfTimeIntervals, reserveMap);
         emit LongTermSwapAToB(msg.sender, amountAIn, orderId);
     }
 
@@ -190,9 +190,9 @@ contract TWAMM is ERC20 {
 
     ///@notice create a long term order to swap from tokenB 
     ///@param amountBIn total amount of tokenB to swap 
-    ///@param numberOfBlockIntervals number of block intervals over which to execute long term order
-    function longTermSwapFromBToA(uint256 amountBIn, uint256 numberOfBlockIntervals) external onlyWhitelist{
-        uint256 orderId = longTermOrders.longTermSwapFromBToA(amountBIn, numberOfBlockIntervals, reserveMap);
+    ///@param numberOfTimeIntervals number of block intervals over which to execute long term order
+    function longTermSwapFromBToA(uint256 amountBIn, uint256 numberOfTimeIntervals) external onlyWhitelist{
+        uint256 orderId = longTermOrders.longTermSwapFromBToA(amountBIn, numberOfTimeIntervals, reserveMap);
         emit LongTermSwapBToA(msg.sender, amountBIn, orderId);
     }
 

@@ -38,15 +38,17 @@ contract FPIControllerAMO is Owned {
 
     // Core
     address public timelock_address;
-    FPI public FPI_TKN = FPI(0x76c8ceF5B18994a85bC2bE1991E5B9C716626767);
-    IFrax public FRAX = IFrax(0x853d955aCEf822Db058eb8505911ED77F175b99e);
-    IUniV2TWAMMPair public TWAMM = IUniV2TWAMMPair(0x0000000000000000000000000000000000000000);
-    IFraxAMOMinter public amo_minter = IFraxAMOMinter(0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241);
+    FPI public FPI_TKN;
+    IFrax public FRAX;
+    IUniV2TWAMMPair public TWAMM;
+    IFraxAMOMinter public amo_minter;
 
     // Oracles
-    AggregatorV3Interface public priceFeedFRAXUSD = AggregatorV3Interface(0xB9E1E3A9feFf48998E45Fa90847ed4D467E8BcfD);
-    AggregatorV3Interface public priceFeedFPIUSD = AggregatorV3Interface(0x0000000000000000000000000000000000000000);
-    CPITrackerOracle public cpiTracker = CPITrackerOracle(0x90E7eFdcA79de10F1713c59BC3AE9B076e753490);
+    AggregatorV3Interface public priceFeedFRAXUSD;
+    AggregatorV3Interface public priceFeedFPIUSD;
+    uint256 public chainlink_frax_usd_decimals;
+    uint256 public chainlink_fpi_usd_decimals;
+    CPITrackerOracle public cpiTracker;
 
     // Tracking
     uint256 public last_fpi_price_twamm;
@@ -63,12 +65,14 @@ contract FPIControllerAMO is Owned {
     uint256 public constant FEE_PRECISION = 1e6;
     uint256 public constant PEG_BAND_PRECISION = 1e6;
    
-    // Fees
-    uint256 public mint_fee = 30000;
-    uint256 public redeem_fee = 30000;
+    // Mints and Redeems
+    uint256 public mint_fee = 3000;
+    uint256 public redeem_fee = 3000;
+    bool public mints_paused = false;
+    bool public redeems_paused = false;
 
     // Safety
-    uint256 public fpi_mint_cap = 100000000e18;
+    uint256 public fpi_mint_cap = 101000000e18;
     uint256 public peg_band_mint_redeem = 50000; // 5%
     uint256 public peg_band_twamm = 100000; // 10%
     uint256 public max_swap_frax_amt_in = 100000000e18; // 100M
@@ -85,9 +89,23 @@ contract FPIControllerAMO is Owned {
 
     constructor (
         address _creator_address,
-        address _timelock_address
+        address _timelock_address,
+        address[7] memory _address_pack
     ) Owned(_creator_address) {
         timelock_address = _timelock_address;
+
+        // Set instances
+        FRAX = IFrax(_address_pack[0]);
+        FPI_TKN = FPI(_address_pack[1]);
+        TWAMM = IUniV2TWAMMPair(_address_pack[2]);
+        priceFeedFRAXUSD = AggregatorV3Interface(_address_pack[3]);
+        priceFeedFPIUSD = AggregatorV3Interface(_address_pack[4]);
+        cpiTracker = CPITrackerOracle(_address_pack[5]);
+        amo_minter = IFraxAMOMinter(_address_pack[6]);
+
+        // Set the oracle decimals
+        chainlink_frax_usd_decimals = priceFeedFRAXUSD.decimals();
+        chainlink_fpi_usd_decimals = priceFeedFPIUSD.decimals();
 
         // Need to know which token FRAX is (0 or 1)
         address token0 = TWAMM.token0();
@@ -107,21 +125,23 @@ contract FPIControllerAMO is Owned {
         collat_val_e18 = (frax_val_e18 * 1e6) / FRAX.global_collateral_ratio();
     }
 
+    // In Chainlink decimals
     function getFRAXPriceE18() public view returns (uint256) {
         (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedFRAXUSD.latestRoundData();
         require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
 
-        return ((uint256(price) * PRICE_PRECISION) / 1e18);
+        return ((uint256(price) * 1e18) / (10 ** chainlink_frax_usd_decimals));
     }
 
+    // In Chainlink decimals    
     function getFPIPriceE18() public view returns (uint256) {
         (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedFPIUSD.latestRoundData();
         require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
 
-        return ((uint256(price) * PRICE_PRECISION) / 1e18);
+        return ((uint256(price) * 1e18) / (10 ** chainlink_fpi_usd_decimals));
     }
 
-    function peg_status_mntrdm() public view returns (uint256 cpi_price, uint256 diff_pct_abs, bool within_range) {
+    function pegStatusMntRdm() public view returns (uint256 cpi_price, uint256 diff_pct_abs, bool within_range) {
         uint256 fpi_price = getFPIPriceE18();
         cpi_price = cpiTracker.lastPrice();
 
@@ -157,10 +177,12 @@ contract FPIControllerAMO is Owned {
 
     /* ========== MUTATIVE ========== */
 
-    // Mint FPI with FRAX
-    function mintFPI(uint256 frax_in, uint256 min_fpi_out) external returns (uint256 fpi_out) {
+    // Calculate Mint FPI with FRAX
+    function calcMintFPI(uint256 frax_in, uint256 min_fpi_out) public view returns (uint256 fpi_out) {
+        require(!mints_paused, "Mints paused");
+
         // Fetch the CPI price and other info
-        (uint256 cpi_price, , bool within_range) = peg_status_mntrdm();
+        (uint256 cpi_price, , bool within_range) = pegStatusMntRdm();
 
         // Make sure the peg is within range for minting
         // Helps combat oracle errors and megadumping
@@ -177,6 +199,11 @@ contract FPIControllerAMO is Owned {
 
         // Check the mint cap
         require(FPI_TKN.totalSupply() + fpi_out <= fpi_mint_cap, "FPI mint cap");
+    }
+
+    // Mint FPI with FRAX
+    function mintFPI(uint256 frax_in, uint256 min_fpi_out) external returns (uint256 fpi_out) {
+        fpi_out = calcMintFPI(frax_in, min_fpi_out);
 
         // Pull in the FRAX
         TransferHelper.safeTransferFrom(address(FRAX), msg.sender, address(this), frax_in);
@@ -187,10 +214,12 @@ contract FPIControllerAMO is Owned {
         emit FPIMinted(frax_in, fpi_out);
     }
 
-    // Redeem FPI for FRAX
-    function redeemFPI(uint256 fpi_in, uint256 min_frax_out) external returns (uint256 frax_out) {
+    // Calculate Redeem FPI for FRAX
+    function calcRedeemFPI(uint256 fpi_in, uint256 min_frax_out) public view returns (uint256 frax_out) {
+        require(!redeems_paused, "Redeems paused");
+
         // Fetch the CPI price and other info
-        (uint256 cpi_price, , bool within_range) = peg_status_mntrdm();
+        (uint256 cpi_price, , bool within_range) = pegStatusMntRdm();
 
         // Make sure the peg is within range for minting
         // Helps combat oracle errors and megadumping
@@ -204,12 +233,17 @@ contract FPIControllerAMO is Owned {
 
         // Make sure enough FRAX is generated
         require(frax_out >= min_frax_out, "Slippage [Redeem]");
+    }
+
+    // Redeem FPI for FRAX
+    function redeemFPI(uint256 fpi_in, uint256 min_frax_out) external returns (uint256 frax_out) {
+        frax_out = calcRedeemFPI(fpi_in, min_frax_out);
 
         // Pull in the FPI
         TransferHelper.safeTransferFrom(address(FPI_TKN), msg.sender, address(this), fpi_in);
 
         // Give FRAX to the sender
-        TransferHelper.safeTransferFrom(address(FRAX), address(this), msg.sender, frax_out);
+        TransferHelper.safeTransfer(address(FRAX), msg.sender, frax_out);
 
         emit FPIRedeemed(fpi_in, frax_out);
     }
@@ -340,12 +374,24 @@ contract FPIControllerAMO is Owned {
         priceFeedFRAXUSD = AggregatorV3Interface(_frax_oracle);
         priceFeedFPIUSD = AggregatorV3Interface(_fpi_oracle);
         cpiTracker = CPITrackerOracle(_cpi_oracle);
+
+        // Set the Chainlink oracle decimals
+        chainlink_frax_usd_decimals = priceFeedFRAXUSD.decimals();
+        chainlink_fpi_usd_decimals = priceFeedFPIUSD.decimals();
     }
 
     function setTWAMMAndSwapPeriod(address _twamm_addr, uint256 _swap_period) external onlyByOwnGov {
         TWAMM = IUniV2TWAMMPair(_twamm_addr);
         swap_period = _swap_period;
         num_twamm_intervals = _swap_period / TWAMM.orderTimeInterval();
+    }
+
+    function toggleMints() external onlyByOwnGov {
+        mints_paused = !mints_paused;
+    }
+
+    function toggleRedeems() external onlyByOwnGov {
+        redeems_paused = !redeems_paused;
     }
 
     function setMintCap(uint256 _fpi_mint_cap) external onlyByOwnGov {
@@ -365,6 +411,10 @@ contract FPIControllerAMO is Owned {
     function setTWAMMMaxSwapIn(uint256 _max_swap_frax_amt_in, uint256 _max_swap_fpi_amt_in) external onlyByOwnGov {
         max_swap_frax_amt_in = _max_swap_frax_amt_in;
         max_swap_fpi_amt_in = _max_swap_fpi_amt_in;
+    }
+
+    function setAMOMinter(address _amo_minter_addr) external onlyByOwnGov {
+        amo_minter = IFraxAMOMinter(_amo_minter_addr);
     }
 
     function setTimelock(address _new_timelock_address) external onlyByOwnGov {

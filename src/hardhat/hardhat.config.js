@@ -132,7 +132,7 @@ module.exports = {
 			},
 			chainId: 250,
 			gas: "auto",
-			gasPrice: 300000000000, // 300 Gwei
+			gasPrice: 600000000000, // 600 Gwei
 			gasMultiplier: 1.2
 		},
 		// fuse: {
@@ -192,7 +192,7 @@ module.exports = {
 			},
 			chainId: 137,
 			gas: "auto",
-			gasPrice: 50000000000, // 50 Gwei
+			gasPrice: 60000000000, // 60 Gwei
 			gasMultiplier: 1.2
 		},
 		ropsten: {

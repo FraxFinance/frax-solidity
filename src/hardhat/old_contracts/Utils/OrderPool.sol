@@ -21,7 +21,7 @@ library OrderPoolLib {
         uint256 rewardFactor;
 
         ///@notice this maps block numbers to the cumulative sales rate of orders that expire on that block
-        mapping(uint256 => uint256) salesRateEndingPerBlock;
+        mapping(uint256 => uint256) salesRateEndingPerTimeInterval;
 
         ///@notice map order ids to the block in which they expire 
         mapping(uint256 => uint256) orderExpiry;
@@ -33,7 +33,7 @@ library OrderPoolLib {
         mapping(uint256 => uint256) rewardFactorAtSubmission;
 
         ///@notice reward factor at a specific block    
-        mapping(uint256 => uint256) rewardFactorAtBlock;
+        mapping(uint256 => uint256) rewardFactorAtTimestamp;
     }
 
     ///@notice distribute payment amount to pool (in the case of TWAMM, proceeds from trades against amm)
@@ -50,14 +50,14 @@ library OrderPoolLib {
         self.rewardFactorAtSubmission[orderId] = self.rewardFactor;
         self.orderExpiry[orderId] = orderExpiry;
         self.salesRate[orderId] = amountPerBlock;
-        self.salesRateEndingPerBlock[orderExpiry] += amountPerBlock;
+        self.salesRateEndingPerTimeInterval[orderExpiry] += amountPerBlock;
     }
 
     ///@notice when orders expire after a given block, we need to update the state of the pool
     function updateStateFromBlockExpiry(OrderPool storage self, uint256 blockNumber) internal {
-        uint256 ordersExpiring = self.salesRateEndingPerBlock[blockNumber];
+        uint256 ordersExpiring = self.salesRateEndingPerTimeInterval[blockNumber];
         self.currentSalesRate -= ordersExpiring;
-        self.rewardFactorAtBlock[blockNumber] = self.rewardFactor;
+        self.rewardFactorAtTimestamp[blockNumber] = self.rewardFactor;
     }
 
     ///@notice cancel order and remove from the order pool
@@ -78,7 +78,7 @@ library OrderPoolLib {
         self.currentSalesRate -= salesRate;
         self.salesRate[orderId] = 0;
         self.orderExpiry[orderId] = 0;
-        self.salesRateEndingPerBlock[expiry] -= salesRate;
+        self.salesRateEndingPerTimeInterval[expiry] -= salesRate;
     }
 
     ///@notice withdraw proceeds from pool for a given order. This can be done before or after the order has expired. 
@@ -92,7 +92,7 @@ library OrderPoolLib {
 
         //if order has expired, we need to calculate the reward factor at expiry
         if(block.number > orderExpiry) {
-            uint256 rewardFactorAtExpiry = self.rewardFactorAtBlock[orderExpiry];
+            uint256 rewardFactorAtExpiry = self.rewardFactorAtTimestamp[orderExpiry];
             totalReward = (rewardFactorAtExpiry - rewardFactorAtSubmission).mul(stakedAmount.fromUint()).toUint();
             //remove stake
             self.salesRate[orderId] = 0;

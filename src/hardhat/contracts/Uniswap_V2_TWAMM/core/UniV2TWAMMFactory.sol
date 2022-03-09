@@ -35,8 +35,6 @@ contract UniV2TWAMMFactory is IUniswapV2FactoryV5 {
     mapping(address => mapping(address => address)) public override getPair;
     address[] public override allPairs;
 
-    bool public override twammWhitelistDisabled = false;
-
     constructor(address _feeToSetter) {
         feeToSetter = _feeToSetter;
     }
@@ -64,16 +62,11 @@ contract UniV2TWAMMFactory is IUniswapV2FactoryV5 {
         assembly {
             pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
-        UniV2TWAMMPair(pair).initialize(token0, token1, twammWhitelistDisabled);
+        UniV2TWAMMPair(pair).initialize(token0, token1);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
         emit PairCreated(token0, token1, pair, allPairs.length);
-    }
-
-    function setTwammWhitelistDisabled(bool _twammWhitelistDisabled) external override onlyFTS {
-        //ECF4: FORBIDDEN
-        twammWhitelistDisabled = _twammWhitelistDisabled;
     }
 
     function setFeeTo(address _feeTo) external override onlyFTS {
@@ -84,9 +77,5 @@ contract UniV2TWAMMFactory is IUniswapV2FactoryV5 {
     function setFeeToSetter(address _feeToSetter) external override onlyFTS {
         //ECF4: FORBIDDEN
         feeToSetter = _feeToSetter;
-    }
-
-    function getFactorySettings() public view  returns (address, bool){
-        return (feeTo, twammWhitelistDisabled);
     }
 }

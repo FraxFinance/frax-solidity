@@ -1,5 +1,9 @@
 const {constants, BigNumber, utils} = require('ethers');
 
+// https://github.com/ethers-io/ethers.js/blob/master/packages/bignumber/src.ts/bignumber.ts
+const BIG6 = BigNumber.from("1000000");
+const BIG18 = BigNumber.from("1000000000000000000");
+
 const PERMIT_TYPEHASH = utils.keccak256(
     utils.toUtf8Bytes('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)')
 )
@@ -73,10 +77,17 @@ function bigNumberify(amount) {
     return utils.parseUnits(`${amount.toLocaleString('fullwide', {useGrouping: false})}`, 0);
 }
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 module.exports = {
+    BIG6,
+    BIG18,
     getApprovalDigest,
     getCreate2Address,
     encodePrice,
     expandTo18Decimals,
-    bigNumberify
+    bigNumberify,
+    sleep
 }

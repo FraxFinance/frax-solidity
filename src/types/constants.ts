@@ -1180,8 +1180,6 @@ export const CONTRACT_ADDRESSES = {
       FRAX: "0x853d955aCEf822Db058eb8505911ED77F175b99e",
       FXS: "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
       FXB: "",
-      FPI: "0x76c8ceF5B18994a85bC2bE1991E5B9C716626767",
-      FPIS: "0xDB68c6264e9D0f8a6Df1fA5a89F205Da38698D15",
       vesting: "NOT_DEPLOYED_YET",
       veFXS: "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0", // Old: "0xcb75A1655c84589652D0f3A4605e5dDA8431F0a6"
       veFXS_whitelist_checker: "",
@@ -1191,7 +1189,9 @@ export const CONTRACT_ADDRESSES = {
     canonicals: {
       // Added here for helping out the ABI
       FRAX: "0x853d955aCEf822Db058eb8505911ED77F175b99e",
-      FXS: "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"
+      FXS: "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
+      FPI: "0x76c8ceF5B18994a85bC2bE1991E5B9C716626767",
+      FPIS: "0xDB68c6264e9D0f8a6Df1fA5a89F205Da38698D15",
     },
 
     oracles: {
@@ -2084,6 +2084,8 @@ export const CONTRACT_ADDRESSES = {
     canonicals: {
       FRAX: "0xdc301622e621166BD8E82f2cA0A26c13Ad0BE355",
       FXS: "0x7d016eec9c25232b01F23EF992D98ca97fc2AF5a",
+      FPI: "0xAb069E73f1AA50c37A7171D16dCc3614c705101B", // FOR TESTING
+      FPIS: "0x3bb6B72dC07D7bFDa981F70C631482e9517CF6EE", // FOR TESTING
     },
     bridge_tokens: {
       anyFRAX_V5: "0xBDba76fA2659c33ffCc2B0bc134c3A2c8a3Aa94d", // Router anyFRAX
@@ -2118,6 +2120,7 @@ export const CONTRACT_ADDRESSES = {
     oracles_other: {
       combo_oracle: "0x496E5c8F169C2930Dd67B821d8DdDDC78542f290", // "0xde606CB6Ff5d897Ad8396C6fd9C830D1B81Aca13",
       combo_oracle_univ2_univ3: "0x689C5BC12B0A80a8aa33dc38dfDFB7E858A49601", // "0x4aF1C4dFe82C20481EA07755b200c29dD285E175",
+      cpi_tracker_oracle: "0x6026004C44E01c957f41144c5b36a8Dd5bD19d53"
     },
     multisigs: {
       Comptrollers: "0xE838c61635dd1D41952c68E47159329443283d90",
@@ -2127,10 +2130,13 @@ export const CONTRACT_ADDRESSES = {
       v3_factory: "0x0000000000000000000000000000000000000000",
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
+      twamm_factory: "0x77B5B8935342e1146c7571ea342f8aD5d58980C4",
+      twamm_router: "0xADfF04db8E8F6EaBc71Eb22A64e241F41856be30"
     },
     amos: {
       curve: "0x442A3c0B86981e33b28011428d6A752eD983b81a",
       scream: "0x51E6D09d5A1EcF8BE035BBCa82F77BfeC3c7672A",
+      fpi_controller_amo: "0x63Ec2E84dA204915BA225198129Fa22b24cB36C5",
       spirit_ola_lending: "0x8dbc48743a05A6e615D9C39aEBf8C2b157aa31eA",
       spiritswap_liquidity: "0x48F0856e0E2D06fBCed5FDA10DD69092a500646B", // Old: "0x4392d664656ef434d451fd8d99B5DfC834D0c794"
     },
@@ -2155,6 +2161,7 @@ export const CONTRACT_ADDRESSES = {
       "SpiritSwap FRAX/FXS": "0xebF993690F65B23862E10F489656529ac06A27B8",
     },
     pair_tokens: {
+      "FraxSwap FRAX/FPI": "0x74fB16D8eBde32a27A1C631b6efdCe44f185432d",
       "Liquid Driver FRAX/FTM": "0x7ed0cdDB9BB6c6dfEa6fB63E117c8305479B8D7D", // Same as SpiritSwap FRAX/FTM
       "SpiritSwap canFRAX/canFXS": "0x7a2aD237e389De505DE7a89768143337E516C6Ce",
       "SpiritSwap canFRAX/FTM": "0x7ed0cddb9bb6c6dfea6fb63e117c8305479b8d7d",
@@ -2511,6 +2518,8 @@ export const CONTRACT_ADDRESSES = {
     canonicals: {
       FRAX: "0x45c32fA6DF82ead1e2EF74d17b76547EDdFaFF89",
       FXS: "0x1a3acf6D19267E2d3e7f898f42803e90C9219062",
+      FPI: "0x411C9cDd0fBBa243488988f2A3005D6fFf126661", // FOR TESTING
+      FPIS: "0x84F6FCeb8E4A3EB87768C4a111273C17b54D4411", // FOR TESTING
     },
     bridge_tokens: {
       anyFRAX: "0xfE952465773bE3802eAc343C89aD351C77c00ab1", // Router anyFRAX
@@ -2546,6 +2555,7 @@ export const CONTRACT_ADDRESSES = {
     oracles_other: {
       combo_oracle: "0xAfe0C8318B67Ea8461350ABf7Bc82E5ce9Cf11D3", // "0x932aac463081dA5b2D5904E55c1F984bDC884048",
       combo_oracle_univ2_univ3: "0x86Cffe1fE0C09A0815Fe4Fd21956D24Af5ba4020", // "0x0D6EeBE86bF972Cb3e18A3D9126dF0Bfb52e7C66",
+      cpi_tracker_oracle: "0xDcF5a3A3d009a3Cd5F40c4BB38C32d870a24aa2e"
     },
     multisigs: {
       Comptrollers: "0xDCB5A4b6Ee39447D700F4FA3303B1d1c25Ea9cA7",
@@ -2555,6 +2565,8 @@ export const CONTRACT_ADDRESSES = {
       v3_factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
       v3_nft_manager: "0xc36442b4a4522e871399cd717abdd847ab11fe88",
       v3_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+      twamm_factory: "0xE55eb0b1b3bFe7b50D3295106E3Fc536dF3E4EF7",
+      twamm_router: "0xc7E4d9C2D4f5DB34F9Ae2e7FD1767deb31C3411c"
     },
     rari_pools: {
       "Index Coop Pool (#2)": "0x164835016E1590EE91Eb479c4Eeb1249779856aa",
@@ -2562,6 +2574,7 @@ export const CONTRACT_ADDRESSES = {
     },
     amos: {
       curve: "0x0eBA9254301B972f8a6A6bB2D576b2B1e0017C18",
+      fpi_controller_amo: "0xC03d43d1F3086dB4A1e51fE9d518dd41Dd0a0721",
       market_xyz_liquidity: "0x2182d5Bcc9110594d49530CA3EDAaBFd3C302E6e",
       sushiswap_liquidity: "0xBF667807Ff4d431E2aa77c50497434646F190Bfa", // Old: "0x6800EEdB4cEb7bBc092791C9C5B9b480B6950f09"
     },
@@ -2575,6 +2588,7 @@ export const CONTRACT_ADDRESSES = {
     },
     vamms: {},
     pair_tokens: {
+      "FraxSwap FRAX/FPI": "0x324b54DD0aC4b482e8e3132F9b6E21cc3528813E",
       "mStable FRAX/mUSD": "0xB30a907084AC8a0d25dDDAB4E364827406Fd09f0",
       // "Sushi FRAX/FXS": "0xd53a56ae0f48c9a03660cd36c2e4ae20493a1eca"
       "Sushi canFRAX/canFXS": "0xDf45B5B68d9dC84173DD963c763AeA8CAD3E24A6",
