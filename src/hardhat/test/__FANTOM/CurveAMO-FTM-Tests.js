@@ -172,16 +172,16 @@ contract('CurveAMO_FTM-Tests', async (accounts) => {
 			params: [process.env.FANTOM_ONE_ADDRESS]
 		});    
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER =========='));
 		await cc_bridge_backer_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER =========='));
 		await canFRAX_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER =========='));
 		await canFXS_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 
-		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE SpiritSwapLiquidityAMO OWNER  =========='));
+		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE SpiritSwapLiquidityAMO OWNER =========='));
 		// await spiritSwapLiquidityAMO_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 	
 		await hre.network.provider.request({
@@ -202,7 +202,7 @@ contract('CurveAMO_FTM-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_DAI]
 		});    
 	
-		console.log(chalk.yellow('========== GIVE THE CurveAMO_FTM SOME DAI  =========='));
+		console.log(chalk.yellow('========== GIVE THE CurveAMO_FTM SOME DAI =========='));
 		await dai_instance.transfer(curve_amo_ftm_instance.address, new BigNumber("1000e18"), { from: ADDRESS_WITH_DAI });
 		
 		await hre.network.provider.request({

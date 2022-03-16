@@ -107,7 +107,7 @@ module.exports = async (deployer) => {
         params: [process.env.MOONBEAM_ONE_ADDRESS]
     });    
 
-    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_MNBM_Nomad  =========='));
+    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_MNBM_Nomad =========='));
     // await cross_chain_bridge_backer_instance.addAMO(scream_amo_instance.address, false, { from: process.env.MOONBEAM_ONE_ADDRESS });
 
     await hre.network.provider.request({

@@ -142,7 +142,7 @@ contract('CrossChainBridgeBacker_AUR_Rainbow-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_RNBWFRAX]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME rnbwFRAX  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME rnbwFRAX =========='));
 		await rnbwFRAX_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("10000e18"), { from: ADDRESS_WITH_RNBWFRAX });
 
 		await hre.network.provider.request({
@@ -156,7 +156,7 @@ contract('CrossChainBridgeBacker_AUR_Rainbow-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_RNBWFXS]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME rnbwFXS  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME rnbwFXS =========='));
 		await rnbwFXS_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000e18"), { from: ADDRESS_WITH_RNBWFXS });
 
 		await hre.network.provider.request({
@@ -170,7 +170,7 @@ contract('CrossChainBridgeBacker_AUR_Rainbow-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_RNBWUSDC]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME rnbwUSDC  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME rnbwUSDC =========='));
 		await rnbwUSDC_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("10000e6"), { from: ADDRESS_WITH_RNBWUSDC });
 
 		await hre.network.provider.request({
@@ -185,13 +185,13 @@ contract('CrossChainBridgeBacker_AUR_Rainbow-Tests', async (accounts) => {
 			params: [process.env.AURORA_ONE_ADDRESS]}
 		);
 
-		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER  =========='));
+		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER =========='));
 		// await cc_bridge_backer_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.AURORA_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER =========='));
 		await canFRAX_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.AURORA_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER =========='));
 		await canFXS_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.AURORA_ONE_ADDRESS });
 
 

@@ -165,7 +165,7 @@ contract('CrossChainBridgeBacker_ARBI_AnySwap-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_anyFRAX]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFRAX  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFRAX =========='));
 		await anyFRAX_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000e18"), { from: ADDRESS_WITH_anyFRAX });
 
 		await hre.network.provider.request({
@@ -179,7 +179,7 @@ contract('CrossChainBridgeBacker_ARBI_AnySwap-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_anyFXS]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFXS  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFXS =========='));
 		await anyFXS_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000e18"), { from: ADDRESS_WITH_anyFXS });
 
 		await hre.network.provider.request({
@@ -193,7 +193,7 @@ contract('CrossChainBridgeBacker_ARBI_AnySwap-Tests', async (accounts) => {
 		// 	params: [ADDRESS_WITH_arbiUSDC]
 		// });    
 
-		// console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME arbiUSDC  =========='));
+		// console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME arbiUSDC =========='));
 		// await arbiUSDC_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000e6"), { from: ADDRESS_WITH_arbiUSDC });
 
 		// await hre.network.provider.request({
@@ -203,16 +203,16 @@ contract('CrossChainBridgeBacker_ARBI_AnySwap-Tests', async (accounts) => {
 
 		// ====================================================
 
-		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER  =========='));
+		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER =========='));
 		// await cc_bridge_backer_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.ARBITRUM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER =========='));
 		await canFRAX_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.ARBITRUM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER =========='));
 		await canFXS_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.ARBITRUM_ONE_ADDRESS });
 
-		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE SushiSwapLiquidityAMO_ARBI OWNER  =========='));
+		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE SushiSwapLiquidityAMO_ARBI OWNER =========='));
 		// await SushiSwapLiquidityAMO_ARBI_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.ARBITRUM_ONE_ADDRESS });
 	
 		await hre.network.provider.request({

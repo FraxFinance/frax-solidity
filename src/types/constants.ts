@@ -1200,7 +1200,7 @@ export const CONTRACT_ADDRESSES = {
     oracles_other: {
       combo_oracle: "0x878f2059435a19C79c20318ee57657bF4543B6d4", // "0xbdCB57c9d35e8D41babCBcA67416ee6622274caf",
       combo_oracle_univ2_univ3: "0x1cBE07F3b3bf3BDe44d363cecAecfe9a98EC2dff", // "0xD13c9a29eF6c5ADc7b43BBd5854B07bB9b099862", 
-      cpi_tracker: "0x90E7eFdcA79de10F1713c59BC3AE9B076e753490"
+      cpi_tracker_oracle: "0x5fCa68C9BA31DBaA5ab82DD468aE76746eFD9Adb"
     },
     retired_oracles: {
       FXS_USDC: "0x1F70Af31D041f9C183E23EC6809c04eb8CA006a4", //V1: 0x28fdA30a6Cf71d5fC7Ce17D6d20c788D98Ff2c46
@@ -2120,7 +2120,7 @@ export const CONTRACT_ADDRESSES = {
     oracles_other: {
       combo_oracle: "0x496E5c8F169C2930Dd67B821d8DdDDC78542f290", // "0xde606CB6Ff5d897Ad8396C6fd9C830D1B81Aca13",
       combo_oracle_univ2_univ3: "0x689C5BC12B0A80a8aa33dc38dfDFB7E858A49601", // "0x4aF1C4dFe82C20481EA07755b200c29dD285E175",
-      cpi_tracker_oracle: "0x6026004C44E01c957f41144c5b36a8Dd5bD19d53"
+      cpi_tracker_oracle: "0x2ef9CEf769fB9E529C681193D20DE4d682B49eb4"
     },
     multisigs: {
       Comptrollers: "0xE838c61635dd1D41952c68E47159329443283d90",
@@ -2130,13 +2130,13 @@ export const CONTRACT_ADDRESSES = {
       v3_factory: "0x0000000000000000000000000000000000000000",
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
-      twamm_factory: "0x77B5B8935342e1146c7571ea342f8aD5d58980C4",
-      twamm_router: "0xADfF04db8E8F6EaBc71Eb22A64e241F41856be30"
+      twamm_factory: "0x4C21e7022c0EA9bCD14a9aA8710757814c88c2A0",
+      twamm_router: "0x2b9eaa11b052190af407872B8A49Ca7dE7854ac2"
     },
     amos: {
       curve: "0x442A3c0B86981e33b28011428d6A752eD983b81a",
       scream: "0x51E6D09d5A1EcF8BE035BBCa82F77BfeC3c7672A",
-      fpi_controller_amo: "0x63Ec2E84dA204915BA225198129Fa22b24cB36C5",
+      fpi_controller_amo: "0xe2eFf3869e0baC1211fBbA34004D71Bb24FaA3A3",
       spirit_ola_lending: "0x8dbc48743a05A6e615D9C39aEBf8C2b157aa31eA",
       spiritswap_liquidity: "0x48F0856e0E2D06fBCed5FDA10DD69092a500646B", // Old: "0x4392d664656ef434d451fd8d99B5DfC834D0c794"
     },
@@ -2161,7 +2161,7 @@ export const CONTRACT_ADDRESSES = {
       "SpiritSwap FRAX/FXS": "0xebF993690F65B23862E10F489656529ac06A27B8",
     },
     pair_tokens: {
-      "FraxSwap FRAX/FPI": "0x74fB16D8eBde32a27A1C631b6efdCe44f185432d",
+      "FraxSwap FRAX/FPI": "0xF73f804Fb747d800E833942870f0312A6d392184",
       "Liquid Driver FRAX/FTM": "0x7ed0cdDB9BB6c6dfEa6fB63E117c8305479B8D7D", // Same as SpiritSwap FRAX/FTM
       "SpiritSwap canFRAX/canFXS": "0x7a2aD237e389De505DE7a89768143337E516C6Ce",
       "SpiritSwap canFRAX/FTM": "0x7ed0cddb9bb6c6dfea6fb63e117c8305479b8d7d",
@@ -2555,7 +2555,7 @@ export const CONTRACT_ADDRESSES = {
     oracles_other: {
       combo_oracle: "0xAfe0C8318B67Ea8461350ABf7Bc82E5ce9Cf11D3", // "0x932aac463081dA5b2D5904E55c1F984bDC884048",
       combo_oracle_univ2_univ3: "0x86Cffe1fE0C09A0815Fe4Fd21956D24Af5ba4020", // "0x0D6EeBE86bF972Cb3e18A3D9126dF0Bfb52e7C66",
-      cpi_tracker_oracle: "0xDcF5a3A3d009a3Cd5F40c4BB38C32d870a24aa2e"
+      cpi_tracker_oracle: "0xDcF5a3A3d009a3Cd5F40c4BB38C32d870a24aa2e", // MUMBAI: "0x1B01514A2B3CdEf16fD3c680a818A0Ab97Da8a09"
     },
     multisigs: {
       Comptrollers: "0xDCB5A4b6Ee39447D700F4FA3303B1d1c25Ea9cA7",

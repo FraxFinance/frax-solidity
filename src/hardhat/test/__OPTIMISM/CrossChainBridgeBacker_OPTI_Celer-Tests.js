@@ -144,7 +144,7 @@ contract('CrossChainBridgeBacker_OPTI_Celer-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_CELRFRAX]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME celrFRAX  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME celrFRAX =========='));
 		await celrFRAX_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("10000e18"), { from: ADDRESS_WITH_CELRFRAX });
 
 		await hre.network.provider.request({
@@ -158,7 +158,7 @@ contract('CrossChainBridgeBacker_OPTI_Celer-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_CELRFXS]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME celrFXS  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME celrFXS =========='));
 		await celrFXS_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000e18"), { from: ADDRESS_WITH_CELRFXS });
 
 		await hre.network.provider.request({
@@ -172,7 +172,7 @@ contract('CrossChainBridgeBacker_OPTI_Celer-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_OPTIUSDC]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER and STAKING_REWARDS_DISTRIBUTOR SOME celrUSDC  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER and STAKING_REWARDS_DISTRIBUTOR SOME celrUSDC =========='));
 		await celrUSDC_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("5000e6"), { from: ADDRESS_WITH_OPTIUSDC });
 		await celrUSDC_instance.transfer(STAKING_REWARDS_DISTRIBUTOR, new BigNumber("100e6"), { from: ADDRESS_WITH_OPTIUSDC });
 
@@ -188,13 +188,13 @@ contract('CrossChainBridgeBacker_OPTI_Celer-Tests', async (accounts) => {
 			params: [process.env.OPTIMISM_ONE_ADDRESS]}
 		);
 
-		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER  =========='));
+		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER =========='));
 		// await cc_bridge_backer_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.OPTIMISM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER =========='));
 		await canFRAX_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.OPTIMISM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER =========='));
 		await canFXS_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.OPTIMISM_ONE_ADDRESS });
 
 

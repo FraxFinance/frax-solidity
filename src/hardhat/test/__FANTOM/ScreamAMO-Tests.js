@@ -181,7 +181,7 @@ contract('ScreamAMO-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_SCREAM]
 		});    
 	
-		console.log(chalk.yellow('========== GIVE THE ScreamAMO SOME SCREAM TOKENS  =========='));
+		console.log(chalk.yellow('========== GIVE THE ScreamAMO SOME SCREAM TOKENS =========='));
 		await scream_instance.transfer(scream_amo_instance.address, new BigNumber("2500e18"), { from: ADDRESS_WITH_SCREAM });
 		
 		await hre.network.provider.request({
@@ -195,7 +195,7 @@ contract('ScreamAMO-Tests', async (accounts) => {
 		// 	params: [ANYFRAX_ADMIN_ADDRESS]
 		// });    
 	
-		// console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFRAX  =========='));
+		// console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFRAX =========='));
 		// await anyFRAX_instance.Swapin("0x6666666666666666666666666666666666666666666666666666666666666666", COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("50000e18"), { from: ANYFRAX_ADMIN_ADDRESS });
 		
 		// await hre.network.provider.request({
@@ -209,7 +209,7 @@ contract('ScreamAMO-Tests', async (accounts) => {
 		// 	params: [ANYFXS_ADMIN_ADDRESS]
 		// });    
 	
-		// console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFXS  =========='));
+		// console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFXS =========='));
 		// await anyFXS_instance.Swapin("0x6666666666666666666666666666666666666666666666666666666666666666", COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("50000e18"), { from: ANYFXS_ADMIN_ADDRESS });
 	
 		// await hre.network.provider.request({
@@ -223,7 +223,7 @@ contract('ScreamAMO-Tests', async (accounts) => {
 		// 	params: [ADDRESS_WITH_USDC]
 		// });    
 	
-		// console.log(chalk.yellow('========== GIVE ScreamAMO SOME USDC.e  =========='));
+		// console.log(chalk.yellow('========== GIVE ScreamAMO SOME USDC.e =========='));
 		// await usdc_instance.transfer(scream_amo_instance.address, new BigNumber("100000e6"), { from: ADDRESS_WITH_USDC });
 	
 		// await hre.network.provider.request({
@@ -237,16 +237,16 @@ contract('ScreamAMO-Tests', async (accounts) => {
 			params: [process.env.FANTOM_ONE_ADDRESS]
 		});    
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER =========='));
 		await cc_bridge_backer_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER =========='));
 		await canFRAX_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER =========='));
 		await canFXS_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 
-		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE ScreamAMO OWNER  =========='));
+		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE ScreamAMO OWNER =========='));
 		// await scream_amo_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 	
 		await hre.network.provider.request({

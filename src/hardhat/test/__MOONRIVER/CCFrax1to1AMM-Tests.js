@@ -168,7 +168,7 @@ contract('CCFrax1to1AMM-Tests', async (accounts) => {
 			params: [MULTISIG_ADDRESS]
 		});    
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER =========='));
 		await cc_bridge_backer_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: MULTISIG_ADDRESS });
 	
 		await hre.network.provider.request({
@@ -185,13 +185,13 @@ contract('CCFrax1to1AMM-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_USDC]
 		});    
 	
-		console.log(chalk.yellow('========== GIVE THE BRIDGE BACKER SOME USDC  =========='));
+		console.log(chalk.yellow('========== GIVE THE BRIDGE BACKER SOME USDC =========='));
 		await anyUSDC_instance.transfer(cc_bridge_backer_instance.address, new BigNumber("3000e6"), { from: ADDRESS_WITH_USDC });
 
-		console.log(chalk.yellow('========== GIVE THE CCFrax1to1AMM SOME USDC  =========='));
+		console.log(chalk.yellow('========== GIVE THE CCFrax1to1AMM SOME USDC =========='));
 		await anyUSDC_instance.transfer(ccfrax_1to1_amm_instance.address, new BigNumber("3000e6"), { from: ADDRESS_WITH_USDC });
 		
-		console.log(chalk.yellow('========== GIVE THE COLLATERAL_FRAX_AND_FXS_OWNER SOME USDC  =========='));
+		console.log(chalk.yellow('========== GIVE THE COLLATERAL_FRAX_AND_FXS_OWNER SOME USDC =========='));
 		await anyUSDC_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("3000e6"), { from: ADDRESS_WITH_USDC });
 
 		await hre.network.provider.request({
@@ -205,7 +205,7 @@ contract('CCFrax1to1AMM-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FRAX]
 		});    
 	
-		console.log(chalk.yellow('========== GIVE THE COLLATERAL_FRAX_AND_FXS_OWNER SOME FRAX  =========='));
+		console.log(chalk.yellow('========== GIVE THE COLLATERAL_FRAX_AND_FXS_OWNER SOME FRAX =========='));
 		await canFRAX_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("3000e18"), { from: ADDRESS_WITH_FRAX });
 
 		await hre.network.provider.request({
@@ -219,7 +219,7 @@ contract('CCFrax1to1AMM-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_USDT]
 		});    
 	
-		console.log(chalk.yellow('========== GIVE THE CCFrax1to1AMM SOME USDT  =========='));
+		console.log(chalk.yellow('========== GIVE THE CCFrax1to1AMM SOME USDT =========='));
 		await usdt_instance.transfer(ccfrax_1to1_amm_instance.address, new BigNumber("1000e6"), { from: ADDRESS_WITH_USDT });
 		
 		await hre.network.provider.request({

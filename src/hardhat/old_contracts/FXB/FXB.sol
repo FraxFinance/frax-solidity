@@ -130,7 +130,7 @@ contract FraxBond is ERC20Custom, AccessControl {
         }
     }
 
-    /* ========== HIGHLY RESTRICTED EXTERNAL FUNCTIONS [Owner and Timelock only]  ========== */
+    /* ========== HIGHLY RESTRICTED EXTERNAL FUNCTIONS [Owner and Timelock only] ========== */
 
     function setOwner(address _owner_address) external onlyByOwnerOrTimelock {
         owner_address = _owner_address;

@@ -26,10 +26,8 @@ pragma solidity ^0.8.0;
 // Sam Kazemian: https://github.com/samkazemian
 
 import './interfaces/IUniswapV2ERC20V5.sol';
-import './libraries/SafeMath.sol';
 
 contract UniV2TWAMMERC20 is IUniswapV2ERC20V5 {
-    using SafeMath for uint;
 
     string public constant override name = 'FraxSwap V1';
     string public constant override symbol = 'FS-V1';
@@ -57,14 +55,14 @@ contract UniV2TWAMMERC20 is IUniswapV2ERC20V5 {
     }
 
     function _mint(address to, uint value) internal {
-        totalSupply = totalSupply.add(value);
-        balanceOf[to] = balanceOf[to].add(value);
+        totalSupply = totalSupply + value;
+        balanceOf[to] = balanceOf[to] + value;
         emit Transfer(address(0), to, value);
     }
 
     function _burn(address from, uint value) internal {
-        balanceOf[from] = balanceOf[from].sub(value);
-        totalSupply = totalSupply.sub(value);
+        balanceOf[from] = balanceOf[from] - value;
+        totalSupply = totalSupply - value;
         emit Transfer(from, address(0), value);
     }
 
@@ -74,8 +72,8 @@ contract UniV2TWAMMERC20 is IUniswapV2ERC20V5 {
     }
 
     function _transfer(address from, address to, uint value) private {
-        balanceOf[from] = balanceOf[from].sub(value);
-        balanceOf[to] = balanceOf[to].add(value);
+        balanceOf[from] = balanceOf[from] - value;
+        balanceOf[to] = balanceOf[to] + value;
         emit Transfer(from, to, value);
     }
 
@@ -91,7 +89,7 @@ contract UniV2TWAMMERC20 is IUniswapV2ERC20V5 {
 
     function transferFrom(address from, address to, uint value) external override returns (bool) {
         if (allowance[from][msg.sender] != type(uint).max) {
-            allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
+            allowance[from][msg.sender] = allowance[from][msg.sender] - value;
         }
         _transfer(from, to, value);
         return true;

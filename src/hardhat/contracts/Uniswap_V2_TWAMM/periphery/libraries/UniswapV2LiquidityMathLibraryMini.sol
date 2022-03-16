@@ -15,9 +15,14 @@ library UniswapV2LiquidityMathLibraryMini {
         uint256 truePriceTokenB,
         uint256 reserveA,
         uint256 reserveB,
-        bool aToB
+        bool aToB_to_use
     ) pure internal returns (uint256 amountIn) {
+        bool aToB = ((reserveA * truePriceTokenB) / reserveB) < truePriceTokenA;
+
         uint256 invariant = reserveA * reserveB;
+
+        // true price is expressed as a ratio, so both values must be non-zero
+        require(truePriceTokenA != 0 && truePriceTokenB != 0, "CPMT: ZERO_PRICE");
 
         uint256 leftSide = Babylonian.sqrt(
             FullMath.mulDiv(

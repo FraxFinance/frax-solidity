@@ -2,11 +2,16 @@ const {expect} = require("chai");
 const {ethers, network} = require("hardhat");
 const {BigNumber} = require('ethers');
 const UniV2TWAMMPair = require('../../artifacts/contracts/Uniswap_V2_TWAMM/core/UniV2TWAMMPair.sol/UniV2TWAMMPair');
-const {BIG6, BIG18, bigNumberify, expandTo18Decimals} = require('./utilities');
-const {calculateTwammExpected} = require('./twamm-utils')
+const {BIG6, BIG18, bigNumberify, expandTo18Decimals, sleep} = require('./utilities');
+const {
+    calculateTwammExpectedFraxSwapIntervals,
+    calculateTwammExpectedFraxSwap,
+    executeVirtualOrdersUntilTimestamp,
+    twammStateSnapshot,
+    getAmountOutWithTwamm
+} = require('./twamm-utils')
 const chalk = require('chalk');
 const util = require('util');
-
 
 async function getBlockNumber() {
     return (await ethers.provider.getBlock("latest")).number
@@ -16,10 +21,14 @@ async function getBlockTimestamp() {
     return (await ethers.provider.getBlock("latest")).timestamp
 }
 
-function outputErrorDiffPct(A, B) {
+function getErrorDiffPct(A, B) {
     const bigger = A > B ? A : B;
     const smaller = A < B ? A : B;
-    return `diff: ${ethers.utils.formatUnits(bigger.mul(10000).div(smaller).sub(10000), 2)} %`
+    return bigger.mul(10000).div(smaller).sub(10000)
+}
+
+function outputErrorDiffPct(A, B) {
+    return `diff: ${ethers.utils.formatUnits(getErrorDiffPct(A, B), 2)} %`
 }
 
 function outputRatio(A, B) {
@@ -249,6 +258,107 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
             // console.log(chalk.blue("addr3_token1_initial: ", (addr3_token1_initial.div(BIG18))));
         });
 
+        describe("Twamm execution frequency", function () {
+            it("high frequency", async function () {
+
+                const amountIn = expandTo18Decimals(10 * multiplier);
+                await token0.transfer(addr1.address, amountIn.mul(2));
+                await token0.connect(addr1).approve(twamm.address, amountIn.mul(2));
+                await token1.transfer(addr1.address, amountIn.mul(2));
+                await token1.connect(addr1).approve(twamm.address, amountIn.mul(2));
+
+                //trigger long term order
+                await transactionInSingleBlock(async () => {
+                    await twamm.connect(addr1).longTermSwapFrom0To1(amountIn, 100);
+                });
+
+                // save the twammState here
+                const twammState = await twammStateSnapshot(twamm)
+
+                //move blocks forward, and execute virtual orders every time interval
+                for (let i = 0; i <= 101; i++) {
+                    await mineTimeIntervals(1);
+                    await twamm.executeVirtualOrders(await getBlockTimestamp());
+                }
+
+                const beforeBalance0 = await token0.balanceOf(addr1.address);
+                const beforeBalance1 = await token1.balanceOf(addr1.address);
+
+                //withdraw proceeds
+                await transactionInSingleBlock(async () => {
+                    await twamm.connect(addr1).withdrawProceedsFromLongTermSwap(0);
+                });
+
+                // use the twamm state here
+                const twammResults = await executeVirtualOrdersUntilTimestamp(twamm, (await getBlockTimestamp()), twammState);
+
+                const afterBalance0 = await token0.balanceOf(addr1.address);
+                const afterBalance1 = await token1.balanceOf(addr1.address);
+
+                // console.log(twammResults)
+                // console.log(`amountIn: ${ethers.utils.formatEther(amountIn)}`)
+                // console.log(`beforeBalance0: ${ethers.utils.formatEther(beforeBalance0)}`)
+                // console.log(`beforeBalance1: ${ethers.utils.formatEther(beforeBalance1)}`)
+                // console.log(`afterBalance0: ${ethers.utils.formatEther(afterBalance0)}`)
+                // console.log(`afterBalance1: ${ethers.utils.formatEther(afterBalance1)}`)
+
+                expect(afterBalance0.sub(beforeBalance0)).to.be.closeTo(twammResults[2], 2)
+                expect(afterBalance1.sub(beforeBalance1)).to.be.lt(twammResults[3], 2)
+
+                //expect swap to work as expected
+                // expect(beforeBalanceA).to.be.lt(afterBalanceA);
+                // expect(beforeBalanceB).to.be.gt(afterBalanceB);
+            });
+
+            it("low frequency", async function () {
+
+                const amountIn = expandTo18Decimals(10 * multiplier);
+                await token0.transfer(addr1.address, amountIn.mul(2));
+                await token0.connect(addr1).approve(twamm.address, amountIn.mul(2));
+                await token1.transfer(addr1.address, amountIn.mul(2));
+                await token1.connect(addr1).approve(twamm.address, amountIn.mul(2));
+
+                //trigger long term order
+                await transactionInSingleBlock(async () => {
+                    await twamm.connect(addr1).longTermSwapFrom0To1(amountIn, 100);
+                });
+
+                // save the twammState here
+                const twammState = await twammStateSnapshot(twamm)
+
+                //move blocks forward, and execute virtual orders
+                await mineTimeIntervals(101)
+
+                const beforeBalance0 = await token0.balanceOf(addr1.address);
+                const beforeBalance1 = await token1.balanceOf(addr1.address);
+
+                //withdraw proceeds
+                await transactionInSingleBlock(async () => {
+                    await twamm.connect(addr1).withdrawProceedsFromLongTermSwap(0);
+                });
+
+                // use the twamm state here
+                const twammResults = await executeVirtualOrdersUntilTimestamp(twamm, (await getBlockTimestamp()), twammState);
+
+                const afterBalance0 = await token0.balanceOf(addr1.address);
+                const afterBalance1 = await token1.balanceOf(addr1.address);
+
+                // console.log(twammResults)
+                // console.log(`amountIn: ${ethers.utils.formatEther(amountIn)}`)
+                // console.log(`beforeBalance0: ${ethers.utils.formatEther(beforeBalance0)}`)
+                // console.log(`beforeBalance1: ${ethers.utils.formatEther(beforeBalance1)}`)
+                // console.log(`afterBalance0: ${ethers.utils.formatEther(afterBalance0)}`)
+                // console.log(`afterBalance1: ${ethers.utils.formatEther(afterBalance1)}`)
+
+                expect(afterBalance0.sub(beforeBalance0)).to.be.closeTo(twammResults[2], 2)
+                expect(afterBalance1.sub(beforeBalance1)).to.be.closeTo(twammResults[3], 2)
+
+                //expect swap to work as expected
+                // expect(beforeBalanceA).to.be.lt(afterBalanceA);
+                // expect(beforeBalanceB).to.be.gt(afterBalanceB);
+            });
+        });
+
         describe("Long term swaps", function () {
 
             it("Single sided long term order behaves like normal swap", async function () {
@@ -362,7 +472,6 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
 
                 //move blocks forward, and execute virtual orders
                 await mineTimeIntervals(3)
-                await twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp());
 
                 //withdraw proceeds
                 await twamm.connect(addr1).withdrawProceedsFromLongTermSwap(0);
@@ -395,7 +504,7 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
                     finalBReserveExpectedBN,
                     token0OutBN,
                     token1OutBN
-                ] = calculateTwammExpected(token0In, token1In, token0ReserveRet, token1ReserveRet)
+                ] = calculateTwammExpectedFraxSwap(token0In, token1In, token0ReserveRet, token1ReserveRet, 10)
 
                 //trigger long term orders
                 await transactionInSingleBlock(async () => {
@@ -437,7 +546,6 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
 
                 //move blocks forward, and execute virtual orders
                 await mineTimeIntervals(22)
-                await twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp());
 
                 //withdraw proceeds
                 await twamm.connect(addr1).withdrawProceedsFromLongTermSwap(0);
@@ -445,8 +553,8 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
 
                 //make sure the order was marked as completed
                 const addr1_det_orders_order0 = await twamm.connect(addr1).getDetailedOrdersForUser(addr1.address, 0, 1);
-                console.log("====== Address 1 [Order 0] ======");
-                console.log(util.inspect(addr1_det_orders_order0, false, null, true));
+                // console.log("====== Address 1 [Order 0] ======");
+                // console.log(util.inspect(addr1_det_orders_order0, false, null, true));
                 expect(addr1_det_orders_order0[0].isComplete).to.be.eq(true);
 
                 const amountToken0Bought = await token0.balanceOf(addr2.address);
@@ -456,6 +564,16 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
 
                 const finalAReserveActualBN = bigNumberify(finalAReserveActual.toString());
                 const finalBReserveActualBN = bigNumberify(finalBReserveActual.toString());
+
+                // console.log(`finalAReserveActualBN: ${ethers.utils.formatEther(finalAReserveActualBN)}`)
+                // console.log(`finalAReserveExpectedBN: ${ethers.utils.formatEther(finalAReserveExpectedBN)}`)
+                // console.log(`finalBReserveActualBN: ${ethers.utils.formatEther(finalBReserveActualBN)}`)
+                // console.log(`finalBReserveExpectedBN: ${ethers.utils.formatEther(finalBReserveExpectedBN)}`)
+                //
+                // console.log(`amountToken0Bought: ${ethers.utils.formatEther(amountToken0Bought)}`)
+                // console.log(`token0OutBN: ${ethers.utils.formatEther(token0OutBN)}`)
+                // console.log(`amountToken1Bought: ${ethers.utils.formatEther(amountToken1Bought)}`)
+                // console.log(`token1OutBN: ${ethers.utils.formatEther(token1OutBN)}`)
 
                 //expect results to be close to calculation
                 expect(finalAReserveActualBN, outputErrorDiffPct(finalAReserveActualBN, finalAReserveExpectedBN)).to.be.closeTo(finalAReserveExpectedBN, finalAReserveExpectedBN.div(99));
@@ -488,19 +606,25 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
                 const addr1_det_orders_offset = await twamm.connect(addr1).getDetailedOrdersForUser(addr1.address, 1, 99999);
                 const addr1_det_orders_limit = await twamm.connect(addr1).getDetailedOrdersForUser(addr1.address, 0, 1);
                 const addr1_det_orders_both = await twamm.connect(addr1).getDetailedOrdersForUser(addr1.address, 1, 1);
-                console.log("====== Address 1 [Full] ======");
-                console.log(util.inspect(addr1_det_orders_full, false, null, true));
-                console.log("====== Address 1 [Offset] ======");
-                console.log(util.inspect(addr1_det_orders_offset, false, null, true));
-                console.log("====== Address 1 [Limit] ======");
-                console.log(util.inspect(addr1_det_orders_limit, false, null, true));
-                console.log("====== Address 1 [Offset & Limit] ======");
-                console.log(util.inspect(addr1_det_orders_both, false, null, true));
+                // console.log("====== Address 1 [Full] ======");
+                // console.log(util.inspect(addr1_det_orders_full, false, null, true));
+                // console.log("====== Address 1 [Offset] ======");
+                // console.log(util.inspect(addr1_det_orders_offset, false, null, true));
+                // console.log("====== Address 1 [Limit] ======");
+                // console.log(util.inspect(addr1_det_orders_limit, false, null, true));
+                // console.log("====== Address 1 [Offset & Limit] ======");
+                // console.log(util.inspect(addr1_det_orders_both, false, null, true));
 
 
                 //move blocks forward, and execute virtual orders
                 await mineTimeIntervals(6);
-                await twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp());
+
+                const [
+                    ammEndToken0,
+                    ammEndToken1,
+                    token0Out,
+                    token1Out
+                ] = await executeVirtualOrdersUntilTimestamp(twamm, await getBlockTimestamp())
 
                 //withdraw proceeds
                 await twamm.connect(addr1).withdrawProceedsFromLongTermSwap(0);
@@ -511,11 +635,32 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
                 const amountToken0Bought = await token0.balanceOf(addr2.address);
                 const amountToken1Bought = await token1.balanceOf(addr1.address);
 
+                let [finalReserve0, finalReserve1] = await twamm.getReserves();
+
+                // console.log(`ammEndToken0  ${ammEndToken0}`);
+                // console.log(`finalReserve0 ${finalReserve0}`);
+                // console.log(`ammEndToken1  ${ammEndToken1}`);
+                // console.log(`finalReserve1 ${finalReserve1}`);
+                // console.log(`token0Out          ${token0Out}`);
+                // console.log(`amountToken0Bought ${amountToken0Bought}`);
+                // console.log(`token1Out          ${token1Out}`);
+                // console.log(`amountToken1Bought ${amountToken1Bought}`);
+
+                expect(ammEndToken0).to.be.closeTo(finalReserve0, 2);
+                expect(ammEndToken1).to.be.closeTo(finalReserve1, 2);
+                expect(token0Out).to.be.closeTo(amountToken0Bought, 2);
+                expect(token1Out).to.be.closeTo(amountToken1Bought, 2);
+
                 //pool is balanced, and orders execute same amount in opposite directions,
                 //so we expect final balances to be roughly equal minus the fees
-                expect(amountToken0Bought.add(amountToken1Bought).div(2),
-                    outputErrorDiffPct(amountToken0Bought.add(amountToken1Bought).div(2), amountIn.mul(997).div(1000))
-                ).to.be.closeTo(amountIn.mul(997).div(1000), amountIn.div(1000))
+
+                const val1 = amountToken0Bought.add(amountToken1Bought).div(2);
+                const val2 = amountIn.mul(997).div(1000)
+
+                expect(val1,
+                    outputErrorDiffPct(val1, val2)
+                ).to.be.closeTo(val2, amountIn.mul(20).div(1000))
+
             });
 
             it("Multiple orders in both pools work as expected [mid-period activities]", async function () {
@@ -606,7 +751,6 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
                 // console.log("addr3_lp_diff_rem: ", addr3_lp_diff_rem.div(BIG18));
 
                 await mineTimeIntervals(1);
-                await twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp());
 
                 //withdraw proceeds
                 await twamm.connect(addr1).withdrawProceedsFromLongTermSwap(0);
@@ -619,9 +763,13 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
 
                 //pool is balanced, and orders execute same amount in opposite directions,
                 //so we expect final balances to be roughly equal minus the fees
-                expect(amountToken0Bought.add(amountToken1Bought).div(2),
-                    outputErrorDiffPct(amountToken0Bought.add(amountToken1Bought).div(2), amountIn.mul(997).div(1000))
-                ).to.be.closeTo(amountIn.mul(997).div(1000), amountIn.div(1000))
+
+                const val1 = amountToken0Bought.add(amountToken1Bought).div(2);
+                const val2 = amountIn.mul(997).div(1000)
+
+                expect(val1,
+                    outputErrorDiffPct(val1, val2)
+                ).to.be.closeTo(val2, amountIn.mul(20).div(1000))
             });
 
             it("Normal swap works as expected while long term orders are active", async function () {
@@ -642,7 +790,6 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
 
                 //move blocks forward, and execute virtual orders
                 await mineTimeIntervals(3)
-                await twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp());
 
                 await transactionInSingleBlock(async () => {
                     await twamm.connect(addr1).withdrawProceedsFromLongTermSwap(0);
@@ -657,7 +804,6 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
                 expect(amountToken0Bought, outputErrorDiffPct(amountToken0Bought, amountToken1Bought)).to.be.closeTo(amountToken1Bought, amountIn.div(80))
             });
         });
-
 
         describe("Cancelling orders", function () {
 
@@ -679,8 +825,8 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
 
                 //make sure the order was marked as completed
                 const addr1_det_orders_order0 = await twamm.connect(addr1).getDetailedOrdersForUser(addr1.address, 0, 1);
-                console.log("====== Address 1 [Order 0] ======");
-                console.log(util.inspect(addr1_det_orders_order0, false, null, true));
+                // console.log("====== Address 1 [Order 0] ======");
+                // console.log(util.inspect(addr1_det_orders_order0, false, null, true));
                 expect(addr1_det_orders_order0[0].isComplete).to.be.eq(true);
 
                 const amountToken0After = await token0.balanceOf(addr1.address);
@@ -693,7 +839,7 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
 
         });
 
-        describe("partial withdrawal", function () {
+        describe("Partial withdrawal", function () {
 
             it("proceeds can be withdrawn while order is still active", async function () {
 
@@ -734,18 +880,18 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
 
 describe("Multiple TWAMM Tests", function () {
     runOnce()
-    // allTwammTests(1)
-    // allTwammTests(10)
-    // allTwammTests(100)
+    allTwammTests(1)
+    allTwammTests(10)
+    allTwammTests(100)
     allTwammTests(1000)
-    // allTwammTests(2000)
-    // allTwammTests(3000)
-    // allTwammTests(4000)
-    // allTwammTests(5000)
-    // allTwammTests(6000)
-    // allTwammTests(7000)
-    // allTwammTests(8000)
-    // allTwammTests(9000)
+    allTwammTests(2000)
+    allTwammTests(3000)
+    allTwammTests(4000)
+    allTwammTests(5000)
+    allTwammTests(6000)
+    allTwammTests(7000)
+    allTwammTests(8000)
+    allTwammTests(9000)
 })
 
 async function mineBlocks(blockNumber) {

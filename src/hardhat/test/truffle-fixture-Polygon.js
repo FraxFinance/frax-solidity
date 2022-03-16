@@ -15,14 +15,25 @@ const polyUSDC = artifacts.require("ERC20/__CROSSCHAIN/polyUSDC");
 const CrossChainCanonicalFRAX = artifacts.require("ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX");
 const CrossChainCanonicalFXS = artifacts.require("ERC20/__CROSSCHAIN/CrossChainCanonicalFXS");
 
+// FPI
+const FPI = artifacts.require("FPI/FPI");
+const FPIS = artifacts.require("FPI/FPIS");
+const FPIControllerPool = artifacts.require("FPI/FPIControllerPool.sol");
+
 // Bridges
 const CrossChainBridgeBacker_POLY_MaticBridge = artifacts.require("Bridges/Polygon/CrossChainBridgeBacker_POLY_MaticBridge");
 
 // Oracles
+const CPITrackerOracle = artifacts.require("Oracle/CPITrackerOracle");
 const CrossChainOracle = artifacts.require("Oracle/CrossChainOracle");
 
 // Staking contracts
 const FraxCrossChainFarm_FRAX_mUSD = artifacts.require("Staking/Variants/FraxCrossChainFarm_FRAX_mUSD");
+
+// TWAMM
+const UniV2TWAMMFactory = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMFactory");
+const UniV2TWAMMPair = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMPair");
+const UniV2TWAMMRouter = artifacts.require("Uniswap_V2_TWAMM/periphery/UniV2TWAMMRouter");
 
 // AMOs
 const MarketXYZLendingAMO = artifacts.require("Misc_AMOs/__CROSSCHAIN/Polygon/MarketXYZLendingAMO.sol");
@@ -43,14 +54,25 @@ module.exports = async (deployer) => {
     let cross_chain_canonical_frax_instance;
     let cross_chain_canonical_fxs_instance;
 
+    // FPI
+    let fpi_instance;
+    let fpis_instance;
+    let fpi_controller_pool_instance;
+
     // Bridges
     let cross_chain_bridge_backer_instance;
 
     // Oracles
+    let cpi_tracker_oracle_instance;
     let cross_chain_oracle_instance;
     
 	// Staking
     let staking_instance_frax_musd;
+
+    // TWAMM
+    let twamm_factory_instance;
+    let twamm_pair_instance;
+    let twamm_router_instance;
 
     // AMO
     let market_xyz_lending_instance;
@@ -67,22 +89,86 @@ module.exports = async (deployer) => {
     cross_chain_canonical_frax_instance = await CrossChainCanonicalFRAX.at(CONTRACT_ADDRESSES.polygon.canonicals.FRAX);
     cross_chain_canonical_fxs_instance = await CrossChainCanonicalFXS.at(CONTRACT_ADDRESSES.polygon.canonicals.FXS);
 
+    // FPI
+    fpi_instance = await FPI.at(CONTRACT_ADDRESSES.polygon.canonicals.FPI);
+    fpis_instance = await FPIS.at(CONTRACT_ADDRESSES.polygon.canonicals.FPIS);
+    // fpi_controller_pool_instance = await FPIControllerPool.at(CONTRACT_ADDRESSES.polygon.amos.fpi_controller_amo);
+
     // Bridges
     cross_chain_bridge_backer_instance = await CrossChainBridgeBacker_POLY_MaticBridge.at(CONTRACT_ADDRESSES.polygon.bridge_backers.matic_bridge);
 
     // Oracles
+    // cpi_tracker_oracle_instance = await CPITrackerOracle.at(CONTRACT_ADDRESSES.polygon.oracles_other.cpi_tracker_oracle); 
     cross_chain_oracle_instance = await CrossChainOracle.at(CONTRACT_ADDRESSES.polygon.oracles.cross_chain_oracle); 
-    
+ 
     // Staking
     staking_instance_frax_musd = await FraxCrossChainFarm_FRAX_mUSD.at(CONTRACT_ADDRESSES.polygon.staking_contracts["mStable FRAX/mUSD"]);
 
+    // TWAMM
+    // twamm_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.polygon.uniswap.twamm_factory);
+    // twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.polygon.pair_tokens["FraxSwap FRAX/FPI"]);
+    // twamm_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.polygon.uniswap.twamm_router);
+
     // AMOs
+    // fpi_controller_pool_instance = await FPIControllerPool.at(CONTRACT_ADDRESSES.polygon.amos.fpi_controller_amo);
     // market_xyz_lending_instance = await MarketXYZLendingAMO.at(CONTRACT_ADDRESSES.polygon.amos.market_xyz_liquidity);
     sushiswap_liquidity_instance = await SushiSwapLiquidityAMO_POLY.at(CONTRACT_ADDRESSES.polygon.amos.sushiswap_liquidity);
 
     // ANY NEW CONTRACTS, PUT BELOW HERE
     // .new() calls and deployments
     // ==========================================================================
+
+    console.log(chalk.yellow("========== UniV2TWAMMFactory =========="));
+    twamm_factory_instance = await UniV2TWAMMFactory.new( 
+        THE_ACCOUNTS[1],
+    );
+
+    console.log(chalk.yellow("========== UniV2TWAMMRouter =========="));
+    twamm_router_instance = await UniV2TWAMMRouter.new( 
+        twamm_factory_instance.address,
+        CONTRACT_ADDRESSES.polygon.reward_tokens.wmatic
+    );
+
+    console.log(chalk.yellow("========== CPITrackerOracle =========="));
+    cpi_tracker_oracle_instance = await CPITrackerOracle.new( 
+        THE_ACCOUNTS[1],
+        "0x0000000000000000000000000000000000000000"
+    );
+
+    // Create the FRAX/FPI LP Pair
+    const seed_amt = BIG18.mul(10);
+    await fpi_instance.approve(twamm_router_instance.address, seed_amt, { from: THE_ACCOUNTS[1] });
+    await cross_chain_canonical_frax_instance.approve(twamm_router_instance.address, seed_amt, { from: THE_ACCOUNTS[1] });
+    await twamm_router_instance.addLiquidity(
+        fpi_instance.address, 
+        cross_chain_canonical_frax_instance.address, 
+        seed_amt, 
+        seed_amt, 
+        0, 
+        0, 
+        THE_ACCOUNTS[1], 
+        1999999999
+    );
+
+    console.log(chalk.yellow("========== UniV2TWAMMPair =========="));
+    const lpAddress = await twamm_factory_instance.getPair(fpi_instance.address, cross_chain_canonical_frax_instance.address);
+    console.log("FRAX/FPI LP deployed to: ", lpAddress)
+    twamm_pair_instance = await UniV2TWAMMPair.at(lpAddress);
+
+    console.log(chalk.yellow("========== FPIControllerPool =========="));
+    fpi_controller_pool_instance = await FPIControllerPool.new( 
+        THE_ACCOUNTS[1], 
+        "0x0000000000000000000000000000000000000000",
+        [
+            cross_chain_canonical_frax_instance.address,
+            fpi_instance.address,
+            lpAddress,
+            "0xBaC409D670d996Ef852056f6d45eCA41A8D57FbD", // fantom CHAINLINK FRAX
+            "0x2553f4eeb82d5A26427b8d1106C51499CBa5D99c", // fantom CHAINLINK USDC [PLACEHOLDER UNTIL FPI ORACLE IS UP]
+            cpi_tracker_oracle_instance.address,
+            "0x0000000000000000000000000000000000000000"
+        ]
+    );
 
     // console.log(chalk.yellow('========== CrossChainBridgeBacker_POLY_MaticBridge =========='));
     // // CrossChainBridgeBacker_POLY_MaticBridge
@@ -141,7 +227,7 @@ module.exports = async (deployer) => {
         params: [process.env.POLYGON_ONE_ADDRESS]
     });    
 
-    // console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_POLY_MaticBridge  =========='));
+    // console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_POLY_MaticBridge =========='));
     // await cross_chain_bridge_backer_instance.addAMO(sushiswap_liquidity_instance.address, false, { from: THE_ACCOUNTS[1] });
 
     await hre.network.provider.request({
@@ -150,15 +236,41 @@ module.exports = async (deployer) => {
     });
 
     // ----------------------------------------------
+    console.log(chalk.yellow('========== DEPLOY CONTRACTS =========='));
+
+    console.log(chalk.yellow("--------DEPLOYING CORE CONTRACTS--------"));
     CrossChainCanonicalFRAX.setAsDeployed(cross_chain_canonical_frax_instance);
     CrossChainCanonicalFXS.setAsDeployed(cross_chain_canonical_fxs_instance);
     polyFRAX.setAsDeployed(polyFRAX_instance);
     polyFXS.setAsDeployed(polyFXS_instance);
     polyUSDC.setAsDeployed(polyUSDC_instance);
-    // IChildChainManager.setAsDeployed(child_chain_manager_instance);
-    CrossChainBridgeBacker_POLY_MaticBridge.setAsDeployed(cross_chain_bridge_backer_instance)
-    CrossChainOracle.setAsDeployed(cross_chain_oracle_instance)
+
+    console.log(chalk.yellow("--------DEPLOYING FPI CONTRACTS--------"));
+    FPI.setAsDeployed(fpi_instance);
+    FPIS.setAsDeployed(fpis_instance);
+    FPIControllerPool.setAsDeployed(fpi_controller_pool_instance);
+
+    console.log(chalk.yellow("--------DEPLOYING BRIDGE CONTRACTS--------"));
+    CrossChainBridgeBacker_POLY_MaticBridge.setAsDeployed(cross_chain_bridge_backer_instance);
+
+    console.log(chalk.yellow("--------DEPLOYING ORACLE CONTRACTS--------"));
+    CrossChainOracle.setAsDeployed(cross_chain_oracle_instance);
+    CPITrackerOracle.setAsDeployed(cpi_tracker_oracle_instance);
+
+    console.log(chalk.yellow("--------DEPLOYING STAKING CONTRACTS--------"));
     FraxCrossChainFarm_FRAX_mUSD.setAsDeployed(staking_instance_frax_musd);
+
+    console.log(chalk.yellow("--------DEPLOYING TWAMM CONTRACTS--------"));
+    UniV2TWAMMFactory.setAsDeployed(twamm_factory_instance);
+    UniV2TWAMMPair.setAsDeployed(twamm_pair_instance);
+    UniV2TWAMMRouter.setAsDeployed(twamm_router_instance);
+
+    console.log(chalk.yellow("--------DEPLOYING AMO CONTRACTS--------"));
+    FPIControllerPool.setAsDeployed(fpi_controller_pool_instance);
     // MarketXYZLendingAMO.setAsDeployed(market_xyz_lending_instance);
     SushiSwapLiquidityAMO_POLY.setAsDeployed(sushiswap_liquidity_instance);
+
+    console.log(chalk.yellow("--------DEPLOYING MISC CONTRACTS--------"));
+
+
 }

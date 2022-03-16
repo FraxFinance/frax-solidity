@@ -119,7 +119,7 @@ library LongTermOrdersLib {
         uint256 orderExpiry = longTermOrders.orderTimeInterval * (numberOfTimeIntervals + 1) + lastExpiryTimestamp;
         uint256 sellingRate = SELL_RATE_ADDITIONAL_PRECISION * amount / (orderExpiry - currentTime);
 
-        require(sellingRate > 0); // tokenRate cannot be zero
+        require(sellingRate > 0, 'tokenRate cannot be zero');
 
         //add order to correct pool
         OrderPool storage orderPool = getOrderPool(longTermOrders, from);
@@ -167,8 +167,8 @@ library LongTermOrdersLib {
     ) private view returns (uint256 token0Out, uint256 token1Out) {
 
         //initial amm balance
-        // reserveResult.newReserve0
-        // reserveResult.newReserve1
+        uint256 bal0 = reserveResult.newReserve0 + reserveResult.newTwammReserve0;
+        uint256 bal1 = reserveResult.newReserve1 + reserveResult.newTwammReserve1;
 
         //updated balances from sales
         uint256 ammEndToken0; uint256 ammEndToken1;
@@ -180,10 +180,10 @@ library LongTermOrdersLib {
         );
 
         //update balances reserves
-        reserveResult.newReserve0 = uint112(ammEndToken0);
-        reserveResult.newReserve1 = uint112(ammEndToken1);
         reserveResult.newTwammReserve0 = reserveResult.newTwammReserve0 + token0Out - token0SellAmount;
         reserveResult.newTwammReserve1 = reserveResult.newTwammReserve1 + token1Out - token1SellAmount;
+        reserveResult.newReserve0 = uint112(bal0 - reserveResult.newTwammReserve0); // calculate reserve0 incl LP fees
+        reserveResult.newReserve1 = uint112(bal1 - reserveResult.newTwammReserve1); // calculate reserve1 incl LP fees
     }
 
     ///@notice handles updating the orderPool state after execution of all virtual orders until blockTimestamp.

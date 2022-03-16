@@ -31,12 +31,10 @@ import '../libraries/TransferHelper.sol';
 
 import './interfaces/IUniswapV2Router02V5.sol';
 import './libraries/UniV2TWAMMLibrary.sol';
-import './libraries/SafeMath.sol';
 import './interfaces/IERC20.sol';
 import './interfaces/IWETH.sol';
 
 contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
-    using SafeMath for uint;
 
     address public immutable override factory;
     address public immutable override WETH;
@@ -353,7 +351,7 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
             uint amountOutput;
             { // scope to avoid stack too deep errors
                 (uint reserveInput, uint reserveOutput, uint twammReserveInput, uint twammReserveOutput) =  UniV2TWAMMLibrary.getReservesWithTwamm(factory, input, output);
-                amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveInput).sub(twammReserveInput);
+                amountInput = IERC20(input).balanceOf(address(pair)) - reserveInput - twammReserveInput;
                 amountOutput = UniV2TWAMMLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
             }
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
@@ -374,7 +372,7 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
-            IERC20(path[path.length - 1]).balanceOf(to).sub(balanceBefore) >= amountOutMin,
+            IERC20(path[path.length - 1]).balanceOf(to) - balanceBefore >= amountOutMin,
             'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT'
         );
     }
@@ -397,7 +395,7 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
-            IERC20(path[path.length - 1]).balanceOf(to).sub(balanceBefore) >= amountOutMin,
+            IERC20(path[path.length - 1]).balanceOf(to) - balanceBefore >= amountOutMin,
             'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT'
         );
     }
