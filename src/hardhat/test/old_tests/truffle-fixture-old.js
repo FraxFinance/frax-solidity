@@ -674,7 +674,7 @@ module.exports = async (deployer) => {
         params: [COMPTROLLER_ADDRESS]
     });    
 
-    console.log(chalk.yellow('========== WHITELIST AMOS FOR MINTER  =========='));
+    console.log(chalk.yellow('========== WHITELIST AMOS FOR MINTER =========='));
     // await frax_amo_minter_instance.addAMO(convex_amo_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(curve_amo_v4_instance.address, 0, { from: COMPTROLLER_ADDRESS });
     // await frax_amo_minter_instance.addAMO(stakedao_amo_instance.address, 0, { from: COMPTROLLER_ADDRESS });
@@ -718,7 +718,7 @@ module.exports = async (deployer) => {
     // });
 
     // ----------------------------------------------
-    console.log(chalk.yellow('========== syncDollarBalances  =========='));
+    console.log(chalk.yellow('========== syncDollarBalances =========='));
     console.log(chalk.red("SKIPPING FOR NOW TO SAVE TIME!!!"));
     console.log(chalk.red("SKIPPING FOR NOW TO SAVE TIME!!!"));
     console.log(chalk.red("SKIPPING FOR NOW TO SAVE TIME!!!"));

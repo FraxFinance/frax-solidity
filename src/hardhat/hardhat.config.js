@@ -112,7 +112,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 125000000000,
+			gasPrice: 75000000000,
 			gasMultiplier: 1.2
 		},
 		// evmos: {
@@ -195,10 +195,20 @@ module.exports = {
 			gasPrice: 60000000000, // 60 Gwei
 			gasMultiplier: 1.2
 		},
+		polygon_mumbai: {
+			url: `${process.env.POLYGON_MUMBAI_NETWORK_ENDPOINT}`,
+			accounts: {
+				mnemonic: process.env.ROPSTEN_HARDHAT_PHRASE
+			},
+			chainId: 80001,
+			gas: "auto",
+			gasPrice: 4000000000, // 4 Gwei
+			gasMultiplier: 1.2
+		},
 		ropsten: {
 			url:`https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
 			accounts: {
-				mnemonic: process.env.MNEMONIC_PHRASE
+				mnemonic: process.env.ROPSTEN_HARDHAT_PHRASE
 			},
 			chainId: 3,
 			gas: "auto",     

@@ -188,7 +188,7 @@ contract('SpiritSwapLiquidityAMO-Tests', async (accounts) => {
 		// 	params: [ANYFRAX_ADMIN_ADDRESS]
 		// });    
 	
-		// console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFRAX  =========='));
+		// console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFRAX =========='));
 		// await anyFRAX_instance.Swapin("0x6666666666666666666666666666666666666666666666666666666666666666", COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("50000e18"), { from: ANYFRAX_ADMIN_ADDRESS });
 		
 		// await hre.network.provider.request({
@@ -202,7 +202,7 @@ contract('SpiritSwapLiquidityAMO-Tests', async (accounts) => {
 		// 	params: [ANYFXS_ADMIN_ADDRESS]
 		// });    
 	
-		// console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFXS  =========='));
+		// console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME anyFXS =========='));
 		// await anyFXS_instance.Swapin("0x6666666666666666666666666666666666666666666666666666666666666666", COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("50000e18"), { from: ANYFXS_ADMIN_ADDRESS });
 	
 		// await hre.network.provider.request({
@@ -216,7 +216,7 @@ contract('SpiritSwapLiquidityAMO-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_USDC]
 		});    
 	
-		console.log(chalk.yellow('========== GIVE THE BRIDGE BACKER SOME USDC  =========='));
+		console.log(chalk.yellow('========== GIVE THE BRIDGE BACKER SOME USDC =========='));
 		await anyUSDC_instance.transfer(cc_bridge_backer_instance.address, new BigNumber("100000e6"), { from: ADDRESS_WITH_USDC });
 	
 		await hre.network.provider.request({
@@ -230,16 +230,16 @@ contract('SpiritSwapLiquidityAMO-Tests', async (accounts) => {
 			params: [process.env.FANTOM_ONE_ADDRESS]
 		});    
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER =========='));
 		await cc_bridge_backer_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER =========='));
 		await canFRAX_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER =========='));
 		await canFXS_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 
-		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE SpiritSwapLiquidityAMO OWNER  =========='));
+		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE SpiritSwapLiquidityAMO OWNER =========='));
 		// await spiritSwapLiquidityAMO_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.FANTOM_ONE_ADDRESS });
 	
 		await hre.network.provider.request({

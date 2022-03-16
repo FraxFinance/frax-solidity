@@ -59,7 +59,7 @@ interface IUniswapV2PairPartialV5 {
     function longTermSwapFrom0To1(uint256 amount0In, uint256 numberOfTimeIntervals) external returns (uint256 orderId);
     function longTermSwapFrom1To0(uint256 amount1In, uint256 numberOfTimeIntervals) external returns (uint256 orderId);
     function cancelLongTermSwap(uint256 orderId) external;
-    function withdrawProceedsFromLongTermSwap(uint256 orderId) external;
+    function withdrawProceedsFromLongTermSwap(uint256 orderId) external returns (bool is_expired);
     function executeVirtualOrders(uint256 blockTimestamp) external;
 
     function getNextOrderID() external view returns (uint256);

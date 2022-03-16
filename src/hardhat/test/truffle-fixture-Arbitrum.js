@@ -219,7 +219,7 @@ module.exports = async (deployer) => {
         params: [process.env.ARBITRUM_ONE_ADDRESS]
     });    
 
-    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_ARBI_AnySwap  =========='));
+    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_ARBI_AnySwap =========='));
     // await cross_chain_bridge_backer_instance.addAMO(scream_amo_instance.address, false, { from: process.env.ARBITRUM_ONE_ADDRESS });
     // await cross_chain_bridge_backer_instance.addAMO(sushiswap_liquidity_amo_arbi_instance.address, false, { from: process.env.ARBITRUM_ONE_ADDRESS });
     // await cross_chain_bridge_backer_instance.addAMO(curve_amo_arbi_instance.address, false, { from: process.env.ARBITRUM_ONE_ADDRESS });

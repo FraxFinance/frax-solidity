@@ -108,7 +108,7 @@ module.exports = async (deployer) => {
         params: [process.env.AVALANCHE_ONE_ADDRESS]
     });    
 
-    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_AVAX_AnySwap  =========='));
+    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_AVAX_AnySwap =========='));
     await cross_chain_bridge_backer_instance.addAMO(axial_amo_instance.address, false, { from: process.env.AVALANCHE_ONE_ADDRESS });
 
     await hre.network.provider.request({

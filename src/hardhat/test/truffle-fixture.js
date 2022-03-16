@@ -4,64 +4,41 @@ const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 const hre = require("hardhat");
 const BigNumber = require('bignumber.js');
+const { BIG6, BIG18, bigNumberify, expandTo18Decimals, sleep } = require('../test/FraxSwap/utilities');
 const chalk = require('chalk');
 const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 
-// Uniswap related
-const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
-const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
-const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
+// Core
+const IanyFRAX = artifacts.require("ERC20/__CROSSCHAIN/IanyFRAX");
+const IanyFXS = artifacts.require("ERC20/__CROSSCHAIN/IanyFXS");
+const CrossChainCanonicalFRAX = artifacts.require("ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX");
+const CrossChainCanonicalFXS = artifacts.require("ERC20/__CROSSCHAIN/CrossChainCanonicalFXS");
+const anyUSDC = artifacts.require("ERC20/__CROSSCHAIN/anyUSDC");
 
-// Uniswap V3 related
-const IUniswapV3PositionsNFT = artifacts.require("Uniswap_V3/IUniswapV3PositionsNFT");
+// FPI
+const FPI = artifacts.require("FPI/FPI");
+const FPIS = artifacts.require("FPI/FPIS");
+const FPIControllerPool = artifacts.require("FPI/FPIControllerPool.sol");
 
-// Rewards and fake token related
-const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
-
-// Collateral Pools
-const FraxPoolV3 = artifacts.require("Frax/Pools/FraxPoolV3");
+// Bridges
+const CrossChainBridgeBacker_FTM_AnySwap = artifacts.require("Bridges/Fantom/CrossChainBridgeBacker_FTM_AnySwap");
 
 // Oracles
 const CPITrackerOracle = artifacts.require("Oracle/CPITrackerOracle");
-
-// FRAX core
-const FRAXStablecoin = artifacts.require("Frax/IFrax");
-const FRAXShares = artifacts.require("FXS/FRAXShares");
-
-// FPI Core
-const FPI = artifacts.require("FPI/FPI");
-const FPIS = artifacts.require("FPI/FPIS");
-
-// Governance related
-const Timelock = artifacts.require("Governance/Timelock");
+const CrossChainOracle = artifacts.require("Oracle/CrossChainOracle");
 
 // Staking contracts
-const FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE");
-const FraxMiddlemanGauge_ARBI_Curve_VSTFRAX = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_ARBI_Curve_VSTFRAX");
+const FraxCrossChainFarm_FRAX_FXS_Spirit = artifacts.require("Staking/Variants/FraxCrossChainFarm_FRAX_FXS_Spirit");
 
-// Investor and lending contract related
+// TWAMM
+const UniV2TWAMMFactory = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMFactory");
+const UniV2TWAMMPair = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMPair");
+const UniV2TWAMMRouter = artifacts.require("Uniswap_V2_TWAMM/periphery/UniV2TWAMMRouter");
 
-
-// Curve Metapool and AMO
-const LiquidityGaugeV2 = artifacts.require("Curve/ILiquidityGaugeV2");
-const IFraxGaugeController = artifacts.require("Curve/IFraxGaugeController");
-const IFraxGaugeControllerV2 = artifacts.require("Curve/IFraxGaugeControllerV2");
-const FraxGaugeController = artifacts.require("Curve/FraxGaugeController");
-const FraxGaugeControllerV2 = artifacts.require("Curve/FraxGaugeControllerV2");
-const FraxGaugeFXSRewardsDistributor = artifacts.require("Curve/IFraxGaugeFXSRewardsDistributor");
-
-// Misc AMOs
-const FraxAMOMinter = artifacts.require("Frax/FraxAMOMinter");
-const FraxLiquidityBridger_AUR_Rainbow = artifacts.require("Bridges/Aurora/FraxLiquidityBridger_AUR_Rainbow");
-
-// veFXS
-const veFXS = artifacts.require("Curve/IveFXS");
-const veFXSYieldDistributorV4 = artifacts.require("Staking/veFXSYieldDistributorV4.sol");
-const veFXSBoost = artifacts.require("Curve/IVotingEscrowDelegation");
-const veFXSBoostDelegationProxy = artifacts.require("Curve/IDelegationProxy");
-
-// FXSRewards
-const FXSRewards = artifacts.require("Staking/FXSRewards.sol");
+// AMOs
+const ScreamAMO = artifacts.require("Misc_AMOs/__CROSSCHAIN/Fantom/ScreamAMO.sol");
+const SpiritSwapLiquidityAMO = artifacts.require("Misc_AMOs/__CROSSCHAIN/Fantom/SpiritSwapLiquidityAMO.sol");
+const CurveAMO_FTM = artifacts.require("Misc_AMOs/__CROSSCHAIN/Fantom/CurveAMO_FTM.sol");
 
 module.exports = async (deployer) => {
     const THE_ACCOUNTS = await hre.web3.eth.getAccounts();
@@ -69,252 +46,279 @@ module.exports = async (deployer) => {
 
     // Get the necessary instances
 	let CONTRACT_ADDRESSES;
-	let timelockInstance;
-	let frax_instance;
-	let fxs_instance;
 
+    // Core
+    let anyFRAX_instance;
+    let anyFXS_instance;
+    let cross_chain_canonical_frax_instance;
+    let cross_chain_canonical_fxs_instance;
+
+    // FPI
     let fpi_instance;
-	let fpis_instance;
+    let fpis_instance;
+    let fpi_controller_pool_instance;
 
-	let routerInstance;
-	let uniswapFactoryInstance;
-    let uniswapV3PositionsNFTInstance;
+    // Bridges
+    let cross_chain_bridge_backer_instance;
 
+    // Oracles
     let cpi_tracker_oracle_instance;
+    let cross_chain_oracle_instance;
+    
+	// Staking
+    let staking_instance_frax_fxs_spirit;
+    
+    // TWAMM
+    let twamm_factory_instance;
+    let twamm_pair_instance;
+    let twamm_router_instance;
 
-    let fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance;
-    let middlemanGauge_ARBI_Curve_VSTFRAX;
-
-    let pool_instance_v3;
-
-    let frax_amo_minter_instance;
-    let frax_gauge_controller;
-    let frax_gauge_controller_v2;
-    let gauge_rewards_distributor_instance;
-    let liquidity_gauge_v2_instance;
-
-    let veFXS_instance;
-    let FXSRewards_instance;
-    let veFXSYieldDistributorV4_instance;
-    let vefxs_boost_instance;
-    let vefxs_boost_deleg_proxy_instance;
-
-    let frax_liquidity_bridger_aur_rainbow_instance;
+    // AMOs
+    let spiritSwapLiquidityAMO_instance;
+    let scream_amo_instance;
+    let curve_amo_ftm_instance;
 
     // Assign live contract addresses
     CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
-    const ADDRS_ETH = CONTRACT_ADDRESSES.ethereum;
-    const COMPTROLLER_ADDRESS = CONTRACT_ADDRESSES.ethereum.multisigs["Comptrollers"];
- 
-    timelockInstance = await Timelock.at(CONTRACT_ADDRESSES.ethereum.misc.timelock);
-    frax_instance = await FRAXStablecoin.at(CONTRACT_ADDRESSES.ethereum.main.FRAX);
-    fxs_instance = await FRAXShares.at(CONTRACT_ADDRESSES.ethereum.main.FXS);
-    veFXS_instance = await veFXS.at(CONTRACT_ADDRESSES.ethereum.main.veFXS);
-    usdc_instance = await ERC20.at(CONTRACT_ADDRESSES.ethereum.collaterals.USDC);
 
-    pool_instance_v3 = await FraxPoolV3.at(CONTRACT_ADDRESSES.ethereum.pools.V3);
+    // Core
+    anyFRAX_instance = await IanyFRAX.at(CONTRACT_ADDRESSES.fantom.bridge_tokens.anyFRAX);
+    anyFXS_instance = await IanyFXS.at(CONTRACT_ADDRESSES.fantom.bridge_tokens.anyFXS);
+    cross_chain_canonical_frax_instance = await CrossChainCanonicalFRAX.at(CONTRACT_ADDRESSES.fantom.canonicals.FRAX);
+    cross_chain_canonical_fxs_instance = await CrossChainCanonicalFXS.at(CONTRACT_ADDRESSES.fantom.canonicals.FXS);
+    anyUSDC_instance = await anyUSDC.at(CONTRACT_ADDRESSES.fantom.collaterals.anyUSDC);
 
-    routerInstance = await IUniswapV2Router02.at(CONTRACT_ADDRESSES.ethereum.uniswap_other.router); 
-    uniswapFactoryInstance = await IUniswapV2Factory.at(CONTRACT_ADDRESSES.ethereum.uniswap_other.factory); 
-    uniswapV3PositionsNFTInstance = await IUniswapV3PositionsNFT.at(CONTRACT_ADDRESSES.ethereum.uniswap_v3.NonfungiblePositionManager); 
+    // FPI
+    fpi_instance = await FPI.at(CONTRACT_ADDRESSES.fantom.canonicals.FPI);
+    fpis_instance = await FPIS.at(CONTRACT_ADDRESSES.fantom.canonicals.FPIS);
+    // fpi_controller_pool_instance = await FPIControllerPool.at(CONTRACT_ADDRESSES.fantom.amos.fpi_controller_amo);
 
-    middlemanGauge_ARBI_Curve_VSTFRAX = await FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.at(CONTRACT_ADDRESSES.ethereum.middleman_gauges['Curve VSTFRAX-f']);
-    fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Temple FRAX/TEMPLE']);
+    // Bridges
+    cross_chain_bridge_backer_instance = await CrossChainBridgeBacker_FTM_AnySwap.at(CONTRACT_ADDRESSES.fantom.bridge_backers.anySwap);
 
-    liquidity_gauge_v2_instance = await LiquidityGaugeV2.at(CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_v2);
-    frax_gauge_controller = await FraxGaugeController.at(CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_controller);
-    frax_gauge_controller_v2 = await FraxGaugeControllerV2.at(CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_controller_v2);
-    gauge_rewards_distributor_instance = await FraxGaugeFXSRewardsDistributor.at(CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_rewards_distributor);
+    // Oracles
+    cpi_tracker_oracle_instance = await CPITrackerOracle.at(CONTRACT_ADDRESSES.fantom.oracles_other.cpi_tracker_oracle); 
+    cross_chain_oracle_instance = await CrossChainOracle.at(CONTRACT_ADDRESSES.fantom.oracles.cross_chain_oracle); 
+    
+    // Staking
+    staking_instance_frax_fxs_spirit = await FraxCrossChainFarm_FRAX_FXS_Spirit.at(CONTRACT_ADDRESSES.fantom.staking_contracts["SpiritSwap FRAX/FXS"]);
 
-    frax_amo_minter_instance = await FraxAMOMinter.at(CONTRACT_ADDRESSES.ethereum.misc.amo_minter);
+    // TWAMM
+    // twamm_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.fantom.uniswap.twamm_factory);
+    // twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.fantom.pair_tokens["FraxSwap FRAX/FPI"]);
+    // twamm_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.fantom.uniswap.twamm_router);
 
-    veFXSYieldDistributorV4_instance = await veFXSYieldDistributorV4.at(CONTRACT_ADDRESSES.ethereum.misc.vefxs_yield_distributor_v4);   
+    // AMOs
+    // fpi_controller_pool_instance = await FPIControllerPool.at(CONTRACT_ADDRESSES.fantom.amos.fpi_controller_amo);
+    spiritSwapLiquidityAMO_instance = await SpiritSwapLiquidityAMO.at(CONTRACT_ADDRESSES.fantom.amos.spiritswap_liquidity);
+    scream_amo_instance = await ScreamAMO.at(CONTRACT_ADDRESSES.fantom.amos.scream);
+    // curve_amo_ftm_instance = await CurveAMO_FTM.at(CONTRACT_ADDRESSES.fantom.amos.curve);
 
     // ANY NEW CONTRACTS, PUT BELOW HERE
     // .new() calls and deployments
     // ==========================================================================
 
-    // // Overrides live deploy, for testing purposes
-    // console.log(chalk.yellow('========== FraxGaugeController =========='));
-    // // FraxGaugeController
-    // frax_gauge_controller = await FraxGaugeController.new(
-    //     fxs_instance.address,
-    //     veFXS_instance.address
-    // );
-    // // Add in a gauge type
-    // await frax_gauge_controller.add_type("Ethereum Mainnet", "1000000000000000000", { from: THE_ACCOUNTS[0] });
-
-    // console.log(chalk.yellow('========== FraxGaugeControllerV2 =========='));
-    // // FraxGaugeControllerV2
-    // frax_gauge_controller_v2 = await FraxGaugeControllerV2.new(
-    //     fxs_instance.address,
-    //     veFXS_instance.address
-    // );
-
-    // // Add in a gauge type
-    // await frax_gauge_controller_v2.add_type("Ethereum Mainnet", "1000000000000000000", { from: THE_ACCOUNTS[0] });
-
-    // console.log(chalk.yellow("========== FraxMiddlemanGauge_ARBI_Curve_VSTFRAX =========="));
-    // middlemanGauge_ARBI_Curve_VSTFRAX = await FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.new(
-    //     THE_ACCOUNTS[1], 
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_rewards_distributor, 
-    //     CONTRACT_ADDRESSES.ethereum.bridges.fxs.arbitrum,
-    //     6,
-	// 	CONTRACT_ADDRESSES.arbitrum.staking_contracts['Curve VSTFRAX-f'],
-    //     "",
-    //     "Arbitrum Curve VSTFRAX-f Middleman Gauge",
-    // );
-
-
-    // console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE =========="));
-    // // // FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE 
-    // fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.new(
-    //     THE_ACCOUNTS[6], 
-    //     [
-    //         "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
-    //         "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7" // TEMPLE
-    //     ], 
-    //     [
-    //         "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
-    //         "0x4D6175d58C5AceEf30F546C0d5A557efFa53A950" // Temple DAO Msig
-    //     ],
-    //     [
-    //         11574074074074, 
-    //         0
-    //     ],
-    //     [
-    //         "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
-    //         "0x0000000000000000000000000000000000000000"
-    //     ],
-    //     [
-    //         "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
-    //         "0x0000000000000000000000000000000000000000"
-    //     ],
-    //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Temple FRAX/TEMPLE'],
-    // );
-
-    console.log(chalk.yellow('========== FPI =========='));
-    // FPI
-    fpi_instance = await FPI.new(
+    console.log(chalk.yellow("========== UniV2TWAMMFactory =========="));
+    twamm_factory_instance = await UniV2TWAMMFactory.new( 
         THE_ACCOUNTS[1],
-        CONTRACT_ADDRESSES.ethereum.misc.timelock
     );
 
-    console.log(chalk.yellow('========== FPIS =========='));
-    // FPIS
-    fpis_instance = await FPIS.new(
-        THE_ACCOUNTS[1],
-        CONTRACT_ADDRESSES.ethereum.misc.timelock,
-        fpi_instance.address
+    console.log(chalk.yellow("========== UniV2TWAMMRouter =========="));
+    twamm_router_instance = await UniV2TWAMMRouter.new( 
+        twamm_factory_instance.address,
+        CONTRACT_ADDRESSES.fantom.reward_tokens.wftm
     );
 
-    console.log(chalk.yellow('========== CPITrackerOracle =========='));
-    // CPITrackerOracle
-    cpi_tracker_oracle_instance = await CPITrackerOracle.new(
+    console.log(chalk.yellow("========== CPITrackerOracle =========="));
+    cpi_tracker_oracle_instance = await CPITrackerOracle.new( 
         THE_ACCOUNTS[1],
-        CONTRACT_ADDRESSES.ethereum.misc.timelock
+        "0x0000000000000000000000000000000000000000"
     );
-    
-    // console.log(chalk.yellow('========== FraxLiquidityBridger_AUR_Rainbow =========='));
-    // // FraxLiquidityBridger_AUR_Rainbow
-    // frax_liquidity_bridger_aur_rainbow_instance = await FraxLiquidityBridger_AUR_Rainbow.new(
+
+    // Create the FRAX/FPI LP Pair
+    const seed_amt = BIG18;
+    await fpi_instance.approve(twamm_router_instance.address, seed_amt, { from: THE_ACCOUNTS[1] });
+    await cross_chain_canonical_frax_instance.approve(twamm_router_instance.address, seed_amt, { from: THE_ACCOUNTS[1] });
+    await twamm_router_instance.addLiquidity(
+        fpi_instance.address, 
+        cross_chain_canonical_frax_instance.address, 
+        seed_amt, 
+        seed_amt, 
+        0, 
+        0, 
+        THE_ACCOUNTS[1], 
+        1999999999
+    , { from: THE_ACCOUNTS[1] });
+
+    console.log(chalk.yellow("========== UniV2TWAMMPair =========="));
+    const lpAddress = await twamm_factory_instance.getPair(fpi_instance.address, cross_chain_canonical_frax_instance.address);
+    console.log("FRAX/FPI LP deployed to: ", lpAddress)
+    twamm_pair_instance = await UniV2TWAMMPair.at(lpAddress);
+
+    console.log(chalk.yellow("========== FPIControllerPool =========="));
+    fpi_controller_pool_instance = await FPIControllerPool.new( 
+        THE_ACCOUNTS[1], 
+        "0x0000000000000000000000000000000000000000",
+        [
+            cross_chain_canonical_frax_instance.address,
+            fpi_instance.address,
+            lpAddress,
+            "0xBaC409D670d996Ef852056f6d45eCA41A8D57FbD", // fantom CHAINLINK FRAX
+            "0x2553f4eeb82d5A26427b8d1106C51499CBa5D99c", // fantom CHAINLINK USDC [PLACEHOLDER UNTIL FPI ORACLE IS UP]
+            cpi_tracker_oracle_instance.address,
+        ]
+    );
+
+    // console.log(chalk.yellow('========== CrossChainCanonicalFRAX =========='));
+    // // CrossChainCanonicalFRAX
+    // cross_chain_canonical_frax_instance = await CrossChainCanonicalFRAX.new(
+	// 	"Frax", 
+	// 	"FRAX",
+	// 	THE_ACCOUNTS[1], 
+	// 	"100000000000000000000000",
+	// 	"0x36A87d1E3200225f881488E4AEedF25303FebcAe",
+	// 	[
+    //         anyFRAX_instance.address
+    //     ]
+    // );
+
+    // console.log(chalk.yellow('========== CrossChainCanonicalFXS =========='));
+    // // CrossChainCanonicalFXS
+    // cross_chain_canonical_fxs_instance = await CrossChainCanonicalFXS.new(
+	// 	"Frax Share", 
+	// 	"FXS",
+	// 	THE_ACCOUNTS[1], 
+	// 	"100000000000000000000000",
+	// 	"0x36A87d1E3200225f881488E4AEedF25303FebcAe",
+	// 	[
+    //         anyFXS_instance.address
+    //     ]
+    // );
+
+    // // Set some starting prices
+    // await cross_chain_oracle_instance.setPrice(anyFRAX_instance.address, new BigNumber("1e6"), { from: THE_ACCOUNTS[1] });
+    // await cross_chain_oracle_instance.setPrice(cross_chain_canonical_frax_instance.address, new BigNumber("1e6"), { from: THE_ACCOUNTS[1] });
+    // await cross_chain_oracle_instance.setPrice(anyFXS_instance.address, new BigNumber("5110000"), { from: THE_ACCOUNTS[1] });
+    // await cross_chain_oracle_instance.setPrice(cross_chain_canonical_fxs_instance.address, new BigNumber("5110000"), { from: THE_ACCOUNTS[1] });
+
+    // console.log(chalk.yellow('========== CrossChainBridgeBacker_FTM_AnySwap =========='));
+    // // CrossChainBridgeBacker_FTM_AnySwap
+    // cross_chain_bridge_backer_instance = await CrossChainBridgeBacker_FTM_AnySwap.new(
     //     THE_ACCOUNTS[1],
     //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     frax_amo_minter_instance.address,
+    //     cross_chain_oracle_instance.address,
     //     [
-    //         CONTRACT_ADDRESSES.ethereum.bridges.frax.aurora,
-    //         CONTRACT_ADDRESSES.ethereum.bridges.fxs.aurora,
-    //         CONTRACT_ADDRESSES.ethereum.bridges.collateral.aurora
+    //         anyFRAX_instance.address, // anyFRAX
+    //         cross_chain_canonical_frax_instance.address, // canFRAX
+    //         anyFXS_instance.address, // anyFXS
+    //         cross_chain_canonical_fxs_instance.address, // canFXS
+    //         CONTRACT_ADDRESSES.fantom.collaterals.anyUSDC
     //     ],
-    //     "0x0000000000000000000000000000000000000000", // Aurora goes to same address on other side
+    //     [
+    //         anyFRAX_instance.address, // Swapout
+    //         anyFXS_instance.address, // Swapout
+    //         CONTRACT_ADDRESSES.fantom.collaterals.anyUSDC // Unwrap
+    //     ],
+    //     "0x0000000000000000000000000000000000000000", // Avalanche goes to same address on other side
     //     "",
-    //     "FRAX Aurora Rainbow Liquidity Bridger",
+    //     "FRAX Avalanche AnySwap CrossChainBridgeBacker",
     // );
-    // const account_id = (`aurora:${frax_liquidity_bridger_aur_rainbow_instance.address.replace("0x", "")}`).toLowerCase();
-    // console.log("account_id: ", account_id);
-    // await frax_liquidity_bridger_aur_rainbow_instance.setAccountID(account_id, false, { from: THE_ACCOUNTS[1] });
 
+    // console.log(chalk.yellow("========== ScreamAMO =========="));
+    // scream_amo_instance = await ScreamAMO.new(
+    //     THE_ACCOUNTS[1],
+    //     THE_ACCOUNTS[10],
+    //     cross_chain_canonical_frax_instance.address,
+    //     "0x4E6854EA84884330207fB557D1555961D85Fc17E",
+    //     cross_chain_bridge_backer_instance.address,
+    // );
 
+    console.log(chalk.yellow("========== CurveAMO_FTM =========="));
+    curve_amo_ftm_instance = await CurveAMO_FTM.new(
+        THE_ACCOUNTS[1],
+        THE_ACCOUNTS[10],
+        [
+            CONTRACT_ADDRESSES.fantom.canonicals.FRAX,
+            CONTRACT_ADDRESSES.fantom.collaterals.DAI,
+            CONTRACT_ADDRESSES.fantom.collaterals.anyUSDC,
+            CONTRACT_ADDRESSES.fantom.bridge_backers.anySwap,
+        ],
+        [
+            "0x7a656B342E14F745e2B164890E88017e27AE7320",
+            "0x8866414733F22295b7563f9C5299715D2D76CAf4",
+            "0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40",
+            "0x78D51EB71a62c081550EfcC0a9F9Ea94B2Ef081c"
+        ]
+    );
+
+    // console.log(chalk.yellow("========== SpiritSwapLiquidityAMO =========="));
+    // spiritSwapLiquidityAMO_instance = await SpiritSwapLiquidityAMO.new(
+    //     THE_ACCOUNTS[1],
+    //     THE_ACCOUNTS[10],
+    //     cross_chain_canonical_frax_instance.address,
+    //     cross_chain_canonical_fxs_instance.address,
+    //     CONTRACT_ADDRESSES.fantom.collaterals.anyUSDC,
+    //     cross_chain_bridge_backer_instance.address,
+    //     [
+	// 		CONTRACT_ADDRESSES.fantom.pair_tokens["SpiritSwap canFRAX/canFXS"],
+	// 		CONTRACT_ADDRESSES.fantom.pair_tokens["SpiritSwap canFRAX/anyUSDC"],
+	// 		CONTRACT_ADDRESSES.fantom.pair_tokens["SpiritSwap canFXS/anyUSDC"],
+	// 	]
+    // );
+    
     // ----------------------------------------------
     await hre.network.provider.request({
         method: "hardhat_impersonateAccount",
-        params: [COMPTROLLER_ADDRESS]
+        params: [process.env.FANTOM_ONE_ADDRESS]
     });    
 
-    console.log(chalk.yellow('========== WHITELIST AMOS FOR MINTER  =========='));
-    // await frax_amo_minter_instance.addAMO(convex_amo_instance.address, 0, { from: COMPTROLLER_ADDRESS });
-
-
-    console.log("Add the liquidity bridgers to the AMO Minter");
-    // await frax_amo_minter_instance.addAMO(frax_liquidity_bridger_aur_rainbow_instance.address, 0, { from: COMPTROLLER_ADDRESS });
+    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_FTM_AnySwap =========='));
+    // await cross_chain_bridge_backer_instance.addAMO(scream_amo_instance.address, false, { from: process.env.FANTOM_ONE_ADDRESS });
+    // await cross_chain_bridge_backer_instance.addAMO(spiritSwapLiquidityAMO_instance.address, false, { from: process.env.FANTOM_ONE_ADDRESS });
+    // await cross_chain_bridge_backer_instance.addAMO(curve_amo_ftm_instance.address, false, { from: process.env.FANTOM_ONE_ADDRESS });
 
     await hre.network.provider.request({
         method: "hardhat_stopImpersonatingAccount",
-        params: [COMPTROLLER_ADDRESS]
+        params: [process.env.FANTOM_ONE_ADDRESS]
     });
 
-    // await hre.network.provider.request({
-    //     method: "hardhat_impersonateAccount",
-    //     params: [process.env.STAKING_OWNER_ADDRESS]
-    // });    
-
-    // console.log("Add the FXS1559 AMO as a notifier to the yield distributor");
-    // await veFXSYieldDistributorV4_instance.toggleRewardNotifier(fxs_1559_amo_instance.address, { from: process.env.STAKING_OWNER_ADDRESS });
-
-    // await hre.network.provider.request({
-    //     method: "hardhat_stopImpersonatingAccount",
-    //     params: [process.env.STAKING_OWNER_ADDRESS]
-    // });
-
-    // ----------------------------------------------
-    console.log(chalk.yellow('========== syncDollarBalances  =========='));
-    console.log(chalk.red("SKIPPING FOR NOW TO SAVE TIME!!!"));
-    console.log(chalk.red("SKIPPING FOR NOW TO SAVE TIME!!!"));
-    console.log(chalk.red("SKIPPING FOR NOW TO SAVE TIME!!!"));
-    
-    // Sync the AMO Minter
-    // await frax_amo_minter_instance.syncDollarBalances({ from: THE_ACCOUNTS[3] });
 
     // ----------------------------------------------
     console.log(chalk.yellow('========== DEPLOY CONTRACTS =========='));
 
-    console.log(chalk.yellow("--------DEPLOYING MISC CONTRACTS--------"));
-    IUniswapV2Router02.setAsDeployed(routerInstance);
-    IUniswapV2Factory.setAsDeployed(uniswapFactoryInstance);
-    IUniswapV3PositionsNFT.setAsDeployed(uniswapV3PositionsNFTInstance);
-    LiquidityGaugeV2.setAsDeployed(liquidity_gauge_v2_instance);
-
     console.log(chalk.yellow("--------DEPLOYING CORE CONTRACTS--------"));
-    FraxAMOMinter.setAsDeployed(frax_amo_minter_instance);
-    FraxPoolV3.setAsDeployed(pool_instance_v3);
-    FraxGaugeController.setAsDeployed(frax_gauge_controller);
-    FraxGaugeControllerV2.setAsDeployed(frax_gauge_controller_v2);
-    FraxGaugeFXSRewardsDistributor.setAsDeployed(gauge_rewards_distributor_instance);
-    FRAXStablecoin.setAsDeployed(frax_instance);
-    FRAXShares.setAsDeployed(fxs_instance);
-    FXSRewards.setAsDeployed(FXSRewards_instance);
-    Timelock.setAsDeployed(timelockInstance);
-    veFXS.setAsDeployed(veFXS_instance);
-    veFXSYieldDistributorV4.setAsDeployed(veFXSYieldDistributorV4_instance);
-    veFXSBoost.setAsDeployed(vefxs_boost_instance);
-    veFXSBoostDelegationProxy.setAsDeployed(vefxs_boost_deleg_proxy_instance);
+    CrossChainCanonicalFRAX.setAsDeployed(cross_chain_canonical_frax_instance);
+    CrossChainCanonicalFXS.setAsDeployed(cross_chain_canonical_fxs_instance);
+    IanyFRAX.setAsDeployed(anyFRAX_instance);
+    IanyFXS.setAsDeployed(anyFXS_instance);
+    anyUSDC.setAsDeployed(anyUSDC_instance);
 
     console.log(chalk.yellow("--------DEPLOYING FPI CONTRACTS--------"));
     FPI.setAsDeployed(fpi_instance);
     FPIS.setAsDeployed(fpis_instance);
+    FPIControllerPool.setAsDeployed(fpi_controller_pool_instance);
 
-    console.log(chalk.yellow("--------DEPLOY ORACLE CONTRACTS--------"));
+    console.log(chalk.yellow("--------DEPLOYING BRIDGE CONTRACTS--------"));
+    CrossChainBridgeBacker_FTM_AnySwap.setAsDeployed(cross_chain_bridge_backer_instance);
+
+    console.log(chalk.yellow("--------DEPLOYING ORACLE CONTRACTS--------"));
+    CrossChainOracle.setAsDeployed(cross_chain_oracle_instance);
     CPITrackerOracle.setAsDeployed(cpi_tracker_oracle_instance);
 
-    console.log(chalk.yellow("--------DEPLOY AMO CONTRACTS--------"));
-    
-    console.log(chalk.yellow("--------DEPLOY STAKING CONTRACTS--------"));
-    FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.setAsDeployed(middlemanGauge_ARBI_Curve_VSTFRAX);
-    FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.setAsDeployed(fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance);
-    
-    console.log(chalk.yellow("--------DEPLOY LIQUIDITY BRIDGER CONTRACTS--------"));
-    // FraxLiquidityBridger_AUR_Rainbow.setAsDeployed(frax_liquidity_bridger_aur_rainbow_instance);
-    // FraxLiquidityBridger_MNBM_Nomad.setAsDeployed(frax_liquidity_bridger_mnbm_nomad_instance);
-    // FraxLiquidityBridger_OPTI_Celer.setAsDeployed(frax_liquidity_bridger_opti_celer_instance);
+    console.log(chalk.yellow("--------DEPLOYING STAKING CONTRACTS--------"));
+    FraxCrossChainFarm_FRAX_FXS_Spirit.setAsDeployed(staking_instance_frax_fxs_spirit);
+
+    console.log(chalk.yellow("--------DEPLOYING TWAMM CONTRACTS--------"));
+    UniV2TWAMMFactory.setAsDeployed(twamm_factory_instance);
+    UniV2TWAMMPair.setAsDeployed(twamm_pair_instance);
+    UniV2TWAMMRouter.setAsDeployed(twamm_router_instance);
+
+    console.log(chalk.yellow("--------DEPLOYING AMO CONTRACTS--------"));
+    CurveAMO_FTM.setAsDeployed(curve_amo_ftm_instance);
+    FPIControllerPool.setAsDeployed(fpi_controller_pool_instance);
+    ScreamAMO.setAsDeployed(scream_amo_instance);
+    SpiritSwapLiquidityAMO.setAsDeployed(spiritSwapLiquidityAMO_instance);
+
+    console.log(chalk.yellow("--------DEPLOYING MISC CONTRACTS--------"));
+
 }

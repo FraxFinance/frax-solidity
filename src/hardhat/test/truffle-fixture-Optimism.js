@@ -101,7 +101,7 @@ module.exports = async (deployer) => {
         params: [process.env.OPTIMISM_ONE_ADDRESS]
     });    
 
-    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_OPTI_Celer  =========='));
+    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_OPTI_Celer =========='));
     // await cross_chain_bridge_backer_instance.addAMO(scream_amo_instance.address, false, { from: process.env.OPTIMISM_ONE_ADDRESS });
 
     await hre.network.provider.request({

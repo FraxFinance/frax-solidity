@@ -631,7 +631,7 @@ contract FraxBondIssuer is AccessControl {
         }
     }
 
-    /* ========== HIGHLY RESTRICTED EXTERNAL FUNCTIONS [Owner and Timelock only]  ========== */
+    /* ========== HIGHLY RESTRICTED EXTERNAL FUNCTIONS [Owner and Timelock only] ========== */
 
     function setController(address _controller_address) external onlyByOwnerOrTimelock {
         controller_address = _controller_address;

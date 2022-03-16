@@ -184,7 +184,7 @@ module.exports = async (deployer) => {
         params: [MULTISIG_ADDRESS]
     });    
 
-    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_MOON_AnySwap  =========='));
+    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_MOON_AnySwap =========='));
     // await cross_chain_bridge_backer_instance.addAMO(SushiSwapLiquidityAMO_MOON_instance.address, false, { from: MULTISIG_ADDRESS });
     await cross_chain_bridge_backer_instance.addAMO(ccfrax_1to1_amm_instance.address, false, { from: MULTISIG_ADDRESS });
 

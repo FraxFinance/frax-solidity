@@ -160,7 +160,7 @@ module.exports = async (deployer) => {
         params: [process.env.HARMONY_ONE_ADDRESS]
     });    
 
-    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_HARM_Horizon  =========='));
+    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_HARM_Horizon =========='));
     // await cross_chain_bridge_backer_instance.addAMO(scream_amo_instance.address, false, { from: process.env.HARMONY_ONE_ADDRESS });
     await cross_chain_bridge_backer_instance.addAMO(SushiSwapLiquidityAMO_HARM_instance.address, false, { from: process.env.HARMONY_ONE_ADDRESS });
 

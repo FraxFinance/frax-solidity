@@ -144,7 +144,7 @@ contract('CrossChainBridgeBacker_MNBM_Nomad-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_MADFRAX]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME madFRAX  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME madFRAX =========='));
 		await madFRAX_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("10000e18"), { from: ADDRESS_WITH_MADFRAX });
 
 		await hre.network.provider.request({
@@ -158,7 +158,7 @@ contract('CrossChainBridgeBacker_MNBM_Nomad-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_MADFXS]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME madFXS  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME madFXS =========='));
 		await madFXS_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("1000e18"), { from: ADDRESS_WITH_MADFXS });
 
 		await hre.network.provider.request({
@@ -172,7 +172,7 @@ contract('CrossChainBridgeBacker_MNBM_Nomad-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_MADUSDC]
 		});    
 
-		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME madUSDC  =========='));
+		console.log(chalk.yellow('========== GIVE COLLATERAL_FRAX_AND_FXS_OWNER SOME madUSDC =========='));
 		await madUSDC_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("10000e6"), { from: ADDRESS_WITH_MADUSDC });
 
 		await hre.network.provider.request({
@@ -187,13 +187,13 @@ contract('CrossChainBridgeBacker_MNBM_Nomad-Tests', async (accounts) => {
 			params: [process.env.MOONBEAM_ONE_ADDRESS]}
 		);
 
-		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER  =========='));
+		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER =========='));
 		// await cc_bridge_backer_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.MOONBEAM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER =========='));
 		await canFRAX_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.MOONBEAM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER =========='));
 		await canFXS_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: process.env.MOONBEAM_ONE_ADDRESS });
 
 

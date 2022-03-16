@@ -29,6 +29,7 @@ const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 const CPITrackerOracle = artifacts.require("Oracle/CPITrackerOracle");
 
 const BIG6 = new BigNumber("1e6");
+const BIG8 = new BigNumber("1e8");
 const BIG18 = new BigNumber("1e18");
 
 contract('CPITrackerOracle-Tests', async (accounts) => {
@@ -116,13 +117,112 @@ contract('CPITrackerOracle-Tests', async (accounts) => {
 		console.log(chalk.hex("#ff8b3d").bold("MAIN TEST"));
 		console.log(chalk.hex("#ff8b3d").bold("===================================================================="));
 
-		// Pull in the data
-		await cpi_tracker_oracle_instance.requestElectionWinner({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		console.log(chalk.hex("#ff8b3d").bold("================== DATA AT WEEK 0 =================="));
+		// Get the data
+		const peg_price_last_week0 = new BigNumber(await cpi_tracker_oracle_instance.peg_price_last.call()).div(BIG18).toNumber();
+		const peg_price_target_week0 = new BigNumber(await cpi_tracker_oracle_instance.peg_price_target.call()).div(BIG18).toNumber();
+		const cpi_last_week0 = new BigNumber(await cpi_tracker_oracle_instance.cpi_last.call()).div(BIG8).toNumber();
+		const cpi_target_week0 = new BigNumber(await cpi_tracker_oracle_instance.cpi_target.call()).div(BIG8).toNumber();
+		const curr_peg_price_week0 = new BigNumber(await cpi_tracker_oracle_instance.currPegPrice.call()).div(BIG18).toNumber();
+		const curr_delta_pct_week0 = new BigNumber(await cpi_tracker_oracle_instance.currDeltaFracE6.call());
+		const upcoming_cpi_params_week0 = await cpi_tracker_oracle_instance.upcomingCPIParams.call();
+		const upcoming_serie_week0 = await cpi_tracker_oracle_instance.upcomingSerie.call();
+		
+		// Print the data
+		console.log("peg_price_last_week0: ", peg_price_last_week0);
+		console.log("peg_price_target_week0: ", peg_price_target_week0);
+		console.log("cpi_last_week0: ", cpi_last_week0);
+		console.log("cpi_target_week0: ", cpi_target_week0);
+		console.log("curr_peg_price_week0: ", curr_peg_price_week0);
+		console.log("curr_delta_pct_week0_raw: ", curr_delta_pct_week0.toNumber());
+		console.log("curr_delta_pct_week0: ", `${curr_delta_pct_week0.div(BIG6).toNumber() * 100}%`);
+		console.log("upcoming_cpi_params_week0: ", `[${upcoming_cpi_params_week0[0]}, ${upcoming_cpi_params_week0[1]}]`);
+		console.log("upcoming_serie_week0: ", upcoming_serie_week0);
+
+
+		console.log(chalk.hex("#ff8b3d").bold("================== DATA AT WEEK 2 =================="));
+		// Advance two weeks
+		const increase_time_week2 = 14 * 86400;
+		await time.increase(increase_time_week2);
+		await time.advanceBlock();
 
 		// Get the data
-		const return_data = await cpi_tracker_oracle_instance.getCandidate.call(0);
-
+		const peg_price_last_week2 = new BigNumber(await cpi_tracker_oracle_instance.peg_price_last.call()).div(BIG18).toNumber();
+		const peg_price_target_week2 = new BigNumber(await cpi_tracker_oracle_instance.peg_price_target.call()).div(BIG18).toNumber();
+		const cpi_last_week2 = new BigNumber(await cpi_tracker_oracle_instance.cpi_last.call()).div(BIG8).toNumber();
+		const cpi_target_week2 = new BigNumber(await cpi_tracker_oracle_instance.cpi_target.call()).div(BIG8).toNumber();
+		const curr_peg_price_week2 = new BigNumber(await cpi_tracker_oracle_instance.currPegPrice.call()).div(BIG18).toNumber();
+		const curr_delta_pct_week2 = new BigNumber(await cpi_tracker_oracle_instance.currDeltaFracE6.call());
+		const upcoming_cpi_params_week2 = await cpi_tracker_oracle_instance.upcomingCPIParams.call();
+		const upcoming_serie_week2 = await cpi_tracker_oracle_instance.upcomingSerie.call();
+		
 		// Print the data
-		console.log("return_data: ", return_data);
+		console.log("peg_price_last_week2: ", peg_price_last_week2);
+		console.log("peg_price_target_week2: ", peg_price_target_week2);
+		console.log("cpi_last_week2: ", cpi_last_week2);
+		console.log("cpi_target_week2: ", cpi_target_week2);
+		console.log("curr_peg_price_week2: ", curr_peg_price_week2);
+		console.log("curr_delta_pct_week2_raw: ", curr_delta_pct_week2.toNumber());
+		console.log("curr_delta_pct_week2: ", `${curr_delta_pct_week2.div(BIG6).toNumber() * 100}%`);
+		console.log("upcoming_cpi_params_week2: ", `[${upcoming_cpi_params_week2[0]}, ${upcoming_cpi_params_week2[1]}]`);
+		console.log("upcoming_serie_week2: ", upcoming_serie_week2);
+
+
+		console.log(chalk.hex("#ff8b3d").bold("================== DATA AT WEEK 4 =================="));
+		// Advance two weeks
+		const increase_time_week4 = 14 * 86400;
+		await time.increase(increase_time_week4);
+		await time.advanceBlock();
+
+		// Get the data
+		const peg_price_last_week4 = new BigNumber(await cpi_tracker_oracle_instance.peg_price_last.call()).div(BIG18).toNumber();
+		const peg_price_target_week4 = new BigNumber(await cpi_tracker_oracle_instance.peg_price_target.call()).div(BIG18).toNumber();
+		const cpi_last_week4 = new BigNumber(await cpi_tracker_oracle_instance.cpi_last.call()).div(BIG8).toNumber();
+		const cpi_target_week4 = new BigNumber(await cpi_tracker_oracle_instance.cpi_target.call()).div(BIG8).toNumber();
+		const curr_peg_price_week4 = new BigNumber(await cpi_tracker_oracle_instance.currPegPrice.call()).div(BIG18).toNumber();
+		const curr_delta_pct_week4 = new BigNumber(await cpi_tracker_oracle_instance.currDeltaFracE6.call());
+		const upcoming_cpi_params_week4 = await cpi_tracker_oracle_instance.upcomingCPIParams.call();
+		const upcoming_serie_week4 = await cpi_tracker_oracle_instance.upcomingSerie.call();
+		
+		// Print the data
+		console.log("peg_price_last_week4: ", peg_price_last_week4);
+		console.log("peg_price_target_week4: ", peg_price_target_week4);
+		console.log("cpi_last_week4: ", cpi_last_week4);
+		console.log("cpi_target_week4: ", cpi_target_week4);
+		console.log("curr_peg_price_week4: ", curr_peg_price_week4);
+		console.log("curr_delta_pct_week4_raw: ", curr_delta_pct_week4.toNumber());
+		console.log("curr_delta_pct_week4: ", `${curr_delta_pct_week4.div(BIG6).toNumber() * 100}%`);
+		console.log("upcoming_cpi_params_week4: ", `[${upcoming_cpi_params_week4[0]}, ${upcoming_cpi_params_week4[1]}]`);
+		console.log("upcoming_serie_week4: ", upcoming_serie_week4);
+
+
+		console.log(chalk.hex("#ff8b3d").bold("================== DATA AT WEEK 5 =================="));
+		// Advance one week
+		const increase_time_week5 = 7 * 86400;
+		await time.increase(increase_time_week5);
+		await time.advanceBlock();
+
+		// Get the data
+		const peg_price_last_week5 = new BigNumber(await cpi_tracker_oracle_instance.peg_price_last.call()).div(BIG18).toNumber();
+		const peg_price_target_week5 = new BigNumber(await cpi_tracker_oracle_instance.peg_price_target.call()).div(BIG18).toNumber();
+		const cpi_last_week5 = new BigNumber(await cpi_tracker_oracle_instance.cpi_last.call()).div(BIG8).toNumber();
+		const cpi_target_week5 = new BigNumber(await cpi_tracker_oracle_instance.cpi_target.call()).div(BIG8).toNumber();
+		const curr_peg_price_week5 = new BigNumber(await cpi_tracker_oracle_instance.currPegPrice.call()).div(BIG18).toNumber();
+		const curr_delta_pct_week5 = new BigNumber(await cpi_tracker_oracle_instance.currDeltaFracE6.call());
+		const upcoming_cpi_params_week5 = await cpi_tracker_oracle_instance.upcomingCPIParams.call();
+		const upcoming_serie_week5 = await cpi_tracker_oracle_instance.upcomingSerie.call();
+		
+		// Print the data
+		console.log("peg_price_last_week5: ", peg_price_last_week5);
+		console.log("peg_price_target_week5: ", peg_price_target_week5);
+		console.log("cpi_last_week5: ", cpi_last_week5);
+		console.log("cpi_target_week5: ", cpi_target_week5);
+		console.log("curr_peg_price_week5: ", curr_peg_price_week5);
+		console.log("curr_delta_pct_week5_raw: ", curr_delta_pct_week5.toNumber());
+		console.log("curr_delta_pct_week5: ", `${curr_delta_pct_week5.div(BIG6).toNumber() * 100}%`);
+		console.log("upcoming_cpi_params_week5: ", `[${upcoming_cpi_params_week5[0]}, ${upcoming_cpi_params_week5[1]}]`);
+		console.log("upcoming_serie_week5: ", upcoming_serie_week5);
+
 	});
 });

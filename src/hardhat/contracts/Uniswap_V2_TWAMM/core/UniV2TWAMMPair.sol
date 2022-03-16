@@ -36,7 +36,6 @@ import '../libraries/TransferHelper.sol';
 import "../twamm/LongTermOrders.sol";
 
 contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
-    using SafeMath  for uint;
     using UQ112x112 for uint224;
     using LongTermOrdersLib for LongTermOrdersLib.LongTermOrders;
     using LongTermOrdersLib for LongTermOrdersLib.ExecuteVirtualOrdersResult;
@@ -161,17 +160,11 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     }
 
     function getReserves() public override view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
-        _reserve0 = reserve0;
-        _reserve1 = reserve1;
-        _blockTimestampLast = blockTimestampLast;
+        return (reserve0, reserve1, blockTimestampLast);
     }
 
     function getTwammReserves() public override view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast, uint112 _twammReserve0, uint112 _twammReserve1) {
-        _reserve0 = reserve0;
-        _reserve1 = reserve1;
-        _blockTimestampLast = blockTimestampLast;
-        _twammReserve0 = twammReserve0;
-        _twammReserve1 = twammReserve1;
+        return (reserve0, reserve1, blockTimestampLast, twammReserve0, twammReserve1);
     }
 
     function _safeTransfer(address token, address to, uint value) private {
@@ -229,11 +222,11 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         uint _kLast = kLast; // gas savings
         if (feeOn) {
             if (_kLast != 0) {
-                uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
+                uint rootK = Math.sqrt(uint(_reserve0) * _reserve1);
                 uint rootKLast = Math.sqrt(_kLast);
                 if (rootK > rootKLast) {
-                    uint numerator = totalSupply.mul(rootK.sub(rootKLast));
-                    uint denominator = rootK.mul(5).add(rootKLast);
+                    uint numerator = totalSupply * (rootK - rootKLast);
+                    uint denominator = (rootK * 5) + rootKLast;
                     uint liquidity = numerator / denominator;
                     if (liquidity > 0) _mint(feeTo, liquidity);
                 }
@@ -248,22 +241,22 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint balance0 = IERC20V5(token0).balanceOf(address(this)) - twammReserve0;
         uint balance1 = IERC20V5(token1).balanceOf(address(this)) - twammReserve1;
-        uint amount0 = balance0.sub(_reserve0);
-        uint amount1 = balance1.sub(_reserve1);
+        uint amount0 = balance0 - _reserve0;
+        uint amount1 = balance1 - _reserve1;
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
-            liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
+            liquidity = Math.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
-            liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
+            liquidity = Math.min(amount0 * _totalSupply / _reserve0, amount1 * _totalSupply / _reserve1);
         }
         require(liquidity > 0); // INSUFFICIENT_LIQUIDITY_MINTED
         _mint(to, liquidity);
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
+        if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
         emit Mint(msg.sender, amount0, amount1);
     }
 
@@ -278,8 +271,8 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
-        amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
-        amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
+        amount0 = liquidity * balance0 / _totalSupply; // using balances ensures pro-rata distribution
+        amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0); // INSUFFICIENT_LIQUIDITY_BURNED
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0);
@@ -288,7 +281,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         balance1 = IERC20V5(_token1).balanceOf(address(this)) - twammReserve1;
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
+        if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
     }
 
@@ -314,9 +307,9 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
         require(amount0In > 0 || amount1In > 0); // INSUFFICIENT_INPUT_AMOUNT
         {// scope for reserve{0,1}Adjusted, avoids stack too deep errors
-            uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
-            uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
-            require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000 ** 2), 'K');
+            uint balance0Adjusted = (balance0 * 1000) - (amount0In * 3);
+            uint balance1Adjusted = (balance1 * 1000) - (amount1In * 3);
+            require(balance0Adjusted * balance1Adjusted >= uint(_reserve0) * _reserve1 * (1000 ** 2), 'K');
         }
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -327,8 +320,8 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     function skim(address to) external override lock execVirtualOrders {
         address _token0 = token0; // gas savings
         address _token1 = token1; // gas savings
-        _safeTransfer(_token0, to, IERC20V5(_token0).balanceOf(address(this)).sub(reserve0 + twammReserve0));
-        _safeTransfer(_token1, to, IERC20V5(_token1).balanceOf(address(this)).sub(reserve1 + twammReserve1));
+        _safeTransfer(_token0, to, IERC20V5(_token0).balanceOf(address(this)) - (reserve0 + twammReserve0));
+        _safeTransfer(_token1, to, IERC20V5(_token1).balanceOf(address(this)) - (reserve1 + twammReserve1));
     }
 
     // force reserves to match balances
@@ -405,7 +398,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     }
 
     ///@notice withdraw proceeds from a long term swap
-    function withdrawProceedsFromLongTermSwap(uint256 orderId) external lock execVirtualOrders {
+    function withdrawProceedsFromLongTermSwap(uint256 orderId) external lock execVirtualOrders returns (bool is_expired) {
         (address proceedToken, uint256 proceeds, bool orderExpired) = longTermOrders.withdrawProceedsFromLongTermSwap(orderId);
         if (proceedToken == token0) {
             twammReserve0 -= uint112(proceeds);
@@ -420,6 +413,8 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         if (orderExpired) longTermOrders.orderMap[orderId].isComplete = true;
 
         emit WithdrawProceedsFromLongTermOrder(msg.sender, orderId, proceedToken, proceeds, orderExpired);
+
+        return orderExpired;
     }
 
     ///@notice execute virtual orders in the twamm, bring it up to the blockNumber passed in
@@ -428,9 +423,6 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
 
         if(newSwapsPaused) return; // skip twamm executions
         if(twammUpToDate()) return; // save gas
-
-        uint112 bal0 = reserve0 + twammReserve0; // save the balance of token0
-        uint112 bal1 = reserve1 + twammReserve1; // save the balance of token1
 
         LongTermOrdersLib.ExecuteVirtualOrdersResult memory result;
         result.newReserve0 = reserve0;
@@ -442,9 +434,9 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
 
         twammReserve0 = uint112(result.newTwammReserve0);
         twammReserve1 = uint112(result.newTwammReserve1);
-
-        uint112 newReserve0 = uint112(bal0 - twammReserve0); // calculate reserve0 for LP fees
-        uint112 newReserve1 = uint112(bal1 - twammReserve1); // calculate reserve1 for LP fees
+        
+        uint112 newReserve0 = uint112(result.newReserve0);
+        uint112 newReserve1 = uint112(result.newReserve1);
 
         uint32 _blockTimestamp = uint32(blockTimestamp % 2 ** 32);
         uint32 timeElapsed;

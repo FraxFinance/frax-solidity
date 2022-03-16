@@ -158,16 +158,16 @@ contract('CurveAMO_ARBI-Tests', async (accounts) => {
 			params: [ORIGINAL_ARBITRUM_ONE_ADDRESS]
 		});    
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE CrossChainBridgeBacker OWNER =========='));
 		await cc_bridge_backer_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: ORIGINAL_ARBITRUM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFRAX OWNER =========='));
 		await canFRAX_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: ORIGINAL_ARBITRUM_ONE_ADDRESS });
 	
-		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER  =========='));
+		console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE canFXS OWNER =========='));
 		await canFXS_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: ORIGINAL_ARBITRUM_ONE_ADDRESS });
 
-		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE SpiritSwapLiquidityAMO OWNER  =========='));
+		// console.log(chalk.yellow('========== SET COLLATERAL_FRAX_AND_FXS_OWNER AS THE SpiritSwapLiquidityAMO OWNER =========='));
 		// await spiritSwapLiquidityAMO_instance.nominateNewOwner(COLLATERAL_FRAX_AND_FXS_OWNER, { from: ORIGINAL_ARBITRUM_ONE_ADDRESS });
 	
 		await hre.network.provider.request({
@@ -187,7 +187,7 @@ contract('CurveAMO_ARBI-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_USDC]
 		});    
 	
-		console.log(chalk.yellow('========== GIVE THE BRIDGEBACKER SOME USDC  =========='));
+		console.log(chalk.yellow('========== GIVE THE BRIDGEBACKER SOME USDC =========='));
 		await arbiUSDC_instance.transfer(cc_bridge_backer_instance.address, new BigNumber("1000e6"), { from: ADDRESS_WITH_USDC });
 		
 		await hre.network.provider.request({
@@ -201,7 +201,7 @@ contract('CurveAMO_ARBI-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_USDT]
 		});    
 	
-		console.log(chalk.yellow('========== GIVE THE CurveAMO_ARBI SOME USDT  =========='));
+		console.log(chalk.yellow('========== GIVE THE CurveAMO_ARBI SOME USDT =========='));
 		await arbiUSDT_instance.transfer(curve_amo_arbi_instance.address, new BigNumber("1000e6"), { from: ADDRESS_WITH_USDT });
 		
 		await hre.network.provider.request({

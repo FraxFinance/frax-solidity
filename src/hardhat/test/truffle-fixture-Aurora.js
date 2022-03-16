@@ -101,7 +101,7 @@ module.exports = async (deployer) => {
         params: [process.env.AURORA_ONE_ADDRESS]
     });    
 
-    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_AUR_Rainbow  =========='));
+    console.log(chalk.yellow('========== WHITELIST AMOS FOR CrossChainBridgeBacker_AUR_Rainbow =========='));
     // await cross_chain_bridge_backer_instance.addAMO(scream_amo_instance.address, false, { from: process.env.AURORA_ONE_ADDRESS });
 
     await hre.network.provider.request({
