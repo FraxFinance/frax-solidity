@@ -36,6 +36,7 @@ contract ComboOracle is Owned {
     address address_to_consult;
     AggregatorV3Interface private priceFeedETHUSD;
     ERC20 private WETH;
+    string public native_token_symbol;
 
     uint256 public PRECISE_PRICE_PRECISION = 1e18;
     uint256 public PRICE_PRECISION = 1e6;
@@ -89,6 +90,7 @@ contract ComboOracle is Owned {
 
         // Handle native ETH
         all_token_addresses.push(address(0));
+        native_token_symbol = _native_token_symbol;
         token_info[address(0)] = TokenInfo(
             address(0),
             _native_token_symbol,
@@ -310,6 +312,14 @@ contract ComboOracle is Owned {
         if (!token_exists) all_token_addresses.push(token_address);
 
         uint256 agg_decs = uint256(AggregatorV3Interface(agg_addr_for_underlying).decimals());
+
+        string memory name_to_use;
+        if (token_address == address(0)) {
+            name_to_use = native_token_symbol;
+        }
+        else {
+            name_to_use = ERC20(token_address).name();
+        }
 
         // Add the token to the mapping
         token_info[token_address] = TokenInfo(

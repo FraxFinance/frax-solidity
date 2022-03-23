@@ -5,10 +5,11 @@ npx hardhat compile
 
 ARBITRUM
 npx hardhat test ./test/__ARBITRUM/CrossChainBridgeBacker_ARBI_AnySwap-Tests.js
+npx hardhat test ./test/FraxCrossChainFarmV2-Tests.js
 npx hardhat test ./test/__ARBITRUM/CurveAMO-ARBI-Tests.js
 
 AURORA
-Todo
+npx hardhat test ./test/__AURORA/CrossChainBridgeBacker_AUR_Rainbow-Tests.js
 
 AVALANCHE
 npx hardhat test ./test/__AVALANCHE/CrossChainBridgeBacker_AVAX_AnySwap-Tests.js
@@ -33,7 +34,6 @@ npx hardhat test ./test/UniV3LiquidityAMO_V2-Tests.js
 npx hardhat test ./test/IFraxGaugeFXSRewardsDistributor-Tests.js
 npx hardhat test ./test/FraxUniV3Farm_Stable_FRAX_USDC-Tests.js
 npx hardhat test ./test/FraxUniV3Farm_Stable_FRAX_DAI-Tests.js
-npx hardhat test ./test/FraxCrossChainFarm-Tests.js
 npx hardhat test ./test/FraxCrossChainLiquidityTracker-Tests.js
 npx hardhat test ./test/PIDController-Tests.js
 npx hardhat test ./test/MigratableFarmBSC_FRAX_FXS-Tests.js
@@ -50,18 +50,32 @@ npx hardhat test ./test/FXS1559AMO-Tests.js
 npx hardhat test ./test/MIM-Convex-AMO-Tests.js
 npx hardhat test ./test/ComboOracle_SLP_UniV2_UniV3-Tests.js
 npx hardhat test ./test/FraxUnifiedFarm_ERC20-Tests.js
+npx hardhat test ./test/FraxUnifiedFarm_UniV3-Tests.js
+npx hardhat test ./test/FraxSwap/fraxswap-twamm-test.js
+npx hardhat test ./test/FraxSwap/fraxswap-uniV2-test.js
+npx hardhat test ./test/CPITrackerOracle-Tests.js
+npx hardhat test ./test/FPI-FPIS-Tests.js
+npx hardhat test ./test/FraxMiddlemanGauge-Tests.js
+npx hardhat test ./test/FraxGaugeController-Tests.js
 
 FANTOM
 npx hardhat test ./test/__FANTOM/CrossChainBridgeBacker_FTM_AnySwap-Tests.js
 npx hardhat test ./test/__FANTOM/CurveAMO-FTM-Tests.js
+npx hardhat test ./test/__FANTOM/FPIControllerPool-Tests.js
 npx hardhat test ./test/__FANTOM/SpiritSwapAMO-Tests.js
 npx hardhat test ./test/__FANTOM/ScreamAMO-Tests.js
 
 HARMONY
 npx hardhat test ./test/__HARMONY/CrossChainBridgeBacker_HARM_Horizon-Tests.js
 
+MOONBEAM
+npx hardhat test ./test/__MOONBEAM/CrossChainBridgeBacker_MNBM_Nomad-Tests.js
+
 MOONRIVER
 npx hardhat test ./test/__MOONRIVER/CCFrax1to1AMM-Tests.js
+
+OPTIMISM
+npx hardhat test ./test/__OPTIMISM/CrossChainBridgeBacker_OPTI_Celer-Tests.js
 
 POLYGON
 npx hardhat test ./test/__POLYGON/CrossChainBridgeBacker_POLY_MaticBridge-Tests.js

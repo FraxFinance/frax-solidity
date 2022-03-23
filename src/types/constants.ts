@@ -1200,7 +1200,7 @@ export const CONTRACT_ADDRESSES = {
     oracles_other: {
       combo_oracle: "0x878f2059435a19C79c20318ee57657bF4543B6d4", // "0xbdCB57c9d35e8D41babCBcA67416ee6622274caf",
       combo_oracle_univ2_univ3: "0x1cBE07F3b3bf3BDe44d363cecAecfe9a98EC2dff", // "0xD13c9a29eF6c5ADc7b43BBd5854B07bB9b099862", 
-      cpi_tracker_oracle: "0x5fCa68C9BA31DBaA5ab82DD468aE76746eFD9Adb"
+      cpi_tracker_oracle: "0x04BaF30115D7bAC714709910Dd286718CfAd8808"
     },
     retired_oracles: {
       FXS_USDC: "0x1F70Af31D041f9C183E23EC6809c04eb8CA006a4", //V1: 0x28fdA30a6Cf71d5fC7Ce17D6d20c788D98Ff2c46
@@ -1260,8 +1260,24 @@ export const CONTRACT_ADDRESSES = {
       USDT: "0x7d3FCd3825AE54E8E8FFD3d0ce95882330d54968",
       V3: "0x2fE065e6FFEf9ac95ab39E5042744d695F560729",
     },
+    rari_unitrollers: {
+      "Tetranode's Locker (#6)": "0x814b02C1ebc9164972D888495927fe1697F0Fb4c", // Unitrollers
+      "ChainLinkGod's / Tetranode's Up Only Pool (#7)": "0xfb558ecd2d24886e8d2956775c619deb22f154ef",
+      "Frax & Reflexer Stable Asset Pool (#9)": "0xd4bdcca1ca76ced6fc8bb1ba91c5d7c0ca4fe567",
+      "Olympus Pool Party Frax (#18)": "0x621579dd26774022f33147d3852ef4e00024b763",
+      "IndexCoop Pool (#19)": "0x3cb4f05061749497187b7ab4ef6f6f6018b2ee67",
+      "Harvest FARMstead (#24)": "0x64858bac30f4cc223ea07adc09a51acdcd225998",
+      "Token Mass Injection Pool (#26)": "0xC202Be8EbaF758A7dc8f227e6De88bE5D28c69dd",
+      "Stake DAO Pool (#27)": "0x35De88F04aD31a396aedb33f19aebe7787C02560",
+      "NFTX Pool (#31)": "0x26577903c42ce72740a8abb50e7cf97a8e5b5564",
+      "Fraximalist Money Market (#36)": "0x93de950f609f51b1ff0c5bf81d8588fbadde7d5c",
+      "DOG PARK (#45)": "0x5BF5718DBC5138DBF863Ba2332c3559c98460265",
+      "Float Protocol Pool (#90)": "0xa58056E9DcC7Bf3006DBb695a4cD70A11553b9bF",
+      "0xb1s Kitchen Sink (#127)": "0x8922C1147E141C055fdDfc0ED5a119f3378c8ef8",
+      "Tribe Convex Pool (#156)": "0x07cd53380FE9B2a5E64099591b498c73F0EfaA66",
+    },
     rari_pools: {
-      "Tetranode's Locker (#6)": "0x1531C1a63A169aC75A2dAAe399080745fa51dE44",
+      "Tetranode's Locker (#6)": "0x1531C1a63A169aC75A2dAAe399080745fa51dE44", // CErc20Delegators
       "ChainLinkGod's / Tetranode's Up Only Pool (#7)": "0x6313c160b329db59086df28ed2bf172a82f0d9d1",
       "Frax & Reflexer Stable Asset Pool (#9)": "0x0f43a7e3f7b529015B0517D0D9Aa9b95701fd2Cb",
       "Olympus Pool Party Frax (#18)": "0x3e5c122ffa75a9fe16ec0c69f7e9149203ea1a5d",
@@ -1271,8 +1287,10 @@ export const CONTRACT_ADDRESSES = {
       "Stake DAO Pool (#27)": "0x9de558FCE4F289b305E38ABe2169b75C626c114e",
       "NFTX Pool (#31)": "0x1BA12ae1FCFadd08FA37Db849Ef4b6e11e435357",
       "Fraximalist Money Market (#36)": "0x5e116a4521c99324f344eb7c7bfe1f78e3226493",
+      "DOG PARK (#45)": "0xC3b6315132d696302dDa91C294aCEf5031546451",
       "Float Protocol Pool (#90)": "0x182b177541fd35A6cEE5Cda1a5B2456586c799B6",
       "0xb1s Kitchen Sink (#127)": "0x8922C1147E141C055fdDfc0ED5a119f3378c8ef8",
+      "Tribe Convex Pool (#156)": "0x5CaDc2a04921213DE60B237688776e0F1A7155E6",
     },
     uniswap_other: {
       router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
@@ -1465,11 +1483,14 @@ export const CONTRACT_ADDRESSES = {
       mta: "0xa3BeD4E1c75D00fa6f4E5E6922DB7261B5E9AcD2",
       ohm: "0x383518188C0C6d7730D91b2c03a03C837814a899",
       ohm_v2: "0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5",
+      perp: "0xbC396689893D065F41bc2C6EcbeE5e0085233447",
       sdt: "0x73968b9a57c6e53d41345fd57a6e6ae27d6cdb2f",
       sushi: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
       temple: "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7",
+      toke: "0x2e9d63788249371f1DFC918a52f8d799F4a38C94",
       tribe: "0xc7283b66eb1eb5fb86327f08e1b5816b0720212b",
       vsp: "0x1b40183EFB4Dd766f11bDa7A7c3AD8982e998421",
+      wbtc: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
       weth: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     },
     bearer_tokens: {
@@ -1489,6 +1510,7 @@ export const CONTRACT_ADDRESSES = {
       saddleD4: "0xd48cF4D7FB0824CC8bAe055dF3092584d0a1726A",
       saddleD4_Pool: "0xC69DDcd4DFeF25D8a793241834d4cc4b3668EAD6",
       "sdFRAX3CRV-f": "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7",
+      OGTemple: "0x654590F810f01B51dc7B86915D4632977e49EA33",
       gOHM: "0x0ab87046fBb341D058F17CBC4c1133F25a20a52f",
       sOHM: "0x04F2694C8fcee23e8Fd0dfEA1d4f5Bb8c352111F",
       stkAAVE: "0x4da27a545c0c5b758a6ba100e3a049001de870f5",
@@ -2116,6 +2138,10 @@ export const CONTRACT_ADDRESSES = {
         FXS: "0xfb4Aaf21733273fFD9cf9F4f70e42dA4DBB5e1E3", // "0x2C37fb628b35dfdFD515d41B0cAAe11B542773C3"
       },
       cross_chain_oracle: "0xD41c352bcF599C4C3C7b516eA005ADb2dB219f2c",
+      solidex: {
+        'Solidly StableV1 AMM - USDC/FRAX': "0x65167f714BAFca7c0cDE3869d1c2AE1E7caaD96D",
+        'Solidly VolatileV1 AMM - FXS/FRAX': "0x773ED601449474c7BcEe5f92033457053A14CB03"
+      }
     },
     oracles_other: {
       combo_oracle: "0x496E5c8F169C2930Dd67B821d8DdDDC78542f290", // "0xde606CB6Ff5d897Ad8396C6fd9C830D1B81Aca13",
@@ -2124,6 +2150,7 @@ export const CONTRACT_ADDRESSES = {
     },
     multisigs: {
       Comptrollers: "0xE838c61635dd1D41952c68E47159329443283d90",
+      InvestorCustodian: "0x5180db0237291A6449DdA9ed33aD90a38787621c"
     },
     uniswap: {
       v2_router: "0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52",
@@ -2151,8 +2178,10 @@ export const CONTRACT_ADDRESSES = {
       FRAX2pool: "0x7a656B342E14F745e2B164890E88017e27AE7320",
       hFRAX: "0xb4300e088a3AE4e624EE5C71Bc1822F68BB5f2bc",
       oFRAX: "0x88c05534566f3bD6b6D704c9259408fF1F1a3F00",
-      scFRAX: "0x4E6854EA84884330207fB557D1555961D85Fc17E",
       "Saddle FRAX/USDC": "0xc969dD0A7AB0F8a0C5A69C0839dB39b6C928bC08",
+      scFRAX: "0x4E6854EA84884330207fB557D1555961D85Fc17E",
+      "Solidly StableV1 AMM - USDC/FRAX": "0x154eA0E896695824C87985a52230674C2BE7731b", // Deposit: "0xF3E57E9cba43F9998559161DDd40aaeB2225E700"
+      "Solidly VolatileV1 AMM - FXS/FRAX": "0x4bBd8467ccd49D5360648CE14830f43a7fEB6e45", // Deposit: "0xa5944150136aCF58e4e9752703Fcf7B13e8579E7"
     },
     vamms: {
       USDC: "0xBea9F78090bDB9e662d8CB301A00ad09A5b756e9", // Saddle FRAX/USDC SwapFlashLoan
@@ -2244,7 +2273,7 @@ export const CONTRACT_ADDRESSES = {
       synFRAX: "0x1852F70512298d56e9c8FDd905e02581E04ddb2a",
     },
     collaterals: {
-      "1DAI": "0xEf977d2f931C1978Db5F6747666fa1eACB0d0339",
+      // "1DAI": "0xEf977d2f931C1978Db5F6747666fa1eACB0d0339",
       "1USDC": "0x985458E523dB3d53125813eD68c274899e9DfAb4",
       "1USDT": "0x3C2B8Be99c50593081EAA2A724F0B8285F5aba8f",
     },
@@ -2267,8 +2296,8 @@ export const CONTRACT_ADDRESSES = {
       cross_chain_oracle: "0x564C2244eE788054570386294A920133E0605d02",
     },
     oracles_other: {
-      combo_oracle: "0xcc75336d664ABC4fD6f08AFf07fBf6988fD5b377", // "0x81FA3Af21e3EF42050eceC643cceC05d0f286680", // Old: "0x2E98E02B43f1EBcCe36a44A512FbCD5ea1e2e8E2",
-      combo_oracle_univ2_univ3: "0x0671Ef4aD095d3ad9E4492cE3DEfB4f97b3e45a3", // "0x37E6E21E8B09B53DA8732b8b521d6F494795a5AB",
+      combo_oracle: "0xB3CAc707679ca53Edd4AbF5cbcCc0C739ae660EA", // Old: "0xcc75336d664ABC4fD6f08AFf07fBf6988fD5b377"
+      combo_oracle_univ2_univ3: "0x22935368A37182bdeA89d3384B6Cc060266f9d07", // Old: "0x0671Ef4aD095d3ad9E4492cE3DEfB4f97b3e45a3",
     },
     multisigs: {
       Comptrollers: "0x5D91bA85cfbC0A3673F312f3FD0BA75a85AD73e6",
@@ -2280,6 +2309,7 @@ export const CONTRACT_ADDRESSES = {
       v3_router: "0x0000000000000000000000000000000000000000",
     },
     reward_tokens: {
+      "1ETH": "0x6983d1e6def3690c4d616b13597a09e6193ea013",
       sushi: "0xbec775cb42abfa4288de81f387a9b1a3c4bc552a",
       wone: "0xcf664087a5bb0237a0bad6742852ec6c8d69a27a", // Wrapped ONE
     },
@@ -2478,13 +2508,13 @@ export const CONTRACT_ADDRESSES = {
       single_assets: {
         FRAX: "0x7655a3dC27ae8df961939373E1df80875E23d502",
         FXS: "0xc55a7F215a18713015570ECb18bbcf8C82F83071",
-        USDC: "0x35c6962c221E4E8c17E2b4D59c8De79457EA66DE",
+        // USDC: "0x35c6962c221E4E8c17E2b4D59c8De79457EA66DE",
       },
       cross_chain_oracle: "0x31aA22d69270148Ec63Baf53fde846b45dB86509",
     },
     oracles_other: {
-      combo_oracle: "0x7ef2a9AA33AB926a42F0e4F259Da225a5BEBdA73",
-      combo_oracle_univ2_univ3: "0xD3cEa6c44F745eAA584b836f92FAF15FAfe826a0",
+      combo_oracle: "0x626eFc448227d794dC8C02ffea6a932bB360f72a", // Old: "0x7ef2a9AA33AB926a42F0e4F259Da225a5BEBdA73",
+      combo_oracle_univ2_univ3: "0xeba66661Afc03aB95ec37383b1BfB724abe14a0F", // Old: "0xD3cEa6c44F745eAA584b836f92FAF15FAfe826a0",
     },
     multisigs: {
       Comptrollers: "0x0dF840dCbf1229262A4125C1fc559bd338eC9491",
@@ -2495,6 +2525,11 @@ export const CONTRACT_ADDRESSES = {
       v3_factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
       v3_nft_manager: "0xc36442b4a4522e871399cd717abdd847ab11fe88",
       v3_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    },
+    uni_v3_pools: {
+      'Uniswap V3 FRAX/USDC': '0x98D9aE198f2018503791D1cAf23c6807C135bB6b', // 0.05% Fee
+      'Uniswap V3 FRAX/WETH': '0x1D26A8c06a8020A26C914eA67eC6d30963d2ddD4', // 0.30% Fee
+      'Uniswap V3 FRAX/FXS': '0x01e37e62733d1792e3cF8ce45630589B8Ac7C2ba', // 0.30% Fee
     },
     amos: {},
     reward_tokens: {
@@ -2585,6 +2620,7 @@ export const CONTRACT_ADDRESSES = {
     },
     bearer_tokens: {
       FRAX3pool: "0x5e5A23b52Cb48F5E70271Be83079cA5bC9c9e9ac",
+      "HOP-LP-USDC": "0x9D373d22FD091d7f9A6649EB067557cc12Fb1A0A", // Swap (getVirtualPrice): 0x5C32143C8B198F392d01f8446b754c181224ac26
     },
     vamms: {},
     pair_tokens: {

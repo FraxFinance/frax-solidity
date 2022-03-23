@@ -204,7 +204,6 @@ contract ComboOracle_UniV2_UniV3 is Owned {
             // In ETH per unit of LP, multiplied by 2**112.
             uint256 precise_price_eth112 = (((sqrtK * 2 * HomoraMath.sqrt(px0)) / (2 ** 56)) * HomoraMath.sqrt(px1)) / (2 ** 56);
 
-
             // In USD
             // Split into 2 parts to avoid overflows
             uint256 precise_price56 = precise_price_eth112 / (2 ** 56); 
