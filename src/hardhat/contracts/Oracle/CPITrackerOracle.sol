@@ -11,7 +11,7 @@ pragma solidity >=0.8.0;
 // ====================================================================
 // ========================= CPITrackerOracle =========================
 // ====================================================================
-// Pull in CPI data and track it in 2022 dollars
+// Pull in CPI data and track it in Dec 2021 dollars
 
 // Frax Finance: https://github.com/FraxFinance
 
@@ -120,7 +120,7 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
         setPublicChainlinkToken();
         time_contract = BokkyPooBahsDateTimeContract(0x90503D86E120B3B309CEBf00C2CA013aB3624736);
         oracle = 0x049Bd8C3adC3fE7d3Fc2a44541d955A537c2A484;
-        jobId = "74295b9df3264781bf904d9e596a2e57";
+        jobId = "1c309d42c7084b34b1acf1a89e7b51fc";
         fee = 1e18; // 1 LINK
 
         // CPI [Polygon Mainnet]
@@ -272,6 +272,15 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
 
         emit CPIUpdated(result_year, result_month, result, peg_price_target, ramp_period);
     }
+
+    function cancelRequest(
+        bytes32 _requestId,
+        uint256 _payment,
+        bytes4 _callbackFunc,
+        uint256 _expiration
+    ) external onlyByOwnGovBot {
+        cancelChainlinkRequest(_requestId, _payment, _callbackFunc, _expiration);
+    }
     
     /* ========== RESTRICTED FUNCTIONS ========== */
 
@@ -281,6 +290,12 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
 
     function setBot(address _new_bot_address) external onlyByOwnGov {
         bot_address = _new_bot_address;
+    }
+
+    function setOracleInfo(address _oracle, bytes32 _jobId, uint256 _fee) external onlyByOwnGov {
+        oracle = _oracle;
+        jobId = _jobId;
+        fee = _fee;
     }
 
     function setMaxDeltaFrac(uint256 _max_delta_frac) external onlyByOwnGov {

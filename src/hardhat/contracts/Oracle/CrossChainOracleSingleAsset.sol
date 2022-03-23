@@ -75,6 +75,7 @@ contract CrossChainOracleSingleAsset is Owned {
 
     /* ========== VIEWS ========== */
 
+    // In E6
     function getPrice() public view returns (uint256) {
         return price;
     }
