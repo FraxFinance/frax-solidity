@@ -21,9 +21,15 @@ pragma solidity ^0.8.0;
 // Rich Gee: https://github.com/zer0blockchain
 // Dennis: https://github.com/denett
 
+// Logic / Algorithm Ideas
+// FrankieIsLost: https://github.com/FrankieIsLost
+
 // Reviewer(s) / Contributor(s)
 // Travis Moore: https://github.com/FortisFortuna
 // Sam Kazemian: https://github.com/samkazemian
+// Drake Evans: https://github.com/DrakeEvans
+// Jack Corddry: https://github.com/corddry
+// Justin Moore: https://github.com/0xJM
 
 import '../core/interfaces/IUniswapV2FactoryV5.sol';
 import '../core/interfaces/IUniV2TWAMMPair.sol';
@@ -40,7 +46,7 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
     address public immutable override WETH;
 
     modifier ensure(uint deadline) {
-        require(deadline >= block.timestamp, 'UniswapV2Router: EXPIRED');
+        require(deadline >= block.timestamp, 'FraxSwapV1Router: EXPIRED');
         _;
     }
 
@@ -72,12 +78,12 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
         } else {
             uint amountBOptimal = UniV2TWAMMLibrary.quote(amountADesired, reserveA, reserveB);
             if (amountBOptimal <= amountBDesired) {
-                require(amountBOptimal >= amountBMin, 'UniswapV2Router: INSUFFICIENT_B_AMOUNT');
+                require(amountBOptimal >= amountBMin, 'FraxSwapV1Router: INSUFFICIENT_B_AMOUNT');
                 (amountA, amountB) = (amountADesired, amountBOptimal);
             } else {
                 uint amountAOptimal = UniV2TWAMMLibrary.quote(amountBDesired, reserveB, reserveA);
                 assert(amountAOptimal <= amountADesired);
-                require(amountAOptimal >= amountAMin, 'UniswapV2Router: INSUFFICIENT_A_AMOUNT');
+                require(amountAOptimal >= amountAMin, 'FraxSwapV1Router: INSUFFICIENT_A_AMOUNT');
                 (amountA, amountB) = (amountAOptimal, amountBDesired);
             }
         }
@@ -138,8 +144,8 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
         (uint amount0, uint amount1) = IUniV2TWAMMPair(pair).burn(to);
         (address token0,) = UniV2TWAMMLibrary.sortTokens(tokenA, tokenB);
         (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
-        require(amountA >= amountAMin, 'UniswapV2Router: INSUFFICIENT_A_AMOUNT');
-        require(amountB >= amountBMin, 'UniswapV2Router: INSUFFICIENT_B_AMOUNT');
+        require(amountA >= amountAMin, 'FraxSwapV1Router: INSUFFICIENT_A_AMOUNT');
+        require(amountB >= amountBMin, 'FraxSwapV1Router: INSUFFICIENT_B_AMOUNT');
     }
     function removeLiquidityETH(
         address token,
@@ -253,7 +259,7 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
         uint deadline
     ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
         amounts = UniV2TWAMMLibrary.getAmountsOutWithTwamm(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amounts[amounts.length - 1] >= amountOutMin, 'FraxSwapV1Router: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, UniV2TWAMMLibrary.pairFor(factory, path[0], path[1]), amounts[0]
         );
@@ -267,7 +273,7 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
         uint deadline
     ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
         amounts = UniV2TWAMMLibrary.getAmountsInWithTwamm(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, 'UniswapV2Router: EXCESSIVE_INPUT_AMOUNT');
+        require(amounts[0] <= amountInMax, 'FraxSwapV1Router: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, UniV2TWAMMLibrary.pairFor(factory, path[0], path[1]), amounts[0]
         );
@@ -281,9 +287,9 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
     ensure(deadline)
     returns (uint[] memory amounts)
     {
-        require(path[0] == WETH, 'UniswapV2Router: INVALID_PATH');
+        require(path[0] == WETH, 'FraxSwapV1Router: INVALID_PATH');
         amounts = UniV2TWAMMLibrary.getAmountsOutWithTwamm(factory, msg.value, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amounts[amounts.length - 1] >= amountOutMin, 'FraxSwapV1Router: INSUFFICIENT_OUTPUT_AMOUNT');
         IWETH(WETH).deposit{value: amounts[0]}();
         assert(IWETH(WETH).transfer(UniV2TWAMMLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
@@ -295,9 +301,9 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
     ensure(deadline)
     returns (uint[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'UniswapV2Router: INVALID_PATH');
+        require(path[path.length - 1] == WETH, 'FraxSwapV1Router: INVALID_PATH');
         amounts = UniV2TWAMMLibrary.getAmountsInWithTwamm(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, 'UniswapV2Router: EXCESSIVE_INPUT_AMOUNT');
+        require(amounts[0] <= amountInMax, 'FraxSwapV1Router: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, UniV2TWAMMLibrary.pairFor(factory, path[0], path[1]), amounts[0]
         );
@@ -312,9 +318,9 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
     ensure(deadline)
     returns (uint[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'UniswapV2Router: INVALID_PATH');
+        require(path[path.length - 1] == WETH, 'FraxSwapV1Router: INVALID_PATH');
         amounts = UniV2TWAMMLibrary.getAmountsOutWithTwamm(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amounts[amounts.length - 1] >= amountOutMin, 'FraxSwapV1Router: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, UniV2TWAMMLibrary.pairFor(factory, path[0], path[1]), amounts[0]
         );
@@ -330,9 +336,9 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
     ensure(deadline)
     returns (uint[] memory amounts)
     {
-        require(path[0] == WETH, 'UniswapV2Router: INVALID_PATH');
+        require(path[0] == WETH, 'FraxSwapV1Router: INVALID_PATH');
         amounts = UniV2TWAMMLibrary.getAmountsInWithTwamm(factory, amountOut, path);
-        require(amounts[0] <= msg.value, 'UniswapV2Router: EXCESSIVE_INPUT_AMOUNT');
+        require(amounts[0] <= msg.value, 'FraxSwapV1Router: EXCESSIVE_INPUT_AMOUNT');
         IWETH(WETH).deposit{value: amounts[0]}();
         assert(IWETH(WETH).transfer(UniV2TWAMMLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
@@ -373,7 +379,7 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
             IERC20(path[path.length - 1]).balanceOf(to) - balanceBefore >= amountOutMin,
-            'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT'
+            'FraxSwapV1Router: INSUFFICIENT_OUTPUT_AMOUNT'
         );
     }
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
@@ -388,7 +394,7 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
     payable
     ensure(deadline)
     {
-        require(path[0] == WETH, 'UniswapV2Router: INVALID_PATH');
+        require(path[0] == WETH, 'FraxSwapV1Router: INVALID_PATH');
         uint amountIn = msg.value;
         IWETH(WETH).deposit{value: amountIn}();
         assert(IWETH(WETH).transfer(UniV2TWAMMLibrary.pairFor(factory, path[0], path[1]), amountIn));
@@ -396,7 +402,7 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
             IERC20(path[path.length - 1]).balanceOf(to) - balanceBefore >= amountOutMin,
-            'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT'
+            'FraxSwapV1Router: INSUFFICIENT_OUTPUT_AMOUNT'
         );
     }
     function swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -411,13 +417,13 @@ contract UniV2TWAMMRouter is IUniswapV2Router02V5 {
     override
     ensure(deadline)
     {
-        require(path[path.length - 1] == WETH, 'UniswapV2Router: INVALID_PATH');
+        require(path[path.length - 1] == WETH, 'FraxSwapV1Router: INVALID_PATH');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, UniV2TWAMMLibrary.pairFor(factory, path[0], path[1]), amountIn
         );
         _swapSupportingFeeOnTransferTokens(path, address(this));
         uint amountOut = IERC20(WETH).balanceOf(address(this));
-        require(amountOut >= amountOutMin, 'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amountOut >= amountOutMin, 'FraxSwapV1Router: INSUFFICIENT_OUTPUT_AMOUNT');
         IWETH(WETH).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
     }

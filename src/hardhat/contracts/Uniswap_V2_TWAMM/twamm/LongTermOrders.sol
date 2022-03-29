@@ -21,9 +21,15 @@ pragma solidity ^0.8.0;
 // Rich Gee: https://github.com/zer0blockchain
 // Dennis: https://github.com/denett
 
+// Logic / Algorithm Ideas
+// FrankieIsLost: https://github.com/FrankieIsLost
+
 // Reviewer(s) / Contributor(s)
 // Travis Moore: https://github.com/FortisFortuna
 // Sam Kazemian: https://github.com/samkazemian
+// Drake Evans: https://github.com/DrakeEvans
+// Jack Corddry: https://github.com/corddry
+// Justin Moore: https://github.com/0xJM
 
 import "./ExecVirtualOrders.sol";
 
@@ -119,7 +125,7 @@ library LongTermOrdersLib {
         uint256 orderExpiry = longTermOrders.orderTimeInterval * (numberOfTimeIntervals + 1) + lastExpiryTimestamp;
         uint256 sellingRate = SELL_RATE_ADDITIONAL_PRECISION * amount / (orderExpiry - currentTime);
 
-        require(sellingRate > 0, 'tokenRate cannot be zero');
+        require(sellingRate > 0); // tokenRate cannot be zero
 
         //add order to correct pool
         OrderPool storage orderPool = getOrderPool(longTermOrders, from);

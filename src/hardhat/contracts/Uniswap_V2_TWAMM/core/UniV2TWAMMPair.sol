@@ -21,9 +21,15 @@ pragma solidity ^0.8.0;
 // Rich Gee: https://github.com/zer0blockchain
 // Dennis: https://github.com/denett
 
+// Logic / Algorithm Ideas
+// FrankieIsLost: https://github.com/FrankieIsLost
+
 // Reviewer(s) / Contributor(s)
 // Travis Moore: https://github.com/FortisFortuna
 // Sam Kazemian: https://github.com/samkazemian
+// Drake Evans: https://github.com/DrakeEvans
+// Jack Corddry: https://github.com/corddry
+// Justin Moore: https://github.com/0xJM
 
 import './interfaces/IUniswapV2PairPartialV5.sol';
 import './UniV2TWAMMERC20.sol';
@@ -68,13 +74,13 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
 
     ///@notice Throws if called by any account other than the owner.
     modifier onlyOwner() {
-        require(owner_address == msg.sender, "Not owner");
+        require(owner_address == msg.sender); // NOT OWNER
         _;
     }
 
     ///@notice Checks if new swaps are paused. If they are, only allow closing of existing ones.
     modifier isNotPaused() {
-        require(newSwapsPaused == false, "New swaps paused");
+        require(newSwapsPaused == false); // NEW LT ORDERS PAUSED
         _;
     }
 
@@ -169,7 +175,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
 
     function _safeTransfer(address token, address to, uint value) private {
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool)))); // TRANSFER_FAILED
+        require(success && (data.length == 0 || abi.decode(data, (bool))), "EC01"); // TRANSFER_FAILED
     }
 
     constructor() public {
@@ -190,7 +196,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
-        require(balance0 + twammReserve0 <= type(uint112).max && balance1 + twammReserve1 <= type(uint112).max); // OVERFLOW
+        require(balance0 + twammReserve0 <= type(uint112).max && balance1 + twammReserve1 <= type(uint112).max, "EC02"); // OVERFLOW
         uint32 blockTimestamp = uint32(block.timestamp % 2 ** 32);
 
         uint32 timeElapsed;
@@ -287,16 +293,16 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external override lock execVirtualOrders {
-        require(amount0Out > 0 || amount1Out > 0); // INSUFFICIENT_OUTPUT_AMOUNT
+        require(amount0Out > 0 || amount1Out > 0, "EC03"); // INSUFFICIENT_OUTPUT_AMOUNT
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        require(amount0Out < _reserve0 && amount1Out < _reserve1); // INSUFFICIENT_LIQUIDITY
+        require(amount0Out < _reserve0 && amount1Out < _reserve1, "EC04"); // INSUFFICIENT_LIQUIDITY
 
         uint balance0;
         uint balance1;
         {// scope for _token{0,1}, avoids stack too deep errors
             address _token0 = token0;
             address _token1 = token1;
-            require(to != _token0 && to != _token1); // INVALID_TO
+            require(to != _token0 && to != _token1, "EC05"); // INVALID_TO
             if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
             if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
             if (data.length > 0) IUniswapV2CalleeV5(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
@@ -305,7 +311,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         }
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
-        require(amount0In > 0 || amount1In > 0); // INSUFFICIENT_INPUT_AMOUNT
+        require(amount0In > 0 || amount1In > 0, "EC06"); // INSUFFICIENT_INPUT_AMOUNT
         {// scope for reserve{0,1}Adjusted, avoids stack too deep errors
             uint balance0Adjusted = (balance0 * 1000) - (amount0In * 3);
             uint balance1Adjusted = (balance1 * 1000) - (amount1In * 3);
@@ -456,7 +462,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
     ///before most interactions with the AMM
     function executeVirtualOrders(uint256 blockTimestamp) public override lock {
         // blockTimestamp is valid
-        require(longTermOrders.lastVirtualOrderTimestamp <= blockTimestamp && blockTimestamp <= block.timestamp);
+        require(longTermOrders.lastVirtualOrderTimestamp <= blockTimestamp && blockTimestamp <= block.timestamp); // INVALID TIMESTAMP
         executeVirtualOrdersInternal(blockTimestamp);
     }
 
@@ -545,7 +551,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         address sellTokenAddr,
         address buyTokenAddr
     ){
-        require(orderId < longTermOrders.orderId);
+        require(orderId < longTermOrders.orderId); // INVALID ORDERID
         LongTermOrdersLib.Order storage order = longTermOrders.orderMap[orderId];
         return (order.id, order.expirationTimestamp, order.saleRate, order.owner, order.sellTokenAddr, order.buyTokenAddr);
     }
@@ -555,7 +561,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         bool orderExpired,
         uint256 totalReward
     ){
-        require(orderId < longTermOrders.orderId);
+        require(orderId < longTermOrders.orderId); // INVALID ORDERID
         LongTermOrdersLib.OrderPool storage orderPool = LongTermOrdersLib.getOrderPool(longTermOrders, longTermOrders.orderMap[orderId].sellTokenAddr);
         (orderExpired, totalReward) = LongTermOrdersLib.orderPoolGetProceeds(orderPool, orderId, blockTimestamp);
     }

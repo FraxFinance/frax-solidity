@@ -30,10 +30,10 @@ import "./IUniswapV2PairV5.sol";
 interface IUniV2TWAMMPair is IUniswapV2PairV5 {
     // TWAMM
 
-    function orderTimeInterval() external returns (uint256);
-
-    function getTWAPHistoryLength() external view returns (uint);
-    function getTwammReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast, uint112 _twammReserve0, uint112 _twammReserve1);
+    event LongTermSwap0To1(address indexed addr, uint256 orderId, uint256 amount0In, uint256 numberOfTimeIntervals);
+    event LongTermSwap1To0(address indexed addr, uint256 orderId, uint256 amount1In, uint256 numberOfTimeIntervals);
+    event CancelLongTermOrder(address indexed addr, uint256 orderId, address sellToken, uint256 unsoldAmount, address buyToken, uint256 purchasedAmount);
+    event WithdrawProceedsFromLongTermOrder(address indexed addr, uint256 orderId, address indexed proceedToken, uint256 proceeds, bool orderExpired);
 
     function longTermSwapFrom0To1(uint256 amount0In, uint256 numberOfTimeIntervals) external returns (uint256 orderId);
     function longTermSwapFrom1To0(uint256 amount1In, uint256 numberOfTimeIntervals) external returns (uint256 orderId);
@@ -41,7 +41,14 @@ interface IUniV2TWAMMPair is IUniswapV2PairV5 {
     function withdrawProceedsFromLongTermSwap(uint256 orderId) external returns (bool is_expired);
     function executeVirtualOrders(uint256 blockTimestamp) external;
 
+    function orderTimeInterval() external returns (uint256);
+    function getTWAPHistoryLength() external view returns (uint);
+    function getTwammReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast, uint112 _twammReserve0, uint112 _twammReserve1);
+    function getReserveAfterTwamm(uint256 blockTimestamp) external view returns (uint112 _reserve0, uint112 _reserve1, uint256 lastVirtualOrderTimestamp, uint112 _twammReserve0, uint112 _twammReserve1);
     function getNextOrderID() external view returns (uint256);
+    function getOrderIDsForUser(address user) external view returns (uint256[] memory);
+    function getOrderIDsForUserLength(address user) external view returns (uint256);
+//    function getDetailedOrdersForUser(address user, uint256 offset, uint256 limit) external view returns (LongTermOrdersLib.Order[] memory detailed_orders);
     function twammUpToDate() external view returns (bool);
     function getTwammState() external view returns (uint256 token0Rate, uint256 token1Rate, uint256 lastVirtualOrderTimestamp, uint256 orderTimeInterval_rtn, uint256 rewardFactorPool0, uint256 rewardFactorPool1);
     function getTwammSalesRateEnding(uint256 _blockTimestamp) external view returns (uint256 orderPool0SalesRateEnding, uint256 orderPool1SalesRateEnding);

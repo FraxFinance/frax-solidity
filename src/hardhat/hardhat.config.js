@@ -112,7 +112,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 75000000000,
+			gasPrice: 95000000000,
 			gasMultiplier: 1.2
 		},
 		// evmos: {
@@ -132,7 +132,7 @@ module.exports = {
 			},
 			chainId: 250,
 			gas: "auto",
-			gasPrice: 600000000000, // 600 Gwei
+			gasPrice: 400000000000, // 400 Gwei
 			gasMultiplier: 1.2
 		},
 		// fuse: {

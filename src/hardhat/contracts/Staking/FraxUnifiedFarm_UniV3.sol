@@ -418,7 +418,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         uint256 token_id
     ) internal {
         // Collect rewards first and then update the balances
-        _getReward(staker_address, destination_address);
+        _getReward(staker_address, destination_address, true);
 
         LockedNFT memory thisNFT;
         thisNFT.liquidity = 0;

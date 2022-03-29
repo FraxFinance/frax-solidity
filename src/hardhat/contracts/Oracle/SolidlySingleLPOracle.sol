@@ -221,7 +221,7 @@ contract SolidlySingleLPOracle is Owned {
         uint256 updatedAt,
         uint80 answeredInRound
     ) {
-        return (0, int256(getPrecisePrice()), 0, last_updated_time, 0);
+        return (0, int256(getPrecisePrice()), 0, block.timestamp, 0);
     }
 
 

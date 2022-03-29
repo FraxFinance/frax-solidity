@@ -388,7 +388,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         bytes32 kek_id
     ) internal {
         // Collect rewards first and then update the balances
-        _getReward(staker_address, destination_address);
+        _getReward(staker_address, destination_address, true);
 
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(staker_address, kek_id);
