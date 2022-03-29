@@ -21,9 +21,15 @@ pragma solidity ^0.8.0;
 // Rich Gee: https://github.com/zer0blockchain
 // Dennis: https://github.com/denett
 
+// Logic / Algorithm Ideas
+// FrankieIsLost: https://github.com/FrankieIsLost
+
 // Reviewer(s) / Contributor(s)
 // Travis Moore: https://github.com/FortisFortuna
 // Sam Kazemian: https://github.com/samkazemian
+// Drake Evans: https://github.com/DrakeEvans
+// Jack Corddry: https://github.com/corddry
+// Justin Moore: https://github.com/0xJM
 
 import './interfaces/IUniswapV2FactoryV5.sol';
 import './UniV2TWAMMPair.sol';
@@ -41,7 +47,7 @@ contract UniV2TWAMMFactory is IUniswapV2FactoryV5 {
 
     ///@notice Throws if called by any account other than the feeToSetter.
     modifier onlyFTS() {
-        require(msg.sender == feeToSetter, "Not feeToSetter");
+        require(msg.sender == feeToSetter); // FORBIDDEN
         _;
     }
 
@@ -50,13 +56,10 @@ contract UniV2TWAMMFactory is IUniswapV2FactoryV5 {
     }
 
     function createPair(address tokenA, address tokenB) external override returns (address pair) {
-        //ECF1: UniswapV2: IDENTICAL_ADDRESSES
-        require(tokenA != tokenB);
+        require(tokenA != tokenB, "IDENTICAL_ADDRESSES"); // IDENTICAL_ADDRESSES
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        //ECF2: UniswapV2: ZERO_ADDRESS
-        require(token0 != address(0));
-        //ECF3: UniswapV2: PAIR_EXISTS
-        require(getPair[token0][token1] == address(0)); // single check is sufficient
+        require(token0 != address(0), "ZERO_ADDRESS"); // ZERO_ADDRESS
+        require(getPair[token0][token1] == address(0), "PAIR_EXISTS"); // PAIR_EXISTS // single check is sufficient
         bytes memory bytecode = type(UniV2TWAMMPair).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         assembly {
@@ -70,12 +73,10 @@ contract UniV2TWAMMFactory is IUniswapV2FactoryV5 {
     }
 
     function setFeeTo(address _feeTo) external override onlyFTS {
-        //ECF4: FORBIDDEN
         feeTo = _feeTo;
     }
 
     function setFeeToSetter(address _feeToSetter) external override onlyFTS {
-        //ECF4: FORBIDDEN
         feeToSetter = _feeToSetter;
     }
 }

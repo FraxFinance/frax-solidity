@@ -21,9 +21,15 @@ pragma solidity ^0.8.0;
 // Rich Gee: https://github.com/zer0blockchain
 // Dennis: https://github.com/denett
 
+// Logic / Algorithm Ideas
+// FrankieIsLost: https://github.com/FrankieIsLost
+
 // Reviewer(s) / Contributor(s)
 // Travis Moore: https://github.com/FortisFortuna
 // Sam Kazemian: https://github.com/samkazemian
+// Drake Evans: https://github.com/DrakeEvans
+// Jack Corddry: https://github.com/corddry
+// Justin Moore: https://github.com/0xJM
 
 import '../../core/interfaces/IUniV2TWAMMPair.sol';
 
@@ -43,7 +49,7 @@ library UniV2TWAMMLibrary {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'0b348bdb11fdc03a335957195b672d5f7f458f1499004512ef38993a7a789eb8' // init code hash
+                hex'f189cae67110999320cf2cb7b2ecfb7ec3d507a37b66dfd4046f14fd37721db8' // init code hash
             )))));
     }
 

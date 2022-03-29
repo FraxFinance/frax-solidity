@@ -117,11 +117,11 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
 
         // CPI [Ethereum]
         // =================================
-        setPublicChainlinkToken();
-        time_contract = BokkyPooBahsDateTimeContract(0x90503D86E120B3B309CEBf00C2CA013aB3624736);
-        oracle = 0x049Bd8C3adC3fE7d3Fc2a44541d955A537c2A484;
-        jobId = "1c309d42c7084b34b1acf1a89e7b51fc";
-        fee = 1e18; // 1 LINK
+        // setPublicChainlinkToken();
+        // time_contract = BokkyPooBahsDateTimeContract(0x90503D86E120B3B309CEBf00C2CA013aB3624736);
+        // oracle = 0x049Bd8C3adC3fE7d3Fc2a44541d955A537c2A484;
+        // jobId = "1c309d42c7084b34b1acf1a89e7b51fc";
+        // fee = 50e18; // 50 LINK
 
         // CPI [Polygon Mainnet]
         // =================================
@@ -133,11 +133,11 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
 
         // CPI [Polygon Mumbai]
         // =================================
-        // setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
-        // time_contract = BokkyPooBahsDateTimeContract(0x2Dd1B4D4548aCCeA497050619965f91f78b3b532);
-        // oracle = 0x3c30c5c415B2410326297F0f65f5Cbb32f3aefCc;
-        // jobId = "32c3e7b12fe44665a4e2bb87aa9779af";
-        // fee = 1e17; // 0.1 LINK
+        setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
+        time_contract = BokkyPooBahsDateTimeContract(0x2Dd1B4D4548aCCeA497050619965f91f78b3b532);
+        oracle = 0x3c30c5c415B2410326297F0f65f5Cbb32f3aefCc;
+        jobId = "32c3e7b12fe44665a4e2bb87aa9779af";
+        fee = 1e17; // 0.1 LINK
 
         // Add the first observation
         cpi_observations.push(CPIObservation(

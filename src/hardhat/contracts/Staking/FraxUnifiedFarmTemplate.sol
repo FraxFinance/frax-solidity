@@ -482,18 +482,27 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // ------ REWARDS CLAIMING ------
 
+    function getRewardExtraLogic(address destination_address) public nonReentrant {
+       return _getRewardExtraLogic(msg.sender, destination_address);
+    }
+
     function _getRewardExtraLogic(address rewardee, address destination_address) internal virtual {
         revert("Need gREL logic");
     }
 
     // Two different getReward functions are needed because of delegateCall and msg.sender issues
-    function getReward(address destination_address) external nonReentrant returns (uint256[] memory) {
-        require(rewardsCollectionPaused == false, "Rewards collection paused");
-        return _getReward(msg.sender, destination_address);
+    function getReward(address destination_address) external returns (uint256[] memory) {
+        return getReward(destination_address, true);
     }
 
+    function getReward(address destination_address, bool claim_extra_too) public nonReentrant returns (uint256[] memory) {
+        require(rewardsCollectionPaused == false, "Rewards collection paused");
+        return _getReward(msg.sender, destination_address, claim_extra_too);
+    }
+
+
     // No withdrawer == msg.sender check needed since this is only internally callable
-    function _getReward(address rewardee, address destination_address) internal updateRewardAndBalance(rewardee, true) returns (uint256[] memory rewards_before) {
+    function _getReward(address rewardee, address destination_address, bool do_extra_logic) internal updateRewardAndBalance(rewardee, true) returns (uint256[] memory rewards_before) {
         // Update the rewards array and distribute rewards
         rewards_before = new uint256[](rewardTokens.length);
 
@@ -504,7 +513,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         }
 
         // Handle additional reward logic
-        _getRewardExtraLogic(rewardee, destination_address);
+        if (do_extra_logic) _getRewardExtraLogic(rewardee, destination_address);
 
         // Update the last reward claim time
         lastRewardClaimTime[rewardee] = block.timestamp;

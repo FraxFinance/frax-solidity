@@ -120,6 +120,30 @@ export const CollateralDetailsPack = {
 export const COLLATERAL_TYPES = Object.keys(CollateralDetailsPack);
 
 export const StakeChoices: StakeChoices = {
+	"0xDAO FRAX/FXS": {
+		lp_logo: "0xdao",
+		label: "0xDAO FRAX/FXS",
+		chain: "fantom",
+		external_contract: true,
+		farming_link: "https://www.oxdao.fi/",
+		staking_enabled: true,
+		pool_tokens: ["FRAX", "FXS"],
+		reward_tokens: ["OXD", "SOLID"],
+    	reward_token_bridge_types: ["canonical"],
+		has_varied_apy: true
+	},
+  	"0xDAO FRAX/USDC": {
+		lp_logo: "0xdao",
+		label: "0xDAO FRAX/USDC",
+		chain: "fantom",
+		external_contract: true,
+		farming_link: "https://www.oxdao.fi/",
+		staking_enabled: true,
+		pool_tokens: ["FRAX", "USDC"],
+		reward_tokens: ["OXD", "SOLID"],
+    	reward_token_bridge_types: ["canonical"],
+		has_varied_apy: true
+	},
   "1Swap FRAX/1S3P": {
 		lp_logo: "1swap",
 		label: "1Swap FRAX/1S3P",
@@ -661,6 +685,30 @@ export const StakeChoices: StakeChoices = {
 		pool_tokens: ["FRAX", "MOVR"],
 		reward_tokens: ["SOLAR"],
 	},
+  "Solidex FRAX/FXS": {
+		lp_logo: "solidex",
+		label: "Solidex FRAX/FXS",
+		chain: "fantom",
+		external_contract: true,
+		farming_link: "https://solidexfinance.com/#/pools",
+		staking_enabled: true,
+		pool_tokens: ["FRAX", "FXS"],
+		reward_tokens: ["SEX", "SOLID"],
+    reward_token_bridge_types: ["canonical"],
+		has_varied_apy: true
+	},
+  "Solidex FRAX/USDC": {
+		lp_logo: "solidex",
+		label: "Solidex FRAX/USDC",
+		chain: "fantom",
+		external_contract: true,
+		farming_link: "https://solidexfinance.com/#/pools",
+		staking_enabled: true,
+		pool_tokens: ["FRAX", "USDC"],
+		reward_tokens: ["SEX", "SOLID"],
+    reward_token_bridge_types: ["canonical"],
+		has_varied_apy: true
+	},
 	"SpiritSwap FRAX/FTM": {
 		lp_logo: "spiritswap",
 		label: "SpiritSwap FRAX/FTM",
@@ -751,6 +799,16 @@ export const StakeChoices: StakeChoices = {
     reward_token_decimals: [18, 18],
 		reward_token_coingecko_slugs: ["frax-share", "stake-dao"],
 		version: 101
+	},
+  "StakeDAO sdFXS": {
+		lp_logo: "stakedao",
+		label: "StakeDAO sdFXS",
+		chain: "ethereum",
+		external_contract: true,
+		farming_link: "https://lockers.stakedao.org/",
+		staking_enabled: true,
+		pool_tokens: ["FXS"],
+		reward_tokens: ["FXS", "SDT"]
 	},
   "Sushi FRAX/ETH": {
 		lp_logo: "sushiswap",
@@ -1629,6 +1687,7 @@ export const CONTRACT_ADDRESSES = {
       "SpiritSwap FRAX/USDC": "0x1478AEC7896e40aE5fB858C77D389F0B3e6CbC5d",
       // "SpiritSwap FRAX/FXS": "0x100FcF27C87D1cc7b8D6c28b69b84A359e4fd377", // MasterChef Pool #16
       "SpiritSwap/Ola FRAX Lending": "0x88c05534566f3bd6b6d704c9259408ff1f1a3f00",
+      "StakeDAO sdFXS": "",
       "Sushi FRAX/ETH": "0xeC8C342bc3E07F05B9a782bc34e7f04fB9B44502",
       "Sushi FRAX/ETH [Harmony]": "",
       "Sushi FRAX/FXS [Polygon]": "0xdf45b5b68d9dc84173dd963c763aea8cad3e24a6",
@@ -2139,8 +2198,8 @@ export const CONTRACT_ADDRESSES = {
       },
       cross_chain_oracle: "0xD41c352bcF599C4C3C7b516eA005ADb2dB219f2c",
       solidex: {
-        'Solidly StableV1 AMM - USDC/FRAX': "0x65167f714BAFca7c0cDE3869d1c2AE1E7caaD96D",
-        'Solidly VolatileV1 AMM - FXS/FRAX': "0x773ED601449474c7BcEe5f92033457053A14CB03"
+        'Solidly StableV1 AMM - USDC/FRAX': "0xb712C352D6338f1aDe3Ee20C1297Bfd1b68F5c22",
+        'Solidly VolatileV1 AMM - FXS/FRAX': "0x1CdAB56fd36196AF27029cD482Aa7B79E9be547C"
       }
     },
     oracles_other: {
@@ -2169,7 +2228,11 @@ export const CONTRACT_ADDRESSES = {
     },
     reward_tokens: {
       curve: "0x442A3c0B86981e33b28011428d6A752eD983b81a",
+      oxd: "0xc5A9848b9d145965d821AaeC8fA32aaEE026492d",
       scream: "0xe0654C8e6fd4D733349ac7E09f6f23DA256bF475",
+      sex: "0xD31Fcd1f7Ba190dBc75354046F6024A9b86014d7",
+      solid: "0x888EF71766ca594DED1F0FA3AE64eD2941740A20",
+      solidsex: "0x41adAc6C1Ff52C5e27568f27998d747F7b69795B",
       spirit: "0x5Cc61A78F164885776AA610fb0FE1257df78E59B",
       inspirit: "0x2FBFf41a9efAEAE77538bd63f1ea489494acdc08",
       wftm: "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83",
@@ -2178,10 +2241,14 @@ export const CONTRACT_ADDRESSES = {
       FRAX2pool: "0x7a656B342E14F745e2B164890E88017e27AE7320",
       hFRAX: "0xb4300e088a3AE4e624EE5C71Bc1822F68BB5f2bc",
       oFRAX: "0x88c05534566f3bD6b6D704c9259408fF1F1a3F00",
+      "ox-vAMM-FXS/FRAX Deposit": "0x9601f81F35B2F00549a654E3f2E5D7c87F733530",
+      oxSOLID: "0xDA0053F0bEfCbcaC208A3f867BB243716734D809",
       "Saddle FRAX/USDC": "0xc969dD0A7AB0F8a0C5A69C0839dB39b6C928bC08",
       scFRAX: "0x4E6854EA84884330207fB557D1555961D85Fc17E",
-      "Solidly StableV1 AMM - USDC/FRAX": "0x154eA0E896695824C87985a52230674C2BE7731b", // Deposit: "0xF3E57E9cba43F9998559161DDd40aaeB2225E700"
-      "Solidly VolatileV1 AMM - FXS/FRAX": "0x4bBd8467ccd49D5360648CE14830f43a7fEB6e45", // Deposit: "0xa5944150136aCF58e4e9752703Fcf7B13e8579E7"
+      "sex-sAMM-USDC/FRAX Deposit": "0xF3E57E9cba43F9998559161DDd40aaeB2225E700",
+      "sex-vAMM-FXS/FRAX Deposit": "0xa5944150136aCF58e4e9752703Fcf7B13e8579E7",
+      "Solidly StableV1 AMM - USDC/FRAX": "0x154eA0E896695824C87985a52230674C2BE7731b",
+      "Solidly VolatileV1 AMM - FXS/FRAX": "0x4bBd8467ccd49D5360648CE14830f43a7fEB6e45",
     },
     vamms: {
       USDC: "0xBea9F78090bDB9e662d8CB301A00ad09A5b756e9", // Saddle FRAX/USDC SwapFlashLoan
@@ -2590,7 +2657,7 @@ export const CONTRACT_ADDRESSES = {
     oracles_other: {
       combo_oracle: "0xAfe0C8318B67Ea8461350ABf7Bc82E5ce9Cf11D3", // "0x932aac463081dA5b2D5904E55c1F984bDC884048",
       combo_oracle_univ2_univ3: "0x86Cffe1fE0C09A0815Fe4Fd21956D24Af5ba4020", // "0x0D6EeBE86bF972Cb3e18A3D9126dF0Bfb52e7C66",
-      cpi_tracker_oracle: "0xDcF5a3A3d009a3Cd5F40c4BB38C32d870a24aa2e", // MUMBAI: "0x1B01514A2B3CdEf16fD3c680a818A0Ab97Da8a09"
+      cpi_tracker_oracle: "0x7086F2aCB5558043fF9cE3df346D8E3FB4F4f452", // MUMBAI: "0x0304A365C0fbb4b1Ad423887861b9b69a5f0c00E", MUMBAI OLD: "0x1B01514A2B3CdEf16fD3c680a818A0Ab97Da8a09"
     },
     multisigs: {
       Comptrollers: "0xDCB5A4b6Ee39447D700F4FA3303B1d1c25Ea9cA7",
