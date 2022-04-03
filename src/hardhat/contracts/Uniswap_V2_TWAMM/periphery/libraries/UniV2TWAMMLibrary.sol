@@ -49,7 +49,7 @@ library UniV2TWAMMLibrary {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'f189cae67110999320cf2cb7b2ecfb7ec3d507a37b66dfd4046f14fd37721db8' // init code hash
+                hex'bcd7f6bf0a33d45a473dfedae56b6f67694589732dd301a36d285a3293f5fa9f' // init code hash
             )))));
     }
 

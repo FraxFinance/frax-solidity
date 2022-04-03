@@ -112,7 +112,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 95000000000,
+			gasPrice: 75000000000,
 			gasMultiplier: 1.2
 		},
 		// evmos: {
@@ -312,6 +312,15 @@ module.exports = {
 			},
 			{
 				version: "0.8.10",
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 100000
+					}
+				  }
+			},
+			{
+				version: "0.8.13",
 				settings: {
 					optimizer: {
 						enabled: true,

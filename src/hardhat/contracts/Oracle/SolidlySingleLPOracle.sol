@@ -55,7 +55,6 @@ contract SolidlySingleLPOracle is Owned {
 
     // AggregatorV3Interface stuff
     uint8 public decimals; // For Chainlink mocking
-    uint8 public padding_decs; // For Chainlink mocking
     string public description;
     uint256 public version = 1;
 
@@ -122,7 +121,6 @@ contract SolidlySingleLPOracle is Owned {
 
         // Chainlink mocking related
         decimals = _decimals;
-        padding_decs = _decimals - uint8(6);
 
         description = _description;
 

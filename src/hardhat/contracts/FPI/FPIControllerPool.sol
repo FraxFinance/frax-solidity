@@ -62,21 +62,21 @@ contract FPIControllerPool is Owned {
     int256 public frax_borrow_cap = int256(10000000e18); // Max amount of FRAX the contract can borrow from this contract
 
     // Mint Fee Related
-    bool public use_manual_mint_fee = false;
+    bool public use_manual_mint_fee = true;
     uint256 public mint_fee_manual = 3000; // E6
     uint256 public mint_fee_multiplier = 1000000; // E6
     
     // Redeem Fee Related
-    bool public use_manual_redeem_fee = false;
+    bool public use_manual_redeem_fee = true;
     uint256 public redeem_fee_manual = 3000; // E6
     uint256 public redeem_fee_multiplier = 1000000; // E6
     
     // Safety
-    uint256 public fpi_mint_cap = 101000000e18;
+    uint256 public fpi_mint_cap = 110000000e18; // 110M
     uint256 public peg_band_mint_redeem = 50000; // 5%
     uint256 public peg_band_twamm = 100000; // 10%
-    uint256 public max_swap_frax_amt_in = 10000000e18; // 10M
-    uint256 public max_swap_fpi_amt_in = 10000000e18; // 10M
+    uint256 public max_swap_frax_amt_in = 10000000e18; // 10M, mainly fat-finger precautions
+    uint256 public max_swap_fpi_amt_in = 10000000e18; // 10M, mainly fat-finger precautions
     bool public mints_paused = false;
     bool public redeems_paused = false;
 
@@ -86,9 +86,9 @@ contract FPIControllerPool is Owned {
     uint256 public constant PEG_BAND_PRECISION = 1e6;
 
     // Misc
-    bool frax_is_token0;
-    bool pending_twamm_order = false;
-    uint256 public num_twamm_intervals = 168;
+    bool public frax_is_token0;
+    bool public pending_twamm_order = false;
+    uint256 public num_twamm_intervals = 168; // Each interval is default 3600 sec (1 hr)
     uint256 public swap_period = 7 * 86400; // 7 days
 
     /* ========== MODIFIERS ========== */
@@ -138,8 +138,9 @@ contract FPIControllerPool is Owned {
 
     // Needed as a FRAX AMO
     function dollarBalances() public view returns (uint256 frax_val_e18, uint256 collat_val_e18) {
-        frax_val_e18 = FRAX.balanceOf(address(this));
-        collat_val_e18 = (frax_val_e18 * 1e6) / FRAX.global_collateral_ratio();
+        // Dummy values here. FPI is not FRAX and should not be treated as FRAX collateral
+        frax_val_e18 = 1e18;
+        collat_val_e18 = 1e18;
     }
 
     // In Chainlink decimals
@@ -158,26 +159,77 @@ contract FPIControllerPool is Owned {
         return ((uint256(price) * 1e18) / (10 ** chainlink_fpi_usd_decimals));
     }
 
+    // Reserve spot price (fpi_price is dangerous / flash loan susceptible, so use carefully)    
+    function getReservesAndFPISpot() public returns (uint256 reserveFRAX, uint256 reserveFPI, uint256 fpi_price) {
+        // Update and get the reserves
+        TWAMM.executeVirtualOrders(block.timestamp);
+        {
+            (uint256 reserveA, uint256 reserveB, ) = TWAMM.getReserves();
+            if (frax_is_token0){
+                reserveFRAX = reserveA;
+                reserveFPI = reserveB;
+                
+            }
+            else {
+                reserveFRAX = reserveB;
+                reserveFPI = reserveA;
+            }
+        }
+
+        // Get the TWAMM reserve spot price
+        fpi_price = (reserveFRAX * 1e18) / reserveFPI;
+    }
+
+    // function getTwammToPegAmt() public returns (uint256 frax_in, uint256 fpi_in) {
+    //     // Update and get the reserves
+    //     (uint256 reserveFRAX, uint256 reserveFPI, uint256 reservePriceFPI) = getReservesAndFPISpot();
+        
+    //     // Get the CPI price
+    //     uint256 cpi_peg_price = cpiTracker.currPegPrice();
+
+    //     // Sort the pricing. NOTE: IN RATIOS, NOT PRICE
+    //     uint256 truePriceFRAX = 1e18;
+    //     uint256 truePriceFPI = cpi_peg_price;
+
+    //     // Determine the direction
+    //     if (fpi_to_frax) {
+    //         return UniswapV2LiquidityMathLibraryMini.computeProfitMaximizingTrade(
+    //             truePriceFPI, truePriceFRAX,
+    //             reserveFPI, reserveFRAX
+    //         );
+    //     }
+    //     else {
+    //         return UniswapV2LiquidityMathLibraryMini.computeProfitMaximizingTrade(
+    //             truePriceFRAX, truePriceFPI,
+    //             reserveFRAX, reserveFPI
+    //         );
+    //     }
+    // }
+
     // In E6
     function mint_fee() public view returns (uint256 fee) {
         if (use_manual_mint_fee) fee = mint_fee_manual;
         else {
-            fee = cpiTracker.currDeltaFracAbsE6();
-        }
+            // For future variable fees
+            fee = 0;
 
-        // Apply the multiplier
-        fee = (fee * mint_fee_multiplier) / 1e6;
+            // Apply the multiplier
+            fee = (fee * mint_fee_multiplier) / 1e6;
+        }
     }
 
     // In E6
     function redeem_fee() public view returns (uint256 fee) {
         if (use_manual_redeem_fee) fee = redeem_fee_manual;
         else {
-            fee = cpiTracker.currDeltaFracAbsE6();
+            // For future variable fees
+            fee = 0;
+
+            // Apply the multiplier
+            fee = (fee * redeem_fee_multiplier) / 1e6;
         }
 
-        // Apply the multiplier
-        fee = (fee * redeem_fee_multiplier) / 1e6;
+        
     }
 
     // Get some info about the peg status
@@ -289,70 +341,34 @@ contract FPIControllerPool is Owned {
         emit FPIRedeemed(fpi_in, frax_out);
     }
 
-    function getTwammToPegAmt(bool fpi_to_frax) public view returns (uint256) {
-        // Get the reserves
-        (uint256 reserveA, uint256 reserveB, ) = TWAMM.getReserves();
-
-        // Get the CPI price
-        uint256 cpi_peg_price = cpiTracker.currPegPrice();
-
-        // Sort the pricing. NOTE: IN RATIOS, NOT PRICE
-        uint256 truePriceTokenA;
-        uint256 truePriceTokenB;
-        if (frax_is_token0){
-            truePriceTokenA = cpi_peg_price; // X FRAX per 1 CPI
-            truePriceTokenB = 1e18;
-        }
-        else {
-            truePriceTokenA = 1e18;
-            truePriceTokenB = cpi_peg_price; // X FRAX per 1 CPI
-        }
-
-        if (fpi_to_frax) {
-            return UniswapV2LiquidityMathLibraryMini.computeProfitMaximizingTrade(
-                truePriceTokenA, truePriceTokenB,
-                reserveA, reserveB,
-                !frax_is_token0
-            );
-        }
-        else {
-            return UniswapV2LiquidityMathLibraryMini.computeProfitMaximizingTrade(
-                truePriceTokenA, truePriceTokenB,
-                reserveA, reserveB,
-                frax_is_token0
-            );
-        }
-
-    }
-
     // Use the TWAMM for bulk peg corrections
-    function twammToPeg(uint256 override_amt) external onlyByOwnGov returns (uint256 frax_to_use, uint256 fpi_to_use) {
+    function twammManual(uint256 frax_sell_amt, uint256 fpi_sell_amt, uint256 override_intervals) external onlyByOwnGov returns (uint256 frax_to_use, uint256 fpi_to_use) {
+        // Make sure only one direction occurs
+        require(!((frax_sell_amt > 0) && (fpi_sell_amt > 0)), "Can only sell in one direction");
+
+        // Update and get the reserves
+        // longTermSwapFrom0to1 and longTermSwapFrom1To0 do it automatically
+        // TWAMM.executeVirtualOrders(block.timestamp);
+        
         // Cancel the previous order (if any) and collect any leftover tokens
         if (pending_twamm_order) TWAMM.cancelLongTermSwap(last_order_id_twamm);
 
         // Now calculate the imbalance after the burn
-        (int256 collat_imbalance, , uint256 curr_fpi_price, uint256 price_diff_abs) = price_info();
+        (, , , uint256 price_diff_abs) = price_info();
 
-        // Make sure the FPI price hasn't moved too much
+        // Make sure the FPI oracle price hasn't moved away too much from the target peg price
         require(price_diff_abs <= peg_band_twamm, "Peg band [TWAMM]");
 
         // Create a new order
         last_order_id_twamm = TWAMM.getNextOrderID(); 
         {
-            if (collat_imbalance > 0) {
-                // FPI price is too high, mint FPI and sell for FRAX
-
-                // Sell cap
-                uint256 fpi_max = (uint256(collat_imbalance) * PRICE_PRECISION) / curr_fpi_price;
-
-                // Calculate the amount of FPI needed to be sold in order to reach the target FPI price
-                fpi_to_use = getTwammToPegAmt(true);
-
-                // Cap the amount of FPI sold
-                if (fpi_to_use > fpi_max) fpi_to_use = fpi_max;
-
-                // Optionally handle the override amount
-                if (override_amt > 0) fpi_to_use = override_amt;
+            if (fpi_sell_amt > 0) {
+                // Mint FPI and sell for FRAX
+                // --------------------------------
+                fpi_to_use = fpi_sell_amt;
+    
+                // Make sure nonzero
+                require(fpi_to_use > 0, "FPI sold must be nonzero");
 
                 // Safety check
                 require(fpi_to_use <= max_swap_fpi_amt_in, "Too much FPI sold");
@@ -365,26 +381,19 @@ contract FPIControllerPool is Owned {
 
                 // Sell FPI for FRAX
                 if (frax_is_token0) {
-                    TWAMM.longTermSwapFrom1To0(fpi_to_use, num_twamm_intervals);
+                    TWAMM.longTermSwapFrom1To0(fpi_to_use, override_intervals > 0 ? override_intervals : num_twamm_intervals);
                 }
                 else {
-                    TWAMM.longTermSwapFrom0To1(fpi_to_use, num_twamm_intervals);
+                    TWAMM.longTermSwapFrom0To1(fpi_to_use, override_intervals > 0 ? override_intervals : num_twamm_intervals);
                 }
             }
             else {
-                // FPI price is too low, use existing (pre-minted or deposited) FRAX and buy FPI
+                // Use FRAX to buy FPI
+                // --------------------------------
+                frax_to_use = frax_sell_amt;
 
-                // Sell cap
-                uint256 frax_max = uint256(-1 * collat_imbalance); // collat_imbalance will always be negative here
-
-                // Calculate the amount of FRAX needed to be sold in order to reach the target FPI price
-                frax_to_use = getTwammToPegAmt(false);
-
-                // Cap the amount of FRAX sold
-                if (frax_to_use > frax_max) frax_to_use = frax_max;
-
-                // Optionally handle the override amount
-                if (override_amt > 0) frax_to_use = override_amt;
+                // Make sure nonzero
+                require(frax_to_use > 0, "FRAX sold must be nonzero");
 
                 // Safety check
                 require(frax_to_use <= max_swap_frax_amt_in, "Too much FRAX sold");
@@ -394,10 +403,10 @@ contract FPIControllerPool is Owned {
 
                 // Sell FRAX for FPI
                 if (frax_is_token0) {
-                    TWAMM.longTermSwapFrom0To1(frax_to_use, num_twamm_intervals);
+                    TWAMM.longTermSwapFrom0To1(frax_to_use, override_intervals > 0 ? override_intervals : num_twamm_intervals);
                 }
                 else {
-                    TWAMM.longTermSwapFrom1To0(frax_to_use, num_twamm_intervals);
+                    TWAMM.longTermSwapFrom1To0(frax_to_use, override_intervals > 0 ? override_intervals : num_twamm_intervals);
                 }
             }
         }
