@@ -397,7 +397,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         _safeTransfer(buyToken, msg.sender, purchasedAmount);
         _safeTransfer(sellToken, msg.sender, unsoldAmount);
 
-        // update order. Used for tracking
+        // update order. Used for tracking / informational
         longTermOrders.orderMap[orderId].isComplete = true;
 
         emit CancelLongTermOrder(msg.sender, orderId, sellToken, unsoldAmount, buyToken, purchasedAmount);
@@ -415,7 +415,7 @@ contract UniV2TWAMMPair is IUniswapV2PairPartialV5, UniV2TWAMMERC20 {
         // transfer to owner of order
         _safeTransfer(proceedToken, msg.sender, proceeds);
 
-        // update order. Used for tracking
+        // update order. Used for tracking / informational
         if (orderExpired) longTermOrders.orderMap[orderId].isComplete = true;
 
         emit WithdrawProceedsFromLongTermOrder(msg.sender, orderId, proceedToken, proceeds, orderExpired);

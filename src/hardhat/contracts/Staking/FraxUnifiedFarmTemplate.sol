@@ -46,6 +46,9 @@ import "../ERC20/SafeERC20.sol";
 import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
 
+// Extra rewards
+import "../Misc_AMOs/aave/IStakedTokenIncentivesController.sol";
+
 contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     using SafeERC20 for ERC20;
 
@@ -554,6 +557,21 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
         // Update the fraxPerLPStored
         fraxPerLPStored = fraxPerLPToken();
+
+        // Pull in rewards and set the reward rate for one week, based off of that
+        {
+            // Aave aFRAX
+            // ====================================
+            address[] memory the_assets = new address[](1);
+            the_assets[0] = 0xd4937682df3C8aEF4FE912A96A74121C0829E664; // aFRAX
+            uint256 stkaave_recd = IStakedTokenIncentivesController(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5).claimRewards(
+                the_assets,
+                115792089237316195423570985008687907853269984665640564039457584007913129639935,
+                address(this)
+            );
+            rewardRatesManual[1] = stkaave_recd / rewardsDuration;
+        }
+
     }
 
     function _updateStoredRewardsAndTime() internal {

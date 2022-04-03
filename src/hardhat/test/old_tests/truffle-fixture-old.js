@@ -261,8 +261,8 @@ module.exports = async (deployer) => {
 
     // crFRAX_instance = await ICREAM_crFRAX.at(CONTRACT_ADDRESSES.ethereum.investments["cream_crFRAX"]);
 
-    routerInstance = await IUniswapV2Router02.at(CONTRACT_ADDRESSES.ethereum.uniswap_other.router); 
-    uniswapFactoryInstance = await IUniswapV2Factory.at(CONTRACT_ADDRESSES.ethereum.uniswap_other.factory); 
+    routerInstance = await IUniswapV2Router02.at(CONTRACT_ADDRESSES.ethereum.uniswap.router); 
+    uniswapFactoryInstance = await IUniswapV2Factory.at(CONTRACT_ADDRESSES.ethereum.uniswap.factory); 
     uniswapV3PositionsNFTInstance = await IUniswapV3PositionsNFT.at(CONTRACT_ADDRESSES.ethereum.uniswap_v3.NonfungiblePositionManager); 
 
     oracle_instance_FRAX_USDC = await UniswapPairOracle_FRAX_USDC.at(CONTRACT_ADDRESSES.ethereum.retired_oracles.FRAX_USDC); 
@@ -536,7 +536,7 @@ module.exports = async (deployer) => {
 	// 		CONTRACT_ADDRESSES.ethereum.canonicals.FRAX,
 	// 		CONTRACT_ADDRESSES.ethereum.canonicals.FXS,
 	// 		combo_oracle_instance.address, // CONTRACT_ADDRESSES.ethereum.oracles_other.combo_oracle,
-	// 		CONTRACT_ADDRESSES.ethereum.uniswap_other.router, // IUniswapV2Router02
+	// 		CONTRACT_ADDRESSES.ethereum.uniswap.router, // IUniswapV2Router02
 	// 		CONTRACT_ADDRESSES.ethereum.uniswap_v3.UniswapV3Factory, // IUniswapV3Factory
 	// 		CONTRACT_ADDRESSES.ethereum.uniswap_v3.NonfungiblePositionManager, // INonfungiblePositionManager
 	// 		CONTRACT_ADDRESSES.ethereum.uniswap_v3.SwapRouter // ISwapRouter

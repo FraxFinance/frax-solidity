@@ -199,7 +199,7 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
         else return uint256(-curr_delta_frac);
     }
 
-    // Current peg price, accounting for the ramping
+    // Current peg price in E18, accounting for the ramping
     function currPegPrice() external view returns (uint256) {
         uint256 elapsed_time = block.timestamp - lastUpdateTime;
         if (elapsed_time >= ramp_period) {

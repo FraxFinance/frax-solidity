@@ -1248,17 +1248,17 @@ export const CONTRACT_ADDRESSES = {
       // Added here for helping out the ABI
       FRAX: "0x853d955aCEf822Db058eb8505911ED77F175b99e",
       FXS: "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
-      FPI: "0x76c8ceF5B18994a85bC2bE1991E5B9C716626767",
-      FPIS: "0xDB68c6264e9D0f8a6Df1fA5a89F205Da38698D15",
+      FPI: "0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E",
+      FPIS: "0xc2544A32872A91F4A553b404C6950e89De901fdb",
     },
-
     oracles: {
       // SDT_WETH: "0xfbe43821dd397afF3341d90211B71C60149DC6D9", 
+      "FRAX/FPI 0.30%": "0x59985D79E1e69f659f4aB97Db07A35cE73D9174B"
     },
     oracles_other: {
       combo_oracle: "0x878f2059435a19C79c20318ee57657bF4543B6d4", // "0xbdCB57c9d35e8D41babCBcA67416ee6622274caf",
       combo_oracle_univ2_univ3: "0x1cBE07F3b3bf3BDe44d363cecAecfe9a98EC2dff", // "0xD13c9a29eF6c5ADc7b43BBd5854B07bB9b099862", 
-      cpi_tracker_oracle: "0x04BaF30115D7bAC714709910Dd286718CfAd8808"
+      cpi_tracker_oracle: "0x7086F2aCB5558043fF9cE3df346D8E3FB4F4f452", // old: "0x04BaF30115D7bAC714709910Dd286718CfAd8808"
     },
     retired_oracles: {
       FXS_USDC: "0x1F70Af31D041f9C183E23EC6809c04eb8CA006a4", //V1: 0x28fdA30a6Cf71d5fC7Ce17D6d20c788D98Ff2c46
@@ -1349,15 +1349,6 @@ export const CONTRACT_ADDRESSES = {
       "Float Protocol Pool (#90)": "0x182b177541fd35A6cEE5Cda1a5B2456586c799B6",
       "0xb1s Kitchen Sink (#127)": "0x8922C1147E141C055fdDfc0ED5a119f3378c8ef8",
       "Tribe Convex Pool (#156)": "0x5CaDc2a04921213DE60B237688776e0F1A7155E6",
-    },
-    uniswap_other: {
-      router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-      factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
-    },
-    uniswap_v3 : {
-      UniswapV3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
-      NonfungiblePositionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-      SwapRouter: "0xE592427A0AEce92De3Edee1F18E0157C05861564"
     },
     pricing: { 
       swap_to_price: "0xa61cBe7E326B13A8dbA11D00f42531BE704DF51B", 
@@ -1518,6 +1509,7 @@ export const CONTRACT_ADDRESSES = {
       msig_helper: "0x977eaDb6fa9b8E1a2A950CcDE1A75a7b527a8cBB",
       mim_convex_amo: "0x31183a2CCe8d1BFBBFE140Ea1A1264A454Fc821E",
       crosschain_liquidity_tracker: "", 
+      fpi_controller_amo: "0x94CFF60496C71a0302ABAba0Da1A1f21626f9613", // Old2: "0xF42111014F27F8D84f93966f7EAF96eDc297aFaB", // Old: "0x0AE84c1A6E142Ed90f8A35a7E7B216CB25469E37",
     },
     libraries: {
       UniswapV2OracleLibrary: "0xeB85Dd2374a44F80342AcF8010d585Bda32B77a0",
@@ -1583,6 +1575,17 @@ export const CONTRACT_ADDRESSES = {
     saddle_pools: {
       "Saddle alUSD/FEI/FRAX/LUSD": "0xC69DDcd4DFeF25D8a793241834d4cc4b3668EAD6",
     },
+    uniswap: {
+      router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+      factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+      twamm_factory: "0xF55C563148cA0c0F1626834ec1B8651844D76792",
+      twamm_router: "0xa007a9716dba05289df85A90d0Fd9D39BEE808dE"
+    },
+    uniswap_v3 : {
+      UniswapV3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+      NonfungiblePositionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+      SwapRouter: "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+    },
     uni_v3_pools: {
       NOTE: "Call getPool here (Factory) to find it: 0x1F98431c8aD98523631AE4a59f267346ea31F984",
       NOTE2: "Do hardhat verify with the v1.0.0 uniswap-v3-core fork",
@@ -1590,6 +1593,7 @@ export const CONTRACT_ADDRESSES = {
       "Uniswap V3 FRAX/DAI": "0x97e7d56A0408570bA1a7852De36350f7713906ec",
       "Uniswap V3 FRAX/USDC": "0xc63B0708E2F7e69CB8A1df0e1389A98C35A76D52",
       "Uniswap V3 FRAX/WETH": "0x92c7b5ce4cb0e5483f3365c1449f21578ee9f21a",
+      "FRAX/FPI 0.30%": "0xd2a9F2B88d6DF8830522D624db491445362a2797"
     },
     investor_custodian: "0x5180db0237291A6449DdA9ed33aD90a38787621c",
     multisigs: {
@@ -1602,6 +1606,7 @@ export const CONTRACT_ADDRESSES = {
     },
     vamms: {},
     pair_tokens: {
+      "FraxSwap FRAX/FPI": "0x9197B71c174dA0a5ab25EdA9e5A1e456c0eaA078",
       "Gelato Uniswap FRAX/DAI": "0xb1Cfdc7370550f5e421E1bf0BF3CADFaDF3C4141",
       "Uniswap FRAX/WETH": "0xFD0A40Bc83C5faE4203DEc7e5929B446b07d1C76",
       "Uniswap FRAX/USDC": "0x97C4adc5d28A86f9470C70DD91Dc6CC2f20d2d4D",
