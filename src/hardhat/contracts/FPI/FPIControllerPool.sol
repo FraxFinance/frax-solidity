@@ -427,7 +427,7 @@ contract FPIControllerPool is Owned {
 
     function collectCurrTWAMMProceeds(uint256 order_id_override) external onlyByOwnGov {
         // Withdraw current proceeds
-        bool is_expired = TWAMM.withdrawProceedsFromLongTermSwap(order_id_override == 0 ? last_order_id_twamm : order_id_override);
+        (bool is_expired, , ) = TWAMM.withdrawProceedsFromLongTermSwap(order_id_override == 0 ? last_order_id_twamm : order_id_override);
         
         // If using the last_order_id_twamm and it is expired, clear the pending order indicator
         if (is_expired && (order_id_override == 0)) pending_twamm_order = false;
