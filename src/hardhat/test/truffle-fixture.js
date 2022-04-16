@@ -52,6 +52,9 @@ const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Route
 // Uniswap V3 related
 const IUniswapV3PositionsNFT = artifacts.require("Uniswap_V3/IUniswapV3PositionsNFT");
 
+// veFPIS
+const veFPIS = artifacts.require("Curve/veFPIS");
+
 // veFXS
 const veFXS = artifacts.require("Curve/IveFXS");
 const veFXSYieldDistributorV4 = artifacts.require("Staking/veFXSYieldDistributorV4.sol");
@@ -105,6 +108,9 @@ module.exports = async (deployer) => {
 	let routerInstance;
 	let uniswapFactoryInstance;
     let uniswapV3PositionsNFTInstance;
+
+    // veFPIS
+    let veFPIS_instance;
 
     // veFXS
     let veFXS_instance;
@@ -186,6 +192,15 @@ module.exports = async (deployer) => {
     //     fxs_instance.address,
     //     veFXS_instance.address
     // );
+
+    console.log(chalk.yellow('========== veFPIS =========='));
+    // veFPIS
+    veFPIS_instance = await veFPIS.new(
+        CONTRACT_ADDRESSES.ethereum.canonicals.FPIS, 
+        "veFPIS",
+        "veFPIS",
+        "veFPIS_1.0.0"
+    );
 
     // // Add in a gauge type
     // await frax_gauge_controller_v2.add_type("Ethereum Mainnet", "1000000000000000000", { from: THE_ACCOUNTS[0] });
@@ -378,11 +393,12 @@ module.exports = async (deployer) => {
     UniV2TWAMMPair.setAsDeployed(twamm_pair_instance);
     UniV2TWAMMRouter.setAsDeployed(twamm_router_instance);
 
+    console.log(chalk.yellow("--------DEPLOYING veFPIS CONTRACTS--------"));
+    veFPIS.setAsDeployed(veFPIS_instance);
+
     console.log(chalk.yellow("--------DEPLOYING veFXS CONTRACTS--------"));
     veFXS.setAsDeployed(veFXS_instance);
     veFXSYieldDistributorV4.setAsDeployed(veFXSYieldDistributorV4_instance);
     veFXSBoost.setAsDeployed(vefxs_boost_instance);
     veFXSBoostDelegationProxy.setAsDeployed(vefxs_boost_deleg_proxy_instance);
-
-
 }

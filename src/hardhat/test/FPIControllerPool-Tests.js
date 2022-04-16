@@ -267,7 +267,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		console.log("FPI spot price from reserves:", fpi_spot_price_reserves);
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================ADVANCE 1 DAY TO INCREASE THE CPI PEG PRICE================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================ADVANCE 1 DAY TO INCREASE THE CPI PEG PRICE================"));
 		// Advance 1 day
 		// Execute virtual orders in the process
 		console.log("Advance 1 days in 1 day increments, executingVirtualOrders along the way");
@@ -299,7 +299,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		console.log("price_info[3] [price_diff_frac_abs]:", new BigNumber(price_info_pack_post_ramp[3]).toNumber());
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================DO TWAMMMANUAL TO SELL FPI [INTERVAL OVERRIDE]================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================DO TWAMMMANUAL TO SELL FPI [INTERVAL OVERRIDE]================"));
 		console.log("Do the order");
 		const manual_fpi_int_ovr_amt = new BigNumber("100e18");
 		const manual_fpi_int_ovr_amt_dec = manual_fpi_int_ovr_amt.div(BIG18).toNumber();
@@ -321,7 +321,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		expect(ttp_fpi_after_manual_fpi_int_ovr - ttp_fpi_before_manual_fpi_int_ovr).to.be.closeTo(manual_fpi_int_ovr_amt_dec * (0.5), manual_fpi_int_ovr_amt_dec * .01);
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================DO TWAMMMANUAL TO SELL FRAX [INTERVAL OVERRIDE]================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================DO TWAMMMANUAL TO SELL FRAX [INTERVAL OVERRIDE]================"));
 		console.log("Do the order");
 		const manual_frax_int_ovr_amt = new BigNumber("100e18");
 		const manual_frax_int_ovr_amt_dec = manual_frax_int_ovr_amt.div(BIG18).toNumber();
@@ -343,7 +343,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		expect(ttp_frax_after_manual_frax_int_ovr - ttp_frax_before_manual_frax_int_ovr).to.be.closeTo(-1 * manual_frax_int_ovr_amt_dec * (0.5), manual_frax_int_ovr_amt_dec * .01);
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================DO TWAMMMANUAL TO SELL FPI================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================DO TWAMMMANUAL TO SELL FPI================"));
 		console.log("Do the order");
 		const manual_fpi_amt = new BigNumber("100e18");
 		const manual_fpi_amt_dec = manual_fpi_amt.div(BIG18).toNumber();
@@ -364,7 +364,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		expect(ttp_fpi_after_manual_fpi - ttp_fpi_before_manual_fpi).to.be.closeTo(manual_fpi_amt_dec * (27 / 28), manual_fpi_amt_dec * .01);
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================DO TWAMMMANUAL TO SELL FRAX================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================DO TWAMMMANUAL TO SELL FRAX================"));
 		console.log("Do the order");
 		const manual_frax_amt = new BigNumber("100e18");
 		const manual_frax_amt_dec = manual_frax_amt.div(BIG18).toNumber();
@@ -385,7 +385,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		expect(ttp_frax_after_manual_frax - ttp_frax_before_manual_frax).to.be.closeTo(-1 * manual_frax_amt_dec * (1 / 28), manual_frax_amt_dec * .01);
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================DO TWAMMMANUAL TO SELL FRAX [AGAIN]================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================DO TWAMMMANUAL TO SELL FRAX [AGAIN]================"));
 		console.log("Do the order");
 		const manual_frax_collect_amt = new BigNumber("100e18");
 		const manual_frax_collect_amt_dec = manual_frax_collect_amt.div(BIG18).toNumber();
@@ -406,7 +406,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		expect(frax_after_collect - frax_before_collect).to.be.closeTo(-1 * manual_frax_collect_amt_dec, manual_frax_collect_amt_dec * .01);
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================ADVANCE TO END OF TWAMM================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================ADVANCE TO END OF TWAMM================"));
 		// Advance 7 days so the TWAMM order is done
 		await time.increase(7 * 86400);
 		await time.advanceBlock();
@@ -521,7 +521,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================AMM SWAP FPI TO FRAX================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================AMM SWAP FPI TO FRAX================"));
 		// Approve FPI
 		await fpi_instance.approve(twamm_router_instance.address, BIG18, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); 
 
@@ -535,7 +535,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		console.log("FPI change: ", amm_fpi_after_0_to_1 - amm_fpi_before_0_to_1);
 
 		
-		console.log(chalk.hex("#ff8b3dI").bold("=================AMM SWAP FRAX TO FPI================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================AMM SWAP FRAX TO FPI================"));
 		// Approve FRAX
 		await frax_instance.approve(twamm_router_instance.address, BIG18, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); 
 
