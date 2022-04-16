@@ -347,7 +347,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================AMM SWAP FPI TO FRAX================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================AMM SWAP FPI TO FRAX================"));
 		// Approve FPI
 		await fpi_instance.approve(twamm_router_instance.address, BIG18, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); 
 
@@ -361,7 +361,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		console.log("FPI change: ", amm_fpi_after_0_to_1 - amm_fpi_before_0_to_1);
 
 		
-		console.log(chalk.hex("#ff8b3dI").bold("=================AMM SWAP FRAX TO FPI================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================AMM SWAP FRAX TO FPI================"));
 		// Approve FRAX
 		await canFRAX_instance.approve(twamm_router_instance.address, BIG18, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); 
 
@@ -375,7 +375,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		console.log("FPI change: ", amm_fpi_after_1_to_0 - amm_fpi_before_1_to_0);
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================ADVANCE TO FULL CPI PRICE================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================ADVANCE TO FULL CPI PRICE================"));
 		// Advance 28 days so the CPI price ramp is done
 		await time.increase(28 * 86400);
 		await time.advanceBlock();
@@ -389,7 +389,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		console.log("price_info[3] [price_diff_frac_abs]:", new BigNumber(price_info_pack_post_ramp[3]).toNumber());
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================DO TWAMMTOPEG [OVERRIDE]================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================DO TWAMMTOPEG [OVERRIDE]================"));
 		// twammToPeg override
 		const override_amt = new BigNumber("1e15");
 		const ttp_frax_before_override = new BigNumber(await canFRAX_instance.balanceOf(fpi_controller_pool_instance.address)).div(BIG18).toNumber();
@@ -401,7 +401,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		console.log("FPI change: ", ttp_fpi_after_override - ttp_fpi_before_override);
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================ADVANCE HALFWAY THROUGH TWAMM, THEN CANCEL================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================ADVANCE HALFWAY THROUGH TWAMM, THEN CANCEL================"));
 		// Advance 3.5 days so the TWAMM order is halfway done
 		await time.increase(3.5 * 86400);
 		await time.advanceBlock();
@@ -416,7 +416,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		console.log("FPI change: ", ttp_fpi_after_cancel - ttp_fpi_before_cancel);
 		
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================DO TWAMMTOPEG [AUTO]================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================DO TWAMMTOPEG [AUTO]================"));
 		// twammToPeg auto
 		const ttp_frax_before_auto = new BigNumber(await canFRAX_instance.balanceOf(fpi_controller_pool_instance.address)).div(BIG18).toNumber();
 		const ttp_fpi_before_auto = new BigNumber(await fpi_instance.balanceOf(fpi_controller_pool_instance.address)).div(BIG18).toNumber();
@@ -436,7 +436,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		console.log("FPI change: ", ttp_fpi_after_auto - ttp_fpi_before_auto);
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================ADVANCE HALFWAY THROUGH TWAMM, THEN COLLECT================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================ADVANCE HALFWAY THROUGH TWAMM, THEN COLLECT================"));
 		// Advance 3.5 days so the TWAMM order is halfway done
 		await time.increase(3.5 * 86400);
 		await time.advanceBlock();
@@ -451,7 +451,7 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		console.log("FPI change: ", ttp_fpi_after_collect - ttp_fpi_before_collect);
 
 
-		console.log(chalk.hex("#ff8b3dI").bold("=================ADVANCE TO END OF TWAMM================"));
+		console.log(chalk.hex("#ff8b3d").bold("=================ADVANCE TO END OF TWAMM================"));
 		// Advance 4 days so the TWAMM order is done is done
 		await time.increase(4 * 86400);
 		await time.advanceBlock();
