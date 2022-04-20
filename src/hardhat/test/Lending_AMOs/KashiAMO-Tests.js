@@ -33,11 +33,10 @@ const hre = require("hardhat");
 const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 const FraxAMOMinter = artifacts.require("Frax/FraxAMOMinter");
 
-const KashiAMO = artifacts.require("contracts/Kashi/KashiAMO.sol");
-const BentoBoxAMO = artifacts.require("contracts/Kashi/BentoBoxAMO.sol");
+const KashiAMO = artifacts.require("contracts/Misc_AMOs/KashiAMO.sol");
 
-const KashiPairMediumRiskV1 = artifacts.require("contracts/Kashi/KashiPairMediumRiskV1.sol");
-const IBentoBoxV1 = artifacts.require("contracts/Kashi/BentoBoxV1.sol");
+const KashiPairMediumRiskV1 = artifacts.require("contracts/Misc_AMOs/kashi/IKashiPairMediumRiskV1.sol");
+const IBentoBoxV1 = artifacts.require("contracts/Misc_AMOs/kashi/IBentoBoxV1.sol");
 
 // FRAX core
 const FRAXStablecoin = artifacts.require("Frax/IFrax");
@@ -106,6 +105,7 @@ contract('KashiAMO-Tests', async (accounts) => {
 		frax_amo_minter_instance = await FraxAMOMinter.at(CONTRACT_ADDRESSES.ethereum.misc.amo_minter);
 
 		kasiAMO_instance = await KashiAMO.new(DEPLOYER_ADDRESS,frax_amo_minter_instance.address);
+		await kasiAMO_instance.addPairToList(wEthFraxKashiPair_instance.address);
 		
     });
 
@@ -119,6 +119,38 @@ contract('KashiAMO-Tests', async (accounts) => {
 		assert.equal(accounts[0], owner);
     });
 
+	it('Frax mint to AMO test', async () => {
+		const frax_balance_before = new BigNumber(await frax_instance.balanceOf.call(kasiAMO_instance.address)).div(BIG18);
+		console.log("AMO FRAX Balance before: ", frax_balance_before.toNumber());
+
+		let allocations = await kasiAMO_instance.showAllocations();
+		console.log("Allocation: Unallocated FRAX: ", BigNumber(allocations[0]).toNumber());
+		console.log("Allocation: Allocated FRAX: ", BigNumber(allocations[1]).toNumber());
+		console.log("Allocation: Total FRAX: ", BigNumber(allocations[2]).toNumber());
+
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [process.env.COMPTROLLER_MSIG_ADDRESS]}
+		);
+		console.log("add AMO to AMO Minter");
+		await frax_amo_minter_instance.addAMO(kasiAMO_instance.address, true, { from: process.env.COMPTROLLER_MSIG_ADDRESS });
+		// console.log("allAMOAddresses:", await frax_amo_minter_instance.allAMOAddresses.call());
+		// console.log("allAMOsLength:", new BigNumber(await frax_amo_minter_instance.allAMOsLength.call()).toNumber());
+		
+		console.log("mint 1k FRAX from the AMO Minter");
+		await frax_amo_minter_instance.mintFraxForAMO(kasiAMO_instance.address, new BigNumber("1000e18"), { from: process.env.COMPTROLLER_MSIG_ADDRESS });
+		
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [process.env.COMPTROLLER_MSIG_ADDRESS]
+		});
+		
+		allocations = await kasiAMO_instance.showAllocations();
+		console.log("Allocation: Unallocated FRAX: ", BigNumber(allocations[0]).toNumber());
+		console.log("Allocation: Allocated FRAX: ", BigNumber(allocations[1]).toNumber());
+		console.log("Allocation: Total FRAX: ", BigNumber(allocations[2]).toNumber());
+    });
+
 	it('VIEWS Functions test', async () => {
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
@@ -126,25 +158,27 @@ contract('KashiAMO-Tests', async (accounts) => {
 		);
 		// Give the COLLATERAL_FRAX_AND_FXS_OWNER address some FRAX
 		await frax_instance.transfer(kasiAMO_instance.address, new BigNumber("1000e18"), { from: ADDRESS_WITH_FRAX });
+		
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
 			params: [ADDRESS_WITH_FRAX]}
 		);
+		
 		// Deposit FRAX to kashipair
-        await kasiAMO_instance.depositToPair.call(wEthFraxKashiPair_instance.address ,new BigNumber("150e18"),false);
-		const allocations = await kasiAMO_instance.showAllocations.call();
+        await kasiAMO_instance.depositToPair(wEthFraxKashiPair_instance.address ,new BigNumber("150e18"));
+		const allocations = await kasiAMO_instance.showAllocations();
 		console.log("Allocation: Unallocated FRAX: ", BigNumber(allocations[0]).toNumber());
 		console.log("Allocation: Allocated FRAX: ", BigNumber(allocations[1]).toNumber());
 		console.log("Allocation: Total FRAX: ", BigNumber(allocations[2]).toNumber());
 		
-		const total_dollar_balance = await kasiAMO_instance.dollarBalances.call();
+		const total_dollar_balance = await kasiAMO_instance.dollarBalances();
 		console.log("dollarBalances: frax_val_e18: ", BigNumber(total_dollar_balance[0]).toNumber());
 		console.log("dollarBalances: collat_val_e18: ", BigNumber(total_dollar_balance[1]).toNumber());
 		
-		const reward = await kasiAMO_instance.showRewards.call();
+		const reward = await kasiAMO_instance.showRewards();
 		console.log("showRewards: SUSHI Balance: ", BigNumber(reward).toNumber());
 
-		const minted_balance = await kasiAMO_instance.mintedBalance.call();
+		const minted_balance = await kasiAMO_instance.mintedBalance();
 		console.log("mintedBalance: Frax minted balance of the KashiAMO: ", BigNumber(minted_balance).toNumber());
 
     });
@@ -169,7 +203,7 @@ contract('KashiAMO-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FRAX]}
 		);
 		// Deposit FRAX to kashipair
-        await kasiAMO_instance.depositToPair.call(wEthFraxKashiPair_instance.address ,new BigNumber("150e18"),true);
+        await kasiAMO_instance.depositToPair(wEthFraxKashiPair_instance.address ,new BigNumber("150e18"));
     });
 	
 	it('Kashi pair withdraw test', async () => {
@@ -184,8 +218,9 @@ contract('KashiAMO-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FRAX]}
 		);
 		// Deposit FRAX to kashipair
-        await kasiAMO_instance.depositToPair.call(wEthFraxKashiPair_instance.address ,new BigNumber("150e18"),false);
-		await kasiAMO_instance.withdrawFromPair.call(wEthFraxKashiPair_instance.address ,new BigNumber("140e18"),true);
+        await kasiAMO_instance.depositToPair(wEthFraxKashiPair_instance.address ,new BigNumber("150e18"));
+		await kasiAMO_instance.withdrawFromPair(wEthFraxKashiPair_instance.address ,new BigNumber("140e18"));
+		
     });
 	
 	it('Kashi new pair creation', async () => {
@@ -204,8 +239,8 @@ contract('KashiAMO-Tests', async (accounts) => {
 		const SUSHI_ETH_CHAINLINK_ADDRESS = '0xe572cef69f43c2e488b33924af04bdace19079cf';
 		// Deposit FRAX to kashipair
 		// console.log(await wEthFraxKashiPair_instance.oracleData.call());
-        const cloneAddress = await kasiAMO_instance.createNewPair.call(SUSHI_TOKEN_ADDRESS,SUSHI_ETH_CHAINLINK_ADDRESS,new BigNumber("1e18"));
+        const cloneAddress = await kasiAMO_instance.createNewPair(SUSHI_TOKEN_ADDRESS,SUSHI_ETH_CHAINLINK_ADDRESS,new BigNumber("1e18"));
+		// console.log("New pair address: ", cloneAddress.address);
     });
-
 
 });

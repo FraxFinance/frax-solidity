@@ -47,7 +47,7 @@ import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
 
 // Extra rewards
-import "../Misc_AMOs/Lending_AMOs/aave/IAaveIncentivesControllerPartial.sol";
+import "../Misc_AMOs/aave/IStakedTokenIncentivesController.sol";
 
 contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     using SafeERC20 for ERC20;
@@ -494,20 +494,18 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     // Two different getReward functions are needed because of delegateCall and msg.sender issues
-    // For backwards-compatibility
-    function getReward(address destination_address) external nonReentrant returns (uint256[] memory) {
-        return _getReward(msg.sender, destination_address, true);
+    function getReward(address destination_address) external returns (uint256[] memory) {
+        return getReward(destination_address, true);
     }
 
-    function getReward2(address destination_address, bool claim_extra_too) external nonReentrant returns (uint256[] memory) {
+    function getReward(address destination_address, bool claim_extra_too) public nonReentrant returns (uint256[] memory) {
+        require(rewardsCollectionPaused == false, "Rewards collection paused");
         return _getReward(msg.sender, destination_address, claim_extra_too);
     }
 
+
     // No withdrawer == msg.sender check needed since this is only internally callable
     function _getReward(address rewardee, address destination_address, bool do_extra_logic) internal updateRewardAndBalance(rewardee, true) returns (uint256[] memory rewards_before) {
-        // Make sure rewards collection isn't paused
-        require(rewardsCollectionPaused == false, "Rewards collection paused");
-        
         // Update the rewards array and distribute rewards
         rewards_before = new uint256[](rewardTokens.length);
 
@@ -518,9 +516,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         }
 
         // Handle additional reward logic
-        if (do_extra_logic) {
-            _getRewardExtraLogic(rewardee, destination_address);
-        }
+        if (do_extra_logic) _getRewardExtraLogic(rewardee, destination_address);
 
         // Update the last reward claim time
         lastRewardClaimTime[rewardee] = block.timestamp;
@@ -563,20 +559,18 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         fraxPerLPStored = fraxPerLPToken();
 
         // Pull in rewards and set the reward rate for one week, based off of that
-        // If the stkAAVE rewards get messed up for some reason, set this to 0 and it will skip
-        if (rewardRatesManual[1] != 0) {
-            // Aave aFRAX
-            // ====================================
-            address[] memory the_assets = new address[](1);
-            the_assets[0] = 0xd4937682df3C8aEF4FE912A96A74121C0829E664; // aFRAX
-            uint256 stkaave_recd = IAaveIncentivesControllerPartial(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5).claimRewards(
-                the_assets,
-                115792089237316195423570985008687907853269984665640564039457584007913129639935,
-                address(this)
-            );
-            rewardRatesManual[1] = stkaave_recd / rewardsDuration;
-        }
-
+        // {
+        //     // Aave aFRAX
+        //     // ====================================
+        //     address[] memory the_assets = new address[](1);
+        //     the_assets[0] = 0xd4937682df3C8aEF4FE912A96A74121C0829E664; // aFRAX
+        //     uint256 stkaave_recd = IStakedTokenIncentivesController(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5).claimRewards(
+        //         the_assets,
+        //         115792089237316195423570985008687907853269984665640564039457584007913129639935,
+        //         address(this)
+        //     );
+        //     rewardRatesManual[1] = stkaave_recd / rewardsDuration;
+        // }
 
     }
 

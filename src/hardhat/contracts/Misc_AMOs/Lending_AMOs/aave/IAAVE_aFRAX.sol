@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.6.11;
-import '../../ERC20/IERC20.sol';
+import '../../../ERC20/IERC20.sol';
 
 // Address [0xd4937682df3c8aef4fe912a96a74121c0829e664] used is a proxy
 // Some functions were omitted for brevity. See the contract for details

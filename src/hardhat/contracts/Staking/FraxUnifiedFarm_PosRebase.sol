@@ -10,58 +10,34 @@ pragma experimental ABIEncoderV2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================= FraxUnifiedFarm_ERC20 ======================
+// ===================== FraxUnifiedFarm_PosRebase ====================
 // ====================================================================
-// For ERC20 Tokens
+// For positive rebase ERC20 Tokens like Aave's aToken and Compound's cToken
 // Uses FraxUnifiedFarmTemplate.sol
 
 import "./FraxUnifiedFarmTemplate.sol";
 
 // -------------------- VARIES --------------------
 
-// G-UNI
-// import "../Misc_AMOs/gelato/IGUniPool.sol";
-
-// mStable
-// import '../Misc_AMOs/mstable/IFeederPool.sol';
-
-// StakeDAO sdETH-FraxPut
-// import '../Misc_AMOs/stakedao/IOpynPerpVault.sol';
-
-// StakeDAO Vault
-// import '../Misc_AMOs/stakedao/IStakeDaoVault.sol';
-
-// Uniswap V2
-import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
-
-// Vesper
-// import '../Misc_AMOs/vesper/IVPool.sol';
+// Aave V2
+import '../Misc_AMOs/Lending_AMOs/aave/IAToken.sol';
+import '../Misc_AMOs/Lending_AMOs/aave/ILendingPool.sol';
 
 // ------------------------------------------------
 
-contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
+contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
 
     /* ========== STATE VARIABLES ========== */
 
     // -------------------- VARIES --------------------
 
-    // G-UNI
-    // IGUniPool public stakingToken;
-    
-    // mStable
-    // IFeederPool public stakingToken;
+    // Aave V2
+    IAToken public stakingToken;
 
-    // sdETH-FraxPut Vault
-    // IOpynPerpVault public stakingToken;
-
-    // StakeDAO Vault
-    // IStakeDaoVault public stakingToken;
-
-    // Uniswap V2
-    IUniswapV2Pair public stakingToken;
-
-    // Vesper
-    // IVPool public stakingToken;
+    // Need to store this when the user stakes. If they lockAdditional, the base value needs to accrue and the
+    // Stored liquidity index needs to be updated
+    // https://docs.aave.com/developers/v/2.0/the-core-protocol/atokens#scaledbalanceof
+    mapping(bytes32 => uint256) public storedStkLiqIdx; // kek_id -> liquidity index. 
 
     // ------------------------------------------------
 
@@ -94,28 +70,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     {
 
         // -------------------- VARIES --------------------
-        // G-UNI
-        // stakingToken = IGUniPool(_stakingToken);
-        // address token0 = address(stakingToken.token0());
-        // frax_is_token0 = token0 == frax_address;
-
-        // mStable
-        // stakingToken = IFeederPool(_stakingToken);
-
-        // StakeDAO sdETH-FraxPut Vault
-        // stakingToken = IOpynPerpVault(_stakingToken);
-
-        // StakeDAO Vault
-        // stakingToken = IStakeDaoVault(_stakingToken);
-
-        // Uniswap V2
-        stakingToken = IUniswapV2Pair(_stakingToken);
-        address token0 = stakingToken.token0();
-        if (token0 == frax_address) frax_is_token0 = true;
-        else frax_is_token0 = false;
-
-        // Vesper
-        // stakingToken = IVPool(_stakingToken);
+  
+        // Aave V2
+        stakingToken = IAToken(_stakingToken);
+    
     }
 
     /* ============= VIEWS ============= */
@@ -126,56 +84,13 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
-        // G-UNI
-        // ============================================
-        // {
-        //     (uint256 reserve0, uint256 reserve1) = stakingToken.getUnderlyingBalances();
-        //     uint256 total_frax_reserves = frax_is_token0 ? reserve0 : reserve1;
 
-        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
-        // }
-
-        // mStable
-        // ============================================
-        // {
-        //     uint256 total_frax_reserves;
-        //     (, IFeederPool.BassetData memory vaultData) = (stakingToken.getBasset(frax_address));
-        //     total_frax_reserves = uint256(vaultData.vaultBalance);
-        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
-        // }
-
-        // StakeDAO sdETH-FraxPut Vault
-        // ============================================
-        // {
-        //    uint256 frax3crv_held = stakingToken.totalUnderlyingControlled();
-        
-        //    // Optimistically assume 50/50 FRAX/3CRV ratio in the metapool to save gas
-        //    frax_per_lp_token = ((frax3crv_held * 1e18) / stakingToken.totalSupply()) / 2;
-        // }
-
-        // StakeDAO Vault
-        // ============================================
-        // {
-        //    uint256 frax3crv_held = stakingToken.balance();
-        
-        //    // Optimistically assume 50/50 FRAX/3CRV ratio in the metapool to save gas
-        //    frax_per_lp_token = ((frax3crv_held * 1e18) / stakingToken.totalSupply()) / 2;
-        // }
-
-        // Uniswap V2
+        // Aave V2
         // ============================================
         {
-            uint256 total_frax_reserves;
-            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-            if (frax_is_token0) total_frax_reserves = reserve0;
-            else total_frax_reserves = reserve1;
-
-            frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
+            // Always 1-to-1, but user will get scaled balance at withdrawal time
+            frax_per_lp_token = 1e18;
         }
-
-        // Vesper
-        // ============================================
-        // frax_per_lp_token = stakingToken.pricePerShare();
 
         return frax_per_lp_token;
     }
@@ -235,6 +150,15 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         }
     }
 
+    // ------ REBASE RELATED ------
+
+    // Aave V2
+    // ============================================
+    // Get currentLiquidityIndex from AAVE
+    function currLiqIdx() public view returns (uint256) {
+        return ILendingPool(stakingToken.POOL()).getReserveNormalizedIncome(frax_address);
+    }
+
     // ------ LOCK RELATED ------
 
     // All the locked stakes for a given account
@@ -282,9 +206,13 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     }
 
     // Add additional LPs to an existing locked stake
+    // REBASE: If you simply want to accrue interest, call this with addl_liq = 0
     function lockAdditional(bytes32 kek_id, uint256 addl_liq) updateRewardAndBalance(msg.sender, true) public {
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
+
+        // Accrue the interest and get the updated stake
+        (thisStake, ) = _accrueInterest(msg.sender, thisStake, theArrayIndex);
 
         // Calculate the new amount
         uint256 new_amt = thisStake.liquidity + addl_liq;
@@ -351,6 +279,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             lock_multiplier
         ));
 
+        // Store the liquidity index. Used later to give back principal + accrued interest
+        storedStkLiqIdx[kek_id] = currLiqIdx();
+
         // Update liquidities
         _total_liquidity_locked += liquidity;
         _locked_liquidity[staker_address] += liquidity;
@@ -387,13 +318,18 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(staker_address, kek_id);
+
+        // Accrue the interest and get the updated stake
+        (thisStake, ) = _accrueInterest(staker_address, thisStake, theArrayIndex);
+
+        // Do safety checks
         require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true || valid_migrators[msg.sender] == true, "Stake is still locked!");
         uint256 liquidity = thisStake.liquidity;
 
         if (liquidity > 0) {
             // Update liquidities
-            _total_liquidity_locked = _total_liquidity_locked - liquidity;
-            _locked_liquidity[staker_address] = _locked_liquidity[staker_address] - liquidity;
+            _total_liquidity_locked -= liquidity;
+            _locked_liquidity[staker_address] -= liquidity;
             {
                 address the_proxy = getProxyFor(staker_address);
                 if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= liquidity;
@@ -409,12 +345,43 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             // Need to call again to make sure everything is correct
             _updateRewardAndBalance(staker_address, false);
 
+            // REBASE: leave liquidity in the event tracking alone, not giveBackAmt
             emit WithdrawLocked(staker_address, liquidity, kek_id, destination_address);
+
+            
         }
 
         return liquidity;
     }
 
+    // REBASE SPECIFIC
+    // Catches-up the user's accrued interest and sets it as the new principal (liquidity)
+    function _accrueInterest(
+        address staker_address, 
+        LockedStake memory thisStake, 
+        uint256 theArrayIndex
+    ) internal returns (LockedStake memory, uint256) {
+        // Calculate the new liquidity as well as the diff
+        // new pricipal = (old principal ∗ currentLiquidityIndex) / (old liquidity index)
+        uint256 new_liq = (thisStake.liquidity * currLiqIdx()) / storedStkLiqIdx[thisStake.kek_id];
+        uint256 liq_diff = new_liq - thisStake.liquidity;
+
+        // Update the new principal
+        lockedStakes[staker_address][theArrayIndex].liquidity = new_liq;
+
+        // Update the liquidity totals
+        _total_liquidity_locked += liq_diff;
+        _locked_liquidity[staker_address] += liq_diff;
+        {
+            address the_proxy = getProxyFor(staker_address);
+            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += liq_diff;
+        }
+
+        // Store the new liquidity index. Used later to give back principal + accrued interest
+        storedStkLiqIdx[thisStake.kek_id] = currLiqIdx();
+    
+        return (lockedStakes[staker_address][theArrayIndex], theArrayIndex);
+    }
 
     function _getRewardExtraLogic(address rewardee, address destination_address) internal override {
         // Do nothing
