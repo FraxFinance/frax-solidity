@@ -19,17 +19,18 @@ pragma solidity >=0.8.0;
 // Reviewer(s) / Contributor(s)
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
+// Amirnader Aghayeghazvini: https://github.com/amirnader-ghazvini
 
-import "../Math/SafeMath.sol";
-import "../Frax/IFrax.sol";
-import "../Frax/IFraxAMOMinter.sol";
-import "../ERC20/ERC20.sol";
-import "../Staking/Owned.sol";
-import '../Uniswap/TransferHelper.sol';
+import "../../Math/SafeMath.sol";
+import "../../Frax/IFrax.sol";
+import "../../Frax/IFraxAMOMinter.sol";
+import "../../ERC20/ERC20.sol";
+import "../../Staking/Owned.sol";
+import '../../Uniswap/TransferHelper.sol';
 import "./rari/ICErc20Delegator.sol";
 import "./rari/IRariComptroller.sol";
 
-contract RariFuseLendingAMO_V2 is Owned {
+contract RariFuseLendingAMO_V3 is Owned {
     using SafeMath for uint256;
     // SafeMath automatically included in Solidity >= 8.0.0
 
@@ -44,6 +45,10 @@ contract RariFuseLendingAMO_V2 is Owned {
     // Rari
     address[] public fuse_pools_array;
     mapping(address => bool) public fuse_pools; // Mapping is also used for faster verification
+
+    address[] public fuse_borrow_pools_array;
+    mapping(address => bool) public fuse_borrow_pools; // Mapping is also used for faster verification
+    
 
     // Price constants
     uint256 private constant PRICE_PRECISION = 1e6;
@@ -90,6 +95,11 @@ contract RariFuseLendingAMO_V2 is Owned {
 
     modifier validPool(address pool_address) {
         require(fuse_pools[pool_address], "Invalid pool");
+        _;
+    }
+
+    modifier validBorrowPool(address borrow_pool_address) {
+        require(fuse_borrow_pools[borrow_pool_address], "Invalid borrow pool");
         _;
     }
 
@@ -157,39 +167,103 @@ contract RariFuseLendingAMO_V2 is Owned {
         return int256(showAllocations()[2]) - mintedBalance();
     }
 
+    // Helpful for UIs
+    function allBorrowPoolAddresses() external view returns (address[] memory) {
+        return fuse_borrow_pools_array;
+    }
+
+    // Helpful for UIs
+    function allBorrowPoolsLength() external view returns (uint256) {
+        return fuse_borrow_pools_array.length;
+    }
+
+    function borrowPoolAddrToIdx(address pool_address) public view returns (uint256) {
+        for (uint i = 0; i < fuse_borrow_pools_array.length; i++){ 
+            if (fuse_borrow_pools_array[i] == pool_address){
+                return i;
+            }
+        }
+        revert("Pool not found");
+    }
+
+    function deptToPoolByPoolIdx(uint256 pool_idx) public view returns (uint256) {
+        ICErc20Delegator delegator = ICErc20Delegator(fuse_borrow_pools_array[pool_idx]);
+        uint256 debt_bal = delegator.borrowBalanceStored(address(this));
+        return debt_bal.mul(delegator.exchangeRateStored()).div(1e18);
+    }
+
+    function debtToPoolByPoolAddr(address pool_address) public view returns (uint256) {
+        uint256 pool_idx = borrowPoolAddrToIdx(pool_address);
+        return deptToPoolByPoolIdx(pool_idx);
+    }
+
+    function assetDeptToPoolByPoolIdx(uint256 pool_idx) public view returns (uint256) {
+        ICErc20Delegator delegator = ICErc20Delegator(fuse_borrow_pools_array[pool_idx]);
+        (,,uint debt_bal,) = delegator.getAccountSnapshot(address(this));
+        return debt_bal;
+    }
+
+    function assetDebtToPoolByPoolAddr(address pool_address) public view returns (uint256) {
+        uint256 pool_idx = borrowPoolAddrToIdx(pool_address);
+        return assetDeptToPoolByPoolIdx(pool_idx);
+    }
+
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     /* ---------------------------------------------------- */
     /* ----------------------- Rari ----------------------- */
     /* ---------------------------------------------------- */
 
-    // IRariComptroller can vary
+    /// @notice IRariComptroller can vary
     function enterMarkets(address comptroller_address, address pool_address) validPool(pool_address) public onlyByOwnGovCust {
         address[] memory cTokens = new address[](1);
         cTokens[0] = pool_address;
         IRariComptroller(comptroller_address).enterMarkets(cTokens);
     }
 
-    // E18
+    /// @notice E18
     function lendToPool(address pool_address, uint256 lend_amount) validPool(pool_address) public onlyByOwnGovCust {
         uint256 pool_idx = poolAddrToIdx(pool_address);
         FRAX.approve(pool_address, lend_amount);
         ICErc20Delegator(fuse_pools_array[pool_idx]).mint(lend_amount);
     }
 
-    // E18
+    /// @notice E18
     function redeemFromPool(address pool_address, uint256 redeem_amount) validPool(pool_address) public onlyByOwnGovCust {
         uint256 pool_idx = poolAddrToIdx(pool_address);
         ICErc20Delegator(fuse_pools_array[pool_idx]).redeemUnderlying(redeem_amount);
     }
 
-    // Auto compounds interest
+    /// @notice Auto compounds interest
     function accrueInterest() public onlyByOwnGovCust {
         for (uint i = 0; i < fuse_pools_array.length; i++){ 
             // Make sure the pool is enabled first
             address pool_address = fuse_pools_array[i];
             if (fuse_pools[pool_address]){
                 ICErc20Delegator(fuse_pools_array[i]).accrueInterest();
+            }
+        }
+    }
+
+    /// @notice Borrow from pool
+    function borrowFromPool(address pool_address, uint256 borrow_amount) validBorrowPool(pool_address) public onlyByOwnGovCust {
+        ICErc20Delegator(pool_address).borrow(borrow_amount);
+    }
+
+    /// @notice Repay borrowed asset to pool
+    function repayToPool(address pool_address, uint256 repay_amount) validBorrowPool(pool_address) public onlyByOwnGovCust {
+        ICErc20Delegator delegator = ICErc20Delegator(pool_address);
+        ERC20(delegator.underlying()).approve(pool_address, repay_amount);
+        delegator.repayBorrow(repay_amount);
+    }
+
+    /// @notice Auto compounds interest for borrow pools
+    function accrueBorrowInterest() public onlyByOwnGovCust {
+        for (uint i = 0; i < fuse_borrow_pools_array.length; i++){ 
+            // Make sure the pool is enabled first
+            address pool_address = fuse_borrow_pools_array[i];
+            if (fuse_borrow_pools[pool_address]){
+                ICErc20Delegator(fuse_borrow_pools_array[i]).accrueInterest();
             }
         }
     }
@@ -205,7 +279,7 @@ contract RariFuseLendingAMO_V2 is Owned {
     /* ========== OWNER / GOVERNANCE FUNCTIONS ONLY ========== */
     // Only owner or timelock can call, to limit risk 
 
-    // Adds fuse pools 
+    // Add a fuse pool 
     function addFusePool(address pool_address) public onlyByOwnGov {
         require(pool_address != address(0), "Zero address detected");
 
@@ -233,6 +307,36 @@ contract RariFuseLendingAMO_V2 is Owned {
         }
 
         emit FusePoolRemoved(pool_address);
+    }
+
+    // Add a fuse pool for borrowing
+    function addBorrowFusePool(address pool_address) public onlyByOwnGov {
+        require(pool_address != address(0), "Zero address detected");
+
+        require(fuse_borrow_pools[pool_address] == false, "Address already exists");
+        fuse_borrow_pools[pool_address] = true; 
+        fuse_borrow_pools_array.push(pool_address);
+
+        emit BorrowFusePoolAdded(pool_address);
+    }
+
+    // Remove a borrow fuse pool 
+    function removeBorrowFusePool(address pool_address) public onlyByOwnGov {
+        require(pool_address != address(0), "Zero address detected");
+        require(fuse_borrow_pools[pool_address] == true, "Address nonexistant");
+        
+        // Delete from the mapping
+        delete fuse_borrow_pools[pool_address];
+
+        // 'Delete' from the array by setting the address to 0x0
+        for (uint i = 0; i < fuse_borrow_pools_array.length; i++){ 
+            if (fuse_borrow_pools_array[i] == pool_address) {
+                fuse_borrow_pools_array[i] = address(0); // This will leave a null in the array and keep the indices the same
+                break;
+            }
+        }
+
+        emit BorrowFusePoolRemoved(pool_address);
     }
 
     function setAMOMinter(address _amo_minter_address) external onlyByOwnGov {
@@ -264,5 +368,7 @@ contract RariFuseLendingAMO_V2 is Owned {
 
     event FusePoolAdded(address token);
     event FusePoolRemoved(address token);
+    event BorrowFusePoolAdded(address token);
+    event BorrowFusePoolRemoved(address token);
     event Recovered(address token, uint256 amount);
 }

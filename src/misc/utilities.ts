@@ -547,6 +547,18 @@ export const rewardTokenSymbolFromAddress = (rew_tkn_addr: string): string => {
     }
     if (found_name) return found_name;
 
+    // Search Ethereum bearer tokens next
+    const ethereum_bearer_obj = CONTRACT_ADDRESSES.ethereum.bearer_tokens;
+    const ethereum_bearer_keys = Object.keys(ethereum_bearer_obj);
+    for (let k = 0; k < ethereum_bearer_keys.length; k++){
+        const test_key = ethereum_bearer_keys[k];
+        if (ethereum_bearer_obj[test_key].toLowerCase() == rew_tkn_addr.toLowerCase()) {
+            found_name = test_key.toUpperCase();
+            break;
+        }
+    }
+    if (found_name) return found_name;
+
     // Search BSC next
     const bsc_rew_obj = CONTRACT_ADDRESSES.bsc.reward_tokens;
     const bsc_rew_keys = Object.keys(bsc_rew_obj);

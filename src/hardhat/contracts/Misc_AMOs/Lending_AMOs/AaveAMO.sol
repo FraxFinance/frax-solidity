@@ -20,14 +20,14 @@ pragma solidity >=0.8.0;
 // Reviewer(s) / Contributor(s)
 // Sam Kazemian: https://github.com/samkazemian
 
-import "../Math/SafeMath.sol";
-import "../FXS/IFxs.sol";
-import "../Frax/IFrax.sol";
-import "../Frax/IFraxAMOMinter.sol";
-import "../ERC20/ERC20.sol";
-import "../Oracle/UniswapPairOracle.sol";
-import "../Staking/Owned.sol";
-import '../Uniswap/TransferHelper.sol';
+import "../../Math/SafeMath.sol";
+import "../../FXS/IFxs.sol";
+import "../../Frax/IFrax.sol";
+import "../../Frax/IFraxAMOMinter.sol";
+import "../../ERC20/ERC20.sol";
+import "../../Oracle/UniswapPairOracle.sol";
+import "../../Staking/Owned.sol";
+import '../../Uniswap/TransferHelper.sol';
 import "./aave/IAAVELendingPool_Partial.sol";
 import "./aave/IAAVE_aFRAX.sol";
 import "./aave/IStakedAave.sol";

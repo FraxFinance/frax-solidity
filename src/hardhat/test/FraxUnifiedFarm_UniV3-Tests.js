@@ -35,9 +35,6 @@ const IUniswapV3PositionsNFT = artifacts.require("Uniswap_V3/IUniswapV3Positions
 // Collateral
 const WETH = artifacts.require("ERC20/WETH");
 
-// Collateral Pools
-const Pool_USDC = artifacts.require("Frax/Pools/Pool_USDC");
-
 // Oracles
 const UniswapPairOracle_FXS_WETH = artifacts.require("Oracle/Variants/UniswapPairOracle_FXS_WETH");
 const ComboOracle = artifacts.require("Oracle/ComboOracle");
@@ -157,9 +154,6 @@ contract('FraxUnifiedFarm_UniV3-Tests', async (accounts) => {
 		oracle_instance_FXS_WETH = await UniswapPairOracle_FXS_WETH.deployed();
 		combo_oracle_instance = await ComboOracle.deployed(); 
 		combo_oracle_univ2_univ3_instance = await ComboOracle_UniV2_UniV3.deployed(); 
-	
-		// Initialize pool instances
-		pool_instance_USDC = await Pool_USDC.deployed();
 
 		// Fill the Uniswap V3 Instances
 		uniswapV3PositionsNFTInstance = await IUniswapV3PositionsNFT.deployed(); 

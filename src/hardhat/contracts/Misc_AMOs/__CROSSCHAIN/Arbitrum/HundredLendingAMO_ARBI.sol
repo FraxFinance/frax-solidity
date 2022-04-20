@@ -24,7 +24,7 @@ pragma solidity >=0.8.0;
 import "../../../ERC20/ERC20.sol";
 import "../../../ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol";
 import "../../../Bridges/Arbitrum/CrossChainBridgeBacker_ARBI_AnySwap.sol";
-import "../../rari/ICErc20Delegator.sol";
+import "../../Lending_AMOs/rari/ICErc20Delegator.sol";
 import "../../compound/IComptroller.sol";
 import "../../hundred/IHundred.sol";
 import "../../../Staking/Owned.sol";

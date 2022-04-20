@@ -405,9 +405,9 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
     // ------ WITHDRAWING ------
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function withdrawLocked(uint256 token_id, address destination_address) nonReentrant external {
+    function withdrawLocked(uint256 token_id, address destination_address) nonReentrant external returns (uint256) {
         require(withdrawalsPaused == false, "Withdrawals paused");
-        _withdrawLocked(msg.sender, destination_address, token_id);
+        return _withdrawLocked(msg.sender, destination_address, token_id);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
@@ -416,7 +416,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         address staker_address,
         address destination_address,
         uint256 token_id
-    ) internal {
+    ) internal returns (uint256) {
         // Collect rewards first and then update the balances
         _getReward(staker_address, destination_address, true);
 
@@ -455,6 +455,8 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
 
             emit WithdrawLocked(staker_address, theLiquidity, token_id, destination_address);
         }
+
+        return theLiquidity;
     }
 
     function _getRewardExtraLogic(address rewardee, address destination_address) internal override {
