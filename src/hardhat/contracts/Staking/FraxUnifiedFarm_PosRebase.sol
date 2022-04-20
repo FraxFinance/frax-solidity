@@ -88,7 +88,9 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         // Aave V2
         // ============================================
         {
-            // Always 1-to-1, but user will get scaled balance at withdrawal time
+            // Always 1-to-1, for simplicity. Autocompounding is handled by _accrueInterest
+            // Users can accrue up their principal by calling lockAdditional with 0 amount.
+            // Also will accrue at withdrawal time
             frax_per_lp_token = 1e18;
         }
 
