@@ -1,6 +1,5 @@
 pragma solidity ^0.8.4;
 
-import "hardhat/console.sol";
 import '../Uniswap_V2_TWAMM/core/interfaces/IUniswapV2PairV5.sol';
 import '../Uniswap_V2_TWAMM/core/UniV2TWAMMERC20.sol';
 import '../Math/Math.sol';
