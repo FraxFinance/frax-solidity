@@ -88,7 +88,9 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         // Aave V2
         // ============================================
         {
-            // Always 1-to-1, but user will get scaled balance at withdrawal time
+            // Always 1-to-1, for simplicity. Autocompounding is handled by _accrueInterest
+            // Users can accrue up their principal by calling lockAdditional with 0 amount.
+            // Also will accrue at withdrawal time
             frax_per_lp_token = 1e18;
         }
 
@@ -218,7 +220,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         uint256 new_amt = thisStake.liquidity + addl_liq;
 
         // Checks
-        require(addl_liq >= 0, "Must be nonzero");
+        require(addl_liq >= 0, "Must be positive");
 
         // Pull the tokens from the sender
         TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);

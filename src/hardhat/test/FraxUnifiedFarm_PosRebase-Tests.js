@@ -858,7 +858,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		console.log("minVeFXSForMaxBoostProxy (veFXS whale): ", min_vefxs_whale_pre_proxy.toString());
 		console.log("LP balance (veFXS whale): ", lp_whale_pre_proxy.toString());
 		console.log("maxLPForMaxBoost (veFXS whale): ", max_lp_whale_pre_proxy.toString());
-		const liq_index_pre_proxy = new BigNumber(await staking_instance.currLiqIdx()).div(BIG18).toString();
+		const liq_index_pre_proxy = new BigNumber(await staking_instance.currLiqIdx()).toString();
 		console.log("liq_index_pre_proxy: ", liq_index_pre_proxy);
 
 		console.log(chalk.yellow("Add the veFXS whale as a valid proxy"));
