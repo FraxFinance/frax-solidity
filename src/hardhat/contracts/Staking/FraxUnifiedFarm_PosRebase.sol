@@ -220,7 +220,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         uint256 new_amt = thisStake.liquidity + addl_liq;
 
         // Checks
-        require(addl_liq >= 0, "Must be nonzero");
+        require(addl_liq >= 0, "Must be positive");
 
         // Pull the tokens from the sender
         TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);

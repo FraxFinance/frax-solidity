@@ -86,6 +86,10 @@ DEPOSIT_FOR_TYPE: constant(int128) = 0
 CREATE_LOCK_TYPE: constant(int128) = 1
 INCREASE_LOCK_AMOUNT: constant(int128) = 2
 INCREASE_UNLOCK_TIME: constant(int128) = 3
+USER_WITHDRAW: constant(int128) = 4
+PROXY_TRANSFER: constant(int128) = 5
+PROXY_PAYBACK: constant(int128) = 6
+PROXY_LIQUIDATION: constant(int128) = 7
 
 event CommitOwnership:
     admin: address
@@ -380,7 +384,7 @@ def next_period_start() -> uint256:
 
 
 @internal
-def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBalance):
+def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBalance, flag: int128):
     """
     @notice Record global and per-user data to checkpoint
     @param addr User's wallet address. No user checkpoint if 0x0
@@ -513,13 +517,24 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
         # Handle FPIS balance change (withdrawals and deposits)
         if (new_locked.amount > old_locked.amount):
             last_point.fpis_amt += convert(new_locked.amount - old_locked.amount, uint256)
+
+            # Add the bias back if you are paying back after expiry
+            if ((flag == PROXY_PAYBACK) and (new_locked.end < block.timestamp)):
+                last_point.bias -= old_locked.amount
+
         elif (new_locked.amount < old_locked.amount):
             last_point.fpis_amt -= convert(old_locked.amount - new_locked.amount, uint256)
 
+            # Subtract the bias if you are liquidating after expiry
+            if ((flag == PROXY_LIQUIDATION) and (new_locked.end < block.timestamp)):
+                last_point.bias -= old_locked.amount
+
             # Remove the offset
             # Corner case to fix issue because emergency unlock allows withdrawal before expiry and disrupts the math
-            if not (self.emergencyUnlockActive):
-                last_point.bias -= old_locked.amount
+            if (new_locked.amount == 0):
+                if (not (self.emergencyUnlockActive)):
+                    last_point.bias -= old_locked.amount
+
 
 
         # ==============================================================================
@@ -591,7 +606,7 @@ def _deposit_for(_staker_addr: address, _payer_addr: address, _value: uint256, u
     # Both old_locked.end could be current or expired (>/< block.timestamp)
     # value == 0 (extend lock) or value > 0 (add to lock or extend lock)
     # _locked.end > block.timestamp (always)
-    self._checkpoint(_staker_addr, old_locked, _locked)
+    self._checkpoint(_staker_addr, old_locked, _locked, type)
 
     if _value != 0:
         assert ERC20(self.token).transferFrom(_payer_addr, self, _value)
@@ -605,7 +620,7 @@ def checkpoint():
     """
     @notice Record global data to checkpoint
     """
-    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
+    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance), 0)
 
 
 @external
@@ -667,7 +682,7 @@ def increase_unlock_time(_unlock_time: uint256):
 
 
 @internal
-def _withdraw(staker_addr: address, addr_out: address, locked_in: LockedBalance, amount_in: int128):
+def _withdraw(staker_addr: address, addr_out: address, locked_in: LockedBalance, amount_in: int128, flag: int128):
     """
     @notice Withdraw tokens for `staker_addr`
     @dev Must be greater than 0 and less than the user's locked amount
@@ -690,7 +705,7 @@ def _withdraw(staker_addr: address, addr_out: address, locked_in: LockedBalance,
     # _locked has only 0 end
     # Both can have >= 0 amount
     # addr: address, old_locked: LockedBalance, new_locked: LockedBalance
-    self._checkpoint(staker_addr, old_locked, _locked)
+    self._checkpoint(staker_addr, old_locked, _locked, flag)
 
     assert ERC20(self.token).transfer(addr_out, value)
 
@@ -703,7 +718,7 @@ def proxy_payback_or_liquidate(
     _staker_addr: address, 
     _payback_amt: uint256, 
     _liquidation_amt: uint256,
-    _liquidation_fee: uint256,
+    _liquidation_fee_amt: uint256,
     _liq_pays_down_loan: bool
 ):
     """
@@ -724,6 +739,7 @@ def proxy_payback_or_liquidate(
 
     # Validate some things
     assert _locked.amount > 0, "No existing lock found"
+    assert (_payback_amt + _liquidation_amt) > 0, "Amounts must be non-zero"
 
     # Handle the payback (returns FPIS back to the user's veFPIS position)
     if (_payback_amt > 0):
@@ -735,7 +751,9 @@ def proxy_payback_or_liquidate(
 
         # Proxy gives back FPIS and deposits it on behalf of the user
         # NOTE: Proxy needs to approve() to the veFPIS contract first
-        self._deposit_for(_staker_addr, msg.sender, _payback_amt, 0, _locked, DEPOSIT_FOR_TYPE)
+        # _staker_addr, _payer_addr, _value, unlock_time, locked_balance, type
+        # self._deposit_for(_staker_addr, msg.sender, _payback_amt, _locked.end, _locked, PROXY_PAYBACK)
+        self._deposit_for(_staker_addr, msg.sender, _payback_amt, 0, _locked, PROXY_PAYBACK)
 
         # Lower the loaned balance 
         self.user_fpis_in_proxy[_staker_addr] -= _payback_amt
@@ -747,15 +765,15 @@ def proxy_payback_or_liquidate(
     # Handle the liquidation (proxy takes FPIS from the user's veFPIS position)
     if (_liquidation_amt > 0): 
         # Prevents an exploit wiping the entire veFPIS contract
-        assert _liquidation_amt <= convert(_locked.amount, uint256), "Cannot liquidate more than the user has"
+        assert (_liquidation_amt + _liquidation_fee_amt) <= convert(_locked.amount, uint256), "Cannot liquidate more than the user has"
 
         # Withdraw the amount to liquidate from the staker's core position and give it to the proxy
         # Also add the fee, if any
-        self._withdraw(_staker_addr, msg.sender, _locked, convert(_liquidation_amt + _liquidation_fee, int128))
+        self._withdraw(_staker_addr, msg.sender, _locked, convert(_liquidation_amt + _liquidation_fee_amt, int128), PROXY_LIQUIDATION)
 
         # Lower the loaned balance, if applicable 
         if (_liq_pays_down_loan):
-            # Fee is purposely excluded here
+            # The liquidation fee is purposely excluded here, it is a penalty and doesn't pay down the loan
             if (_liquidation_amt < _proxy_balance ):
                 # Partial pay-down
                 self.user_fpis_in_proxy[_staker_addr] -= _liquidation_amt
@@ -765,7 +783,7 @@ def proxy_payback_or_liquidate(
 
 
 
-    log ProxyPaybackOrLiquidation(_staker_addr, msg.sender, _payback_amt, _liquidation_amt, _liquidation_fee, _liq_pays_down_loan)
+    log ProxyPaybackOrLiquidation(_staker_addr, msg.sender, _payback_amt, _liquidation_amt, _liquidation_fee_amt, _liq_pays_down_loan)
 
 
 @external
@@ -784,7 +802,7 @@ def withdraw():
     assert (self.user_fpis_in_proxy[msg.sender] == 0), "Outstanding FPIS in proxy. Have proxy use proxy_payback_or_liquidate"
     
     # Allow the withdrawal
-    self._withdraw(msg.sender, msg.sender, _locked, _locked.amount)
+    self._withdraw(msg.sender, msg.sender, _locked, _locked.amount, USER_WITHDRAW)
 
 
 @external
@@ -806,7 +824,7 @@ def transfer_to_proxy(_staker_addr: address, _transfer_amt: int128):
     assert (block.timestamp < _locked.end), "No transfers after expiration"
 
     # Allow the transfer to the proxy. This will reduce the user's veFPIS balance
-    self._withdraw(_staker_addr, msg.sender, _locked, _transfer_amt)
+    self._withdraw(_staker_addr, msg.sender, _locked, _transfer_amt, PROXY_TRANSFER)
 
     # Note the amount moved to the proxy 
     _value: uint256 = convert(_transfer_amt, uint256)
@@ -852,6 +870,11 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
     if _epoch == 0:
         return 0
     else:
+        # Just leave this alone. It is fine if it decays to 1 veFPIS = 1 bias
+        # Otherwise it would be inconsistent with totalSupply and totalSupplyAt
+        # _locked: LockedBalance = self.locked[addr]
+        # if (block.timestamp >= _locked.end): return 0
+
         last_point: Point = self.user_point_history[addr][_epoch]
         last_point.bias -= last_point.slope * convert(_t - last_point.ts, int128)
         if last_point.bias < 0:
@@ -876,9 +899,11 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
         #     weighted_supply = last_point.fpis_amt
 
         # -------------------------------- veFPIS --------------------------------
+        # Mainly used to counter negative biases
         weighted_supply: uint256 = convert(last_point.bias, uint256)
         if weighted_supply < last_point.fpis_amt:
             weighted_supply = last_point.fpis_amt
+        
 
         # ==============================================================================
 
@@ -1095,7 +1120,7 @@ def toggleEmergencyUnlock():
     """
     assert msg.sender == self.admin  # dev: admin only
     self.emergencyUnlockActive = not (self.emergencyUnlockActive)
-    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
+    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance), 0)
 
     log EmergencyUnlockToggled(self.emergencyUnlockActive)
 
@@ -1106,7 +1131,7 @@ def toggleProxyTransferTos():
     """
     assert msg.sender == self.admin  # dev: admin only
     self.proxyTransferTosEnabled = not (self.proxyTransferTosEnabled)
-    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
+    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance), 0)
 
     log ProxyTransferTosToggled(self.proxyTransferTosEnabled)
 
@@ -1117,7 +1142,7 @@ def toggleProxyPaybackOrLiquidations():
     """
     assert msg.sender == self.admin  # dev: admin only
     self.proxyPaybackOrLiquidationsEnabled = not (self.proxyPaybackOrLiquidationsEnabled)
-    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance))
+    self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance), 0)
 
     log ProxyPaybackOrLiquidationsToggled(self.proxyPaybackOrLiquidationsEnabled)
 
@@ -1141,7 +1166,7 @@ def stakerSetProxy(_proxy: address):
     @param _proxy The address the staker will let withdraw/deposit for them 
     """
     # Do some checks
-    assert (self.admin_whitelisted_proxies[_proxy]), "Proxy not whitelisted [admin level]"
+    assert (_proxy == ZERO_ADDRESS or self.admin_whitelisted_proxies[_proxy]), "Proxy not whitelisted [admin level]"
     assert (self.user_fpis_in_proxy[msg.sender] == 0), "Outstanding FPIS in proxy. Have proxy use proxy_payback_or_liquidate"
 
     # Set the proxy
