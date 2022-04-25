@@ -18,9 +18,10 @@ pragma solidity >=0.6.11;
 ///  Travis Moore: https:///github.com/FortisFortuna
 ///  Jason Huan: https:///github.com/jasonhuan
 ///  Sam Kazemian: https:///github.com/samkazemian
+///
 ///  Reviewer(s) / Contributor(s)
-///   Sam Sun: https:///github.com/samczsun
-///   Daniel Tedesco: https:///github.com/dtedesco1
+///  Sam Sun: https:///github.com/samczsun
+///  Daniel Tedesco: https:///github.com/dtedesco1
 
 import "../Common/Context.sol";
 import "../ERC20/IERC20.sol";
