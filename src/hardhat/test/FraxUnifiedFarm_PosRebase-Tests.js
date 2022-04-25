@@ -273,6 +273,47 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		});
 
 		// ---------------------------------------------------------------
+		// ONLY IF LIVE TESTING
+		console.log("Set Ropsten [6] as the owner");
+		await hre.network.provider.request({
+			method: "hardhat_impersonateAccount",
+			params: [process.env.STAKING_OWNER_ADDRESS]
+		});
+
+		// Set the owner as Ropsten[6]
+		await staking_instance.nominateNewOwner(STAKING_OWNER, { from: process.env.STAKING_OWNER_ADDRESS });
+		
+		await hre.network.provider.request({
+			method: "hardhat_stopImpersonatingAccount",
+			params: [process.env.STAKING_OWNER_ADDRESS]
+		});
+
+		// Accept ownership
+		await staking_instance.acceptOwnership({ from: STAKING_OWNER });
+
+		// Set the locking time back
+		await staking_instance.setMiscVariables(
+			[
+				new BigNumber("3e18"),
+				new BigNumber("2e18"),
+				new BigNumber("2e18"),
+				new BigNumber("4e18"),
+				new BigNumber("94608000"),
+				new BigNumber("86400"),
+			],
+			{ from: STAKING_OWNER }
+		);
+
+		// function setMiscVariables(
+			// [0]: uint256 _lock_max_multiplier, 
+			// [1] uint256 _vefxs_max_multiplier, 
+			// [2] uint256 _vefxs_per_frax_for_max_boost,
+			// [3] uint256 _vefxs_boost_scale_factor,
+			// [4] uint256 _lock_time_for_max_multiplier,
+			// [5] uint256 _lock_time_min
+		// )
+
+		// ---------------------------------------------------------------
 
 		console.log("Add a migrator address");
 		await staking_instance.toggleMigrator(MIGRATOR_ADDRESS, { from: STAKING_OWNER });
