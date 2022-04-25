@@ -2,7 +2,6 @@ pragma solidity ^0.8.4;
 
 import './interfaces/IFraxswapRangePair.sol';
 import './FraxswapRangePair.sol';
-import "hardhat/console.sol";
 
 contract FraxswapRangeFactory {
     address public feeTo;
