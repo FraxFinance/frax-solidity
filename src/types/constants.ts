@@ -187,6 +187,26 @@ export const StakeChoices: StakeChoices = {
 		pool_tokens: ["FRAX"],
 		reward_tokens: ["FRAX"]
 	},
+  "Aave aFRAX": {
+    lp_logo: "aave",
+		slug: "Aave_aFRAX",
+		label: "Aave aFRAX",
+		chain: "ethereum",
+		info_link: "https://app.aave.com/reserve-overview/?underlyingAsset=0x853d955acef822db058eb8505911ed77f175b99e&marketName=proto_mainnet",
+		add_liq_link: "https://app.aave.com/reserve-overview/?underlyingAsset=0x853d955acef822db058eb8505911ed77f175b99e&marketName=proto_mainnet",
+		trade_link: "https://app.aave.com/reserve-overview/?underlyingAsset=0x853d955acef822db058eb8505911ed77f175b99e&marketName=proto_mainnet",
+		farming_link: "https://app.frax.finance/staking#Aave_aFRAX",
+    starting_block: 14637530 ,
+		staking_enabled: true,
+		vefxs_enabled: true,
+		external_contract: false,
+		is_gauged: true,
+		pool_tokens: ["aFRAX"],
+		reward_tokens: ["FXS", "stkAAVE"],
+    reward_token_decimals: [18, 18],
+		reward_token_coingecko_slugs: ["frax-share", "aave"],
+		version: 102
+	},
   "ApeSwap canFRAX/BUSD": {
 		lp_logo: "apeswap",
 		label: "ApeSwap FRAX/BUSD",
@@ -1609,6 +1629,7 @@ export const CONTRACT_ADDRESSES = {
     },
     vamms: {},
     pair_tokens: {
+      'Aave aFRAX': '0xd4937682df3C8aEF4FE912A96A74121C0829E664',
 			"FraxSwap FRAX/FPI": "0x7d95b33cbEC441917d4f617482d4b5c7e6c35902",
 			"FraxSwap FRAX/FXS": "0x122F21a89a0A7197FF18C6e2995322ac29f42873",
       "FraxSwap FRAX/FPIS": "0x25be6ce04a504D4BCEcb6ba7f5967F7aae6Af579",
@@ -1644,6 +1665,7 @@ export const CONTRACT_ADDRESSES = {
       "Vesper Orbit FRAX": "0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",      
     },
     staking_contracts: {
+      "Aave aFRAX": "0x02577b426F223A6B4f2351315A19ecD6F357d65c",
       "Gelato Uniswap FRAX/DAI": "0xcdfc491804A420b677f8e788B5157856910E2F6f",
       "Uniswap FRAX/WETH": "0xD875628B942f8970De3CcEaf6417005F68540d4f",
       "Uniswap FRAX/USDC": "0xa29367a3f057F3191b62bd4055845a33411892b6",
