@@ -4,7 +4,7 @@ const envPath = path.join(__dirname, '../../.env');
 require('dotenv').config({ path: envPath });
 const hre = require("hardhat");
 const BigNumber = require('bignumber.js');
-const { BIG6, BIG18, bigNumberify, expandTo18Decimals, sleep } = require('../test/FraxSwap/utilities');
+const { BIG6, BIG18, bigNumberify, expandTo18Decimals, sleep } = require('../test/Fraxswap/utilities');
 const chalk = require('chalk');
 const constants = require(path.join(__dirname, '../../../dist/types/constants'));
 
@@ -31,9 +31,9 @@ const CrossChainOracle = artifacts.require("Oracle/CrossChainOracle");
 const FraxCrossChainFarm_FRAX_FXS_Spirit = artifacts.require("Staking/Variants/FraxCrossChainFarm_FRAX_FXS_Spirit");
 
 // TWAMM
-const UniV2TWAMMFactory = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMFactory");
-const UniV2TWAMMPair = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMPair");
-const UniV2TWAMMRouter = artifacts.require("Uniswap_V2_TWAMM/periphery/UniV2TWAMMRouter");
+const UniV2TWAMMFactory = artifacts.require("Fraxswap/core/FraxswapFactory");
+const UniV2TWAMMPair = artifacts.require("Fraxswap/core/FraxswapPair");
+const UniV2TWAMMRouter = artifacts.require("Fraxswap/periphery/FraxswapRouter");
 
 // AMOs
 const ScreamAMO = artifacts.require("Misc_AMOs/__CROSSCHAIN/Fantom/ScreamAMO.sol");
@@ -105,7 +105,7 @@ module.exports = async (deployer) => {
 
     // TWAMM
     // twamm_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.fantom.uniswap.twamm_factory);
-    // twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.fantom.pair_tokens["FraxSwap FRAX/FPI"]);
+    // twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.fantom.pair_tokens["Fraxswap FRAX/FPI"]);
     // twamm_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.fantom.uniswap.twamm_router);
 
     // AMOs
@@ -118,12 +118,12 @@ module.exports = async (deployer) => {
     // .new() calls and deployments
     // ==========================================================================
 
-    console.log(chalk.yellow("========== UniV2TWAMMFactory =========="));
+    console.log(chalk.yellow("========== FraxswapFactory =========="));
     twamm_factory_instance = await UniV2TWAMMFactory.new( 
         THE_ACCOUNTS[1],
     );
 
-    console.log(chalk.yellow("========== UniV2TWAMMRouter =========="));
+    console.log(chalk.yellow("========== FraxswapRouter =========="));
     twamm_router_instance = await UniV2TWAMMRouter.new( 
         twamm_factory_instance.address,
         CONTRACT_ADDRESSES.fantom.reward_tokens.wftm
@@ -150,7 +150,7 @@ module.exports = async (deployer) => {
         1999999999
     , { from: THE_ACCOUNTS[1] });
 
-    console.log(chalk.yellow("========== UniV2TWAMMPair =========="));
+    console.log(chalk.yellow("========== FraxswapPair =========="));
     const lpAddress = await twamm_factory_instance.getPair(fpi_instance.address, cross_chain_canonical_frax_instance.address);
     console.log("FRAX/FPI LP deployed to: ", lpAddress)
     twamm_pair_instance = await UniV2TWAMMPair.at(lpAddress);

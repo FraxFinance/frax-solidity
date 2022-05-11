@@ -1,12 +1,13 @@
 pragma solidity ^0.8.4;
 
-import '../Uniswap_V2_TWAMM/core/interfaces/IUniswapV2PairV5.sol';
-import '../Uniswap_V2_TWAMM/core/UniV2TWAMMERC20.sol';
+// import "hardhat/console.sol";
+import '../Fraxswap/core/interfaces/IUniswapV2PairV5.sol';
+import '../Fraxswap/core/UniV2TWAMMERC20.sol';
 import '../Math/Math.sol';
 import '../Math/UQ112x112.sol';
-import '../Uniswap_V2_TWAMM/core/interfaces/IERC20V5.sol';
-import '../Uniswap_V2_TWAMM/core/interfaces/IUniswapV2FactoryV5.sol';
-import '../Uniswap_V2_TWAMM/core/interfaces/IUniswapV2CalleeV5.sol';
+import '../Fraxswap/core/interfaces/IERC20V5.sol';
+import '../Fraxswap/core/interfaces/IUniswapV2FactoryV5.sol';
+import '../Fraxswap/core/interfaces/IUniswapV2CalleeV5.sol';
 
 contract FraxswapRangePair is UniV2TWAMMERC20 {
     using SafeMath  for uint;

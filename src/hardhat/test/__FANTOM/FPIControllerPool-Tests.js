@@ -46,9 +46,9 @@ const CrossChainOracle = artifacts.require("Oracle/CrossChainOracle");
 const FraxCrossChainFarm_FRAX_FXS_Spirit = artifacts.require("Staking/Variants/FraxCrossChainFarm_FRAX_FXS_Spirit");
 
 // TWAMM
-const UniV2TWAMMFactory = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMFactory");
-const UniV2TWAMMPair = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMPair");
-const UniV2TWAMMRouter = artifacts.require("Uniswap_V2_TWAMM/periphery/UniV2TWAMMRouter");
+const UniV2TWAMMFactory = artifacts.require("Fraxswap/core/FraxswapFactory");
+const UniV2TWAMMPair = artifacts.require("Fraxswap/core/FraxswapPair");
+const UniV2TWAMMRouter = artifacts.require("Fraxswap/periphery/FraxswapRouter");
 
 // AMOs
 const CurveAMO_FTM = artifacts.require("Misc_AMOs/__CROSSCHAIN/Fantom/CurveAMO_FTM.sol");

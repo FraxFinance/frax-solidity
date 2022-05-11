@@ -31,9 +31,9 @@ const FPIControllerPool = artifacts.require("FPI/FPIControllerPool.sol");
 const CPITrackerOracle = artifacts.require("Oracle/CPITrackerOracle");
 
 // TWAMM
-const UniV2TWAMMFactory = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMFactory");
-const UniV2TWAMMPair = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMPair");
-const UniV2TWAMMRouter = artifacts.require("Uniswap_V2_TWAMM/periphery/UniV2TWAMMRouter");
+const UniV2TWAMMFactory = artifacts.require("Fraxswap/core/FraxswapFactory");
+const UniV2TWAMMPair = artifacts.require("Fraxswap/core/FraxswapPair");
+const UniV2TWAMMRouter = artifacts.require("Fraxswap/periphery/FraxswapRouter");
 
 
 // Constants

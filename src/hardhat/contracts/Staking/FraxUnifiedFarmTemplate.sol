@@ -47,7 +47,7 @@ import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
 
 // Extra rewards
-import "../Misc_AMOs/Lending_AMOs/aave/IAaveIncentivesControllerPartial.sol";
+import "../Misc_AMOs/convex/IConvexBaseRewardPool.sol";
 
 contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     using SafeERC20 for ERC20;
@@ -71,8 +71,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // Lock time and multiplier settings
     uint256 public lock_max_multiplier = uint256(3e18); // E18. 1x = e18
-    // uint256 public lock_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
-    uint256 public lock_time_for_max_multiplier = 2 * 86400; // 2 days
+    uint256 public lock_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
+    // uint256 public lock_time_for_max_multiplier = 2 * 86400; // 2 days
     uint256 public lock_time_min = 86400; // 1 * 86400  (1 day)
 
     // veFXS related
@@ -487,7 +487,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // ------ REWARDS CLAIMING ------
 
     function getRewardExtraLogic(address destination_address) public nonReentrant {
-       return _getRewardExtraLogic(msg.sender, destination_address);
+        require(rewardsCollectionPaused == false, "Rewards collection paused");
+        return _getRewardExtraLogic(msg.sender, destination_address);
     }
 
     function _getRewardExtraLogic(address rewardee, address destination_address) internal virtual {
@@ -564,20 +565,23 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         fraxPerLPStored = fraxPerLPToken();
 
         // Pull in rewards and set the reward rate for one week, based off of that
-        // If the stkAAVE rewards get messed up for some reason, set this to 0 and it will skip
-        if (rewardRatesManual[1] != 0) {
-            // Aave aFRAX
-            // ====================================
-            address[] memory the_assets = new address[](1);
-            the_assets[0] = 0xd4937682df3C8aEF4FE912A96A74121C0829E664; // aFRAX
-            uint256 stkaave_recd = IAaveIncentivesControllerPartial(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5).claimRewards(
-                the_assets,
-                115792089237316195423570985008687907853269984665640564039457584007913129639935,
-                address(this)
-            );
-            rewardRatesManual[1] = stkaave_recd / rewardsDuration;
-        }
+        // If the rewards get messed up for some reason, set this to 0 and it will skip
+        // if (rewardRatesManual[1] != 0 && rewardRatesManual[2] != 0) {
+        //     // CRV & CVX
+        //     // ====================================
+        //     uint256 crv_before = ERC20(rewardTokens[1]).balanceOf(address(this));
+        //     uint256 cvx_before = ERC20(rewardTokens[2]).balanceOf(address(this));
+        //     IConvexBaseRewardPool(0x329cb014b562d5d42927cfF0dEdF4c13ab0442EF).getReward(
+        //         address(this),
+        //         true
+        //     );
+        //     uint256 crv_after = ERC20(rewardTokens[1]).balanceOf(address(this));
+        //     uint256 cvx_after = ERC20(rewardTokens[2]).balanceOf(address(this));
 
+        //     // Set the new reward rate
+        //     rewardRatesManual[1] = (crv_after - crv_before) / rewardsDuration;
+        //     rewardRatesManual[2] = (cvx_after - cvx_before) / rewardsDuration;
+        // }
 
     }
 

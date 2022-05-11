@@ -52,8 +52,8 @@ npx hardhat test ./test/ComboOracle_SLP_UniV2_UniV3-Tests.js
 npx hardhat test ./test/FraxUnifiedFarm_ERC20-Tests.js
 npx hardhat test ./test/FraxUnifiedFarm_PosRebase-Tests.js
 npx hardhat test ./test/FraxUnifiedFarm_UniV3-Tests.js
-npx hardhat test ./test/FraxSwap/fraxswap-twamm-test.js
-npx hardhat test ./test/FraxSwap/fraxswap-uniV2-test.js
+npx hardhat test ./test/Fraxswap/fraxswap-twamm-test.js
+npx hardhat test ./test/Fraxswap/fraxswap-uniV2-test.js
 npx hardhat test ./test/CPITrackerOracle-Tests.js
 npx hardhat test ./test/FPI-FPIS-Tests.js
 npx hardhat test ./test/FraxMiddlemanGauge-Tests.js

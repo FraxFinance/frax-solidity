@@ -356,4 +356,16 @@ contract ComboOracle_UniV2_UniV3 is Owned {
     function setComboOracle(address _combo_oracle) external onlyByOwnGov {
         combo_oracle = ComboOracle(_combo_oracle);
     }
+
+    function setUniV2Addrs(address _router) external onlyByOwnGov {
+        // UniV2 / SLP
+        router = IUniswapV2Router02(_router);
+    }
+
+    function setUniV3Addrs(address _factory, address _positions_nft_manager, address _router) external onlyByOwnGov {
+        // UniV3
+        univ3_factory = IUniswapV3Factory(_factory);
+        univ3_positions = INonfungiblePositionManager(_positions_nft_manager);
+        univ3_router = ISwapRouter(_router);
+    }
 }

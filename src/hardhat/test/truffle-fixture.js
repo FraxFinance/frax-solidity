@@ -41,9 +41,9 @@ const FraxMiddlemanGauge_ARBI_Curve_VSTFRAX = artifacts.require("Curve/Middleman
 const FraxUnifiedFarm_PosRebase_aFRAX = artifacts.require("Staking/Variants/FraxUnifiedFarm_PosRebase_aFRAX");
 
 // TWAMM
-const UniV2TWAMMFactory = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMFactory");
-const UniV2TWAMMPair = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMPair");
-const UniV2TWAMMRouter = artifacts.require("Uniswap_V2_TWAMM/periphery/UniV2TWAMMRouter");
+const UniV2TWAMMFactory = artifacts.require("Fraxswap/core/FraxswapFactory");
+const UniV2TWAMMPair = artifacts.require("Fraxswap/core/FraxswapPair");
+const UniV2TWAMMRouter = artifacts.require("Fraxswap/periphery/FraxswapRouter");
 
 // Uniswap related
 const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
@@ -162,7 +162,7 @@ module.exports = async (deployer) => {
 
     // TWAMM
     twamm_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.ethereum.uniswap.twamm_factory);
-    twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["FraxSwap FRAX/FPI"]);
+    twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap FRAX/FPI"]);
     twamm_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.ethereum.uniswap.twamm_router);
 
     // Uniswap
@@ -248,7 +248,7 @@ module.exports = async (deployer) => {
     //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Temple FRAX/TEMPLE'],
     // );
 
-    console.log(chalk.yellow("========== FraxUnifiedFarm_PosRebase_aFRAX =========="));
+    // console.log(chalk.yellow("========== FraxUnifiedFarm_PosRebase_aFRAX =========="));
     // // FraxUnifiedFarm_PosRebase_aFRAX 
     // fraxUnifiedFarm_PosRebase_aFRAX_instance = await FraxUnifiedFarm_PosRebase_aFRAX.new(
     //     THE_ACCOUNTS[6], 
@@ -308,18 +308,18 @@ module.exports = async (deployer) => {
     // );
 
     console.log(chalk.yellow("========== FPIControllerPool =========="));
-    // fpi_controller_pool_instance = await FPIControllerPool.new( 
-    //     THE_ACCOUNTS[1], 
-    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
-    //     [
-    //         frax_instance.address,
-    //         fpi_instance.address,
-    //         CONTRACT_ADDRESSES.ethereum.pair_tokens["FraxSwap FRAX/FPI"],
-    //         "0xB9E1E3A9feFf48998E45Fa90847ed4D467E8BcfD", // ethereum CHAINLINK FRAX
-    //         CONTRACT_ADDRESSES.ethereum.oracles["FRAX/FPI 0.30%"], // ethereum UniV3TWAPOracle FPI [PLACEHOLDER UNTIL REAL CHAINLINK ORACLE IS UP]
-    //         cpi_tracker_oracle_instance.address,
-    //     ]
-    // );
+    fpi_controller_pool_instance = await FPIControllerPool.new( 
+        THE_ACCOUNTS[1], 
+        CONTRACT_ADDRESSES.ethereum.misc.timelock,
+        [
+            frax_instance.address,
+            fpi_instance.address,
+            CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap FRAX/FPI"],
+            "0xB9E1E3A9feFf48998E45Fa90847ed4D467E8BcfD", // ethereum CHAINLINK FRAX
+            CONTRACT_ADDRESSES.ethereum.oracles["FRAX/FPI 0.30%"], // ethereum UniV3TWAPOracle FPI [PLACEHOLDER UNTIL REAL CHAINLINK ORACLE IS UP]
+            cpi_tracker_oracle_instance.address,
+        ]
+    );
     
     // console.log(chalk.yellow('========== FraxLiquidityBridger_AUR_Rainbow =========='));
     // // FraxLiquidityBridger_AUR_Rainbow

@@ -350,6 +350,26 @@ export const StakeChoices: StakeChoices = {
 		pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
 		reward_tokens: ["CRV", "CVX"]
 	},
+  "Convex stkcvxFPIFRAX": {
+    lp_logo: "convex",
+		slug: "Convex_stkcvxFPIFRAX",
+		label: "Convex stkcvxFPIFRAX",
+		chain: "ethereum",
+		info_link: "https://www.convexfinance.com/stake",
+		add_liq_link: "https://www.convexfinance.com/stake",
+		trade_link: "https://www.convexfinance.com/stake",
+		farming_link: "https://app.frax.finance/staking#Convex_stkcvxFPIFRAX",
+    starting_block: 14724647,
+		staking_enabled: true,
+		vefxs_enabled: true,
+		external_contract: false,
+		is_gauged: true,
+		pool_tokens: ["FRAX"],
+		reward_tokens: ["FXS"],
+    reward_token_decimals: [18],
+		reward_token_coingecko_slugs: ["frax-share"],
+		version: 102
+	},
 	// "Cream FRAX Lending": {
 	// 	lp_logo: "cream",
 	// 	label: "Cream FRAX Lending",
@@ -1167,9 +1187,9 @@ export const StakeChoices: StakeChoices = {
 		slug: "Vesper_Orbit_FRAX",
 		label: "Vesper Orbit FRAX",
 		chain: "ethereum",
-		info_link: "https://orbit.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
-		add_liq_link: "https://orbit.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
-		trade_link: "https://orbit.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+		info_link: "https://app.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+		add_liq_link: "https://app.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+		trade_link: "https://app.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
 		farming_link: "https://app.frax.finance/staking#Vesper_Orbit_FRAX",
     starting_block: 14134745,
 		staking_enabled: true,
@@ -1254,6 +1274,7 @@ export const govHistStringFromCode = (code: number) => {
 
 export const CONTRACT_ADDRESSES = {
   ethereum: {
+    chain_id: 1,
     main: {
       FRAX: "0x853d955aCEf822Db058eb8505911ED77F175b99e",
       FXS: "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
@@ -1273,7 +1294,8 @@ export const CONTRACT_ADDRESSES = {
     },
     oracles: {
       // SDT_WETH: "0xfbe43821dd397afF3341d90211B71C60149DC6D9", 
-      "FRAX/FPI 0.30%": "0x59985D79E1e69f659f4aB97Db07A35cE73D9174B"
+      "FRAX/FPI 0.30%": "0x59985D79E1e69f659f4aB97Db07A35cE73D9174B", // UniV3TWAPOracle, gives FPI price
+      "FRAX/FPIS 1%": "0xfa7c660683Ff22989413256bd57f569562cE1559" // UniV3TWAPOracle, gives FPIS price
     },
     oracles_other: {
       combo_oracle: "0x878f2059435a19C79c20318ee57657bF4543B6d4", // "0xbdCB57c9d35e8D41babCBcA67416ee6622274caf",
@@ -1370,8 +1392,8 @@ export const CONTRACT_ADDRESSES = {
       "0xb1s Kitchen Sink (#127)": "0x8922C1147E141C055fdDfc0ED5a119f3378c8ef8",
       "Tribe Convex Pool (#156)": "0x5CaDc2a04921213DE60B237688776e0F1A7155E6",
     },
-    pricing: { 
-      swap_to_price: "0xa61cBe7E326B13A8dbA11D00f42531BE704DF51B", 
+    pricing: {
+      swap_to_price: "0xa61cBe7E326B13A8dbA11D00f42531BE704DF51B",
       frax_oracle_wrapper: "0x2A6ddD9401B14d0443d0738B8a78fd5B99829A80",
       fxs_oracle_wrapper: "0xeE0F15e5Ffc105EBb3d1368cf84F43b40caB3480",
       chainlink_eth_usd: "0xBa6C6EaC41a24F9D39032513f66D738B3559f15a",
@@ -1386,7 +1408,7 @@ export const CONTRACT_ADDRESSES = {
         boba: "0xdc1664458d2f0B6090bEa60A8793A4E66c2F1c00", // bobaGateway: depositERC20
         bsc: "0x533e3c0e6b48010873B947bddC4721b1bDFF9648", // anySwap: Dump into bridge
         ethereum: "0x4f60a160D8C2DDdaAfe16FCC57566dB84D674BD6", // Mainnet anyFRAX (for the router)
-        evmos: "",
+        evmos: "0x88A69B4E698A4B090DF6CF5Bd7B2D47325Ad30A3", // Nomad Bridge: send
         fantom: "0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE", // anySwap: Dump into bridge
         fuse: "",
         harmony: "0xB37D31b2A74029B5951a2778F959282E2D518595", // Celer: IOriginalTokenVault deposit
@@ -1404,7 +1426,7 @@ export const CONTRACT_ADDRESSES = {
         boba: "0xdc1664458d2f0B6090bEa60A8793A4E66c2F1c00", // bobaGateway: depositERC20
         bsc: "0x533e3c0e6b48010873B947bddC4721b1bDFF9648", // anySwap: Dump into bridge
         ethereum: "0x685b63CFE0179b3EFb70A01dCb1D648549AA192d", // Mainnet anyFXS (for the router)
-        evmos: "",
+        evmos: "0x88A69B4E698A4B090DF6CF5Bd7B2D47325Ad30A3", // Nomad Bridge: send
         fantom: "0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE", // anySwap: Dump into bridge
         fuse: "",
         harmony: "0xB37D31b2A74029B5951a2778F959282E2D518595", // Celer: IOriginalTokenVault deposit
@@ -1421,7 +1443,7 @@ export const CONTRACT_ADDRESSES = {
         avalanche: "0xE78388b4CE79068e89Bf8aA7f218eF6b9AB0e9d0", // anySwap: Dump into bridge
         boba: "0xdc1664458d2f0B6090bEa60A8793A4E66c2F1c00", // bobaGateway: depositERC20
         bsc: "0x533e3c0e6b48010873B947bddC4721b1bDFF9648", // Not used
-        evmos: "",
+        evmos: "0x0000000000000000000000000000000000000000",
         fantom: "0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE", // anySwap: Dump into bridge
         fuse: "",
         harmony: "0xB37D31b2A74029B5951a2778F959282E2D518595",  // Not used
@@ -1449,11 +1471,12 @@ export const CONTRACT_ADDRESSES = {
           anySwap: "0x4572B68296A23B4C66696FAd177c50CBc35c532F"
         },
         evmos: {
-
+          nomad: "0x0000000000000000000000000000000000000000"
         },
         fantom: {
           anySwap: "0x8575FFE80b94fe58c8e0c735E11658A760109f53"
         },
+        fuse: {},
         harmony: {
           celer: "0x8D0A8f07F5Ea7F0982Ed116993200C331E4cdD27"
         },
@@ -1470,9 +1493,10 @@ export const CONTRACT_ADDRESSES = {
           maticBridge: "0x6e1A844AFff1aa2a8ba3127dB83088e196187110"
         },
         solana: {
-          wormhole_v2: "0xF3a21b5d9E11eECA3a50BEb654276987164AbC8d"
-        }
-      }
+          wormhole_v2: "0xF3a21b5d9E11eECA3a50BEb654276987164AbC8d",
+        },
+        zksync: {},
+      },
     },
     misc: {
       timelock: "0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA",
@@ -1569,10 +1593,14 @@ export const CONTRACT_ADDRESSES = {
       aFRAX: "0xd4937682df3C8aEF4FE912A96A74121C0829E664",
       aUSDC: "0xBcca60bB61934080951369a648Fb03DF4F96263C",
       cAAVE: "0xe65cdB6479BaC1e22340E4E755fAE7E509EcD06c",
+      curve4pool: "0x4e0915c88bc70750d68c481540f081fefaf22273",
       cUSDC: "0x39AA39c021dfbaE8faC545936693aC917d5E7563",
+      "cvxFPIFRAX-f": "0x28ebAb5Ecbc3efB4116205c2D3237d8b16976B06",
       cvxgusd3CRV_free: "0x15c2471ef46Fa721990730cfa526BcFb45574576",
       // cvxgusd3CRV_deposited: "0x7A7bBf95C44b144979360C3300B54A7D34b44985",
       d3pool: "0xBaaa1F5DbA42C3389bDbc2c9D2dE134F5cD0Dc89",
+      "FPIFRAX-f": "0x4704aB1fb693ce163F7c9D3A31b3FF4eaF797714",
+      "FPIFRAX-f_Pool": "0xf861483fa7E511fbc37487D91B6FAa803aF5d37c",
       "FRAX3CRV-f": "0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B",
       "fTRIBE-8": "0xFd3300A9a74b3250F1b2AbC12B47611171910b07",
       "fUSDC-18": "0x6f95d4d251053483f41c8718C30F4F3C404A8cf2",
@@ -1580,6 +1608,7 @@ export const CONTRACT_ADDRESSES = {
       saddleD4: "0xd48cF4D7FB0824CC8bAe055dF3092584d0a1726A",
       saddleD4_Pool: "0xC69DDcd4DFeF25D8a793241834d4cc4b3668EAD6",
       "sdFRAX3CRV-f": "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7",
+      "stkcvxFPIFRAX": "0x7287488F8Df7dddc5f373142D4827aAF92AAC845",
       OGTemple: "0x654590F810f01B51dc7B86915D4632977e49EA33",
       gOHM: "0x0ab87046fBb341D058F17CBC4c1133F25a20a52f",
       sOHM: "0x04F2694C8fcee23e8Fd0dfEA1d4f5Bb8c352111F",
@@ -1588,7 +1617,7 @@ export const CONTRACT_ADDRESSES = {
       tFRAX: "0x94671a3cee8c7a12ea72602978d1bb84e920efb2",
       tFXS: "0xadf15ec41689fc5b6dca0db7c53c9bfe7981e655",
       veCRV: "0x5f3b5DfEb7B28CDbD7FAba78963EE202a494e2A2",
-      vlCVX: "0xD18140b4B819b895A3dba5442F959fA44994AF50",
+      vlCVX: "0x72a19342e8F1838460eBFCCEf09F6585e32db86E",
       xSDT: "0xaC14864ce5A98aF3248Ffbf549441b04421247D3",
       yvUSDC: "0xa354f35829ae975e850e23e9615b11da1b3dc4de", // V2: "0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9"
     },
@@ -1599,12 +1628,12 @@ export const CONTRACT_ADDRESSES = {
       router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
       factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
       twamm_factory: "0x54F454D747e037Da288dB568D4121117EAb34e79",
-      twamm_router: "0xE52D0337904D4D0519EF7487e707268E1DB6495F"
+      twamm_router: "0xE52D0337904D4D0519EF7487e707268E1DB6495F",
     },
-    uniswap_v3 : {
+    uniswap_v3: {
       UniswapV3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
       NonfungiblePositionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-      SwapRouter: "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+      SwapRouter: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     },
     uni_v3_pools: {
       NOTE: "Call getPool here (Factory) to find it: 0x1F98431c8aD98523631AE4a59f267346ea31F984",
@@ -1613,7 +1642,8 @@ export const CONTRACT_ADDRESSES = {
       "Uniswap V3 FRAX/DAI": "0x97e7d56A0408570bA1a7852De36350f7713906ec",
       "Uniswap V3 FRAX/USDC": "0xc63B0708E2F7e69CB8A1df0e1389A98C35A76D52",
       "Uniswap V3 FRAX/WETH": "0x92c7b5ce4cb0e5483f3365c1449f21578ee9f21a",
-      "FRAX/FPI 0.30%": "0xd2a9F2B88d6DF8830522D624db491445362a2797"
+      "FRAX/FPI 0.30%": "0xd2a9F2B88d6DF8830522D624db491445362a2797",
+      "FRAX/FPIS 1%": "0x8fE536c7dC019455cce34746755C64bBE2Aa163b"
     },
     investor_custodian: "0x5180db0237291A6449DdA9ed33aD90a38787621c",
     multisigs: {
@@ -1629,63 +1659,71 @@ export const CONTRACT_ADDRESSES = {
     },
     vamms: {},
     pair_tokens: {
-      'Aave aFRAX': '0xd4937682df3C8aEF4FE912A96A74121C0829E664',
-			"FraxSwap FRAX/FPI": "0x7d95b33cbEC441917d4f617482d4b5c7e6c35902",
-			"FraxSwap FRAX/FXS": "0x122F21a89a0A7197FF18C6e2995322ac29f42873",
-      "FraxSwap FRAX/FPIS": "0x25be6ce04a504D4BCEcb6ba7f5967F7aae6Af579",
-			"FraxSwap FPI/FXS": "0xdc95403d54a7BB182e9AAb861c1c3a74d9fB9E57",
-      "FraxSwap FPI/FPIS": "0x04BBDA16ed5C9dB488B47d128bC2A43a2dC53303",
-      "FraxSwap FXS/FPIS": "0xfCCDE09b708115246174DAAFCB13a63332Fc22f0",
-      "FraxSwap FRAX/WETH": "0xf2E9fda1fE6a21E519174852A5c752Bd9FBA05A4",
+      "Aave aFRAX": "0xd4937682df3C8aEF4FE912A96A74121C0829E664",
+      "Convex stkcvxFPIFRAX": "0x7287488F8Df7dddc5f373142D4827aAF92AAC845",
+      "Curve FRAX/FPI": "0xf861483fa7E511fbc37487D91B6FAa803aF5d37c",
+      "Curve FRAX/SILO": "0x9a22CDB1CA1cdd2371cD5BB5199564C4E89465eb",
+      "Curve FRAX3CRV-f-2": "0xd632f22692fac7611d2aa1c0d552930d43caed3b", // Proxied For: https://etherscan.io/address/0x5f890841f657d90e081babdb532a05996af79fe6
+      "Curve FXS/ETH": "0x941Eb6F616114e4Ecaa85377945EA306002612FE",
+      "Curve FXS/cvxFXS": "0xd658A338613198204DCa1143Ac3F01A722b5d94A",
+      "Curve MIM3CRV": "0x5a6A4D54456819380173272A5E8E9B9904BdF41B",
+      "Curve d3pool": "0xBaaa1F5DbA42C3389bDbc2c9D2dE134F5cD0Dc89",
+      "Fraxswap FPI/FPIS": "0x04BBDA16ed5C9dB488B47d128bC2A43a2dC53303",
+      "Fraxswap FPI/FXS": "0xdc95403d54a7BB182e9AAb861c1c3a74d9fB9E57",
+      "Fraxswap FRAX/FPI": "0x7d95b33cbEC441917d4f617482d4b5c7e6c35902",
+      "Fraxswap FRAX/FPIS": "0x25be6ce04a504D4BCEcb6ba7f5967F7aae6Af579",
+      "Fraxswap FRAX/FXS": "0x122F21a89a0A7197FF18C6e2995322ac29f42873",
+      "Fraxswap FRAX/WETH": "0xf2E9fda1fE6a21E519174852A5c752Bd9FBA05A4",
+      "Fraxswap FXS/FPIS": "0xfCCDE09b708115246174DAAFCB13a63332Fc22f0",
       "Gelato Uniswap FRAX/DAI": "0xb1Cfdc7370550f5e421E1bf0BF3CADFaDF3C4141",
-      "Uniswap FRAX/WETH": "0xFD0A40Bc83C5faE4203DEc7e5929B446b07d1C76",
-      "Uniswap FRAX/USDC": "0x97C4adc5d28A86f9470C70DD91Dc6CC2f20d2d4D",
-      "Uniswap V3 FRAX/USDC": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88", // Uniswap V3 Positions NFT
-      "Uniswap V3 FRAX/agEUR": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88", // Uniswap V3 Positions NFT
-      "Uniswap V3 FRAX/DAI": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88", // Uniswap V3 Positions NFT
-      "Uniswap V3 FRAX/WETH": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88", // Uniswap V3 Positions NFT
-      "Uniswap FEI/TRIBE": "0x9928e4046d7c6513326cCeA028cD3e7a91c7590A",
-      "Uniswap FRAX/FXS": "0xE1573B9D29e2183B1AF0e743Dc2754979A40D237",
-      "Uniswap FXS/WETH": "0xecBa967D84fCF0405F6b32Bc45F4d36BfDBB2E81",
-      "Uniswap FRAX/IQ": "0xd6c783b257e662ca949b441a4fcb08a53fc49914",
-      "Uniswap FRAX/TEMPLE": "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03", // THEIR CUSTOM AMM, NOT EXACT
-      "Uniswap FRAX/OHM": "0x2dce0dda1c2f98e0f171de8333c3c6fe1bbf4877",
+      "Saddle alUSD/FEI/FRAX/LUSD": "0xd48cF4D7FB0824CC8bAe055dF3092584d0a1726A",
       "StakeDAO sdETH-FraxPut": "0x839A989bE40f2D60f00beEB648903732c041CBd7",
       "StakeDAO sdFRAX3CRV-f": "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7",
       "Sushi FRAX/SUSHI": "0xe06F8d30AC334c857Fc8c380C85969C150f38A6A",
       "Sushi FXS/WETH": "0xeC8C342bc3E07F05B9a782bc34e7f04fB9B44502",
-      // "Sushi FRAX/FXS": "0xc218001e3D102e3d1De9bf2c0F7D9626d76C6f30",
-      // "Sushi FXS/WETH": "0x61eB53ee427aB4E007d78A9134AaCb3101A2DC23",
-      // "Curve FRAX-DAI-USDC-USDT": "0x83D2944d5fC10A064451Dc5852f4F47759F249B6", // Proxied Implementation: https://etherscan.io/address/0x2c7796c0590cc100d70af473993890d457cb2ac9#code
-      "Curve d3pool": "0xBaaa1F5DbA42C3389bDbc2c9D2dE134F5cD0Dc89",
-      "Curve FRAX3CRV-f-2": "0xd632f22692fac7611d2aa1c0d552930d43caed3b", // Proxied For: https://etherscan.io/address/0x5f890841f657d90e081babdb532a05996af79fe6
-      "Curve MIM3CRV": "0x5a6A4D54456819380173272A5E8E9B9904BdF41B",
-      "Saddle alUSD/FEI/FRAX/LUSD": "0xd48cF4D7FB0824CC8bAe055dF3092584d0a1726A",
       "Temple FRAX/TEMPLE": "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03",
-      "Vesper Orbit FRAX": "0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",      
+      "Uniswap FEI/TRIBE": "0x9928e4046d7c6513326cCeA028cD3e7a91c7590A",
+      "Uniswap FRAX/FXS": "0xE1573B9D29e2183B1AF0e743Dc2754979A40D237",
+      "Uniswap FRAX/IQ": "0xd6c783b257e662ca949b441a4fcb08a53fc49914",
+      "Uniswap FRAX/OHM": "0x2dce0dda1c2f98e0f171de8333c3c6fe1bbf4877",
+      "Uniswap FRAX/TEMPLE": "0x6021444f1706f15465bEe85463BCc7d7cC17Fc03", // THEIR CUSTOM AMM, NOT EXACT
+      "Uniswap FRAX/USDC": "0x97C4adc5d28A86f9470C70DD91Dc6CC2f20d2d4D",
+      "Uniswap FRAX/WETH": "0xFD0A40Bc83C5faE4203DEc7e5929B446b07d1C76",
+      "Uniswap FXS/WETH": "0xecBa967D84fCF0405F6b32Bc45F4d36BfDBB2E81",
+      "Uniswap V3 FRAX/DAI": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88", // Uniswap V3 Positions NFT
+      "Uniswap V3 FRAX/USDC": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88", // Uniswap V3 Positions NFT
+      "Uniswap V3 FRAX/WETH": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88", // Uniswap V3 Positions NFT
+      "Uniswap V3 FRAX/agEUR": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88", // Uniswap V3 Positions NFT
+      "Vesper Orbit FRAX": "0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+      // "Curve FRAX-DAI-USDC-USDT": "0x83D2944d5fC10A064451Dc5852f4F47759F249B6", // Proxied Implementation: https://etherscan.io/address/0x2c7796c0590cc100d70af473993890d457cb2ac9#code
+      // "Sushi FRAX/FXS": "0xc218001e3D102e3d1De9bf2c0F7D9626d76C6f30",
+      // "Sushi FXS/WETH": "0x61eB53ee427aB4E007d78A9134AaCb3101A2DC23",   
     },
     staking_contracts: {
       "Aave aFRAX": "0x02577b426F223A6B4f2351315A19ecD6F357d65c",
+      "Convex stkcvxFPIFRAX": "0x183a756f416c723000e7bd3fb0e66cba3e48c52d",
       "Gelato Uniswap FRAX/DAI": "0xcdfc491804A420b677f8e788B5157856910E2F6f",
-      "Uniswap FRAX/WETH": "0xD875628B942f8970De3CcEaf6417005F68540d4f",
-      "Uniswap FRAX/USDC": "0xa29367a3f057F3191b62bd4055845a33411892b6",
-      "Uniswap V3 FRAX/agEUR": "0xf8caEd1943B15B877D7105B9906a618c154f69E8",
-      "Uniswap V3 FRAX/DAI": "0xF22471AC2156B489CC4a59092c56713F813ff53e", // "0xD922cD347eb367FC4FB4bbcb68A84C6CDD3bA4ba",
-      "Uniswap V3 FRAX/USDC": "0x3EF26504dbc8Dd7B7aa3E97Bc9f3813a9FC0B4B0", // Old4: "0x1e1356Eb81a56daEcfAdA456E007b26C86c56670", // Old3: "0xCbe6ea4725e4ba34aa215B95239DfA6E8854B49a", // Old2: "0x1C21Dd0cE3bA89375Fc39F1B134AD15671022660", // Old1: "0xF397Abd7495EB6FE4697F45b5BA17166f03533b9"
-      "Uniswap FEI/TRIBE": "0x9928e4046d7c6513326cCeA028cD3e7a91c7590A",
-      "Uniswap FRAX/FXS": "0xda2c338350a0E59Ce71CDCED9679A3A590Dd9BEC",
-      "Uniswap FXS/WETH": "0xDc65f3514725206Dd83A8843AAE2aC3D99771C88",
-      "Uniswap FRAX/IQ": "0xF37057823910653a554d996B49E3399DC87fAE1b", // V1: "0x35fc5Fd90e06c47c0D9dEBfEDB1daF55bCE14E6d",
-      "Uniswap FRAX/OHM": "0xfC77A420f56Dec53e3b91D7FC936902e132335FF",
+      "Saddle alUSD/FEI/FRAX/LUSD": "0x0639076265e9f88542C91DCdEda65127974A5CA5",
       "StakeDAO sdETH-FraxPut": "0x0A53544b2194Dd8Ebc62c779043fc0624705BB56",
       "StakeDAO sdFRAX3CRV-f": "0xEB81b86248d3C2b618CcB071ADB122109DA96Da2",
       "Sushi FRAX/SUSHI": "0xb4Ab0dE6581FBD3A02cF8f9f265138691c3A7d5D",
       "Sushi FXS/WETH": "", // Pre-gauge: "0x74C370990C1181303D20e9f0252437a97518B95B",
-      "Saddle alUSD/FEI/FRAX/LUSD": "0x0639076265e9f88542C91DCdEda65127974A5CA5",
       "Temple FRAX/TEMPLE": "0x10460d02226d6ef7B2419aE150E6377BdbB7Ef16", // Old1: "0x016563F5EB22cF84fA0Ff8B593DdC5343ca15856",
+      "Uniswap FEI/TRIBE": "0x9928e4046d7c6513326cCeA028cD3e7a91c7590A",
+      "Uniswap FRAX/FXS": "0xda2c338350a0E59Ce71CDCED9679A3A590Dd9BEC",
+      "Uniswap FRAX/IQ": "0xF37057823910653a554d996B49E3399DC87fAE1b", // V1: "0x35fc5Fd90e06c47c0D9dEBfEDB1daF55bCE14E6d",
+      "Uniswap FRAX/OHM": "0xfC77A420f56Dec53e3b91D7FC936902e132335FF",
+      "Uniswap FRAX/USDC": "0xa29367a3f057F3191b62bd4055845a33411892b6",
+      "Uniswap FRAX/WETH": "0xD875628B942f8970De3CcEaf6417005F68540d4f",
+      "Uniswap FXS/WETH": "0xDc65f3514725206Dd83A8843AAE2aC3D99771C88",
+      "Uniswap V3 FRAX/DAI": "0xF22471AC2156B489CC4a59092c56713F813ff53e", // "0xD922cD347eb367FC4FB4bbcb68A84C6CDD3bA4ba",
+      "Uniswap V3 FRAX/USDC": "0x3EF26504dbc8Dd7B7aa3E97Bc9f3813a9FC0B4B0", // Old4: "0x1e1356Eb81a56daEcfAdA456E007b26C86c56670", // Old3: "0xCbe6ea4725e4ba34aa215B95239DfA6E8854B49a", // Old2: "0x1C21Dd0cE3bA89375Fc39F1B134AD15671022660", // Old1: "0xF397Abd7495EB6FE4697F45b5BA17166f03533b9"
+      "Uniswap V3 FRAX/agEUR": "0xf8caEd1943B15B877D7105B9906a618c154f69E8",
       "Vesper Orbit FRAX": "0x698137C473bc1F0Ea9b85adE45Caf64ef2DF48d6",
     },
     external_farm_tokens: {
+      "0xDAO FRAX/FXS": "",
+      "0xDAO FRAX/USDC": "",
       "1Swap FRAX/1S3P": "",
       "Angle FRAX/agEUR Staking": "",
       "Angle FRAX/agEUR Perpetuals": "",
@@ -1703,15 +1741,21 @@ export const CONTRACT_ADDRESSES = {
       "Convex d3pool": "",
       "Curve FRAX3CRV-f-2": "",
       "dForce FRAX Lending": "",
+      "Echidna Finance FRAX": "",
       "Hundred FRAX Lending [Arbitrum]": "0xb1c4426C86082D91a6c097fC588E5D5d8dD1f5a8",
       "Hundred FRAX Lending [Fantom]": "0xb4300e088a3AE4e624EE5C71Bc1822F68BB5f2bc",
+      "Hundred FRAX Lending [Moonriver]": "0x8e15a22853a0a60a0fbb0d875055a8e66cff0235",
       "Liquid Driver FRAX/FTM": "",
       "Lobis FXS Bonds": "",
       "Market.xyz FRAX Lending": "",
       "OlympusDAO FRAX Bonds": "",
       "Olympus Pro FRAX/WETH SLP": "",
       "Pangolin FRAX/AVAX": "0x55152E05202AE58fDab26b20c6Fd762F5BCA797c", // Old: "0xfd0824dF1E598D34C3495e1C2a339E2FA23Af40D",
+      "Pickle Finance FRAX/DAI": "",
+      "Pickle Finance FRAX/USDC": "",
+      "Pickle Finance pveFXS": "",
       "Planet Finance FRAX Lending": "0x6022bA7e5A70E1bAA98d47a566F3495A26511b25",
+      "Platypus FRAX": "",
       "Rari FRAX Lending": "",
       "Saber wFRAX/USDC": "", // FRAXXvt2ucEsxYPK4nufDy5zKhb2xysieqRBE1dQTqnK
       "Scream FRAX Lending": "",
@@ -1719,6 +1763,8 @@ export const CONTRACT_ADDRESSES = {
       // "SmartCredit FXS Lending": "",
       "Solarbeam FRAX/ROME": "",
       "Solarbeam FRAX/MOVR": "",
+      "Solidex FRAX/FXS": "",
+      "Solidex FRAX/USDC": "",
       "SpiritSwap FRAX/FTM": "0x7ed0cdDB9BB6c6dfEa6fB63E117c8305479B8D7D", // MasterChef Pool #14
       "SpiritSwap FRAX/USDC": "0x1478AEC7896e40aE5fB858C77D389F0B3e6CbC5d",
       // "SpiritSwap FRAX/FXS": "0x100FcF27C87D1cc7b8D6c28b69b84A359e4fd377", // MasterChef Pool #16
@@ -1733,9 +1779,13 @@ export const CONTRACT_ADDRESSES = {
       "Trader Joe FRAX/AVAX": "0x862905a82382db9405a40dcaa8ee9e8f4af52c89",
       "Trader Joe FRAX/gOHM": "0x3E6Be71dE004363379d864006AAC37C9F55F8329",
       "Trader Joe FXS/AVAX": "0x53942Dcce5087f56cF1D68F4e017Ca3A793F59a2",
+      "Vector Finance FRAX": "",
       "veDAO FRAX": "0xE04C26444d37fE103B9cc8033c99b09D47056f51",
-      "Vesper Orbit FRAX": "0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+      "Vesper Orbit FRAX": "0x698137C473bc1F0Ea9b85adE45Caf64ef2DF48d6",
       "Yearn crvFRAX Vault (V3)": "",
+      "Yearn FRAX Vault [Fantom]": "",
+      "Zenlink FRAX/GLMR": "",
+      "Zenlink FRAX/FXS": "",
     },
     middleman_gauges: {
       "Curve VSTFRAX-f": "0x127963A74c07f72D862F2Bdc225226c3251BD117", // Arbitrum
@@ -1807,6 +1857,7 @@ export const CONTRACT_ADDRESSES = {
       VSTA: "0xa684cd057951541187f288294a1e1C2646aA2d24"
     },
     bearer_tokens: {
+      curve4pool: "0x1C5ffa4FB4907B681c61B8c82b28C4672ceb1974",
       FRAX2pool: "0xf07d553B195080F84F582e88ecdD54bAa122b279",
       hFRAX: "0xb1c4426C86082D91a6c097fC588E5D5d8dD1f5a8",
       saddleArbUSDv2: "0x0a20c2FFa10cD43F67D06170422505b7D6fC0953",
@@ -1892,7 +1943,10 @@ export const CONTRACT_ADDRESSES = {
       "NearPad canFRAX/canFXS": "0x120160EF80BA3a5D06d14497886dBd0F032Efa7F",
       "NearPad canFRAX/WETH": "0x8561a678682E937cc7F778559613033B3a1Ae41e",
     },
-    staking_contracts: {},
+    staking_contracts: {
+      "Rose FRAX": "0xB9D873cDc15e462f5414CCdFe618a679a47831b4",
+      "Rose FRAX/ROSE": "0x1B10bFCd6192edC573ced7Db7c7e403c7FAb8068",
+    },
   },
   avalanche: {
     chain_id: 43114,
@@ -1954,6 +2008,7 @@ export const CONTRACT_ADDRESSES = {
       wavax: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
     },
     bearer_tokens: {
+      curve4pool: "0xcb11EE4B70d73e38a383b8691cAFb221059669cC",
       "Axial AC4D TSD/MIM/FRAX/DAI.e": "0x4da067E13974A4d32D342d86fBBbE4fb0f95f382",
       "FRAX3CRV-f": "0xE013593CEA239E445d2271106836b00C9E7356ae",
       gOHM: "0x321E7092a180BB43555132ec53AaA65a5bF84251",
@@ -1966,6 +2021,7 @@ export const CONTRACT_ADDRESSES = {
     },
     vamms: {},
     pair_tokens: {
+      "Curve 4pool": "0xcb11EE4B70d73e38a383b8691cAFb221059669cC",
       "Pangolin canFRAX/canFXS": "0xe0CC7ed0666B29e60a21aF8636bBC69b21eDc434",
       "Pangolin canFRAX/WAVAX": "0x0ce543c0f81ac9aaa665ccaae5eec70861a6b559",
       "Pangolin canFRAX/USDC.e": "0x0c8249757b8d66cB2b6155281A5e4f8F53C94c05",
@@ -2150,46 +2206,66 @@ export const CONTRACT_ADDRESSES = {
   evmos: {
     chain_id: 9001,
     main: {
-      FRAX: "",
-      FXS: "",
+      FRAX: "0x28eC4B29657959F4A5052B41079fe32919Ec3Bd3", // madFRAX
+      FXS: "0xd0ec216A38F199B0229AE668a96c3Cd9F9f118A6", // madFXS
     },
     canonicals: {
-      FRAX: "",
-      FXS: "",
+      FRAX: "0xE03494D0033687543a80c9B1ca7D6237F2EA8BD8",
+      FXS: "0xd8176865DD0D672c6Ab4A427572f80A72b4B4A9C",
     },
-    bridge_tokens: {},
+    bridge_tokens: {
+      madFRAX: "0x28eC4B29657959F4A5052B41079fe32919Ec3Bd3",
+      madFXS: "0xd0ec216A38F199B0229AE668a96c3Cd9F9f118A6",
+      celrFRAX: "0xf5A178cf150216449630EAD9d0FDAEE09e06187b",
+      celrFXS: "0xFc6Da929c031162841370af240dEc19099861d3B",
+    },
     collaterals: {
-      USDC: "",
+      madUSDC: "0x51e44FfaD5C2B122C8b635671FCC8139dc636E82",
+      USDC: "0x51e44FfaD5C2B122C8b635671FCC8139dc636E82",
     },
-    bridges: {},
-    bridge_backers: {},
+    bridges: {
+      madFRAX: "0x28eC4B29657959F4A5052B41079fe32919Ec3Bd3",
+      madFXS: "0xd0ec216A38F199B0229AE668a96c3Cd9F9f118A6",
+      madUSDC: "0x51e44FfaD5C2B122C8b635671FCC8139dc636E82",
+    },
+    bridge_backers: {
+      nomad: "0xFbD5ED7244842696a60424e347109F8E42be46E0",
+    },
     oracles: {
       single_assets: {
-        FRAX: "",
-        FXS: "",
-        USDC: "",
+        FRAX: "0x6BAA2DC3B2BB2d115EeE65CFee6F369238DEFa8A",
+        FXS: "0x5DE9a252bf23b96C3538Dd0F94517E243A2188F7",
+        USDC: "0x9990300fecfa6a6bE483BcE5b38620c0998227F8",
+        WETH: "0x8278dC69DA0E24729a117DEb03c36b1fe8099385",
+        WEVMOS: "0xa17856bfD0197DEeF5fCf0968Bbd0aB7221149a2",
       },
-      cross_chain_oracle: "",
+      cross_chain_oracle: "0x7a6DF5e183f4DA46a323c525b32f226d24dBa08F",
     },
     oracles_other: {
-      combo_oracle: "",
-      combo_oracle_univ2_univ3: "",
+      combo_oracle: "0x18E72a9636B12D0CA7B4c2310fcDF5E3faA83e8F",
+      combo_oracle_univ2_univ3: "0x09178001CE6a153CE98f6e37e2c6d1d3F9f66ECa",
     },
     multisigs: {
       Comptrollers: "",
     },
     uniswap: {
-      v2_router: "",
+      v2_router: "0x3Bc1F48740a5D6dffAc36FAF4c9905a941509348",
       v3_factory: "0x0000000000000000000000000000000000000000",
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
     },
     amos: {},
     reward_tokens: {
-      WETH: "",
+      madWETH: "0x5842C5532b61aCF3227679a8b1BD0242a41752f2",
+      weth: "0x5842C5532b61aCF3227679a8b1BD0242a41752f2",
+      wevmos: "0xD4949664cD82660AaE99bEdc034a0deA8A0bd517"
     },
     vamms: {},
-    pair_tokens: {},
+    pair_tokens: {
+      "Cronus canFRAX/canFXS": "0xf1967e602ed274d9F1F4A9F93C5A4feeA6f53C7B",
+      "Cronus canFRAX/USDC": "0x0E759b8fB49Ed5bF608E93A2f777362704cF5C92",
+      "Cronus canFRAX/WEVMOS": "0x74Ae421098020707cE3D81f1b74e84F2450DC94F",
+    },
     staking_contracts: {},
   },
   fantom: {
@@ -2274,6 +2350,7 @@ export const CONTRACT_ADDRESSES = {
       wftm: "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83",
     },
     bearer_tokens: {
+      curve4pool: "0x9dc516a18775d492c9f061211C8a3FDCd476558d",
       FRAX2pool: "0x7a656B342E14F745e2B164890E88017e27AE7320",
       hFRAX: "0xb4300e088a3AE4e624EE5C71Bc1822F68BB5f2bc",
       oFRAX: "0x88c05534566f3bD6b6D704c9259408fF1F1a3F00",
@@ -2293,7 +2370,8 @@ export const CONTRACT_ADDRESSES = {
       "SpiritSwap FRAX/FXS": "0xebF993690F65B23862E10F489656529ac06A27B8",
     },
     pair_tokens: {
-      "FraxSwap FRAX/FPI": "0xF73f804Fb747d800E833942870f0312A6d392184",
+      "Curve 4pool": "0x9dc516a18775d492c9f061211C8a3FDCd476558d",
+      // "Fraxswap FRAX/FPI": "0xF73f804Fb747d800E833942870f0312A6d392184",
       "Liquid Driver FRAX/FTM": "0x7ed0cdDB9BB6c6dfEa6fB63E117c8305479B8D7D", // Same as SpiritSwap FRAX/FTM
       "SpiritSwap canFRAX/canFXS": "0x7a2aD237e389De505DE7a89768143337E516C6Ce",
       "SpiritSwap canFRAX/FTM": "0x7ed0cddb9bb6c6dfea6fb63e117c8305479b8d7d",
@@ -2350,7 +2428,7 @@ export const CONTRACT_ADDRESSES = {
     },
     amos: {},
     reward_tokens: {
-      WETH: '',
+      wfuse: '0x0BE9e53fd7EDaC9F859882AfdDa116645287C629',
     },
     vamms: {},
     pair_tokens: {},
@@ -2491,6 +2569,7 @@ export const CONTRACT_ADDRESSES = {
     amos: {},
     reward_tokens: {
       WGLMR: "0xAcc15dC74880C9944775448304B263D191c6077F",
+      ZLK: "0x3Fd9b6C9A24E09F67b7b706d72864aEbb439100C",
     },
     bearer_tokens: {
       "Saddle FRAX/USDC": "0x3a054b77DB7a4facc7fc718519B5A7294d6Ef0f1",
@@ -2639,12 +2718,15 @@ export const CONTRACT_ADDRESSES = {
       WETH: "0x4200000000000000000000000000000000000006",
     },
     bearer_tokens: {
+      curve4pool: "0x3da3153E26A230d918bb9F9428A8d60349B73379",
       "Saddle FRAX/USDC": "0x1C8FBaBDAE03B43e04dE5f86275e4cB148002530",
     },
     vamms: {
       USDC: "0xF47b8b1daF12c3058b757A1446dADfa8E4B33535", // Saddle FRAX/USDC
     },
-    pair_tokens: {},
+    pair_tokens: {
+      "Curve 4pool": "0x3da3153E26A230d918bb9F9428A8d60349B73379",
+    },
     staking_contracts: {},
   },
   polygon: {
@@ -2722,12 +2804,13 @@ export const CONTRACT_ADDRESSES = {
       wmatic: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
     },
     bearer_tokens: {
+      curve4pool: "0xe4ae3Ee65bb687045e401827b404FeE34BE4BA53",
       FRAX3pool: "0x5e5A23b52Cb48F5E70271Be83079cA5bC9c9e9ac",
       "HOP-LP-USDC": "0x9D373d22FD091d7f9A6649EB067557cc12Fb1A0A", // Swap (getVirtualPrice): 0x5C32143C8B198F392d01f8446b754c181224ac26
     },
     vamms: {},
     pair_tokens: {
-      // "FraxSwap FRAX/FPI": "0x324b54DD0aC4b482e8e3132F9b6E21cc3528813E",
+      // "Fraxswap FRAX/FPI": "0x324b54DD0aC4b482e8e3132F9b6E21cc3528813E",
       "mStable FRAX/mUSD": "0xB30a907084AC8a0d25dDDAB4E364827406Fd09f0",
       // "Sushi FRAX/FXS": "0xd53a56ae0f48c9a03660cd36c2e4ae20493a1eca"
       "Sushi canFRAX/canFXS": "0xDf45B5B68d9dC84173DD963c763AeA8CAD3E24A6",

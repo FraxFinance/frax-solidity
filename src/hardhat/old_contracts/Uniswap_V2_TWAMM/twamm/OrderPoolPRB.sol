@@ -44,15 +44,15 @@ library OrderPoolLib {
     }
 
     ///@notice deposit an order into the order pool.
-    function depositOrder(OrderPool storage self, uint256 orderId, uint256 amountPerBlock, uint256 orderExpiry) internal {
-        self.currentSalesRate += amountPerBlock;
+    function depositOrder(OrderPool storage self, uint256 orderId, uint256 amountPerInterval, uint256 orderExpiry) internal {
+        self.currentSalesRate += amountPerInterval;
         self.rewardFactorAtSubmission[orderId] = self.rewardFactor;
         self.orderExpiry[orderId] = orderExpiry;
-        self.salesRate[orderId] = amountPerBlock;
-        self.salesRateEndingPerTimeInterval[orderExpiry] += amountPerBlock;
+        self.salesRate[orderId] = amountPerInterval;
+        self.salesRateEndingPerTimeInterval[orderExpiry] += amountPerInterval;
     }
 
-    ///@notice when orders expire after a given block, we need to update the state of the pool
+    ///@notice when orders expire after a given timestamp, we need to update the state of the pool
     function updateStateFromBlockExpiry(OrderPool storage self, uint256 blockNumber) internal {
         self.currentSalesRate -= self.salesRateEndingPerTimeInterval[blockNumber];
         self.rewardFactorAtTimestamp[blockNumber] = self.rewardFactor;
