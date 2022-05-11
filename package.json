@@ -13,7 +13,7 @@
     "stablecoin",
     "defi"
   ],
-  "author": "Travis Moore (github.com/FortisFortuna) & Jason Huan <sino@ucla.edu> (github.com/jasonhuan)",
+  "author": "Frax Finance Team (https://github.com/orgs/FraxFinance)",
   "license": "ISC",
   "dependencies": {
     "@chainlink/contracts": "0.4.0",
