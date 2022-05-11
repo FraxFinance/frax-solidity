@@ -19,6 +19,11 @@ import "./FraxUnifiedFarmTemplate.sol";
 
 // -------------------- VARIES --------------------
 
+// Convex stkcvxFPIFRAX
+import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
+import "../Misc_AMOs/convex/IDepositToken.sol";
+import "../Misc_AMOs/curve/I2pool.sol";
+
 // G-UNI
 // import "../Misc_AMOs/gelato/IGUniPool.sol";
 
@@ -32,7 +37,7 @@ import "./FraxUnifiedFarmTemplate.sol";
 // import '../Misc_AMOs/stakedao/IStakeDaoVault.sol';
 
 // Uniswap V2
-import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
+// import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
 
 // Vesper
 // import '../Misc_AMOs/vesper/IVPool.sol';
@@ -44,6 +49,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     /* ========== STATE VARIABLES ========== */
 
     // -------------------- VARIES --------------------
+
+    // Convex stkcvxFPIFRAX
+    IConvexStakingWrapperFrax public stakingToken;
+    I2pool public curvePool;
 
     // G-UNI
     // IGUniPool public stakingToken;
@@ -58,7 +67,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // IStakeDaoVault public stakingToken;
 
     // Uniswap V2
-    IUniswapV2Pair public stakingToken;
+    // IUniswapV2Pair public stakingToken;
 
     // Vesper
     // IVPool public stakingToken;
@@ -94,6 +103,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     {
 
         // -------------------- VARIES --------------------
+        // Convex stkcvxFPIFRAX
+        stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        curvePool = I2pool(0xf861483fa7E511fbc37487D91B6FAa803aF5d37c);
+
         // G-UNI
         // stakingToken = IGUniPool(_stakingToken);
         // address token0 = address(stakingToken.token0());
@@ -109,10 +122,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // stakingToken = IStakeDaoVault(_stakingToken);
 
         // Uniswap V2
-        stakingToken = IUniswapV2Pair(_stakingToken);
-        address token0 = stakingToken.token0();
-        if (token0 == frax_address) frax_is_token0 = true;
-        else frax_is_token0 = false;
+        // stakingToken = IUniswapV2Pair(_stakingToken);
+        // address token0 = stakingToken.token0();
+        // if (token0 == frax_address) frax_is_token0 = true;
+        // else frax_is_token0 = false;
 
         // Vesper
         // stakingToken = IVPool(_stakingToken);
@@ -125,6 +138,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     function fraxPerLPToken() public view override returns (uint256) {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
+
+        // Convex stkcvxFPIFRAX
+        // ============================================
+        {
+            frax_per_lp_token = curvePool.get_virtual_price();
+        }
 
         // G-UNI
         // ============================================
@@ -164,14 +183,14 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // Uniswap V2
         // ============================================
-        {
-            uint256 total_frax_reserves;
-            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-            if (frax_is_token0) total_frax_reserves = reserve0;
-            else total_frax_reserves = reserve1;
+        // {
+        //     uint256 total_frax_reserves;
+        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+        //     if (frax_is_token0) total_frax_reserves = reserve0;
+        //     else total_frax_reserves = reserve1;
 
-            frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
-        }
+        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
+        // }
 
         // Vesper
         // ============================================
@@ -290,7 +309,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 new_amt = thisStake.liquidity + addl_liq;
 
         // Checks
-        require(addl_liq >= 0, "Must be nonzero");
+        require(addl_liq >= 0, "Must be positive");
 
         // Pull the tokens from the sender
         TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);
@@ -392,8 +411,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         if (liquidity > 0) {
             // Update liquidities
-            _total_liquidity_locked = _total_liquidity_locked - liquidity;
-            _locked_liquidity[staker_address] = _locked_liquidity[staker_address] - liquidity;
+            _total_liquidity_locked -= liquidity;
+            _locked_liquidity[staker_address] -= liquidity;
             {
                 address the_proxy = getProxyFor(staker_address);
                 if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= liquidity;

@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
+// import "hardhat/console.sol";
 import "prb-math/contracts/PRBMathUD60x18.sol";
 
 ///@notice An Order Pool is an abstraction for a pool of long term orders that sells a token at a constant rate to the embedded AMM. 
@@ -44,15 +45,15 @@ library OrderPoolLib {
     }
 
     ///@notice deposit an order into the order pool. 
-    function depositOrder(OrderPool storage self, uint256 orderId, uint256 amountPerBlock, uint256 orderExpiry) internal {
-        self.currentSalesRate += amountPerBlock;
+    function depositOrder(OrderPool storage self, uint256 orderId, uint256 amountPerInterval, uint256 orderExpiry) internal {
+        self.currentSalesRate += amountPerInterval;
         self.rewardFactorAtSubmission[orderId] = self.rewardFactor;
         self.orderExpiry[orderId] = orderExpiry;
-        self.salesRate[orderId] = amountPerBlock;
-        self.salesRateEndingPerTimeInterval[orderExpiry] += amountPerBlock;
+        self.salesRate[orderId] = amountPerInterval;
+        self.salesRateEndingPerTimeInterval[orderExpiry] += amountPerInterval;
     }
 
-    ///@notice when orders expire after a given block, we need to update the state of the pool
+    ///@notice when orders expire after a given timestamp, we need to update the state of the pool
     function updateStateFromBlockExpiry(OrderPool storage self, uint256 blockNumber) internal {
         uint256 ordersExpiring = self.salesRateEndingPerTimeInterval[blockNumber];
         self.currentSalesRate -= ordersExpiring;

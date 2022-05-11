@@ -112,19 +112,19 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 55000000000,
+			gasPrice: 80000000000, // 80 Gwei
 			gasMultiplier: 1.2
 		},
-		// evmos: {
-		// 	url: process.env.EVMOS_NETWORK_ENDPOINT,
-		// 	accounts: {
-		// 		mnemonic: process.env.EVMOS_MNEMONIC_PHRASE
-		// 	},
-		// 	chainId: 9001,
-		// 	gas: "auto",
-		// 	gasPrice: 5000000000, // 5 Gwei
-		// 	gasMultiplier: 1.2
-		// },
+		evmos: {
+			url: process.env.EVMOS_NETWORK_ENDPOINT,
+			accounts: {
+				mnemonic: process.env.EVMOS_MNEMONIC_PHRASE
+			},
+			chainId: 9001,
+			gas: "auto",
+			gasPrice: 10000000000, // 10 Gwei
+			gasMultiplier: 1.2
+		},
 		fantom: {
 			url: process.env.FANTOM_NETWORK_ENDPOINT,
 			accounts: {
@@ -355,8 +355,7 @@ module.exports = {
     vyper: {
 		// version: "0.2.15"
 		// version: "0.2.16"
-		version: "0.3.1"
-		// version: "0.3.2"
+		version: "0.3.2"
     }
 };
 

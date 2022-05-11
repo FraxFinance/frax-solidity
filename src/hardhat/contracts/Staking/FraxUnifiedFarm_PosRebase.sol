@@ -216,6 +216,9 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         // Accrue the interest and get the updated stake
         (thisStake, ) = _accrueInterest(msg.sender, thisStake, theArrayIndex);
 
+        // Return early if only accruing, to save gas
+        if (addl_liq == 0) return;
+
         // Calculate the new amount
         uint256 new_amt = thisStake.liquidity + addl_liq;
 

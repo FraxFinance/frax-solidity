@@ -31,9 +31,9 @@ const CrossChainOracle = artifacts.require("Oracle/CrossChainOracle");
 const FraxCrossChainFarm_FRAX_mUSD = artifacts.require("Staking/Variants/FraxCrossChainFarm_FRAX_mUSD");
 
 // TWAMM
-const UniV2TWAMMFactory = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMFactory");
-const UniV2TWAMMPair = artifacts.require("Uniswap_V2_TWAMM/core/UniV2TWAMMPair");
-const UniV2TWAMMRouter = artifacts.require("Uniswap_V2_TWAMM/periphery/UniV2TWAMMRouter");
+const UniV2TWAMMFactory = artifacts.require("Fraxswap/core/FraxswapFactory");
+const UniV2TWAMMPair = artifacts.require("Fraxswap/core/FraxswapPair");
+const UniV2TWAMMRouter = artifacts.require("Fraxswap/periphery/FraxswapRouter");
 
 // AMOs
 const MarketXYZLendingAMO = artifacts.require("Misc_AMOs/__CROSSCHAIN/Polygon/MarketXYZLendingAMO.sol");
@@ -106,7 +106,7 @@ module.exports = async (deployer) => {
 
     // TWAMM
     // twamm_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.polygon.uniswap.twamm_factory);
-    // twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.polygon.pair_tokens["FraxSwap FRAX/FPI"]);
+    // twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.polygon.pair_tokens["Fraxswap FRAX/FPI"]);
     // twamm_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.polygon.uniswap.twamm_router);
 
     // AMOs
@@ -118,12 +118,12 @@ module.exports = async (deployer) => {
     // .new() calls and deployments
     // ==========================================================================
 
-    console.log(chalk.yellow("========== UniV2TWAMMFactory =========="));
+    console.log(chalk.yellow("========== FraxswapFactory =========="));
     twamm_factory_instance = await UniV2TWAMMFactory.new( 
         THE_ACCOUNTS[1],
     );
 
-    console.log(chalk.yellow("========== UniV2TWAMMRouter =========="));
+    console.log(chalk.yellow("========== FraxswapRouter =========="));
     twamm_router_instance = await UniV2TWAMMRouter.new( 
         twamm_factory_instance.address,
         CONTRACT_ADDRESSES.polygon.reward_tokens.wmatic
@@ -150,7 +150,7 @@ module.exports = async (deployer) => {
         1999999999
     );
 
-    console.log(chalk.yellow("========== UniV2TWAMMPair =========="));
+    console.log(chalk.yellow("========== FraxswapPair =========="));
     const lpAddress = await twamm_factory_instance.getPair(fpi_instance.address, cross_chain_canonical_frax_instance.address);
     console.log("FRAX/FPI LP deployed to: ", lpAddress)
     twamm_pair_instance = await UniV2TWAMMPair.at(lpAddress);

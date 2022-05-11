@@ -31,8 +31,8 @@ import "../Frax/IFraxAMOMinter.sol";
 import "../Staking/Owned.sol";
 import "../Oracle/AggregatorV3Interface.sol";
 import "../Oracle/CPITrackerOracle.sol";
-import "../Uniswap_V2_TWAMM/periphery/libraries/UniswapV2LiquidityMathLibraryMini.sol";
-import "../Uniswap_V2_TWAMM/core/interfaces/IUniV2TWAMMPair.sol";
+import "../Fraxswap/periphery/libraries/UniswapV2LiquidityMathLibraryMini.sol";
+import "../Fraxswap/core/interfaces/IFraxswapPair.sol";
 
 contract FPIControllerPool is Owned {
 
@@ -40,7 +40,7 @@ contract FPIControllerPool is Owned {
     address public timelock_address;
     FPI public FPI_TKN;
     IFrax public FRAX;
-    IUniV2TWAMMPair public TWAMM;
+    IFraxswapPair public TWAMM;
 
     // Oracles
     AggregatorV3Interface public priceFeedFRAXUSD;
@@ -115,7 +115,7 @@ contract FPIControllerPool is Owned {
         // Set instances
         FRAX = IFrax(_address_pack[0]);
         FPI_TKN = FPI(_address_pack[1]);
-        TWAMM = IUniV2TWAMMPair(_address_pack[2]);
+        TWAMM = IFraxswapPair(_address_pack[2]);
         priceFeedFRAXUSD = AggregatorV3Interface(_address_pack[3]);
         priceFeedFPIUSD = AggregatorV3Interface(_address_pack[4]);
         cpiTracker = CPITrackerOracle(_address_pack[5]);
@@ -418,30 +418,41 @@ contract FPIControllerPool is Owned {
     }
 
     function cancelCurrTWAMMOrder(uint256 order_id_override) public onlyByOwnGov {
+        // Get the order id
+        uint256 order_id_to_use = (order_id_override == 0 ? last_order_id_twamm : order_id_override);
+
         // Cancel the order
-        TWAMM.cancelLongTermSwap(order_id_override == 0 ? last_order_id_twamm : order_id_override);
+        TWAMM.cancelLongTermSwap(order_id_to_use);
 
         // Clear the pending order indicator
         pending_twamm_order = false;
+
+        emit TWAMMOrderCancelled(order_id_to_use);
     }
 
     function collectCurrTWAMMProceeds(uint256 order_id_override) external onlyByOwnGov {
+        // Get the order id
+        uint256 order_id_to_use = (order_id_override == 0 ? last_order_id_twamm : order_id_override);
+
         // Withdraw current proceeds
-        (bool is_expired, , ) = TWAMM.withdrawProceedsFromLongTermSwap(order_id_override == 0 ? last_order_id_twamm : order_id_override);
+        (bool is_expired, address rewardTkn, uint256 totalReward) = TWAMM.withdrawProceedsFromLongTermSwap(order_id_to_use);
         
         // If using the last_order_id_twamm and it is expired, clear the pending order indicator
         if (is_expired && (order_id_override == 0)) pending_twamm_order = false;
+
+        emit TWAMMProceedsCollected(order_id_to_use, rewardTkn, totalReward);
     }
 
     /* ========== Burns and givebacks ========== */
 
     // Burn unneeded or excess FPI.
     function burnFPI(bool burn_all, uint256 fpi_amount) public onlyByOwnGov {
-        if (burn_all) {
-            // Burn any leftover FPI
-            FPI_TKN.burn(FPI_TKN.balanceOf(address(this)));
-        }
-        else FPI_TKN.burn(fpi_amount);
+        uint256 amt_to_burn = burn_all ? FPI_TKN.balanceOf(address(this)) : fpi_amount;
+
+        // Burn
+        FPI_TKN.burn(amt_to_burn);
+
+        emit FPIBurned(amt_to_burn);
     }
 
     // ------------------------------------------------------------------
@@ -450,6 +461,7 @@ contract FPIControllerPool is Owned {
 
     // Lend the FRAX collateral to an AMO
     function giveFRAXToAMO(address destination_amo, uint256 frax_amount) external onlyByOwnGov validAMO(destination_amo) {
+        require(frax_amount <= (2**255 - 1), "int256 overflow");
         int256 frax_amount_i256 = int256(frax_amount);
 
         // Update the balances first
@@ -459,10 +471,13 @@ contract FPIControllerPool is Owned {
 
         // Give the FRAX to the AMO
         TransferHelper.safeTransfer(address(FRAX), destination_amo, frax_amount);
+
+        emit FRAXGivenToAMO(destination_amo, frax_amount);
     }
 
     // AMO gives back FRAX. Needed for proper accounting
     function receiveFRAXFromAMO(uint256 frax_amount) external validAMO(msg.sender) {
+        require(frax_amount <= (2**255 - 1), "int256 overflow");
         int256 frax_amt_i256 = int256(frax_amount);
 
         // Give back first
@@ -471,6 +486,8 @@ contract FPIControllerPool is Owned {
         // Then update the balances
         frax_borrowed_balances[msg.sender] -= frax_amt_i256;
         frax_borrowed_sum -= frax_amt_i256;
+
+        emit FRAXReceivedFromAMO(msg.sender, frax_amount);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -520,7 +537,7 @@ contract FPIControllerPool is Owned {
         if (pending_twamm_order) cancelCurrTWAMMOrder(last_order_id_twamm);
         
         // Change the TWAMM parameters
-        TWAMM = IUniV2TWAMMPair(_twamm_addr);
+        TWAMM = IFraxswapPair(_twamm_addr);
         swap_period = _swap_period;
         num_twamm_intervals = _swap_period / TWAMM.orderTimeInterval();
     }
@@ -534,6 +551,8 @@ contract FPIControllerPool is Owned {
     }
 
     function setFraxBorrowCap(int256 _frax_borrow_cap) external onlyByOwnGov {
+        require(_frax_borrow_cap >= 0, "int256 underflow");
+        require(_frax_borrow_cap <= (2**255 - 1), "int256 overflow");
         frax_borrow_cap = _frax_borrow_cap;
     }
 
@@ -579,10 +598,15 @@ contract FPIControllerPool is Owned {
     }
 
     /* ========== EVENTS ========== */
-    event AMOAdded(address amo_address);
-    event AMORemoved(address amo_address);
-    event RecoveredERC20(address token, uint256 amount);
     event FPIMinted(uint256 frax_in, uint256 fpi_out);
     event FPIRedeemed(uint256 fpi_in, uint256 frax_out);
     event TWAMMedToPeg(uint256 order_id, uint256 frax_amt, uint256 fpi_amt, uint256 timestamp);
+    event TWAMMOrderCancelled(uint256 order_id);
+    event TWAMMProceedsCollected(uint256 order_id, address reward_tkn, uint256 ttl_reward);
+    event FPIBurned(uint256 amt_burned);
+    event FRAXGivenToAMO(address destination_amo, uint256 frax_amount);
+    event FRAXReceivedFromAMO(address source_amo, uint256 frax_amount);
+    event AMOAdded(address amo_address);
+    event AMORemoved(address amo_address);
+    event RecoveredERC20(address token, uint256 amount);
 }
