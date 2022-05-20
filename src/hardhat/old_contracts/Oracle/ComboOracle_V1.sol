@@ -202,10 +202,11 @@ contract ComboOracleV1 is Owned {
     // get_virtual_price: 0xbb7b8b80
     // getVirtualPrice: 0xe25aa5fa
     // pricePerShare: 0x99530b06
+    // lp_price: 0x54f0f7d5
 
     // Function signature encoder
     //     web3_data.eth.abi.encodeFunctionSignature({
-    //     name: 'getVirtualPrice',
+    //     name: 'lp_price',
     //     type: 'function',
     //     inputs: []
     // })

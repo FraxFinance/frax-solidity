@@ -142,7 +142,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Convex stkcvxFPIFRAX
         // ============================================
         {
-            frax_per_lp_token = curvePool.get_virtual_price();
+            // frax_per_lp_token = curvePool.get_virtual_price() / 2; 
+            // Count full value here since FRAX and FPI are both part of FRAX ecosystem
+            // frax_per_lp_token = curvePool.get_virtual_price(); // BAD
+            frax_per_lp_token = curvePool.lp_price() / 2;
         }
 
         // G-UNI
