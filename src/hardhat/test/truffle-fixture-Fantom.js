@@ -69,9 +69,9 @@ module.exports = async (deployer) => {
     let staking_instance_frax_fxs_spirit;
     
     // TWAMM
-    let twamm_factory_instance;
+    let fraxswap_factory_instance;
     let twamm_pair_instance;
-    let twamm_router_instance;
+    let fraxswap_router_instance;
 
     // AMOs
     let spiritSwapLiquidityAMO_instance;
@@ -104,9 +104,9 @@ module.exports = async (deployer) => {
     staking_instance_frax_fxs_spirit = await FraxCrossChainFarm_FRAX_FXS_Spirit.at(CONTRACT_ADDRESSES.fantom.staking_contracts["SpiritSwap FRAX/FXS"]);
 
     // TWAMM
-    // twamm_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.fantom.uniswap.twamm_factory);
+    // fraxswap_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.fantom.uniswap.fraxswap_factory);
     // twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.fantom.pair_tokens["Fraxswap FRAX/FPI"]);
-    // twamm_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.fantom.uniswap.twamm_router);
+    // fraxswap_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.fantom.uniswap.fraxswap_router);
 
     // AMOs
     // fpi_controller_pool_instance = await FPIControllerPool.at(CONTRACT_ADDRESSES.fantom.amos.fpi_controller_amo);
@@ -119,13 +119,13 @@ module.exports = async (deployer) => {
     // ==========================================================================
 
     console.log(chalk.yellow("========== FraxswapFactory =========="));
-    twamm_factory_instance = await UniV2TWAMMFactory.new( 
+    fraxswap_factory_instance = await UniV2TWAMMFactory.new( 
         THE_ACCOUNTS[1],
     );
 
     console.log(chalk.yellow("========== FraxswapRouter =========="));
-    twamm_router_instance = await UniV2TWAMMRouter.new( 
-        twamm_factory_instance.address,
+    fraxswap_router_instance = await UniV2TWAMMRouter.new( 
+        fraxswap_factory_instance.address,
         CONTRACT_ADDRESSES.fantom.reward_tokens.wftm
     );
 
@@ -137,9 +137,9 @@ module.exports = async (deployer) => {
 
     // Create the FRAX/FPI LP Pair
     const seed_amt = BIG18;
-    await fpi_instance.approve(twamm_router_instance.address, seed_amt, { from: THE_ACCOUNTS[1] });
-    await cross_chain_canonical_frax_instance.approve(twamm_router_instance.address, seed_amt, { from: THE_ACCOUNTS[1] });
-    await twamm_router_instance.addLiquidity(
+    await fpi_instance.approve(fraxswap_router_instance.address, seed_amt, { from: THE_ACCOUNTS[1] });
+    await cross_chain_canonical_frax_instance.approve(fraxswap_router_instance.address, seed_amt, { from: THE_ACCOUNTS[1] });
+    await fraxswap_router_instance.addLiquidity(
         fpi_instance.address, 
         cross_chain_canonical_frax_instance.address, 
         seed_amt, 
@@ -151,7 +151,7 @@ module.exports = async (deployer) => {
     , { from: THE_ACCOUNTS[1] });
 
     console.log(chalk.yellow("========== FraxswapPair =========="));
-    const lpAddress = await twamm_factory_instance.getPair(fpi_instance.address, cross_chain_canonical_frax_instance.address);
+    const lpAddress = await fraxswap_factory_instance.getPair(fpi_instance.address, cross_chain_canonical_frax_instance.address);
     console.log("FRAX/FPI LP deployed to: ", lpAddress)
     twamm_pair_instance = await UniV2TWAMMPair.at(lpAddress);
 
@@ -309,9 +309,9 @@ module.exports = async (deployer) => {
     FraxCrossChainFarm_FRAX_FXS_Spirit.setAsDeployed(staking_instance_frax_fxs_spirit);
 
     console.log(chalk.yellow("--------DEPLOYING TWAMM CONTRACTS--------"));
-    UniV2TWAMMFactory.setAsDeployed(twamm_factory_instance);
+    UniV2TWAMMFactory.setAsDeployed(fraxswap_factory_instance);
     UniV2TWAMMPair.setAsDeployed(twamm_pair_instance);
-    UniV2TWAMMRouter.setAsDeployed(twamm_router_instance);
+    UniV2TWAMMRouter.setAsDeployed(fraxswap_router_instance);
 
     console.log(chalk.yellow("--------DEPLOYING AMO CONTRACTS--------"));
     CurveAMO_FTM.setAsDeployed(curve_amo_ftm_instance);

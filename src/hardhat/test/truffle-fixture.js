@@ -30,6 +30,7 @@ const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 // Misc AMOs
 const FraxAMOMinter = artifacts.require("Frax/FraxAMOMinter");
 const FraxLiquidityBridger_AUR_Rainbow = artifacts.require("Bridges/Aurora/FraxLiquidityBridger_AUR_Rainbow");
+const TWAMM_AMO = artifacts.require("Misc_AMOs/TWAMM_AMO");
 
 // Oracles
 const CPITrackerOracle = artifacts.require("Oracle/CPITrackerOracle");
@@ -91,6 +92,7 @@ module.exports = async (deployer) => {
     // Misc AMOs
     let frax_amo_minter_instance;
     let frax_liquidity_bridger_aur_rainbow_instance;
+    let twamm_amo_instance;
 
     // Oracles
     let cpi_tracker_oracle_instance;
@@ -102,9 +104,9 @@ module.exports = async (deployer) => {
     let fraxUnifiedFarm_PosRebase_aFRAX_instance;
 
     // TWAMM
-    let twamm_factory_instance;
+    let fraxswap_factory_instance;
     let twamm_pair_instance;
-    let twamm_router_instance;
+    let fraxswap_router_instance;
     
     // Uniswap
 	let routerInstance;
@@ -150,6 +152,7 @@ module.exports = async (deployer) => {
 
     // Misc AMOS
     frax_amo_minter_instance = await FraxAMOMinter.at(CONTRACT_ADDRESSES.ethereum.misc.amo_minter);
+    // twamm_amo_instance = await TWAMM_AMO.at(CONTRACT_ADDRESSES.ethereum.misc.twamm_amo);
 
     // Oracles
     cpi_tracker_oracle_instance = await CPITrackerOracle.at(CONTRACT_ADDRESSES.ethereum.oracles_other.cpi_tracker_oracle); 
@@ -161,9 +164,9 @@ module.exports = async (deployer) => {
     fraxUnifiedFarm_PosRebase_aFRAX_instance = await FraxUnifiedFarm_PosRebase_aFRAX.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Aave aFRAX']);
 
     // TWAMM
-    twamm_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.ethereum.uniswap.twamm_factory);
+    fraxswap_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.ethereum.uniswap.fraxswap_factory);
     twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap FRAX/FPI"]);
-    twamm_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.ethereum.uniswap.twamm_router);
+    fraxswap_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.ethereum.uniswap.fraxswap_router);
 
     // Uniswap
     routerInstance = await IUniswapV2Router02.at(CONTRACT_ADDRESSES.ethereum.uniswap.router); 
@@ -307,17 +310,33 @@ module.exports = async (deployer) => {
     //     "FRAX/FPI 0.30%"
     // );
 
-    console.log(chalk.yellow("========== FPIControllerPool =========="));
-    fpi_controller_pool_instance = await FPIControllerPool.new( 
+    // console.log(chalk.yellow("========== FPIControllerPool =========="));
+    // fpi_controller_pool_instance = await FPIControllerPool.new( 
+    //     THE_ACCOUNTS[1], 
+    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
+    //     [
+    //         frax_instance.address,
+    //         fpi_instance.address,
+    //         CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap FRAX/FPI"],
+    //         "0xB9E1E3A9feFf48998E45Fa90847ed4D467E8BcfD", // Ethereum CHAINLINK FRAX
+    //         CONTRACT_ADDRESSES.ethereum.oracles["FRAX/FPI 0.30%"], // Ethereum UniV3TWAPOracle FPI [PLACEHOLDER UNTIL REAL CHAINLINK ORACLE IS UP]
+    //         cpi_tracker_oracle_instance.address,
+    //     ]
+    // );
+
+    console.log(chalk.yellow("========== TWAMM_AMO =========="));
+    twamm_amo_instance = await TWAMM_AMO.new( 
         THE_ACCOUNTS[1], 
         CONTRACT_ADDRESSES.ethereum.misc.timelock,
         [
             frax_instance.address,
-            fpi_instance.address,
-            CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap FRAX/FPI"],
-            "0xB9E1E3A9feFf48998E45Fa90847ed4D467E8BcfD", // ethereum CHAINLINK FRAX
-            CONTRACT_ADDRESSES.ethereum.oracles["FRAX/FPI 0.30%"], // ethereum UniV3TWAPOracle FPI [PLACEHOLDER UNTIL REAL CHAINLINK ORACLE IS UP]
-            cpi_tracker_oracle_instance.address,
+            fxs_instance.address,
+            CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap FRAX/FXS"],
+            "0xB9E1E3A9feFf48998E45Fa90847ed4D467E8BcfD", // Ethereum CHAINLINK FRAX
+            "0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f", // Ethereum CHAINLINK FXS
+            CONTRACT_ADDRESSES.ethereum.multisigs.Comptrollers,
+            CONTRACT_ADDRESSES.ethereum.misc.amo_minter,
+            CONTRACT_ADDRESSES.ethereum.misc.vefxs_yield_distributor_v4
         ]
     );
     
@@ -349,10 +368,14 @@ module.exports = async (deployer) => {
 
     console.log(chalk.yellow('========== WHITELIST AMOS FOR MINTER =========='));
     // await frax_amo_minter_instance.addAMO(convex_amo_instance.address, 0, { from: COMPTROLLER_ADDRESS });
+    await frax_amo_minter_instance.addAMO(twamm_amo_instance.address, 0, { from: COMPTROLLER_ADDRESS });
 
 
-    console.log("Add the liquidity bridgers to the AMO Minter");
+    // console.log("Add the liquidity bridgers to the AMO Minter");
     // await frax_amo_minter_instance.addAMO(frax_liquidity_bridger_aur_rainbow_instance.address, 0, { from: COMPTROLLER_ADDRESS });
+
+    console.log("Add the TWAMM AMO as a notifier to the yield distributor");
+    await veFXSYieldDistributorV4_instance.toggleRewardNotifier(twamm_amo_instance.address, { from: COMPTROLLER_ADDRESS });
 
     await hre.network.provider.request({
         method: "hardhat_stopImpersonatingAccount",
@@ -404,6 +427,7 @@ module.exports = async (deployer) => {
     console.log(chalk.yellow("--------DEPLOY MISC AMO CONTRACTS--------"));
     FraxAMOMinter.setAsDeployed(frax_amo_minter_instance);
     // FraxLiquidityBridger_AUR_Rainbow.setAsDeployed(frax_liquidity_bridger_aur_rainbow_instance);
+    TWAMM_AMO.setAsDeployed(twamm_amo_instance);
 
     console.log(chalk.yellow("--------DEPLOY ORACLE CONTRACTS--------"));
     CPITrackerOracle.setAsDeployed(cpi_tracker_oracle_instance);
@@ -420,9 +444,9 @@ module.exports = async (deployer) => {
     FraxUnifiedFarm_PosRebase_aFRAX.setAsDeployed(fraxUnifiedFarm_PosRebase_aFRAX_instance);
 
     console.log(chalk.yellow("--------DEPLOYING TWAMM CONTRACTS--------"));
-    UniV2TWAMMFactory.setAsDeployed(twamm_factory_instance);
+    UniV2TWAMMFactory.setAsDeployed(fraxswap_factory_instance);
     UniV2TWAMMPair.setAsDeployed(twamm_pair_instance);
-    UniV2TWAMMRouter.setAsDeployed(twamm_router_instance);
+    UniV2TWAMMRouter.setAsDeployed(fraxswap_router_instance);
 
     console.log(chalk.yellow("--------DEPLOYING veFPIS CONTRACTS--------"));
     veFPIS.setAsDeployed(veFPIS_instance);

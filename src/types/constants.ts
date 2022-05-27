@@ -1499,61 +1499,63 @@ export const CONTRACT_ADDRESSES = {
       },
     },
     misc: {
-      timelock: "0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA",
-      migration_helper: "0xe16723A08Ae054a8F20BDc0395389569011e78D6",
-      mint_utilities: "0xE054C1ab5D548E0144ab3F89a8f5809137819906",
-      staking_utilities: "0xE4de6E1DF1FE135D6462554d0Fd36A14d787f689",
-      investor_amo_V1: "0xEE5825d5185a1D512706f9068E69146A54B6e076",
-      investor_amo: "0xB8315Af919729c823B2d996B1A6DDE381E7444f1", // Old proxy: 0x2B4d259a8f6E765AD881C4C1D04045D629dA01b4
-      // investor_amo_impl: "0xde3c8aa7f53a69c595b7720045000a68cb9cb341", // Old V3: 0xEccA5a27B4f8f92a2bFFd006F20168A7188C0A0C, Old V2: "0xEE5825d5185a1D512706f9068E69146A54B6e076", // Old: 0xe09394AE14d7c3b1798e4dbEa4c280973B2689A4
-      // investor_amo_admin: "0x069c24600c2A03147D4E1D9b04d193151676F577",
-      lending_amo: "0x9507189f5B6D820cd93d970d67893006968825ef", // Old: 0xDA9d06166c2085988920Fb35EB2d322B4aaDF1EE
-      curve_amo_V1: "0xbd061885260F176e05699fED9C5a4604fc7F2BDC",
-      curve_amo_V2: "0xD103FEf74D05FbC20B5184FE85c7187735355DB3", //0xeF8c0b4902b985bF64B8cfF6BbCD0AC1FDc8d5d3", // Proxy: "0x7e983e4f98b16cee76f8f9a6a1e87b5861de8769"
-      curve_amo: "0x72170Cdc48C33a6AE6B3E83CD387ca3Fb9105da2", // Impl: 0xC3204838aF4CE0597476aDF367B4C9a3cf9a1B51
-      // curve_amo_impl: "0x5840db064e17480f8e8e74fd6714c9c316f7ddfe", // Old2: 0xbd061885260F176e05699fED9C5a4604fc7F2BDC", Old1: 0x77746DC37Deae008c7149EDc1b1A8D6d63e08Be5, Old2: 0x25e9702359bAf56E505F0BA981eeBFA23ceB030A, Old3: 0x19a47F38D39692617C9D9012eC0176C9ead00a5e
-      curve_amo_admin: "0x900909C07c2761d84C5d863FF5905102916DF69C",
-      fxs_1559_amo: "0x9C6a04871D11b33645ab592f68C41bb2B41F51EE", // Old1: "0xaf02be5968D8Fe9536e24E4c7e888C59A58Bc077"
-      fxs_1559_amo_v2: "0xC80C48862E4254F37047235298eDb6AA35717C24", // Proxy
-      fxs_1559_amo_v3: "0xb524622901b3f7b5DeA6501E9830700C847C7DC5", // Old: "0x7301BB959ee286D8ABC46f341144afE443CEdAe5",
-      stakedao_amo: "0x375278D3C65f29C1A90E8550888f1439cFeFe465", // Impl: 0xcf1e6926b2167f83ec3300bed04a672abd93e646 
-      ohm_amo: "0x5699d20732a2EFa9A895EF04bb210aa751C4dB96", // Impl: 0x89a5CeC88598c0CE4d4E331D0b027499edd3dfFa
-      ohm_amo_admin: "0xE53d45ABe10Ce20427D20c5a1b6360Fa5BA0cE0A",
+      aave_amo: "0x66635DC1EdEfF19e839f152a67278151Aa6e1B61",
+      amo_minter: "0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241", // Old: 0xF9931973fCc0c37908687Eec2CCB28fC3B94B086
+      amo_minter_old: "0x36a0B6a5F7b318A2B4Af75FFFb1b51a5C78dEB8C", 
+      bundle_utils: "0xD1a7b80a954e56bfd7bd889aF6e2BE8674719F5d", 
       convex_amo: "0x49ee75278820f409ecd67063D8D717B38d66bd71", // Impl: 0x49f77ddd4d57636ab4c98d8f18ca5f4b5210983d
       convex_amo_admin: "0xE53d45ABe10Ce20427D20c5a1b6360Fa5BA0cE0A",
-      rari_amo: "0x96665d63c1B53f8335e3c9287Ee255f306C93c45",
-      // fxs_1559_amo_v2_impl: "0xCDe9A4e885B87a893b8817D136FD2F404B54294f".
-      fxs_1559_amo_v2_admin: "0xCaa487D113ad1C34Ce128c4f3a2A437614C6a692", // Proxy admin
-      frax_gauge_v2: "0x72e158d38dbd50a483501c24f792bdaaa3e7d55c",
+      crosschain_liquidity_tracker: "", 
       crvFRAX_vault: "0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139",
+      curve_amo: "0x72170Cdc48C33a6AE6B3E83CD387ca3Fb9105da2", // Impl: 0xC3204838aF4CE0597476aDF367B4C9a3cf9a1B51
+      curve_amo_impl: "0x5840db064e17480f8e8e74fd6714c9c316f7ddfe", // Old2: 0xbd061885260F176e05699fED9C5a4604fc7F2BDC", Old1: 0x77746DC37Deae008c7149EDc1b1A8D6d63e08Be5, Old2: 0x25e9702359bAf56E505F0BA981eeBFA23ceB030A, Old3: 0x19a47F38D39692617C9D9012eC0176C9ead00a5e
+      curve_amo_V1: "0xbd061885260F176e05699fED9C5a4604fc7F2BDC",
+      curve_amo_V2: "0xD103FEf74D05FbC20B5184FE85c7187735355DB3", //0xeF8c0b4902b985bF64B8cfF6BbCD0AC1FDc8d5d3", // Proxy: "0x7e983e4f98b16cee76f8f9a6a1e87b5861de8769"
+      curve_amo_admin: "0x900909C07c2761d84C5d863FF5905102916DF69C",
+      curve_metapool_locker: "0x70F55767B11c047C8397285E852919F5f6c8DC60", 
+      curve_metapool_locker_2: "0xE4BD0461AE7fdc76c61CE286a80c9B55d83B204a", 
+      cvx_locker_amo: "0x7038C406e7e2C9F81571557190d26704bB39B8f3",
+      fpi_controller_amo: "0x2397321b301B80A1C0911d6f9ED4b6033d43cF51", // Old: "0x309AC8840f9b4C7eEB5bAb1e89669d8dbb86c060",
+      frax3crv_curve_fxs_distributor: "0xBBbAf1adf4d39B2843928CCa1E65564e5ce99ccC", // MAY NEED TO CALL APPROVE FIRST
+      frax3crv_curve_rewards_distributor_eoa: "0x73f9f84b04584227b4f0baffd8b37d6d0c11a23c",
+      frax_gauge_controller: "0x44ade9AA409B0C29463fF7fcf07c9d3c939166ce",
+      frax_gauge_controller_v2: "0x3669C421b77340B2979d1A00a792CC2ee0FcE737",
+      frax_gauge_rewards_distributor: "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34",
+      frax_gauge_v2: "0x72e158d38dbd50a483501c24f792bdaaa3e7d55c",
+      fxs_1559_amo: "0x9C6a04871D11b33645ab592f68C41bb2B41F51EE", // Old1: "0xaf02be5968D8Fe9536e24E4c7e888C59A58Bc077"
+      fxs_1559_amo_v2: "0xC80C48862E4254F37047235298eDb6AA35717C24", // Proxy
+      fxs_1559_amo_v2_admin: "0xCaa487D113ad1C34Ce128c4f3a2A437614C6a692", // Proxy admin
+      fxs_1559_amo_v2_impl: "0xCDe9A4e885B87a893b8817D136FD2F404B54294f",
+      fxs_1559_amo_v3: "0xb524622901b3f7b5DeA6501E9830700C847C7DC5", // Old: "0x7301BB959ee286D8ABC46f341144afE443CEdAe5",
+      investor_amo: "0xB8315Af919729c823B2d996B1A6DDE381E7444f1", // Old proxy: 0x2B4d259a8f6E765AD881C4C1D04045D629dA01b4
+      investor_amo_V1: "0xEE5825d5185a1D512706f9068E69146A54B6e076",
+      investor_amo_admin: "0x069c24600c2A03147D4E1D9b04d193151676F577",
+      investor_amo_impl: "0xde3c8aa7f53a69c595b7720045000a68cb9cb341", // Old V3: 0xEccA5a27B4f8f92a2bFFd006F20168A7188C0A0C, Old V2: "0xEE5825d5185a1D512706f9068E69146A54B6e076", // Old: 0xe09394AE14d7c3b1798e4dbEa4c280973B2689A4
+      lending_amo: "0x9507189f5B6D820cd93d970d67893006968825ef", // Old: 0xDA9d06166c2085988920Fb35EB2d322B4aaDF1EE
+      manual_token_tracker_amo: "0xEc8672dd770D59FaD9a811591a5Edd40e8F6A413",
+      migration_bundle_utils: "0x239c957d42343B3d91FABc7c16E7F1e30Bc32E5B", // same bytecode: 0x2fFFFbA4F562569bec2D4FC1c36F7797ffb173Cd
+      migration_helper: "0xe16723A08Ae054a8F20BDc0395389569011e78D6",
+      mim_convex_amo: "0x31183a2CCe8d1BFBBFE140Ea1A1264A454Fc821E",
+      mint_utilities: "0xE054C1ab5D548E0144ab3F89a8f5809137819906",
+      msig_helper: "0x977eaDb6fa9b8E1a2A950CcDE1A75a7b527a8cBB",
       multisig: "0xFa27873EA2F0eA9DcD2052848C4A7F8ADE8a3936",
+      ohm_amo: "0x5699d20732a2EFa9A895EF04bb210aa751C4dB96", // Impl: 0x89a5CeC88598c0CE4d4E331D0b027499edd3dfFa
+      ohm_amo_admin: "0xE53d45ABe10Ce20427D20c5a1b6360Fa5BA0cE0A",
+      rari_amo: "0x96665d63c1B53f8335e3c9287Ee255f306C93c45",
+      stakedao_amo: "0x375278D3C65f29C1A90E8550888f1439cFeFe465", // Impl: 0xcf1e6926b2167f83ec3300bed04a672abd93e646 
+      staking_utilities: "0xE4de6E1DF1FE135D6462554d0Fd36A14d787f689",
+      timelock: "0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA",
+      token_tracker_amo: "0x3F702a8F6c9f9F7ABdfEA67f89d33F18e0368600",
+      token_tracker_v2: "0x37336AD1F3A145C710247E6a14C9AcC7f34D09eE",
+      twamm_amo: "0x0000000000000000000000000000000000000000",
+      uniV2_to_uniV3_migrator_address: "0x7b50137E8996A1717a6D97a0527e4c5D2D133405",
+      uniV3_liquidity_amo: "0x3814307b86b54b1d8e7B2Ac34662De9125F8f4E6", // Old: "0xef2b0895f986Afd7Eb7939B65E2883C5e199751f",
+      vefxs_smart_wallet_checker: "0x53c13BA8834a1567474b19822aAD85c6F90D9f9F",
       vefxs_yield_distributor: "0x19a0a70a68fbC604Bf20A03b787df8f7AC1d50f0",
       vefxs_yield_distributor_v2: "0x62C4cf364078C98fA08AfDB4D3d8D87e780Ebd45",
       vefxs_yield_distributor_v3: "0xed2647Bbf875b2936AAF95a3F5bbc82819e3d3FE",
       vefxs_yield_distributor_v4: "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
-      frax3crv_curve_rewards_distributor_eoa: "0x73f9f84b04584227b4f0baffd8b37d6d0c11a23c",
-      frax3crv_curve_fxs_distributor: "0xBBbAf1adf4d39B2843928CCa1E65564e5ce99ccC", // MAY NEED TO CALL APPROVE FIRST
-      uniV2_to_uniV3_migrator_address: "0x7b50137E8996A1717a6D97a0527e4c5D2D133405",
-      migration_bundle_utils: "0x239c957d42343B3d91FABc7c16E7F1e30Bc32E5B", // same bytecode: 0x2fFFFbA4F562569bec2D4FC1c36F7797ffb173Cd
-      bundle_utils: "0xD1a7b80a954e56bfd7bd889aF6e2BE8674719F5d", 
-      vefxs_smart_wallet_checker: "0x53c13BA8834a1567474b19822aAD85c6F90D9f9F",
-      frax_gauge_controller: "0x44ade9AA409B0C29463fF7fcf07c9d3c939166ce",
-      frax_gauge_controller_v2: "0x3669C421b77340B2979d1A00a792CC2ee0FcE737",
-      frax_gauge_rewards_distributor: "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34",
-      uniV3_liquidity_amo: "0x3814307b86b54b1d8e7B2Ac34662De9125F8f4E6", // Old: "0xef2b0895f986Afd7Eb7939B65E2883C5e199751f",
-      amo_minter_old: "0x36a0B6a5F7b318A2B4Af75FFFb1b51a5C78dEB8C", 
-      amo_minter: "0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241", // Old: 0xF9931973fCc0c37908687Eec2CCB28fC3B94B086
-      curve_metapool_locker: "0x70F55767B11c047C8397285E852919F5f6c8DC60", 
-      curve_metapool_locker_2: "0xE4BD0461AE7fdc76c61CE286a80c9B55d83B204a", 
-      aave_amo: "0x66635DC1EdEfF19e839f152a67278151Aa6e1B61",
-      cvx_locker_amo: "0x7038C406e7e2C9F81571557190d26704bB39B8f3",
-      token_tracker_amo: "0x3F702a8F6c9f9F7ABdfEA67f89d33F18e0368600",
-      token_tracker_v2: "0x37336AD1F3A145C710247E6a14C9AcC7f34D09eE",
-      manual_token_tracker_amo: "0xEc8672dd770D59FaD9a811591a5Edd40e8F6A413",
-      msig_helper: "0x977eaDb6fa9b8E1a2A950CcDE1A75a7b527a8cBB",
-      mim_convex_amo: "0x31183a2CCe8d1BFBBFE140Ea1A1264A454Fc821E",
-      crosschain_liquidity_tracker: "", 
-      fpi_controller_amo: "0x2397321b301B80A1C0911d6f9ED4b6033d43cF51", // Old: "0x309AC8840f9b4C7eEB5bAb1e89669d8dbb86c060",
+
     },
     libraries: {
       UniswapV2OracleLibrary: "0xeB85Dd2374a44F80342AcF8010d585Bda32B77a0",
@@ -1627,8 +1629,8 @@ export const CONTRACT_ADDRESSES = {
     uniswap: {
       router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
       factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
-      twamm_factory: "0xB076b06F669e682609fb4a8C6646D2619717Be4b", // Old: "0x54F454D747e037Da288dB568D4121117EAb34e79",
-      twamm_router: "0x1C6cA5DEe97C8C368Ca559892CCce2454c8C35C7", // Old: "0xE52D0337904D4D0519EF7487e707268E1DB6495F",
+      fraxswap_factory: "0xB076b06F669e682609fb4a8C6646D2619717Be4b", // Old: "0x54F454D747e037Da288dB568D4121117EAb34e79",
+      fraxswap_router: "0x1C6cA5DEe97C8C368Ca559892CCce2454c8C35C7", // Old: "0xE52D0337904D4D0519EF7487e707268E1DB6495F",
     },
     uniswap_v3: {
       UniswapV3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
@@ -1828,6 +1830,7 @@ export const CONTRACT_ADDRESSES = {
     },
     multisigs: {
       Comptrollers: "0xe61D9ed1e5Dc261D1e90a99304fADCef2c76FD10",
+      FPI_Comptroller: "0xF0D5007dB0393c9D5F6A88A5F82Df520EA483fDb"
     },
     oracles: {
       single_assets: {
@@ -1844,6 +1847,8 @@ export const CONTRACT_ADDRESSES = {
       v3_factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
       v3_nft_manager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
       v3_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+      fraxswap_factory: "0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E",
+      fraxswap_router: "0xc2544A32872A91F4A553b404C6950e89De901fdb"
     },
     amos: {
       curve: "0x62544Bd5da87F51934C09cD6464757ACecaf8e49",
@@ -1865,6 +1870,8 @@ export const CONTRACT_ADDRESSES = {
     vamms: {},
     pair_tokens: {
       "Curve VSTFRAX-f": "0x59bF0545FCa0E5Ad48E13DA269faCD2E8C886Ba4",
+      "Fraxswap FRAX/FXS": "0x053B92fFA8a15b7db203ab66Bbd5866362013566",
+      "Fraxswap FRAX/WETH": "0xb771410E2b1d892C3469711824c44769528fdc89",
       "Sushi canFRAX/canFXS": "0xfb5DB4f55Bb97A608f6EE50864104457FA04DA4f",
       "Sushi canFRAX/WETH": "0xaebfda10b251d650126830b952ee74b4a599f71f",
       "Sushi canFRAX/arbiUSDC": "0x8286a9881CEe20E71ac1215f8D39De6853Dd9A8F",
@@ -1981,6 +1988,7 @@ export const CONTRACT_ADDRESSES = {
     },
     multisigs: {
       Comptrollers: "0xc036Caff65c1A31eAa53e60F6E17f1E6689937AA",
+      FPI_Comptroller: "0xB3e03c9C1820C6216953FB1BBC6fFd232ac12a19"
     },
     oracles: {
       single_assets: {
@@ -1998,6 +2006,8 @@ export const CONTRACT_ADDRESSES = {
       v3_factory: "0x0000000000000000000000000000000000000000",
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
+      fraxswap_factory: "0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E",
+      fraxswap_router: "0xc2544A32872A91F4A553b404C6950e89De901fdb"
     },
     amos: {
       axial: "0x81C9e3327e620e74e41cF14b2FD7319084E6a246",
@@ -2022,6 +2032,8 @@ export const CONTRACT_ADDRESSES = {
     vamms: {},
     pair_tokens: {
       "Curve 4pool": "0xcb11EE4B70d73e38a383b8691cAFb221059669cC",
+      "Fraxswap FRAX/FXS": "0xEa9345507c4055b2aC73c67e56f7207702FE66Cc",
+      "Fraxswap FRAX/WAVAX": "0x48A7d7d9b6d6529a3d191E434b71CDB874f29011",
       "Pangolin canFRAX/canFXS": "0xe0CC7ed0666B29e60a21aF8636bBC69b21eDc434",
       "Pangolin canFRAX/WAVAX": "0x0ce543c0f81ac9aaa665ccaae5eec70861a6b559",
       "Pangolin canFRAX/USDC.e": "0x0c8249757b8d66cB2b6155281A5e4f8F53C94c05",
@@ -2138,6 +2150,7 @@ export const CONTRACT_ADDRESSES = {
     },
     multisigs: {
       Comptrollers: "0x8811Da0385cCf1848B21475A42eA4D07Fc5d964a",
+      FPI_Comptroller: "0x49f9cbf5333d8e50c9BE76c775777DB2ACb1d456"
     },
     collaterals: {
       BUSD: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
@@ -2166,6 +2179,8 @@ export const CONTRACT_ADDRESSES = {
       v3_factory: "0x0000000000000000000000000000000000000000",
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
+      fraxswap_factory: "0xa007a9716dba05289df85A90d0Fd9D39BEE808dE",
+      fraxswap_router: "0x0AE84c1A6E142Ed90f8A35a7E7B216CB25469E37"
     },
     amos: {
       apeswap_liquidity: "0xD900397B25Cb25043C9d850c3ECfaEe1884de470",
@@ -2185,15 +2200,17 @@ export const CONTRACT_ADDRESSES = {
       BUSD: "0xf2B9155E3C9756a18EF6572fC99B39F88a9fFf25", // Saddle FRAX/BUSD SwapFlashLoan
     },
     pair_tokens: {
-      "Saddle FRAX/BUSD": "0xBD0091CC77Fd3bDb620985a1dD8D3f94E071CCE3",
-      "Impossible FRAX/IF": "0x5316e743816223b335764738021f3df7a17a25da",
-      "Impossible FRAX/FXS": "0x13d80efd9f4ec6ef7279fe10124cebf58c0d07c2",
       "ApeSwap canFRAX/canFXS": "0x489c8fF79245f14AEEE9520d28209844790cB979",
       "ApeSwap canFRAX/WBNB": "0x16BDb03E6074759943149eBB1526DDfD1AA5fc56",
       "ApeSwap canFRAX/BUSD": "0x5292600758A090490D34367d4864ed6291D254fe",
       "ApeSwap canFRAX/USDC": "0x885BE9bCbCdcB70c59F56A78ae64A820e0448589",
       "ApeSwap canFXS/USDC": "0x84f2781E4E60f97D2963260A7b20D883F04F0d20",
       "ApeSwap canFXS/WBNB": "0x8210D92a8951d50de3D46AC0ee39cb5E2C14e18A",
+      "Fraxswap FRAX/FXS": "0xC86B106F76ef5b9A085071365eD5355592A7aFa4",
+      "Fraxswap FRAX/WBNB": "0x84eE532a0d4238f5fC4a1E8c043f8749eD4F274D",
+      "Impossible FRAX/IF": "0x5316e743816223b335764738021f3df7a17a25da",
+      "Impossible FRAX/FXS": "0x13d80efd9f4ec6ef7279fe10124cebf58c0d07c2",
+      "Saddle FRAX/BUSD": "0xBD0091CC77Fd3bDb620985a1dD8D3f94E071CCE3",
     },
     staking_contracts: {
       "ApeSwap canFRAX/BUSD": "0x5c8D727b265DBAfaba67E050f2f739cAeEB4A6F9", // MasterApe
@@ -2321,6 +2338,7 @@ export const CONTRACT_ADDRESSES = {
     },
     multisigs: {
       Comptrollers: "0xE838c61635dd1D41952c68E47159329443283d90",
+      FPI_Comptroller: "0xe722B0fA594e290a8E53bFB5654cE4Ad8a4BE811",
       InvestorCustodian: "0x5180db0237291A6449DdA9ed33aD90a38787621c"
     },
     uniswap: {
@@ -2328,8 +2346,8 @@ export const CONTRACT_ADDRESSES = {
       v3_factory: "0x0000000000000000000000000000000000000000",
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
-      // twamm_factory: "0xffE66A866B249f5d7C97b4a4c84742A393bC9354",
-      // twamm_router: "0xEb30A2d9F4e623884dF27Ad5a7C52F435f89f153"
+      fraxswap_factory: "0xF55C563148cA0c0F1626834ec1B8651844D76792",
+      fraxswap_router: "0xa007a9716dba05289df85A90d0Fd9D39BEE808dE"
     },
     amos: {
       curve: "0x442A3c0B86981e33b28011428d6A752eD983b81a",
@@ -2371,7 +2389,8 @@ export const CONTRACT_ADDRESSES = {
     },
     pair_tokens: {
       "Curve 4pool": "0x9dc516a18775d492c9f061211C8a3FDCd476558d",
-      // "Fraxswap FRAX/FPI": "0xF73f804Fb747d800E833942870f0312A6d392184",
+      "Fraxswap FRAX/FXS": "0xB186ad077cA69e860476B2C84ecD0DE3572A10F5",
+      "Fraxswap FRAX/WFTM": "0xc736279b8371c736f027cCC3F77755D7931F8845",
       "Liquid Driver FRAX/FTM": "0x7ed0cdDB9BB6c6dfEa6fB63E117c8305479B8D7D", // Same as SpiritSwap FRAX/FTM
       "SpiritSwap canFRAX/canFXS": "0x7a2aD237e389De505DE7a89768143337E516C6Ce",
       "SpiritSwap canFRAX/FTM": "0x7ed0cddb9bb6c6dfea6fb63e117c8305479b8d7d",
@@ -2557,15 +2576,18 @@ export const CONTRACT_ADDRESSES = {
       combo_oracle_univ2_univ3: "0x4A40198373dE481741bdf629B44Dc98f12f18161",
     },
     multisigs: {
-      Comptrollers: "0x343e4f06BF240d22FbdFd4a2Fe5858BC66e79F12",
       Address1: "0x104E5d38a2d646FFaf936d0a4Af876e56B5B14B3",
+      Comptrollers: "0x343e4f06BF240d22FbdFd4a2Fe5858BC66e79F12",
+      FPI_Comptroller: "0xc4d89dcE72cde17DC3BEF317E62530b6A0733971",
     },
     uniswap: {
       v2_router: "0x7a3909C7996EFE42d425cD932fc44E3840fCAB71", // Zenlink
       v3_factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
       v3_nft_manager: "0xc36442b4a4522e871399cd717abdd847ab11fe88",
       v3_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-    },
+      fraxswap_factory: "0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E",
+      fraxswap_router: "0xc2544A32872A91F4A553b404C6950e89De901fdb",
+    },    
     amos: {},
     reward_tokens: {
       WGLMR: "0xAcc15dC74880C9944775448304B263D191c6077F",
@@ -2578,6 +2600,8 @@ export const CONTRACT_ADDRESSES = {
       USDC: "0x247b71D57Ac80883364599ad5c9D74ea5EDc8660", // Saddle FRAX/USDC
     },
     pair_tokens: {
+      "Fraxswap FRAX/FXS": "0x44E11b99ff8F6164FD54393a17b3CD4c57732dB7",
+      "Fraxswap FRAX/WGLMR": "0xAE0b5be7d467C8c0898CaE4c96B2f40A6810DEBC",
       "Zenlink canFRAX/canFXS": "0x8ca030649720b94b16e8C3B551cc2ab88c681C0F",
       "Zenlink canFRAX/WGLMR": "0xd341D2191bb0F84E5c29cB301deF5753Dab1ac04",
     },
@@ -2779,14 +2803,15 @@ export const CONTRACT_ADDRESSES = {
     },
     multisigs: {
       Comptrollers: "0xDCB5A4b6Ee39447D700F4FA3303B1d1c25Ea9cA7",
+      FPI_Comptroller: "0x4EBd698a5dB2580587EE0000929128190524006c",
     },
     uniswap: {
       v2_router: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
       v3_factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
       v3_nft_manager: "0xc36442b4a4522e871399cd717abdd847ab11fe88",
       v3_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-      // twamm_factory: "0xE55eb0b1b3bFe7b50D3295106E3Fc536dF3E4EF7",
-      // twamm_router: "0xc7E4d9C2D4f5DB34F9Ae2e7FD1767deb31C3411c"
+      fraxswap_factory: "0xc2544A32872A91F4A553b404C6950e89De901fdb",
+      fraxswap_router: "0x9bc2152fD37b196C0Ff3C16f5533767c9A983971"
     },
     rari_pools: {
       "Index Coop Pool (#2)": "0x164835016E1590EE91Eb479c4Eeb1249779856aa",
@@ -2810,7 +2835,8 @@ export const CONTRACT_ADDRESSES = {
     },
     vamms: {},
     pair_tokens: {
-      // "Fraxswap FRAX/FPI": "0x324b54DD0aC4b482e8e3132F9b6E21cc3528813E",
+      "Fraxswap FRAX/FXS": "0x60AC6d228ffeeefF423879baA02091558e6480dc",
+      "Fraxswap FRAX/WMATIC": "0x4F7267Af6DB7B284dF74BEA9e35402987D8C72a7",
       "mStable FRAX/mUSD": "0xB30a907084AC8a0d25dDDAB4E364827406Fd09f0",
       // "Sushi FRAX/FXS": "0xd53a56ae0f48c9a03660cd36c2e4ae20493a1eca"
       "Sushi canFRAX/canFXS": "0xDf45B5B68d9dC84173DD963c763AeA8CAD3E24A6",
@@ -3194,6 +3220,16 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Total Collateral USD Value", big_base: BIG18, symbol: "USD" },
     { title: "Total USD Value in all LPs", big_base: BIG18, symbol: "USD" },
     { title: "Total USD Value in entire AMO", big_base: BIG18, symbol: "USD" },
+  ],
+  "Truefi_AMO": [
+    { title: "Unallocated FRAX", big_base: exports.BIG18, symbol: "FRAX" },
+    { title: "Allocated FRAX in Core Pool", big_base: exports.BIG18, symbol: "FRAX" },
+    { title: "Allocated FRAX in Managed Portfolios", big_base: exports.BIG18, symbol: "FRAX" },
+    { title: "Total FRAX", big_base: exports.BIG18, symbol: "FRAX" },
+    { title: "Unallocated USDC", big_base: exports.BIG6, symbol: "USDC" },
+    { title: "Allocated USDC in Core Pool", big_base: exports.BIG6, symbol: "USDC" },
+    { title: "Allocated USDC in Managed Portfolios", big_base: exports.BIG6, symbol: "USDC" },
+    { title: "Total USDC", big_base: exports.BIG6, symbol: "USDC" },
   ],
   "UniV3_Liquidity_AMO": [
     { title: "Unallocated FRAX", big_base: BIG18, symbol: "FRAX" },

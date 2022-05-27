@@ -100,9 +100,9 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 	let cpi_tracker_oracle_instance;
 
 	// Initialize TWAMM instances
-	let twamm_factory_instance;
+	let fraxswap_factory_instance;
 	let twamm_pair_instance;
-	let twamm_router_instance;
+	let fraxswap_router_instance;
 
     beforeEach(async() => {
 
@@ -138,9 +138,9 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		cpi_tracker_oracle_instance = await CPITrackerOracle.deployed();
 
 		// Fill TWAMM instances
-		twamm_factory_instance = await UniV2TWAMMFactory.deployed();
+		fraxswap_factory_instance = await UniV2TWAMMFactory.deployed();
 		twamm_pair_instance = await UniV2TWAMMPair.deployed();
-		twamm_router_instance = await UniV2TWAMMRouter.deployed();
+		fraxswap_router_instance = await UniV2TWAMMRouter.deployed();
 	
 	});
 	
@@ -349,12 +349,12 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 
 		console.log(chalk.hex("#ff8b3d").bold("=================AMM SWAP FPI TO FRAX================"));
 		// Approve FPI
-		await fpi_instance.approve(twamm_router_instance.address, BIG18, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); 
+		await fpi_instance.approve(fraxswap_router_instance.address, BIG18, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); 
 
 		// Do the swap
 		const amm_frax_before_0_to_1 = new BigNumber(await canFRAX_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
 		const amm_fpi_before_0_to_1 = new BigNumber(await fpi_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
-		await twamm_router_instance.swapExactTokensForTokens(BIG18, 0, [fpi_instance.address, canFRAX_instance.address], COLLATERAL_FRAX_AND_FXS_OWNER, 1947242944, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await fraxswap_router_instance.swapExactTokensForTokens(BIG18, 0, [fpi_instance.address, canFRAX_instance.address], COLLATERAL_FRAX_AND_FXS_OWNER, 1947242944, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		const amm_frax_after_0_to_1 = new BigNumber(await canFRAX_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
 		const amm_fpi_after_0_to_1 = new BigNumber(await fpi_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
 		console.log("FRAX change: ", amm_frax_after_0_to_1 - amm_frax_before_0_to_1);
@@ -363,12 +363,12 @@ contract('FPIControllerPool-Tests', async (accounts) => {
 		
 		console.log(chalk.hex("#ff8b3d").bold("=================AMM SWAP FRAX TO FPI================"));
 		// Approve FRAX
-		await canFRAX_instance.approve(twamm_router_instance.address, BIG18, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); 
+		await canFRAX_instance.approve(fraxswap_router_instance.address, BIG18, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); 
 
 		// Do the swap
 		const amm_frax_before_1_to_0 = new BigNumber(await canFRAX_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
 		const amm_fpi_before_1_to_0 = new BigNumber(await fpi_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
-		await twamm_router_instance.swapExactTokensForTokens(BIG18, 0, [canFRAX_instance.address, fpi_instance.address], COLLATERAL_FRAX_AND_FXS_OWNER, 1947242944, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await fraxswap_router_instance.swapExactTokensForTokens(BIG18, 0, [canFRAX_instance.address, fpi_instance.address], COLLATERAL_FRAX_AND_FXS_OWNER, 1947242944, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 		const amm_frax_after_1_to_0 = new BigNumber(await canFRAX_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
 		const amm_fpi_after_1_to_0 = new BigNumber(await fpi_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
 		console.log("FRAX change: ", amm_frax_after_1_to_0 - amm_frax_before_1_to_0);
