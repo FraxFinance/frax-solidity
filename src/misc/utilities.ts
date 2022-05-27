@@ -652,6 +652,10 @@ export const apyToApr = (apy, frequency = BLOCKS_IN_A_YEAR) =>
  */
 export const aprToApy = (apr, frequency = BLOCKS_IN_A_YEAR) => ((1 + apr / 100 / frequency) ** frequency - 1) * 100
 
+export const parseTwammAMOSwapLog = (tx_obj)  => {
+    return tx_obj.logs[0].args.order_id;
+}
+
 export const EMPTY_LENDING_AMOS_DATA = (): LendingAMOsData => {
     return {
         aave_minted: 0,
