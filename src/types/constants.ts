@@ -4,7 +4,7 @@ export const BIG6 = new BigNumber("1e6");
 export const BIG8 = new BigNumber("1e8");
 export const BIG12 = new BigNumber("1e12");
 export const BIG18 = new BigNumber("1e18");
-export const ONE_E18 = 10**18;
+export const ONE_E18 = 10 ** 18;
 
 // For getPastLogs
 export const PAST_LOGS_BATCH_SIZE_ARBITRUM = 2500;
@@ -30,1247 +30,1308 @@ export function omit(key, obj) {
 }
 
 export type GraphTimeFrame = keyof typeof GraphTimeFramePack;
-export const GraphTimeFramePack = { 
-    "All Time": 1576800000,
-    "1 Year": 31556952,
-    "6 Months": 15778476,
-    "3 Months": 7889238,
-    "1 Month": 2629746,
-    "1 Week": 604800,
-    "1 Day": 86400,
-    "8 Hours": 28800,
-    "1 Hour": 3600,
-    "15 Minutes": 900,
-}
+export const GraphTimeFramePack = {
+  "All Time": 1576800000,
+  "1 Year": 31556952,
+  "6 Months": 15778476,
+  "3 Months": 7889238,
+  "1 Month": 2629746,
+  "1 Week": 604800,
+  "1 Day": 86400,
+  "8 Hours": 28800,
+  "1 Hour": 3600,
+  "15 Minutes": 900,
+};
 
-export const GraphTimeFramePackLowercased = { 
-    "all-time": 1576800000,
-    "1-year": 31556952,
-    "6-months": 15778476,
-    "3-months": 7889238,
-    "1-month": 2629746,
-    "1-week": 604800,
-    "1-day": 86400,
-    "8-hours": 28800,
-    "1-hour": 3600,
-    "15-minutes": 900,
-}
+export const GraphTimeFramePackLowercased = {
+  "all-time": 1576800000,
+  "1-year": 31556952,
+  "6-months": 15778476,
+  "3-months": 7889238,
+  "1-month": 2629746,
+  "1-week": 604800,
+  "1-day": 86400,
+  "8-hours": 28800,
+  "1-hour": 3600,
+  "15-minutes": 900,
+};
 
 export type LockedStakeBucket = keyof typeof LockedStakeBucketPack;
-export const LockedStakeBucketPack = { 
-    "Unlocked": { idx: 0, min: 0, max: 1 },
-    "≤ 15 days": { idx: 1, min: 1, max: 1296000 },
-    "15 - 30 Days": { idx: 2, min: 1296001, max: 2592000 },
-    "30 - 60 Days": { idx: 3, min: 2592001, max: 5184000 },
-    "60 - 90 Days": { idx: 4, min: 5184001, max: 7776000 },
-    "90 Days - 180 Days": { idx: 5, min: 7776001, max: 15552000 },
-    "180 Days - 1 Year": { idx: 6, min: 15552001, max: 31536000 },
-    "1 Year - 2 Years": { idx: 7, min: 31536001, max: 63113904 },
-    "2 Years - 3 Years": { idx: 8, min: 63113905, max: 94608000 },
-    "3 Years - 4 Years": { idx: 9, min: 94608001, max: 900000000 }, // includes 9999 day locks
-}
+export const LockedStakeBucketPack = {
+  Unlocked: { idx: 0, min: 0, max: 1 },
+  "≤ 15 days": { idx: 1, min: 1, max: 1296000 },
+  "15 - 30 Days": { idx: 2, min: 1296001, max: 2592000 },
+  "30 - 60 Days": { idx: 3, min: 2592001, max: 5184000 },
+  "60 - 90 Days": { idx: 4, min: 5184001, max: 7776000 },
+  "90 Days - 180 Days": { idx: 5, min: 7776001, max: 15552000 },
+  "180 Days - 1 Year": { idx: 6, min: 15552001, max: 31536000 },
+  "1 Year - 2 Years": { idx: 7, min: 31536001, max: 63113904 },
+  "2 Years - 3 Years": { idx: 8, min: 63113905, max: 94608000 },
+  "3 Years - 4 Years": { idx: 9, min: 94608001, max: 900000000 }, // includes 9999 day locks
+};
 
 export type GraphTimeNumPoints = keyof typeof GraphTimeNumPointsPack;
-export const GraphTimeNumPointsPack = { 
-    "all-time": 1095,  // Assuming 3 years, each day
-    "1-year": 365, // One point per day
-    "6-months": 180, // One point per day
-    "3-months": 180, // One point per half day
-    "1-month": 120, // One point per 6 hrs
-    "1-week": 126, // One point per 2 hrs
-    "1-day": 96, // One point per 15 min
-    "8-hours": 96, // One point per 5 min
-    "1-hour": 120, // One point per 30 sec
-    "15-minutes": 90, // One point per block (~15 seconds)
-}
+export const GraphTimeNumPointsPack = {
+  "all-time": 1095, // Assuming 3 years, each day
+  "1-year": 365, // One point per day
+  "6-months": 180, // One point per day
+  "3-months": 180, // One point per half day
+  "1-month": 120, // One point per 6 hrs
+  "1-week": 126, // One point per 2 hrs
+  "1-day": 96, // One point per 15 min
+  "8-hours": 96, // One point per 5 min
+  "1-hour": 120, // One point per 30 sec
+  "15-minutes": 90, // One point per block (~15 seconds)
+};
 
 // Used to limit the return size of the data to it is faster
 export type GraphTimeModulusPoints = keyof typeof GraphTimeNumPointsPack;
-export const GraphTimeModulusPointsPack = { 
-    "all-time": 20,
-    "1-year": 10,
-    "6-months": 10,
-    "3-months": 5,
-    "1-month": 4,
-    "1-week": 3,
-    "1-day": 2,
-    "8-hours": 1,
-    "1-hour": 1,
-    "15-minutes": 1,
-}
+export const GraphTimeModulusPointsPack = {
+  "all-time": 20,
+  "1-year": 10,
+  "6-months": 10,
+  "3-months": 5,
+  "1-month": 4,
+  "1-week": 3,
+  "1-day": 2,
+  "8-hours": 1,
+  "1-hour": 1,
+  "15-minutes": 1,
+};
 
-export const CollateralDetailsPack = { 
-    "yUSD": {
-        name: "LP-yCurve",
-		    dd_name: "yCRV DAI+USDC+USDT+TUSD",
-		    decimals: 18
-    },
-    "USDC": {
-        name: "USDC",
-		    dd_name: "USDC",
-		    decimals: 18
-    },
-    "USDT": {
-        name: "USDT",
-		    dd_name: "USDT",
-		    decimals: 18
-    },
+export const CollateralDetailsPack = {
+  yUSD: {
+    name: "LP-yCurve",
+    dd_name: "yCRV DAI+USDC+USDT+TUSD",
+    decimals: 18,
+  },
+  USDC: {
+    name: "USDC",
+    dd_name: "USDC",
+    decimals: 18,
+  },
+  USDT: {
+    name: "USDT",
+    dd_name: "USDT",
+    decimals: 18,
+  },
 };
 
 export const COLLATERAL_TYPES = Object.keys(CollateralDetailsPack);
 
 export const StakeChoices: StakeChoices = {
-	"0xDAO FRAX/FXS": {
-		lp_logo: "0xdao",
-		label: "0xDAO FRAX/FXS",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://www.oxdao.fi/",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "FXS"],
-		reward_tokens: ["OXD", "SOLID"],
-    	reward_token_bridge_types: ["canonical"],
-		has_varied_apy: true
-	},
-  	"0xDAO FRAX/USDC": {
-		lp_logo: "0xdao",
-		label: "0xDAO FRAX/USDC",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://www.oxdao.fi/",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "USDC"],
-		reward_tokens: ["OXD", "SOLID"],
-    	reward_token_bridge_types: ["canonical"],
-		has_varied_apy: true
-	},
+  "0xDAO FRAX/FXS": {
+    lp_logo: "0xdao",
+    label: "0xDAO FRAX/FXS",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://www.oxdao.fi/",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "FXS"],
+    reward_tokens: ["OXD", "SOLID"],
+    reward_token_bridge_types: ["canonical"],
+    has_varied_apy: true,
+  },
+  "0xDAO FRAX/USDC": {
+    lp_logo: "0xdao",
+    label: "0xDAO FRAX/USDC",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://www.oxdao.fi/",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "USDC"],
+    reward_tokens: ["OXD", "SOLID"],
+    reward_token_bridge_types: ["canonical"],
+    has_varied_apy: true,
+  },
   "1Swap FRAX/1S3P": {
-		lp_logo: "1swap",
-		label: "1Swap FRAX/1S3P",
-		chain: "moonriver",
-		external_contract: true,
-		farming_link: "https://1swap.fi/farms",
+    lp_logo: "1swap",
+    label: "1Swap FRAX/1S3P",
+    chain: "moonriver",
+    external_contract: true,
+    farming_link: "https://1swap.fi/farms",
     staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["1SWAP"]
-	},
-	'Angle FRAX/agEUR Staking': {
-		lp_logo: 'angle',
-		label: 'Angle FRAX/agEUR Staking',
-		chain: 'ethereum',
-		external_contract: true,
-		farming_link:
-		  'https://app.angle.money/#/slp',
-		staking_enabled: true,
-		pool_tokens: ['FRAX'],
-		reward_tokens: ['FRAX', 'ANGLE'],
-	},
-	'Angle FRAX/agEUR Perpetuals': {
-		lp_logo: 'angle',
-		label: 'Angle FRAX/agEUR Perpetuals',
-		chain: 'ethereum',
-		external_contract: true,
-		farming_link:
-		  'https://app.angle.money/#/perpetuals/open/0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8/0x853d955aCEf822Db058eb8505911ED77F175b99e',
-		staking_enabled: true,
-		pool_tokens: ['FRAX'],
-		reward_tokens: ['FRAX', 'ANGLE'],
-		has_varied_apy: true,
-	},
-	"Aave FRAX Lending": {
-		lp_logo: "aave",
-		label: "Aave FRAX Lending",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://app.aave.com/reserve-overview/FRAX-0x853d955acef822db058eb8505911ed77f175b99e0xb53c1a33016b2dc2ff3653530bff1848a515c8c5",
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["1SWAP"],
+  },
+  "Angle FRAX/agEUR Staking": {
+    lp_logo: "angle",
+    label: "Angle FRAX/agEUR Staking",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://app.angle.money/#/slp",
     staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"]
-	},
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX", "ANGLE"],
+  },
+  "Angle FRAX/agEUR Perpetuals": {
+    lp_logo: "angle",
+    label: "Angle FRAX/agEUR Perpetuals",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link:
+      "https://app.angle.money/#/perpetuals/open/0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8/0x853d955aCEf822Db058eb8505911ED77F175b99e",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX", "ANGLE"],
+    has_varied_apy: true,
+  },
+  "Aave FRAX Lending": {
+    lp_logo: "aave",
+    label: "Aave FRAX Lending",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link:
+      "https://app.aave.com/reserve-overview/FRAX-0x853d955acef822db058eb8505911ed77f175b99e0xb53c1a33016b2dc2ff3653530bff1848a515c8c5",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
+  },
   "Aave aFRAX": {
     lp_logo: "aave",
-		slug: "Aave_aFRAX",
-		label: "Aave aFRAX",
-		chain: "ethereum",
-		info_link: "https://app.aave.com/reserve-overview/?underlyingAsset=0x853d955acef822db058eb8505911ed77f175b99e&marketName=proto_mainnet",
-		add_liq_link: "https://app.aave.com/reserve-overview/?underlyingAsset=0x853d955acef822db058eb8505911ed77f175b99e&marketName=proto_mainnet",
-		trade_link: "https://app.aave.com/reserve-overview/?underlyingAsset=0x853d955acef822db058eb8505911ed77f175b99e&marketName=proto_mainnet",
-		farming_link: "https://app.frax.finance/staking#Aave_aFRAX",
-    starting_block: 14637530 ,
-		staking_enabled: true,
-		vefxs_enabled: true,
-		external_contract: false,
-		is_gauged: true,
-		pool_tokens: ["aFRAX"],
-		reward_tokens: ["FXS", "stkAAVE"],
+    slug: "Aave_aFRAX",
+    label: "Aave aFRAX",
+    chain: "ethereum",
+    info_link:
+      "https://app.aave.com/reserve-overview/?underlyingAsset=0x853d955acef822db058eb8505911ed77f175b99e&marketName=proto_mainnet",
+    add_liq_link:
+      "https://app.aave.com/reserve-overview/?underlyingAsset=0x853d955acef822db058eb8505911ed77f175b99e&marketName=proto_mainnet",
+    trade_link:
+      "https://app.aave.com/reserve-overview/?underlyingAsset=0x853d955acef822db058eb8505911ed77f175b99e&marketName=proto_mainnet",
+    farming_link: "https://app.frax.finance/staking#Aave_aFRAX",
+    starting_block: 14637530,
+    staking_enabled: true,
+    vefxs_enabled: true,
+    external_contract: false,
+    is_gauged: true,
+    pool_tokens: ["aFRAX"],
+    reward_tokens: ["FXS", "stkAAVE"],
     reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "aave"],
-		version: 102
-	},
+    reward_token_coingecko_slugs: ["frax-share", "aave"],
+    version: 102,
+  },
   "ApeSwap canFRAX/BUSD": {
-		lp_logo: "apeswap",
-		label: "ApeSwap FRAX/BUSD",
-		chain: "bsc",
-		external_contract: true,
-		farming_link: "https://apeswap.finance/farms",
+    lp_logo: "apeswap",
+    label: "ApeSwap FRAX/BUSD",
+    chain: "bsc",
+    external_contract: true,
+    farming_link: "https://apeswap.finance/farms",
     staking_enabled: true,
-		pool_tokens: ["FRAX", "BUSD"],
-		reward_tokens: ["BANANA"],
-	},
+    pool_tokens: ["FRAX", "BUSD"],
+    reward_tokens: ["BANANA"],
+  },
   "ApeSwap canFXS/WBNB": {
-		lp_logo: "apeswap",
-		label: "ApeSwap FXS/BNB",
-		chain: "bsc",
-		external_contract: true,
-		farming_link: "https://apeswap.finance/farms",
+    lp_logo: "apeswap",
+    label: "ApeSwap FXS/BNB",
+    chain: "bsc",
+    external_contract: true,
+    farming_link: "https://apeswap.finance/farms",
     staking_enabled: true,
-		pool_tokens: ["FXS", "BNB"],
-		reward_tokens: ["BANANA"],
-	},
+    pool_tokens: ["FXS", "BNB"],
+    reward_tokens: ["BANANA"],
+  },
   "APY.Finance Curve FRAX": {
-		lp_logo: "apyfinance",
-		label: "APY.Finance Curve FRAX",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://dashboard.apy.finance/dashboard/portfolio",
+    lp_logo: "apyfinance",
+    label: "APY.Finance Curve FRAX",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://dashboard.apy.finance/dashboard/portfolio",
     staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
-		has_varied_apy: true
-	},
-	"Axial AC4D TSD/MIM/FRAX/DAI.e": {
-		lp_logo: "axial",
-		label: "Axial AC4D TSD/MIM/FRAX/DAI.e",
-		chain: "avalanche",
-		external_contract: true,
-		farming_link: "https://app.axial.exchange/#/rewards/ac4d/deposit",
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
+    has_varied_apy: true,
+  },
+  "Axial AC4D TSD/MIM/FRAX/DAI.e": {
+    lp_logo: "axial",
+    label: "Axial AC4D TSD/MIM/FRAX/DAI.e",
+    chain: "avalanche",
+    external_contract: true,
+    farming_link: "https://app.axial.exchange/#/rewards/ac4d/deposit",
     staking_enabled: true,
-		pool_tokens: ["TSD", "MIM", "FRAX", "DAI.e"],
-		reward_tokens: ["FRAX", "AXIAL"],
-		reward_token_bridge_types: ["canonical"],
-	},
+    pool_tokens: ["TSD", "MIM", "FRAX", "DAI.e"],
+    reward_tokens: ["FRAX", "AXIAL"],
+    reward_token_bridge_types: ["canonical"],
+  },
   "Beefy Finance [Avalanche]": {
-		lp_logo: "beefy_finance",
-		label: "Beefy Finance",
-		chain: "avalanche",
-		external_contract: true,
-		farming_link: "https://app.beefy.finance/#/avax",
+    lp_logo: "beefy_finance",
+    label: "Beefy Finance",
+    chain: "avalanche",
+    external_contract: true,
+    farming_link: "https://app.beefy.finance/#/avax",
     staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
     reward_token_bridge_types: ["canonical"],
-		has_varied_apy: true
-	},
+    has_varied_apy: true,
+  },
   "Beefy Finance [BSC]": {
-		lp_logo: "beefy_finance",
-		label: "Beefy Finance",
-		chain: "bsc",
-		external_contract: true,
-		farming_link: "https://app.beefy.finance/#/bsc",
+    lp_logo: "beefy_finance",
+    label: "Beefy Finance",
+    chain: "bsc",
+    external_contract: true,
+    farming_link: "https://app.beefy.finance/#/bsc",
     staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["BANANA"],
-		has_varied_apy: true
-	},
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["BANANA"],
+    has_varied_apy: true,
+  },
   "Beefy Finance [Fantom]": {
-		lp_logo: "beefy_finance",
-		label: "Beefy Finance",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://app.beefy.finance/#/fantom",
+    lp_logo: "beefy_finance",
+    label: "Beefy Finance",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://app.beefy.finance/#/fantom",
     staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
     reward_token_bridge_types: ["canonical"],
-		has_varied_apy: true
-	},
+    has_varied_apy: true,
+  },
   "Beefy Finance [Harmony]": {
-		lp_logo: "beefy_finance",
-		label: "Beefy Finance",
-		chain: "harmony",
-		external_contract: true,
-		farming_link: "https://app.beefy.finance/#/harmony",
+    lp_logo: "beefy_finance",
+    label: "Beefy Finance",
+    chain: "harmony",
+    external_contract: true,
+    farming_link: "https://app.beefy.finance/#/harmony",
     staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
     reward_token_bridge_types: ["canonical"],
-		has_varied_apy: true
-	},
+    has_varied_apy: true,
+  },
   "Beefy Finance [Moonriver]": {
-		lp_logo: "beefy_finance",
-		label: "Beefy Finance",
-		chain: "moonriver",
-		external_contract: true,
-		farming_link: "https://app.beefy.finance/#/moonriver",
+    lp_logo: "beefy_finance",
+    label: "Beefy Finance",
+    chain: "moonriver",
+    external_contract: true,
+    farming_link: "https://app.beefy.finance/#/moonriver",
     staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
     reward_token_bridge_types: ["canonical"],
-		has_varied_apy: true
-	},
-	"Beefy Finance [Polygon]": {
-		lp_logo: "beefy_finance",
-		label: "Beefy Finance",
-		chain: "polygon",
-		external_contract: true,
-		farming_link: "https://app.beefy.finance/#/polygon",
+    has_varied_apy: true,
+  },
+  "Beefy Finance [Polygon]": {
+    lp_logo: "beefy_finance",
+    label: "Beefy Finance",
+    chain: "polygon",
+    external_contract: true,
+    farming_link: "https://app.beefy.finance/#/polygon",
     staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
     reward_token_bridge_types: ["canonical"],
-		has_varied_apy: true
-	},
-	"Convex cvxFXS/FXS": {
-		lp_logo: "convex",
-		label: "Convex cvxFXS",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://frax.convexfinance.com",
-		staking_enabled: true,
-		pool_tokens: ["FXS"],
-		reward_tokens: ["FXS"],
-	  },
-	"Convex d3pool": {
-		lp_logo: "convex",
-		label: "Convex d3pool",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://www.convexfinance.com/stake",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "FEI", "alUSD"],
-		reward_tokens: ["CRV", "CVX"]
-	},
-	"Convex FRAX3CRV-f": {
-		lp_logo: "convex",
-		label: "Convex FRAX3CRV-f",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://www.convexfinance.com/stake",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
-		reward_tokens: ["CRV", "CVX"]
-	},
+    has_varied_apy: true,
+  },
+  "Convex cvxFXS/FXS": {
+    lp_logo: "convex",
+    label: "Convex cvxFXS",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://frax.convexfinance.com",
+    staking_enabled: true,
+    pool_tokens: ["FXS"],
+    reward_tokens: ["FXS"],
+  },
+  "Convex d3pool": {
+    lp_logo: "convex",
+    label: "Convex d3pool",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://www.convexfinance.com/stake",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "FEI", "alUSD"],
+    reward_tokens: ["CRV", "CVX"],
+  },
+  "Convex FRAX3CRV-f": {
+    lp_logo: "convex",
+    label: "Convex FRAX3CRV-f",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://www.convexfinance.com/stake",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
+    reward_tokens: ["CRV", "CVX"],
+  },
   "Convex stkcvxFPIFRAX": {
     lp_logo: "convex",
-		slug: "Convex_stkcvxFPIFRAX",
-		label: "Convex stkcvxFPIFRAX",
-		chain: "ethereum",
-		info_link: "https://www.convexfinance.com/stake",
-		add_liq_link: "https://www.convexfinance.com/stake",
-		trade_link: "https://www.convexfinance.com/stake",
-		farming_link: "https://app.frax.finance/staking#Convex_stkcvxFPIFRAX",
+    slug: "Convex_stkcvxFPIFRAX",
+    label: "Convex stkcvxFPIFRAX",
+    chain: "ethereum",
+    info_link: "https://www.convexfinance.com/stake",
+    add_liq_link: "https://www.convexfinance.com/stake",
+    trade_link: "https://www.convexfinance.com/stake",
+    farming_link: "https://app.frax.finance/staking#Convex_stkcvxFPIFRAX",
     starting_block: 14724647,
-		staking_enabled: true,
-		vefxs_enabled: true,
-		external_contract: false,
-		is_gauged: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FXS"],
+    staking_enabled: true,
+    vefxs_enabled: true,
+    external_contract: false,
+    is_gauged: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FXS"],
     reward_token_decimals: [18],
-		reward_token_coingecko_slugs: ["frax-share"],
-		version: 102
-	},
-	// "Cream FRAX Lending": {
-	// 	lp_logo: "cream",
-	// 	label: "Cream FRAX Lending",
-	// 	chain: "ethereum",
-	// 	external_contract: true,
-	// 	farming_link: "https://app.cream.finance/",
-	// 	staking_enabled: true,
-	// 	pool_tokens: ["FRAX"],
-	// 	reward_tokens: ["FRAX"]
-	// },
-  'Curve VSTFRAX-f': {
-    lp_logo: 'curve_arbi_vstfrax',
-    slug: 'Curve_VSTFRAX_F',
-    label: 'Curve VSTFRAX-f',
-    chain: 'arbitrum',
-    info_link: 'https://arbitrum.curve.fi/factory/19',
-    add_liq_link: 'https://arbitrum.curve.fi/factory/19/deposit',
-    trade_link: 'https://arbitrum.curve.fi/factory/19',
-    farming_link: 'https://app.frax.finance/staking#Curve_VSTFRAX_F',
+    reward_token_coingecko_slugs: ["frax-share"],
+    version: 102,
+  },
+  // "Cream FRAX Lending": {
+  // 	lp_logo: "cream",
+  // 	label: "Cream FRAX Lending",
+  // 	chain: "ethereum",
+  // 	external_contract: true,
+  // 	farming_link: "https://app.cream.finance/",
+  // 	staking_enabled: true,
+  // 	pool_tokens: ["FRAX"],
+  // 	reward_tokens: ["FRAX"]
+  // },
+  "Curve VSTFRAX-f": {
+    lp_logo: "curve_arbi_vstfrax",
+    slug: "Curve_VSTFRAX_F",
+    label: "Curve VSTFRAX-f",
+    chain: "arbitrum",
+    info_link: "https://arbitrum.curve.fi/factory/19",
+    add_liq_link: "https://arbitrum.curve.fi/factory/19/deposit",
+    trade_link: "https://arbitrum.curve.fi/factory/19",
+    farming_link: "https://app.frax.finance/staking#Curve_VSTFRAX_F",
     starting_block: 5752224,
     staking_enabled: true,
     external_contract: false,
     is_gauged: true,
-    pool_tokens: ['FRAX', 'VST'],
-    reward_tokens: ['FXS', 'VSTA'],
+    pool_tokens: ["FRAX", "VST"],
+    reward_tokens: ["FXS", "VSTA"],
     reward_token_decimals: [18, 18],
-    reward_token_coingecko_slugs: ['frax-share', 'vesta-finance'],
+    reward_token_coingecko_slugs: ["frax-share", "vesta-finance"],
     version: 5,
   },
-	"Curve FRAX3CRV-f-2": {
-		lp_logo: "curve",
-		slug: "Curve_FRAX3CRV_F_2",
-		label: "Curve FRAX3CRV-f V2 (Metapool)",
-		chain: "ethereum",
-		info_link: "https://curve.fi/frax/stats",
-		add_liq_link: "https://curve.fi/frax/deposit",
-		trade_link: "https://curve.fi/frax/",
-		farming_link: "https://curve.fi/frax/deposit",
-		staking_enabled: true,
-		external_contract: true,
-		pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
-		reward_tokens: ["CRV"],
-		reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["curve-dao-token"],
-		version: 2
-	},
-	"dForce FRAX Lending": {
-		lp_logo: 'dforce',
-		label: 'dForce FRAX Lending',
-		chain: 'ethereum',
-		external_contract: true,
-		farming_link: 'https://app.dforce.network',
-		staking_enabled: true,
-		pool_tokens: ['FRAX'],
-		reward_tokens: ['FRAX','DFORCE'],
-		has_varied_apy: true,
-	},
-	"FXS": {
-		lp_logo: "frax",
-		label: "Frax Shares Staking (veFXS)",
-		chain: "ethereum",
-		external_contract: false,
-		farming_link: "https://app.frax.finance/vefxs",
-		staking_enabled: true,
-		pool_tokens: ["FXS"],
-		reward_tokens: ["FXS"],
-	},
-	"Gelato Uniswap FRAX/DAI": {
-		lp_logo: "gelato",
-		slug: "Gelato_Uniswap_FRAX_DAI",
-		label: "Gelato Uniswap FRAX/DAI",
-		chain: "ethereum",
-		info_link: "https://www.sorbet.finance/#/pools/0xb1Cfdc7370550f5e421E1bf0BF3CADFaDF3C4141",
-		add_liq_link: "https://www.sorbet.finance/#/pools/0xb1Cfdc7370550f5e421E1bf0BF3CADFaDF3C4141/add",
-		trade_link: "https://www.sorbet.finance/#/limit-order?inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0x6b175474e89094c44da98b954eedeac495271d0f",
-		farming_link: "https://app.frax.finance/staking#Gelato_Uniswap_FRAX_DAI",
+  "Curve FRAX3CRV-f-2": {
+    lp_logo: "curve",
+    slug: "Curve_FRAX3CRV_F_2",
+    label: "Curve FRAX3CRV-f V2 (Metapool)",
+    chain: "ethereum",
+    info_link: "https://curve.fi/frax/stats",
+    add_liq_link: "https://curve.fi/frax/deposit",
+    trade_link: "https://curve.fi/frax/",
+    farming_link: "https://curve.fi/frax/deposit",
+    staking_enabled: true,
+    external_contract: true,
+    pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
+    reward_tokens: ["CRV"],
+    reward_token_decimals: [18, 18],
+    reward_token_coingecko_slugs: ["curve-dao-token"],
+    version: 2,
+  },
+  "dForce FRAX Lending": {
+    lp_logo: "dforce",
+    label: "dForce FRAX Lending",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://app.dforce.network",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX", "DFORCE"],
+    has_varied_apy: true,
+  },
+  FXS: {
+    lp_logo: "frax",
+    label: "Frax Shares Staking (veFXS)",
+    chain: "ethereum",
+    external_contract: false,
+    farming_link: "https://app.frax.finance/vefxs",
+    staking_enabled: true,
+    pool_tokens: ["FXS"],
+    reward_tokens: ["FXS"],
+  },
+  "Gelato Uniswap FRAX/DAI": {
+    lp_logo: "gelato",
+    slug: "Gelato_Uniswap_FRAX_DAI",
+    label: "Gelato Uniswap FRAX/DAI",
+    chain: "ethereum",
+    info_link:
+      "https://www.sorbet.finance/#/pools/0xb1Cfdc7370550f5e421E1bf0BF3CADFaDF3C4141",
+    add_liq_link:
+      "https://www.sorbet.finance/#/pools/0xb1Cfdc7370550f5e421E1bf0BF3CADFaDF3C4141/add",
+    trade_link:
+      "https://www.sorbet.finance/#/limit-order?inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0x6b175474e89094c44da98b954eedeac495271d0f",
+    farming_link: "https://app.frax.finance/staking#Gelato_Uniswap_FRAX_DAI",
     starting_block: 13388815,
-		staking_enabled: true,
-		vefxs_enabled: true,
-		external_contract: false,
-		is_gauged: true,
-		pool_tokens: ["FRAX", "DAI"],
-		reward_tokens: ["FXS"],
+    staking_enabled: true,
+    vefxs_enabled: true,
+    external_contract: false,
+    is_gauged: true,
+    pool_tokens: ["FRAX", "DAI"],
+    reward_tokens: ["FXS"],
     reward_token_decimals: [18],
-		reward_token_coingecko_slugs: ["frax-share"],
-		version: 101
-	},
+    reward_token_coingecko_slugs: ["frax-share"],
+    version: 101,
+  },
   "Hundred FRAX Lending [Arbitrum]": {
-		lp_logo: "hundred",
-		label: "Hundred FRAX Lending",
-		chain: "arbitrum",
-		external_contract: true,
-		farming_link: "https://hundred.finance/",
-		staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX", "HND"],
+    lp_logo: "hundred",
+    label: "Hundred FRAX Lending",
+    chain: "arbitrum",
+    external_contract: true,
+    farming_link: "https://hundred.finance/",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX", "HND"],
     reward_token_bridge_types: ["canonical"],
-	},
+  },
   "Hundred FRAX Lending [Fantom]": {
-		lp_logo: "hundred",
-		label: "Hundred FRAX Lending",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://hundred.finance/",
-		staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX", "HND"],
+    lp_logo: "hundred",
+    label: "Hundred FRAX Lending",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://hundred.finance/",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX", "HND"],
     reward_token_bridge_types: ["canonical"],
-	},
-	"Impossible FRAX/IF": {
-		lp_logo: "impossible",
-		slug: "Impossible_FRAX_IF",
-		label: "Impossible FRAX/IF",
-		chain: "bsc",
-		info_link: "https://info.impossible.finance/pair/0x5316e743816223b335764738021f3df7a17a25da",
-		add_liq_link: "https://swap.impossible.finance/#/add/0x29cED01C447166958605519F10DcF8b0255fB379/0xB0e1fc65C1a741b4662B813eB787d369b8614Af1",
-		trade_link: "https://swap.impossible.finance/#/swap?inputCurrency=0x29cED01C447166958605519F10DcF8b0255fB379&outputCurrency=0xB0e1fc65C1a741b4662B813eB787d369b8614Af1",
-		farming_link: "https://app.frax.finance/staking#Impossible_FRAX_IF",
+  },
+  "Impossible FRAX/IF": {
+    lp_logo: "impossible",
+    slug: "Impossible_FRAX_IF",
+    label: "Impossible FRAX/IF",
+    chain: "bsc",
+    info_link:
+      "https://info.impossible.finance/pair/0x5316e743816223b335764738021f3df7a17a25da",
+    add_liq_link:
+      "https://swap.impossible.finance/#/add/0x29cED01C447166958605519F10DcF8b0255fB379/0xB0e1fc65C1a741b4662B813eB787d369b8614Af1",
+    trade_link:
+      "https://swap.impossible.finance/#/swap?inputCurrency=0x29cED01C447166958605519F10DcF8b0255fB379&outputCurrency=0xB0e1fc65C1a741b4662B813eB787d369b8614Af1",
+    farming_link: "https://app.frax.finance/staking#Impossible_FRAX_IF",
     starting_block: 10073446,
-		staking_enabled: false,
-		external_contract: false,
-		pool_tokens: ["FRAX", "IF"],
-		reward_tokens: ["FXS", "IF"],
-    	reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "impossible-finance"],
-		reward_token_bridge_types: ["anyFXS", null],
-		version: 5
-	},
-	"Impossible FRAX/FXS": {
-		lp_logo: "impossible",
-		slug: "Impossible_FRAX_FXS",
-		label: "Impossible FRAX/FXS",
-		chain: "bsc",
-		info_link: "https://info.impossible.finance/pair/0x13d80efd9f4ec6ef7279fe10124cebf58c0d07c2",
-		add_liq_link: "https://swap.impossible.finance/#/add/0x29cED01C447166958605519F10DcF8b0255fB379/0xDE2F075f6F14EB9D96755b24E416A53E736Ca363",
-		trade_link: "https://swap.impossible.finance/#/swap?inputCurrency=0x29cED01C447166958605519F10DcF8b0255fB379&outputCurrency=0xDE2F075f6F14EB9D96755b24E416A53E736Ca363",
-		farming_link: "https://app.frax.finance/staking#Impossible_FRAX_FXS",
+    staking_enabled: false,
+    external_contract: false,
+    pool_tokens: ["FRAX", "IF"],
+    reward_tokens: ["FXS", "IF"],
+    reward_token_decimals: [18, 18],
+    reward_token_coingecko_slugs: ["frax-share", "impossible-finance"],
+    reward_token_bridge_types: ["anyFXS", null],
+    version: 5,
+  },
+  "Impossible FRAX/FXS": {
+    lp_logo: "impossible",
+    slug: "Impossible_FRAX_FXS",
+    label: "Impossible FRAX/FXS",
+    chain: "bsc",
+    info_link:
+      "https://info.impossible.finance/pair/0x13d80efd9f4ec6ef7279fe10124cebf58c0d07c2",
+    add_liq_link:
+      "https://swap.impossible.finance/#/add/0x29cED01C447166958605519F10DcF8b0255fB379/0xDE2F075f6F14EB9D96755b24E416A53E736Ca363",
+    trade_link:
+      "https://swap.impossible.finance/#/swap?inputCurrency=0x29cED01C447166958605519F10DcF8b0255fB379&outputCurrency=0xDE2F075f6F14EB9D96755b24E416A53E736Ca363",
+    farming_link: "https://app.frax.finance/staking#Impossible_FRAX_FXS",
     starting_block: 10064339,
-		staking_enabled: false,
-		external_contract: false,
-		pool_tokens: ["FRAX", "FXS"],
-		reward_tokens: ["FXS", "IF"],
-    	reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "impossible-finance"],
-		reward_token_bridge_types: ["anyFXS", null],
-		version: 5
-	},
-	"Liquid Driver FRAX/FTM": {
-		lp_logo: "liquiddriver",
-		label: "Liquid Driver FRAX/FTM",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://www.liquiddriver.finance/farms",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "FTM"],
-		reward_tokens: ["LQDR"]
-	},
-	"Lobis FXS Bonds": {
-		lp_logo: "lobis",
-		label: "Lobis FXS Bonds",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://app.lobis.finance/#/mints/fxs",
-		staking_enabled: true,
-		pool_tokens: ["FXS"],
-		reward_tokens: ["LOBI"],
-		has_varied_apy: true
-	},
+    staking_enabled: false,
+    external_contract: false,
+    pool_tokens: ["FRAX", "FXS"],
+    reward_tokens: ["FXS", "IF"],
+    reward_token_decimals: [18, 18],
+    reward_token_coingecko_slugs: ["frax-share", "impossible-finance"],
+    reward_token_bridge_types: ["anyFXS", null],
+    version: 5,
+  },
+  "Liquid Driver FRAX/FTM": {
+    lp_logo: "liquiddriver",
+    label: "Liquid Driver FRAX/FTM",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://www.liquiddriver.finance/farms",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "FTM"],
+    reward_tokens: ["LQDR"],
+  },
+  "Lobis FXS Bonds": {
+    lp_logo: "lobis",
+    label: "Lobis FXS Bonds",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://app.lobis.finance/#/mints/fxs",
+    staking_enabled: true,
+    pool_tokens: ["FXS"],
+    reward_tokens: ["LOBI"],
+    has_varied_apy: true,
+  },
   "Market.xyz FRAX Lending": {
-		lp_logo: "marketxyz",
-		label: "Market.xyz FRAX Lending",
-		chain: "polygon",
-		external_contract: true,
-		farming_link: "https://polygon.market.xyz/?filter=frax",
-		staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
-    	reward_token_bridge_types: ["canonical"],
-		has_varied_apy: true
-	},
-	"mStable FRAX/mUSD": {
-		lp_logo: "mstable",
-		slug: "mStable_FRAX_mUSD",
-		label: "mStable FRAX/mUSD",
-		chain: "polygon",
-		info_link: "https://app.mstable.org/#/musd/pools",
-		add_liq_link: "https://app.mstable.org/#/musd/pools/0xb30a907084ac8a0d25dddab4e364827406fd09f0?network=polygon",
-		trade_link: "https://app.mstable.org/#/musd/exchange/swap",
-		farming_link: "https://app.frax.finance/staking#mStable_FRAX_mUSD",
+    lp_logo: "marketxyz",
+    label: "Market.xyz FRAX Lending",
+    chain: "polygon",
+    external_contract: true,
+    farming_link: "https://polygon.market.xyz/?filter=frax",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
+    reward_token_bridge_types: ["canonical"],
+    has_varied_apy: true,
+  },
+  "mStable FRAX/mUSD": {
+    lp_logo: "mstable",
+    slug: "mStable_FRAX_mUSD",
+    label: "mStable FRAX/mUSD",
+    chain: "polygon",
+    info_link: "https://app.mstable.org/#/musd/pools",
+    add_liq_link:
+      "https://app.mstable.org/#/musd/pools/0xb30a907084ac8a0d25dddab4e364827406fd09f0?network=polygon",
+    trade_link: "https://app.mstable.org/#/musd/exchange/swap",
+    farming_link: "https://app.frax.finance/staking#mStable_FRAX_mUSD",
     starting_block: 17439000,
-		staking_enabled: true,
-		external_contract: false,
-		is_gauged: true,
-		pool_tokens: ["FRAX", "mUSD"],
-		reward_tokens: ["FXS", "MTA"],
-    reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "meta"],
-		reward_token_bridge_types: ["polyFXS", null],
-		version: 5
-	},
-	"OolongSwap aCYBER-FRAX": {
-		lp_logo: "oolong-swap",
-		label: "OolongSwap aCYBER-FRAX",
-		chain: "boba",
-		external_contract: true,
-		farming_link: "https://oolongswap.com/#/farm",
-		staking_enabled: true,
-		pool_tokens: ["aCYBER", "FRAX"],
-		reward_tokens: ["OLO", "aCYBER"],
-		has_varied_apy: true,
-	  },
-	"OlympusDAO FRAX Bonds": {
-		lp_logo: "olympus",
-		label: "OlympusDAO FRAX Bonds",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://app.olympusdao.finance/#/bonds",
-		staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
-		has_varied_apy: true
-	},
-	"Olympus Pro FRAX/WETH SLP": {
-		lp_logo: "olympus",
-		label: "Olympus Pro FRAX/WETH SLP",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://pro.olympusdao.finance/#/bond/frax_eth_sushi",
-		staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
-		has_varied_apy: true
-	},
-	"Olympus Pro FRAX Bond [Arbitrum]": {
-		lp_logo: "olympus",
-		label: "Olympus Pro FRAX Bond",
-		chain: "arbitrum",
-		external_contract: true,
-		farming_link: "https://pro.olympusdao.finance/#/bond/iq_frax_bond",
-		staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["IQ"],
-		has_varied_apy: true,
-	  },
-	"Pangolin FRAX/AVAX": {
-		lp_logo: "pangolin",
-		label: "Pangolin FRAX/AVAX",
-		chain: "avalanche",
-		external_contract: true,
-		farming_link: "https://app.pangolin.exchange/#/png/AVAX/0xD24C2Ad096400B6FBcd2ad8B24E7acBc21A1da64/1",
     staking_enabled: true,
-		pool_tokens: ["FRAX", "AVAX"],
-		reward_tokens: ["PNG"]
-	},
-	'Planet Finance FRAX Lending': {
-		lp_logo: 'planetfinance',
-		label: 'Planet Finance FRAX Lending',
-		chain: 'bsc',
-		external_contract: true,
-		farming_link: 'https://blue.planetfinance.io',
-		staking_enabled: true,
-		pool_tokens: ['FRAX'],
-		reward_tokens: ['FRAX', 'GAMMA'],
-	  },
-	// "SmartCredit FRAX Lending": {
-	// 	lp_logo: "smartcredit",
-	// 	label: "SmartCredit FRAX Lending",
-	// 	chain: "ethereum",
-	// 	external_contract: true,
-	// 	farming_link: "https://smartcredit.io/",
-	// 	staking_enabled: true,
-	// 	pool_tokens: ["FRAX"],
-	// 	reward_tokens: ["FRAX"]
-	// },
-	// "SmartCredit FXS Lending": {
-	// 	lp_logo: "smartcredit",
-	// 	label: "SmartCredit FXS Lending",
-	// 	chain: "ethereum",
-	// 	external_contract: true,
-	// 	farming_link: "https://smartcredit.io/",
-	// 	staking_enabled: true,
-	// 	pool_tokens: ["FXS"],
-	// 	reward_tokens: ["FXS"]
-	// },
+    external_contract: false,
+    is_gauged: true,
+    pool_tokens: ["FRAX", "mUSD"],
+    reward_tokens: ["FXS", "MTA"],
+    reward_token_decimals: [18, 18],
+    reward_token_coingecko_slugs: ["frax-share", "meta"],
+    reward_token_bridge_types: ["polyFXS", null],
+    version: 5,
+  },
+  "OolongSwap aCYBER-FRAX": {
+    lp_logo: "oolong-swap",
+    label: "OolongSwap aCYBER-FRAX",
+    chain: "boba",
+    external_contract: true,
+    farming_link: "https://oolongswap.com/#/farm",
+    staking_enabled: true,
+    pool_tokens: ["aCYBER", "FRAX"],
+    reward_tokens: ["OLO", "aCYBER"],
+    has_varied_apy: true,
+  },
+  "OlympusDAO FRAX Bonds": {
+    lp_logo: "olympus",
+    label: "OlympusDAO FRAX Bonds",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://app.olympusdao.finance/#/bonds",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
+    has_varied_apy: true,
+  },
+  "Olympus Pro FRAX/WETH SLP": {
+    lp_logo: "olympus",
+    label: "Olympus Pro FRAX/WETH SLP",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://pro.olympusdao.finance/#/bond/frax_eth_sushi",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
+    has_varied_apy: true,
+  },
+  "Olympus Pro FRAX Bond [Arbitrum]": {
+    lp_logo: "olympus",
+    label: "Olympus Pro FRAX Bond",
+    chain: "arbitrum",
+    external_contract: true,
+    farming_link: "https://pro.olympusdao.finance/#/bond/iq_frax_bond",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["IQ"],
+    has_varied_apy: true,
+  },
+  "Pangolin FRAX/AVAX": {
+    lp_logo: "pangolin",
+    label: "Pangolin FRAX/AVAX",
+    chain: "avalanche",
+    external_contract: true,
+    farming_link:
+      "https://app.pangolin.exchange/#/png/AVAX/0xD24C2Ad096400B6FBcd2ad8B24E7acBc21A1da64/1",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "AVAX"],
+    reward_tokens: ["PNG"],
+  },
+  "Planet Finance FRAX Lending": {
+    lp_logo: "planetfinance",
+    label: "Planet Finance FRAX Lending",
+    chain: "bsc",
+    external_contract: true,
+    farming_link: "https://blue.planetfinance.io",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX", "GAMMA"],
+  },
+  // "SmartCredit FRAX Lending": {
+  // 	lp_logo: "smartcredit",
+  // 	label: "SmartCredit FRAX Lending",
+  // 	chain: "ethereum",
+  // 	external_contract: true,
+  // 	farming_link: "https://smartcredit.io/",
+  // 	staking_enabled: true,
+  // 	pool_tokens: ["FRAX"],
+  // 	reward_tokens: ["FRAX"]
+  // },
+  // "SmartCredit FXS Lending": {
+  // 	lp_logo: "smartcredit",
+  // 	label: "SmartCredit FXS Lending",
+  // 	chain: "ethereum",
+  // 	external_contract: true,
+  // 	farming_link: "https://smartcredit.io/",
+  // 	staking_enabled: true,
+  // 	pool_tokens: ["FXS"],
+  // 	reward_tokens: ["FXS"]
+  // },
 
-	"Rari FRAX Lending": {
-		lp_logo: "rari",
-		label: "Rari FRAX Lending",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://app.rari.capital/fuse?filter=frax",
-		staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
-    has_varied_apy: true
-	},
+  "Rari FRAX Lending": {
+    lp_logo: "rari",
+    label: "Rari FRAX Lending",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://app.rari.capital/fuse?filter=frax",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
+    has_varied_apy: true,
+  },
   "Saber wFRAX/USDC": {
-		lp_logo: "saber",
-		label: "Saber wFRAX/USDC",
-		chain: "solana",
-		external_contract: true,
-		farming_link: "https://app.saber.so/#/farms/frax/stake",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "USDC"],
-		reward_tokens: ["SBR"]
-	},
+    lp_logo: "saber",
+    label: "Saber wFRAX/USDC",
+    chain: "solana",
+    external_contract: true,
+    farming_link: "https://app.saber.so/#/farms/frax/stake",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "USDC"],
+    reward_tokens: ["SBR"],
+  },
   "Saddle alUSD/FEI/FRAX/LUSD": {
-		lp_logo: "saddle",
-		slug: "Saddle_alUSD_FEI_FRAX_LUSD",
-		label: "Saddle alUSD/FEI/FRAX/LUSD",
-		chain: "ethereum",
-		info_link: "https://saddle.exchange/#/pools",
-		add_liq_link: "https://saddle.exchange/#/pools/d4/deposit",
-		trade_link: "https://saddle.exchange/#/",
-		farming_link: "https://app.frax.finance/staking#Saddle_alUSD_FEI_FRAX_LUSD",
+    lp_logo: "saddle",
+    slug: "Saddle_alUSD_FEI_FRAX_LUSD",
+    label: "Saddle alUSD/FEI/FRAX/LUSD",
+    chain: "ethereum",
+    info_link: "https://saddle.exchange/#/pools",
+    add_liq_link: "https://saddle.exchange/#/pools/d4/deposit",
+    trade_link: "https://saddle.exchange/#/",
+    farming_link: "https://app.frax.finance/staking#Saddle_alUSD_FEI_FRAX_LUSD",
     starting_block: 1278245,
-		staking_enabled: true,
-		external_contract: false,
-		pool_tokens: ["FRAX", "alUSD", "FEI", "LUSD"],
-		reward_tokens: ["FXS", "TRIBE", "ALCX", "LQTY" ],
-		reward_token_decimals: [18, 18, 18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "tribe-2", "alchemix", "liquity"],
-		version: 100
-	},
+    staking_enabled: true,
+    external_contract: false,
+    pool_tokens: ["FRAX", "alUSD", "FEI", "LUSD"],
+    reward_tokens: ["FXS", "TRIBE", "ALCX", "LQTY"],
+    reward_token_decimals: [18, 18, 18, 18],
+    reward_token_coingecko_slugs: [
+      "frax-share",
+      "tribe-2",
+      "alchemix",
+      "liquity",
+    ],
+    version: 100,
+  },
   "Scream FRAX Lending": {
-		lp_logo: "scream",
-		label: "Scream FRAX Lending",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://scream.sh/lend",
-		staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
-    reward_token_bridge_types: ["canonical"],
-	},
-	"Solarbeam FRAX/ROME": {
-		lp_logo: "solarbeam",
-		label: "Solarbeam FRAX/ROME",
-		chain: "moonriver",
-		external_contract: true,
-		farming_link: "https://app.solarbeam.io/farm",
+    lp_logo: "scream",
+    label: "Scream FRAX Lending",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://scream.sh/lend",
     staking_enabled: true,
-		pool_tokens: ["FRAX", "ROME"],
-		reward_tokens: ["SOLAR"],
-	},
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
+    reward_token_bridge_types: ["canonical"],
+  },
+  "Solarbeam FRAX/ROME": {
+    lp_logo: "solarbeam",
+    label: "Solarbeam FRAX/ROME",
+    chain: "moonriver",
+    external_contract: true,
+    farming_link: "https://app.solarbeam.io/farm",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "ROME"],
+    reward_tokens: ["SOLAR"],
+  },
   "Solarbeam FRAX/MOVR": {
-		lp_logo: "solarbeam",
-		label: "Solarbeam FRAX/MOVR",
-		chain: "moonriver",
-		external_contract: true,
-		farming_link: "https://app.solarbeam.io/farm",
+    lp_logo: "solarbeam",
+    label: "Solarbeam FRAX/MOVR",
+    chain: "moonriver",
+    external_contract: true,
+    farming_link: "https://app.solarbeam.io/farm",
     staking_enabled: true,
-		pool_tokens: ["FRAX", "MOVR"],
-		reward_tokens: ["SOLAR"],
-	},
+    pool_tokens: ["FRAX", "MOVR"],
+    reward_tokens: ["SOLAR"],
+  },
   "Solidex FRAX/FXS": {
-		lp_logo: "solidex",
-		label: "Solidex FRAX/FXS",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://solidexfinance.com/#/pools",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "FXS"],
-		reward_tokens: ["SEX", "SOLID"],
+    lp_logo: "solidex",
+    label: "Solidex FRAX/FXS",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://solidexfinance.com/#/pools",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "FXS"],
+    reward_tokens: ["SEX", "SOLID"],
     reward_token_bridge_types: ["canonical"],
-		has_varied_apy: true
-	},
+    has_varied_apy: true,
+  },
   "Solidex FRAX/USDC": {
-		lp_logo: "solidex",
-		label: "Solidex FRAX/USDC",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://solidexfinance.com/#/pools",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "USDC"],
-		reward_tokens: ["SEX", "SOLID"],
+    lp_logo: "solidex",
+    label: "Solidex FRAX/USDC",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://solidexfinance.com/#/pools",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "USDC"],
+    reward_tokens: ["SEX", "SOLID"],
     reward_token_bridge_types: ["canonical"],
-		has_varied_apy: true
-	},
-	"SpiritSwap FRAX/FTM": {
-		lp_logo: "spiritswap",
-		label: "SpiritSwap FRAX/FTM",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://app.spiritswap.finance/#/allfarms",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "FTM"],
-		reward_tokens: ["SPIRIT"]
-	},
-	"SpiritSwap FRAX/USDC": {
-		lp_logo: "spiritswap",
-		label: "SpiritSwap FRAX/USDC",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://app.spiritswap.finance/#/allfarms",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "USDC"],
-		reward_tokens: ["SPIRIT"]
-	},
+    has_varied_apy: true,
+  },
+  "SpiritSwap FRAX/FTM": {
+    lp_logo: "spiritswap",
+    label: "SpiritSwap FRAX/FTM",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://app.spiritswap.finance/#/allfarms",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "FTM"],
+    reward_tokens: ["SPIRIT"],
+  },
+  "SpiritSwap FRAX/USDC": {
+    lp_logo: "spiritswap",
+    label: "SpiritSwap FRAX/USDC",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://app.spiritswap.finance/#/allfarms",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "USDC"],
+    reward_tokens: ["SPIRIT"],
+  },
   "SpiritSwap FRAX/FXS": {
-		lp_logo: "spiritswap",
-		slug: "SpiritSwap_FRAX_FXS",
-		label: "SpiritSwap FRAX/FXS",
-		chain: "fantom",
-		info_link: "https://info.spiritswap.finance/pair/0x100fcf27c87d1cc7b8d6c28b69b84a359e4fd377",
-		add_liq_link: "https://swap.spiritswap.finance/#/add/0x82f8cb20c14f134fe6ebf7ac3b903b2117aafa62/0xaf319e5789945197e365e7f7fbfc56b130523b33",
-		trade_link: "https://swap.spiritswap.finance/#/swap/0x5Cc61A78F164885776AA610fb0FE1257df78E59B",
-		farming_link: "https://app.frax.finance/staking#SpiritSwap_FRAX_FXS",
+    lp_logo: "spiritswap",
+    slug: "SpiritSwap_FRAX_FXS",
+    label: "SpiritSwap FRAX/FXS",
+    chain: "fantom",
+    info_link:
+      "https://info.spiritswap.finance/pair/0x100fcf27c87d1cc7b8d6c28b69b84a359e4fd377",
+    add_liq_link:
+      "https://swap.spiritswap.finance/#/add/0x82f8cb20c14f134fe6ebf7ac3b903b2117aafa62/0xaf319e5789945197e365e7f7fbfc56b130523b33",
+    trade_link:
+      "https://swap.spiritswap.finance/#/swap/0x5Cc61A78F164885776AA610fb0FE1257df78E59B",
+    farming_link: "https://app.frax.finance/staking#SpiritSwap_FRAX_FXS",
     starting_block: 14456599,
-		staking_enabled: false,
-		external_contract: false,
-		pool_tokens: ["FRAX", "FXS"],
-		reward_tokens: ["FXS"],
+    staking_enabled: false,
+    external_contract: false,
+    pool_tokens: ["FRAX", "FXS"],
+    reward_tokens: ["FXS"],
     reward_token_decimals: [18],
-		reward_token_coingecko_slugs: ["frax-share"],
-		reward_token_bridge_types: ["anyFXS"],
-		version: 5,
-		is_soon: false
-	},
-	"SpiritSwap/Ola FRAX Lending": {
-		lp_logo: "spiritswap",
-		label: "SpiritSwap/Ola FRAX Lending",
-		chain: "fantom",
-		external_contract: true,
-		farming_link: "https://app.ola.finance/networks/0x892701d128d63c9856A9Eb5d967982F78FD3F2AE/markets",
-		staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FRAX"],
+    reward_token_coingecko_slugs: ["frax-share"],
+    reward_token_bridge_types: ["anyFXS"],
+    version: 5,
+    is_soon: false,
+  },
+  "SpiritSwap/Ola FRAX Lending": {
+    lp_logo: "spiritswap",
+    label: "SpiritSwap/Ola FRAX Lending",
+    chain: "fantom",
+    external_contract: true,
+    farming_link:
+      "https://app.ola.finance/networks/0x892701d128d63c9856A9Eb5d967982F78FD3F2AE/markets",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FRAX"],
     reward_token_bridge_types: ["canonical"],
-	},
+  },
   "StakeDAO sdETH-FraxPut": {
-		lp_logo: "stakedao",
-		slug: "StakeDAO_sdETH-FraxPut",
-		label: "StakeDAO sdETH-FraxPut",
-		chain: "ethereum",
-		info_link: "https://stakedao.org/0x0000000000000000000000000000000000000000/strategies/option",
-		add_liq_link: "https://curve.fi/frax/deposit",
-		trade_link: "https://stakedao.org/0x0000000000000000000000000000000000000000/strategies/option",
-		farming_link: "https://app.frax.finance/staking#StakeDAO_sdETH-FraxPut",
+    lp_logo: "stakedao",
+    slug: "StakeDAO_sdETH-FraxPut",
+    label: "StakeDAO sdETH-FraxPut",
+    chain: "ethereum",
+    info_link:
+      "https://stakedao.org/0x0000000000000000000000000000000000000000/strategies/option",
+    add_liq_link: "https://curve.fi/frax/deposit",
+    trade_link:
+      "https://stakedao.org/0x0000000000000000000000000000000000000000/strategies/option",
+    farming_link: "https://app.frax.finance/staking#StakeDAO_sdETH-FraxPut",
     starting_block: 13574614,
-		staking_enabled: true,
-		external_contract: false,
+    staking_enabled: true,
+    external_contract: false,
     vefxs_enabled: true,
-		is_gauged: true,
-		pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
-		reward_tokens: ["FXS", "SDT"],
+    is_gauged: true,
+    pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
+    reward_tokens: ["FXS", "SDT"],
     reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "stake-dao"],
-		version: 101
-	},
-	"StakeDAO sdFRAX3CRV-f": {
-		lp_logo: "stakedao",
-		slug: "StakeDAO_sdFRAX3CRV-f",
-		label: "StakeDAO sdFRAX3CRV-f",
-		chain: "ethereum",
-		info_link: "https://stakedao.org/0x0000000000000000000000000000000000000000/strategies",
-		add_liq_link: "https://curve.fi/frax/deposit",
-		trade_link: "https://stakedao.org/0x0000000000000000000000000000000000000000/strategies",
-		farming_link: "https://app.frax.finance/staking#StakeDAO_sdFRAX3CRV-f",
+    reward_token_coingecko_slugs: ["frax-share", "stake-dao"],
+    version: 101,
+  },
+  "StakeDAO sdFRAX3CRV-f": {
+    lp_logo: "stakedao",
+    slug: "StakeDAO_sdFRAX3CRV-f",
+    label: "StakeDAO sdFRAX3CRV-f",
+    chain: "ethereum",
+    info_link:
+      "https://stakedao.org/0x0000000000000000000000000000000000000000/strategies",
+    add_liq_link: "https://curve.fi/frax/deposit",
+    trade_link:
+      "https://stakedao.org/0x0000000000000000000000000000000000000000/strategies",
+    farming_link: "https://app.frax.finance/staking#StakeDAO_sdFRAX3CRV-f",
     starting_block: 13225432,
-		staking_enabled: true,
-		external_contract: false,
+    staking_enabled: true,
+    external_contract: false,
     vefxs_enabled: true,
-		is_gauged: true,
-		pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
-		reward_tokens: ["FXS", "SDT"],
+    is_gauged: true,
+    pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
+    reward_tokens: ["FXS", "SDT"],
     reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "stake-dao"],
-		version: 101
-	},
+    reward_token_coingecko_slugs: ["frax-share", "stake-dao"],
+    version: 101,
+  },
   "StakeDAO sdFXS": {
-		lp_logo: "stakedao",
-		label: "StakeDAO sdFXS",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://lockers.stakedao.org/",
-		staking_enabled: true,
-		pool_tokens: ["FXS"],
-		reward_tokens: ["FXS", "SDT"]
-	},
+    lp_logo: "stakedao",
+    label: "StakeDAO sdFXS",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://lockers.stakedao.org/",
+    staking_enabled: true,
+    pool_tokens: ["FXS"],
+    reward_tokens: ["FXS", "SDT"],
+  },
   "Sushi FRAX/ETH": {
-		lp_logo: "sushiswap",
-		label: "Sushi FRAX/ETH",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://app.sushi.com/farm",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "ETH"],
-		reward_tokens: ["SUSHI"]
-	},
-	"Sushi FRAX/ETH [Harmony]": {
-		lp_logo: "sushiswap",
-		label: "Sushi FRAX/ETH",
-		chain: "harmony",
-		external_contract: true,
-		farming_link: "https://app.sushi.com/farm",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "ETH"],
-		reward_tokens: ["SUSHI", "ONE"]
-	},
-	"Sushi FRAX/FXS [Polygon]": {
-		lp_logo: "sushiswap",
-		label: "Sushi FRAX/FXS",
-		chain: "polygon",
-		external_contract: true,
-		farming_link: "https://app.sushi.com/farm",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "FXS"],
-		reward_tokens: ["SUSHI", "MATIC"]
-	},
-	// "Sushi FRAX/USDC [Polygon]": {
-	// 	lp_logo: "sushiswap",
-	// 	label: "Sushi FRAX/USDC",
-	// 	chain: "polygon",
-	// 	external_contract: true,
-	// 	farming_link: "https://app.sushi.com/farm",
-	// 	staking_enabled: true,
-	// 	pool_tokens: ["FRAX", "USDC"],
-	// 	reward_tokens: ["SUSHI", "MATIC"]
-	// },
+    lp_logo: "sushiswap",
+    label: "Sushi FRAX/ETH",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://app.sushi.com/farm",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "ETH"],
+    reward_tokens: ["SUSHI"],
+  },
+  "Sushi FRAX/ETH [Harmony]": {
+    lp_logo: "sushiswap",
+    label: "Sushi FRAX/ETH",
+    chain: "harmony",
+    external_contract: true,
+    farming_link: "https://app.sushi.com/farm",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "ETH"],
+    reward_tokens: ["SUSHI", "ONE"],
+  },
+  "Sushi FRAX/FXS [Polygon]": {
+    lp_logo: "sushiswap",
+    label: "Sushi FRAX/FXS",
+    chain: "polygon",
+    external_contract: true,
+    farming_link: "https://app.sushi.com/farm",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "FXS"],
+    reward_tokens: ["SUSHI", "MATIC"],
+  },
+  // "Sushi FRAX/USDC [Polygon]": {
+  // 	lp_logo: "sushiswap",
+  // 	label: "Sushi FRAX/USDC",
+  // 	chain: "polygon",
+  // 	external_contract: true,
+  // 	farming_link: "https://app.sushi.com/farm",
+  // 	staking_enabled: true,
+  // 	pool_tokens: ["FRAX", "USDC"],
+  // 	reward_tokens: ["SUSHI", "MATIC"]
+  // },
   "Sushi FRAX/USDC [Moonriver]": {
-		lp_logo: "sushiswap",
-		label: "Sushi FRAX/USDC",
-		chain: "moonriver",
-		external_contract: true,
-		farming_link: "https://app.sushi.com/farm",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "USDC"],
-		reward_tokens: ["SUSHI", "MOVR"]
-	},
+    lp_logo: "sushiswap",
+    label: "Sushi FRAX/USDC",
+    chain: "moonriver",
+    external_contract: true,
+    farming_link: "https://app.sushi.com/farm",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "USDC"],
+    reward_tokens: ["SUSHI", "MOVR"],
+  },
   "Sushi FRAX/SUSHI": {
-		lp_logo: "sushiswap",
-		slug: "Sushi_FRAX_SUSHI",
-		label: "Sushi FRAX/SUSHI",
-		chain: "ethereum",
-		info_link: "https://analytics.sushi.com/pairs/0xe06f8d30ac334c857fc8c380c85969c150f38a6a",
-		add_liq_link: "https://app.sushi.com/swap#/add/0x6b3595068778dd592e39a122f4f5a5cf09c90fe2/0x853d955acef822db058eb8505911ed77f175b99e",
-		trade_link: "https://app.sushi.com/swap#/swap?inputCurrency=0x6b3595068778dd592e39a122f4f5a5cf09c90fe2&outputCurrency=0x853d955acef822db058eb8505911ed77f175b99e",
-		farming_link: "https://app.frax.finance/staking#Sushi_FRAX_SUSHI",
+    lp_logo: "sushiswap",
+    slug: "Sushi_FRAX_SUSHI",
+    label: "Sushi FRAX/SUSHI",
+    chain: "ethereum",
+    info_link:
+      "https://analytics.sushi.com/pairs/0xe06f8d30ac334c857fc8c380c85969c150f38a6a",
+    add_liq_link:
+      "https://app.sushi.com/swap#/add/0x6b3595068778dd592e39a122f4f5a5cf09c90fe2/0x853d955acef822db058eb8505911ed77f175b99e",
+    trade_link:
+      "https://app.sushi.com/swap#/swap?inputCurrency=0x6b3595068778dd592e39a122f4f5a5cf09c90fe2&outputCurrency=0x853d955acef822db058eb8505911ed77f175b99e",
+    farming_link: "https://app.frax.finance/staking#Sushi_FRAX_SUSHI",
     starting_block: 13013617,
-		staking_enabled: true,
-		external_contract: false,
-		vefxs_enabled: true,
-		is_gauged: true,
-		pool_tokens: ["FRAX", "SUSHI"],
-		reward_tokens: ["FXS", "SUSHI"],
-    	reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "sushi"],
-		version: 101,
-		is_soon: false
-	},
+    staking_enabled: true,
+    external_contract: false,
+    vefxs_enabled: true,
+    is_gauged: true,
+    pool_tokens: ["FRAX", "SUSHI"],
+    reward_tokens: ["FXS", "SUSHI"],
+    reward_token_decimals: [18, 18],
+    reward_token_coingecko_slugs: ["frax-share", "sushi"],
+    version: 101,
+    is_soon: false,
+  },
   "Temple FRAX/TEMPLE": {
     lp_logo: "templedao",
-		slug: "Temple_FRAX_TEMPLE",
-		label: "Temple FRAX/TEMPLE",
-		chain: "ethereum",
-		info_link: "https://templedao.link/",
-		add_liq_link: "https://templedao.link/",
-		trade_link: "https://templedao.link/",
-		farming_link: "https://app.frax.finance/staking#Temple_FRAX_TEMPLE",
+    slug: "Temple_FRAX_TEMPLE",
+    label: "Temple FRAX/TEMPLE",
+    chain: "ethereum",
+    info_link: "https://templedao.link/",
+    add_liq_link: "https://templedao.link/",
+    trade_link: "https://templedao.link/",
+    farming_link: "https://app.frax.finance/staking#Temple_FRAX_TEMPLE",
     starting_block: 14123565,
-		staking_enabled: true,
-		vefxs_enabled: true,
-		external_contract: false,
-		is_gauged: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FXS", "TEMPLE"],
-    reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "temple"],
-		version: 102
-	},
-	"Tokemak FRAX Staking": {
-		lp_logo: "tokemak",
-		label: "Tokemak FRAX Staking",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://www.tokemak.xyz/",
-		staking_enabled: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["TOKE"],
-	},
-	"Tokemak FXS Staking": {
-		lp_logo: "tokemak",
-		label: "Tokemak FXS Staking",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://www.tokemak.xyz/",
     staking_enabled: true,
-		pool_tokens: ["FXS"],
-		reward_tokens: ["TOKE"],
-	},
-	'Trader Joe FRAX/AVAX': {
-		lp_logo: 'traderjoe',
-		label: 'Trader Joe FRAX/AVAX',
-		chain: 'avalanche',
-		external_contract: true,
-		farming_link: 'https://traderjoexyz.com/#/farm/0x862905a82382Db9405a40DCAa8Ee9e8F4af52C89-0x188bED1968b795d5c9022F6a0bb5931Ac4c18F00?fm=fm',
-		staking_enabled: true,
-		pool_tokens: ['FRAX', 'AVAX'],
-		reward_tokens: ['FXS'],
-	},
-	'Trader Joe FRAX/gOHM': {
-		lp_logo: 'traderjoe',
-		label: 'Trader Joe FRAX/gOHM',
-		chain: 'avalanche',
-		external_contract: true,
-		farming_link: 'https://traderjoexyz.com/#/farm/0x3E6Be71dE004363379d864006AAC37C9F55F8329-0x188bED1968b795d5c9022F6a0bb5931Ac4c18F00',
-		staking_enabled: true,
-		pool_tokens: ['FRAX', 'gOHM'],
-		reward_tokens: ['gOHM'],
-	},
-	'Trader Joe FXS/AVAX': {
-		lp_logo: 'traderjoe',
-		label: 'Trader Joe FXS/AVAX',
-		chain: 'avalanche',
-		external_contract: true,
-		farming_link: 'https://traderjoexyz.com/#/farm/0x53942Dcce5087f56cF1D68F4e017Ca3A793F59a2-0x188bED1968b795d5c9022F6a0bb5931Ac4c18F00',
-		staking_enabled: true,
-		pool_tokens: ['FXS', 'AVAX'],
-		reward_tokens: ['JOE'],
-	},
-	"Uniswap FRAX/USDC": {
-		lp_logo: "uniswap",
-		slug: "Uniswap_FRAX_USDC",
-		label: "Uniswap FRAX/USDC",
-		chain: "ethereum",
-		info_link: "https://v2.info.uniswap.org/pair/0x97c4adc5d28a86f9470c70dd91dc6cc2f20d2d4d",
-		add_liq_link: "https://app.uniswap.org/#/add/v2/0x853d955acef822db058eb8505911ed77f175b99e/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-		trade_link: "https://app.uniswap.org/#/swap?use=V2&inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-		farming_link: "https://app.frax.finance/staking#Uniswap_FRAX_USDC",
-    starting_block: 11465735,
-		staking_enabled: false,
-		external_contract: false,
-		is_migratable_to_v3: false,
-		pool_tokens: ["FRAX", "USDC"],
-		reward_tokens: ["FXS"],
-		reward_token_decimals: [18],
-		reward_token_coingecko_slugs: ["frax-share"],
-		version: 1
-	},
-  "Uniswap V3 FRAX/agEUR": {
-		lp_logo: "uniswap_v3",
-		slug: "Uniswap_V3_FRAX_agEUR",
-		label: "Uniswap V3 FRAX/agEUR",
-		chain: "ethereum",
-		info_link: "https://info.uniswap.org/#/pools/0x8ce5796ef6b0c5918025bcf4f9ca908201b030b3",
-		add_liq_link: "https://app.uniswap.org/#/add/0x853d955acef822db058eb8505911ed77f175b99e/0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8/500",
-		trade_link: "https://app.uniswap.org/#/swap?inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8",
-		farming_link: "https://app.frax.finance/staking#Uniswap_V3_FRAX_agEUR",
-    starting_block: 13715882,
-		staking_enabled: true,
-		external_contract: false,
-		vefxs_enabled: true,
-		is_gauged: true,
-		pair_token0_decimals: 18,
-		pair_token1_decimals: 18,
-		pool_tokens: ["FRAX", "agEUR"],
-		reward_tokens: ["FXS", "FRAX", "agEUR"],
-    reward_token_decimals: [18],
-		reward_token_coingecko_slugs: ["frax-share", "frax", "ageur"],
-		version: 1000,
-	},
-  "Uniswap V3 FRAX/DAI": {
-		lp_logo: "uniswap_v3",
-		slug: "Uniswap_V3_FRAX_DAI",
-		label: "Uniswap V3 FRAX/DAI",
-		chain: "ethereum",
-		info_link: "https://info.uniswap.org/#/pools/0x97e7d56a0408570ba1a7852de36350f7713906ec",
-		add_liq_link: "https://app.uniswap.org/#/add/0x853d955acef822db058eb8505911ed77f175b99e/0x6B175474E89094C44Da98b954EedeAC495271d0F/500",
-		trade_link: "https://app.uniswap.org/#/swap?inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0x6B175474E89094C44Da98b954EedeAC495271d0F",
-		farming_link: "https://app.frax.finance/staking#Uniswap_V3_FRAX_DAI",
-    starting_block: 12934415,
-		staking_enabled: true,
-		external_contract: false,
-		vefxs_enabled: true,
-		is_gauged: true,
-		pair_token0_decimals: 18,
-		pair_token1_decimals: 18,
-		pool_tokens: ["FRAX", "DAI"],
-		reward_tokens: ["FXS", "FRAX", "DAI"],
-    	reward_token_decimals: [18],
-		reward_token_coingecko_slugs: ["frax-share", "frax", "dai"],
-		version: 1000,
-	},
-	"Uniswap V3 FRAX/USDC": {
-		lp_logo: "uniswap_v3",
-		slug: "Uniswap_V3_FRAX_USDC",
-		label: "Uniswap V3 FRAX/USDC",
-		chain: "ethereum",
-		info_link: "https://info.uniswap.org/#/pools/0xc63b0708e2f7e69cb8a1df0e1389a98c35a76d52",
-		add_liq_link: "https://app.uniswap.org/#/add/0x853d955acef822db058eb8505911ed77f175b99e/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48/500",
-		trade_link: "https://app.uniswap.org/#/swap?inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-		farming_link: "https://app.frax.finance/staking#Uniswap_V3_FRAX_USDC",
-    starting_block: 12829216,
-		staking_enabled: true,
-		external_contract: false,
-		vefxs_enabled: true,
-		is_gauged: true,
-		pair_token0_decimals: 18,
-		pair_token1_decimals: 6,
-		pool_tokens: ["FRAX", "USDC"],
-		reward_tokens: ["FXS", "FRAX", "USDC"],
-		reward_token_decimals: [18],
-		reward_token_coingecko_slugs: ["frax-share", "frax", "usd-coin"],
-		version: 1000,
-		is_soon: false
-	},
-  // "Uniswap V3 FRAX/WETH": {
-	// 	lp_logo: "uniswap",
-	// 	slug: "Uniswap_V3_FRAX_WETH",
-	// 	label: "Uniswap V3 FRAX/WETH",
-	// 	chain: "ethereum",
-	// 	info_link: "https://info.uniswap.org/#/pools/0x92c7b5ce4cb0e5483f3365c1449f21578ee9f21a",
-	// 	add_liq_link: "https://app.uniswap.org/#/add/0x853d955acef822db058eb8505911ed77f175b99e/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2/3000",
-	// 	trade_link: "https://app.uniswap.org/#/swap?inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-	// 	farming_link: "https://app.frax.finance/staking#Uniswap_V3_FRAX_WETH",
-  //   starting_block: 6666666666,
-	// 	staking_enabled: true,
-	// 	external_contract: false,
-  //   vefxs_enabled: true,
-	// 	pair_token0_decimals: 18,
-	// 	pair_token1_decimals: 18,
-	// 	pool_tokens: ["FRAX", "WETH"],
-	// 	reward_tokens: ["FXS", "FRAX", "WETH"],
-  //   reward_token_decimals: [18],
-	// 	reward_token_coingecko_slugs: ["frax-share", "frax", "weth"],
-	// 	version: 1000
-	// },
-	"Uniswap FRAX/WETH": {
-		lp_logo: "uniswap",
-		slug: "Uniswap_FRAX_WETH",
-		label: "Uniswap FRAX/WETH",
-		chain: "ethereum",
-		info_link: "https://v2.info.uniswap.org/pair/0xfd0a40bc83c5fae4203dec7e5929b446b07d1c76",
-		add_liq_link: "https://app.uniswap.org/#/add/v2/0x853d955acef822db058eb8505911ed77f175b99e/ETH",
-		trade_link: "https://app.uniswap.org/#/swap?use=V2&inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=ETH",
-		farming_link: "https://app.frax.finance/staking#Uniswap_FRAX_WETH",
-    starting_block: 11465735,
-		staking_enabled: false,
-		external_contract: false,
-		pool_tokens: ["FRAX", "WETH"],
-		reward_tokens: ["FXS"],
-		reward_token_decimals: [18],
-		reward_token_coingecko_slugs: ["frax-share"],
-		version: 1
-	},
-	"Uniswap FRAX/FXS": {
-		lp_logo: "uniswap",
-		slug: "Uniswap_FRAX_FXS",
-		label: "Uniswap FRAX/FXS",
-		chain: "ethereum",
-		info_link: "https://v2.info.uniswap.org/pair/0xe1573b9d29e2183b1af0e743dc2754979a40d237",
-		add_liq_link: "https://app.uniswap.org/#/add/v2/0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0/0x853d955acef822db058eb8505911ed77f175b99e",
-		trade_link: "https://app.uniswap.org/#/swap?use=V2&inputCurrency=0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0&outputCurrency=0x853d955acef822db058eb8505911ed77f175b99e",
-		farming_link: "https://app.frax.finance/staking#Uniswap_FRAX_FXS",
-    starting_block: 11465739,
-		staking_enabled: true,
-		external_contract: false,
-		pool_tokens: ["FRAX", "FXS"],
-		reward_tokens: ["FXS"],
-    	reward_token_decimals: [18],
-		reward_token_coingecko_slugs: ["frax-share"],
-		version: 1
-	},
-	"Uniswap FRAX/IQ": {
-		lp_logo: "uniswap",
-		slug: "Uniswap_FRAX_IQ",
-		label: "Uniswap FRAX/IQ",
-		chain: "ethereum",
-		info_link: "https://v2.info.uniswap.org/pair/0xd6c783b257e662ca949b441a4fcb08a53fc49914",
-		add_liq_link: "https://app.uniswap.org/#/add/v2/0x853d955acef822db058eb8505911ed77f175b99e/0x579cea1889991f68acc35ff5c3dd0621ff29b0c9",
-		trade_link: "https://app.uniswap.org/#/swap?use=V2&inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0x579cea1889991f68acc35ff5c3dd0621ff29b0c9",
-		farming_link: "https://app.frax.finance/staking#Uniswap_FRAX_IQ",
-    starting_block: 12512549,
-		staking_enabled: true,
-		vefxs_enabled: true,
-		external_contract: false,
-		pool_tokens: ["FRAX", "IQ"],
-		reward_tokens: ["FXS", "IQ"],
-		reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "everipedia"],
-		version: 3
-	},
-	"Uniswap FRAX/OHM": {
-		lp_logo: "uniswap",
-		slug: "Uniswap_FRAX_OHM",
-		label: "Uniswap FRAX/OHM",
-		chain: "ethereum",
-		info_link: "https://v2.info.uniswap.org/pair/0x2dce0dda1c2f98e0f171de8333c3c6fe1bbf4877",
-		add_liq_link: "https://app.uniswap.org/#/add/v2/0x853d955acef822db058eb8505911ed77f175b99e/0x383518188c0c6d7730d91b2c03a03c837814a899",
-		trade_link: "https://app.uniswap.org/#/swap?use=V2&inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0x383518188c0c6d7730d91b2c03a03c837814a899",
-		farming_link: "https://app.frax.finance/staking#Uniswap_FRAX_OHM",
-    starting_block: 12563575,
-		staking_enabled: false,
-		vefxs_enabled: true,
-		external_contract: false,
-		pool_tokens: ["FRAX", "OHM"],
-		reward_tokens: ["FXS", "OHM"],
-		reward_token_decimals: [18, 9],
-		reward_token_coingecko_slugs: ["frax-share", "olympus"],
-		version: 4
-	},
-	'veDAO FRAX': {
-		lp_logo: 'vedao',
-		label: 'veDAO FRAX',
-		chain: 'fantom',
-		external_contract: true,
-		farming_link: 'https://www.vedao.io/#/farms/frax',
-		staking_enabled: true,
-		pool_tokens: ['FRAX'],
-		reward_tokens: ['WEVE'],
-	  },
-	"Vesper Orbit FRAX": {
-    lp_logo: "vesper",
-		slug: "Vesper_Orbit_FRAX",
-		label: "Vesper Orbit FRAX",
-		chain: "ethereum",
-		info_link: "https://app.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
-		add_liq_link: "https://app.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
-		trade_link: "https://app.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
-		farming_link: "https://app.frax.finance/staking#Vesper_Orbit_FRAX",
-    starting_block: 14134745,
-		staking_enabled: true,
-		vefxs_enabled: true,
-		external_contract: false,
-		is_gauged: true,
-		pool_tokens: ["FRAX"],
-		reward_tokens: ["FXS", "VSP"],
+    vefxs_enabled: true,
+    external_contract: false,
+    is_gauged: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FXS", "TEMPLE"],
     reward_token_decimals: [18, 18],
-		reward_token_coingecko_slugs: ["frax-share", "vesper-finance"],
-		version: 102
-	},
-	"Yearn crvFRAX Vault (V3)": {
-		lp_logo: "yearn",
-		label: "Yearn crvFRAX Vault (V3)",
-		chain: "ethereum",
-		external_contract: true,
-		farming_link: "https://yearn.finance/#/vault/0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
-		reward_tokens: ["FRAX3CRV-f"]
-	},
+    reward_token_coingecko_slugs: ["frax-share", "temple"],
+    version: 102,
+  },
+  "Tokemak FRAX Staking": {
+    lp_logo: "tokemak",
+    label: "Tokemak FRAX Staking",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://www.tokemak.xyz/",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["TOKE"],
+  },
+  "Tokemak FXS Staking": {
+    lp_logo: "tokemak",
+    label: "Tokemak FXS Staking",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link: "https://www.tokemak.xyz/",
+    staking_enabled: true,
+    pool_tokens: ["FXS"],
+    reward_tokens: ["TOKE"],
+  },
+  "Trader Joe FRAX/AVAX": {
+    lp_logo: "traderjoe",
+    label: "Trader Joe FRAX/AVAX",
+    chain: "avalanche",
+    external_contract: true,
+    farming_link:
+      "https://traderjoexyz.com/#/farm/0x862905a82382Db9405a40DCAa8Ee9e8F4af52C89-0x188bED1968b795d5c9022F6a0bb5931Ac4c18F00?fm=fm",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "AVAX"],
+    reward_tokens: ["FXS"],
+  },
+  "Trader Joe FRAX/gOHM": {
+    lp_logo: "traderjoe",
+    label: "Trader Joe FRAX/gOHM",
+    chain: "avalanche",
+    external_contract: true,
+    farming_link:
+      "https://traderjoexyz.com/#/farm/0x3E6Be71dE004363379d864006AAC37C9F55F8329-0x188bED1968b795d5c9022F6a0bb5931Ac4c18F00",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "gOHM"],
+    reward_tokens: ["gOHM"],
+  },
+  "Trader Joe FXS/AVAX": {
+    lp_logo: "traderjoe",
+    label: "Trader Joe FXS/AVAX",
+    chain: "avalanche",
+    external_contract: true,
+    farming_link:
+      "https://traderjoexyz.com/#/farm/0x53942Dcce5087f56cF1D68F4e017Ca3A793F59a2-0x188bED1968b795d5c9022F6a0bb5931Ac4c18F00",
+    staking_enabled: true,
+    pool_tokens: ["FXS", "AVAX"],
+    reward_tokens: ["JOE"],
+  },
+  "Uniswap FRAX/USDC": {
+    lp_logo: "uniswap",
+    slug: "Uniswap_FRAX_USDC",
+    label: "Uniswap FRAX/USDC",
+    chain: "ethereum",
+    info_link:
+      "https://v2.info.uniswap.org/pair/0x97c4adc5d28a86f9470c70dd91dc6cc2f20d2d4d",
+    add_liq_link:
+      "https://app.uniswap.org/#/add/v2/0x853d955acef822db058eb8505911ed77f175b99e/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    trade_link:
+      "https://app.uniswap.org/#/swap?use=V2&inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    farming_link: "https://app.frax.finance/staking#Uniswap_FRAX_USDC",
+    starting_block: 11465735,
+    staking_enabled: false,
+    external_contract: false,
+    is_migratable_to_v3: false,
+    pool_tokens: ["FRAX", "USDC"],
+    reward_tokens: ["FXS"],
+    reward_token_decimals: [18],
+    reward_token_coingecko_slugs: ["frax-share"],
+    version: 1,
+  },
+  "Uniswap V3 FRAX/agEUR": {
+    lp_logo: "uniswap_v3",
+    slug: "Uniswap_V3_FRAX_agEUR",
+    label: "Uniswap V3 FRAX/agEUR",
+    chain: "ethereum",
+    info_link:
+      "https://info.uniswap.org/#/pools/0x8ce5796ef6b0c5918025bcf4f9ca908201b030b3",
+    add_liq_link:
+      "https://app.uniswap.org/#/add/0x853d955acef822db058eb8505911ed77f175b99e/0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8/500",
+    trade_link:
+      "https://app.uniswap.org/#/swap?inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8",
+    farming_link: "https://app.frax.finance/staking#Uniswap_V3_FRAX_agEUR",
+    starting_block: 13715882,
+    staking_enabled: true,
+    external_contract: false,
+    vefxs_enabled: true,
+    is_gauged: true,
+    pair_token0_decimals: 18,
+    pair_token1_decimals: 18,
+    pool_tokens: ["FRAX", "agEUR"],
+    reward_tokens: ["FXS", "FRAX", "agEUR"],
+    reward_token_decimals: [18],
+    reward_token_coingecko_slugs: ["frax-share", "frax", "ageur"],
+    version: 1000,
+  },
+  "Uniswap V3 FRAX/DAI": {
+    lp_logo: "uniswap_v3",
+    slug: "Uniswap_V3_FRAX_DAI",
+    label: "Uniswap V3 FRAX/DAI",
+    chain: "ethereum",
+    info_link:
+      "https://info.uniswap.org/#/pools/0x97e7d56a0408570ba1a7852de36350f7713906ec",
+    add_liq_link:
+      "https://app.uniswap.org/#/add/0x853d955acef822db058eb8505911ed77f175b99e/0x6B175474E89094C44Da98b954EedeAC495271d0F/500",
+    trade_link:
+      "https://app.uniswap.org/#/swap?inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0x6B175474E89094C44Da98b954EedeAC495271d0F",
+    farming_link: "https://app.frax.finance/staking#Uniswap_V3_FRAX_DAI",
+    starting_block: 12934415,
+    staking_enabled: true,
+    external_contract: false,
+    vefxs_enabled: true,
+    is_gauged: true,
+    pair_token0_decimals: 18,
+    pair_token1_decimals: 18,
+    pool_tokens: ["FRAX", "DAI"],
+    reward_tokens: ["FXS", "FRAX", "DAI"],
+    reward_token_decimals: [18],
+    reward_token_coingecko_slugs: ["frax-share", "frax", "dai"],
+    version: 1000,
+  },
+  "Uniswap V3 FRAX/USDC": {
+    lp_logo: "uniswap_v3",
+    slug: "Uniswap_V3_FRAX_USDC",
+    label: "Uniswap V3 FRAX/USDC",
+    chain: "ethereum",
+    info_link:
+      "https://info.uniswap.org/#/pools/0xc63b0708e2f7e69cb8a1df0e1389a98c35a76d52",
+    add_liq_link:
+      "https://app.uniswap.org/#/add/0x853d955acef822db058eb8505911ed77f175b99e/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48/500",
+    trade_link:
+      "https://app.uniswap.org/#/swap?inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    farming_link: "https://app.frax.finance/staking#Uniswap_V3_FRAX_USDC",
+    starting_block: 12829216,
+    staking_enabled: true,
+    external_contract: false,
+    vefxs_enabled: true,
+    is_gauged: true,
+    pair_token0_decimals: 18,
+    pair_token1_decimals: 6,
+    pool_tokens: ["FRAX", "USDC"],
+    reward_tokens: ["FXS", "FRAX", "USDC"],
+    reward_token_decimals: [18],
+    reward_token_coingecko_slugs: ["frax-share", "frax", "usd-coin"],
+    version: 1000,
+    is_soon: false,
+  },
+  // "Uniswap V3 FRAX/WETH": {
+  // 	lp_logo: "uniswap",
+  // 	slug: "Uniswap_V3_FRAX_WETH",
+  // 	label: "Uniswap V3 FRAX/WETH",
+  // 	chain: "ethereum",
+  // 	info_link: "https://info.uniswap.org/#/pools/0x92c7b5ce4cb0e5483f3365c1449f21578ee9f21a",
+  // 	add_liq_link: "https://app.uniswap.org/#/add/0x853d955acef822db058eb8505911ed77f175b99e/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2/3000",
+  // 	trade_link: "https://app.uniswap.org/#/swap?inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+  // 	farming_link: "https://app.frax.finance/staking#Uniswap_V3_FRAX_WETH",
+  //   starting_block: 6666666666,
+  // 	staking_enabled: true,
+  // 	external_contract: false,
+  //   vefxs_enabled: true,
+  // 	pair_token0_decimals: 18,
+  // 	pair_token1_decimals: 18,
+  // 	pool_tokens: ["FRAX", "WETH"],
+  // 	reward_tokens: ["FXS", "FRAX", "WETH"],
+  //   reward_token_decimals: [18],
+  // 	reward_token_coingecko_slugs: ["frax-share", "frax", "weth"],
+  // 	version: 1000
+  // },
+  "Uniswap FRAX/WETH": {
+    lp_logo: "uniswap",
+    slug: "Uniswap_FRAX_WETH",
+    label: "Uniswap FRAX/WETH",
+    chain: "ethereum",
+    info_link:
+      "https://v2.info.uniswap.org/pair/0xfd0a40bc83c5fae4203dec7e5929b446b07d1c76",
+    add_liq_link:
+      "https://app.uniswap.org/#/add/v2/0x853d955acef822db058eb8505911ed77f175b99e/ETH",
+    trade_link:
+      "https://app.uniswap.org/#/swap?use=V2&inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=ETH",
+    farming_link: "https://app.frax.finance/staking#Uniswap_FRAX_WETH",
+    starting_block: 11465735,
+    staking_enabled: false,
+    external_contract: false,
+    pool_tokens: ["FRAX", "WETH"],
+    reward_tokens: ["FXS"],
+    reward_token_decimals: [18],
+    reward_token_coingecko_slugs: ["frax-share"],
+    version: 1,
+  },
+  "Uniswap FRAX/FXS": {
+    lp_logo: "uniswap",
+    slug: "Uniswap_FRAX_FXS",
+    label: "Uniswap FRAX/FXS",
+    chain: "ethereum",
+    info_link:
+      "https://v2.info.uniswap.org/pair/0xe1573b9d29e2183b1af0e743dc2754979a40d237",
+    add_liq_link:
+      "https://app.uniswap.org/#/add/v2/0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0/0x853d955acef822db058eb8505911ed77f175b99e",
+    trade_link:
+      "https://app.uniswap.org/#/swap?use=V2&inputCurrency=0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0&outputCurrency=0x853d955acef822db058eb8505911ed77f175b99e",
+    farming_link: "https://app.frax.finance/staking#Uniswap_FRAX_FXS",
+    starting_block: 11465739,
+    staking_enabled: true,
+    external_contract: false,
+    pool_tokens: ["FRAX", "FXS"],
+    reward_tokens: ["FXS"],
+    reward_token_decimals: [18],
+    reward_token_coingecko_slugs: ["frax-share"],
+    version: 1,
+  },
+  "Uniswap FRAX/IQ": {
+    lp_logo: "uniswap",
+    slug: "Uniswap_FRAX_IQ",
+    label: "Uniswap FRAX/IQ",
+    chain: "ethereum",
+    info_link:
+      "https://v2.info.uniswap.org/pair/0xd6c783b257e662ca949b441a4fcb08a53fc49914",
+    add_liq_link:
+      "https://app.uniswap.org/#/add/v2/0x853d955acef822db058eb8505911ed77f175b99e/0x579cea1889991f68acc35ff5c3dd0621ff29b0c9",
+    trade_link:
+      "https://app.uniswap.org/#/swap?use=V2&inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0x579cea1889991f68acc35ff5c3dd0621ff29b0c9",
+    farming_link: "https://app.frax.finance/staking#Uniswap_FRAX_IQ",
+    starting_block: 12512549,
+    staking_enabled: true,
+    vefxs_enabled: true,
+    external_contract: false,
+    pool_tokens: ["FRAX", "IQ"],
+    reward_tokens: ["FXS", "IQ"],
+    reward_token_decimals: [18, 18],
+    reward_token_coingecko_slugs: ["frax-share", "everipedia"],
+    version: 3,
+  },
+  "Uniswap FRAX/OHM": {
+    lp_logo: "uniswap",
+    slug: "Uniswap_FRAX_OHM",
+    label: "Uniswap FRAX/OHM",
+    chain: "ethereum",
+    info_link:
+      "https://v2.info.uniswap.org/pair/0x2dce0dda1c2f98e0f171de8333c3c6fe1bbf4877",
+    add_liq_link:
+      "https://app.uniswap.org/#/add/v2/0x853d955acef822db058eb8505911ed77f175b99e/0x383518188c0c6d7730d91b2c03a03c837814a899",
+    trade_link:
+      "https://app.uniswap.org/#/swap?use=V2&inputCurrency=0x853d955acef822db058eb8505911ed77f175b99e&outputCurrency=0x383518188c0c6d7730d91b2c03a03c837814a899",
+    farming_link: "https://app.frax.finance/staking#Uniswap_FRAX_OHM",
+    starting_block: 12563575,
+    staking_enabled: false,
+    vefxs_enabled: true,
+    external_contract: false,
+    pool_tokens: ["FRAX", "OHM"],
+    reward_tokens: ["FXS", "OHM"],
+    reward_token_decimals: [18, 9],
+    reward_token_coingecko_slugs: ["frax-share", "olympus"],
+    version: 4,
+  },
+  "veDAO FRAX": {
+    lp_logo: "vedao",
+    label: "veDAO FRAX",
+    chain: "fantom",
+    external_contract: true,
+    farming_link: "https://www.vedao.io/#/farms/frax",
+    staking_enabled: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["WEVE"],
+  },
+  "Vesper Orbit FRAX": {
+    lp_logo: "vesper",
+    slug: "Vesper_Orbit_FRAX",
+    label: "Vesper Orbit FRAX",
+    chain: "ethereum",
+    info_link:
+      "https://app.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+    add_liq_link:
+      "https://app.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+    trade_link:
+      "https://app.vesper.finance/eth/pools/0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
+    farming_link: "https://app.frax.finance/staking#Vesper_Orbit_FRAX",
+    starting_block: 14134745,
+    staking_enabled: true,
+    vefxs_enabled: true,
+    external_contract: false,
+    is_gauged: true,
+    pool_tokens: ["FRAX"],
+    reward_tokens: ["FXS", "VSP"],
+    reward_token_decimals: [18, 18],
+    reward_token_coingecko_slugs: ["frax-share", "vesper-finance"],
+    version: 102,
+  },
+  "Yearn crvFRAX Vault (V3)": {
+    lp_logo: "yearn",
+    label: "Yearn crvFRAX Vault (V3)",
+    chain: "ethereum",
+    external_contract: true,
+    farming_link:
+      "https://yearn.finance/#/vault/0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "DAI", "USDC", "USDT"],
+    reward_tokens: ["FRAX3CRV-f"],
+  },
   "Zenlink FRAX/GLMR": {
-		lp_logo: "zenlink",
-		label: "Zenlink FRAX/GLMR",
-		chain: "moonbeam",
-		external_contract: true,
-		farming_link: "https://dex.zenlink.pro/#/earn/stake",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "GLMR"],
-		reward_tokens: ["ZLK", "WGLMR"]
-	},
+    lp_logo: "zenlink",
+    label: "Zenlink FRAX/GLMR",
+    chain: "moonbeam",
+    external_contract: true,
+    farming_link: "https://dex.zenlink.pro/#/earn/stake",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "GLMR"],
+    reward_tokens: ["ZLK", "WGLMR"],
+  },
   "Zenlink FRAX/FXS": {
-		lp_logo: "zenlink",
-		label: "Zenlink FRAX/FXS",
-		chain: "moonbeam",
-		external_contract: true,
-		farming_link: "https://dex.zenlink.pro/#/earn/stake",
-		staking_enabled: true,
-		pool_tokens: ["FRAX", "FXS"],
-		reward_tokens: ["ZLK", "WGLMR"]
-	},
+    lp_logo: "zenlink",
+    label: "Zenlink FRAX/FXS",
+    chain: "moonbeam",
+    external_contract: true,
+    farming_link: "https://dex.zenlink.pro/#/earn/stake",
+    staking_enabled: true,
+    pool_tokens: ["FRAX", "FXS"],
+    reward_tokens: ["ZLK", "WGLMR"],
+  },
 };
 
 export const StakeChoiceKeys = Object.keys(StakeChoices);
 export const StakeChoiceSlugToKey = (passed_slug) => {
-	const the_dict = {};
-	StakeChoiceKeys.forEach((key, idx) => {
-			const the_obj = StakeChoices[key];
-			if (the_obj != undefined) the_dict[the_obj.slug] = key;
-	});
-	return the_dict[passed_slug];
-}
+  const the_dict = {};
+  StakeChoiceKeys.forEach((key, idx) => {
+    const the_obj = StakeChoices[key];
+    if (the_obj != undefined) the_dict[the_obj.slug] = key;
+  });
+  return the_dict[passed_slug];
+};
 
-export const GovernanceHistoryCodes = { 
-		"Created": 0,
-		"Active": 1,
-		"Rejected": 2,
-		"Succeeded": 3,
-		"Queued": 4,
-		"Executed": 5
-	
-	// SHOULD ACTUALLY BE, PER THE SMART CONTRACT: 
-	// Pending,
-	// Active,
-	// Canceled,
-	// Defeated,
-	// Succeeded,
-	// Queued,
-	// Expired,
-	// Executed
-}
+export const GovernanceHistoryCodes = {
+  Created: 0,
+  Active: 1,
+  Rejected: 2,
+  Succeeded: 3,
+  Queued: 4,
+  Executed: 5,
+
+  // SHOULD ACTUALLY BE, PER THE SMART CONTRACT:
+  // Pending,
+  // Active,
+  // Canceled,
+  // Defeated,
+  // Succeeded,
+  // Queued,
+  // Expired,
+  // Executed
+};
 
 export const govHistStringFromCode = (code: number) => {
-    const theKeys = Object.keys(GovernanceHistoryCodes);
-    for (let i = 0; i < theKeys.length; i++){
-        const key = theKeys[i];
-        if (GovernanceHistoryCodes[key] == code) return key;
-    }
-    return null;
-}
+  const theKeys = Object.keys(GovernanceHistoryCodes);
+  for (let i = 0; i < theKeys.length; i++) {
+    const key = theKeys[i];
+    if (GovernanceHistoryCodes[key] == code) return key;
+  }
+  return null;
+};
 
 export const CONTRACT_ADDRESSES = {
   ethereum: {
@@ -1283,7 +1344,8 @@ export const CONTRACT_ADDRESSES = {
       veFXS: "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0", // Old: "0xcb75A1655c84589652D0f3A4605e5dDA8431F0a6"
       veFXS_whitelist_checker: "",
       veFXS_boost: "0x59e132164Ec2e48b0714EB6abdb10225Df44dA0e",
-      veFXS_boost_delegation_proxy: "0xb4EB45443D525149410Ee69400c0956A7e89b82e"
+      veFXS_boost_delegation_proxy:
+        "0xb4EB45443D525149410Ee69400c0956A7e89b82e",
     },
     canonicals: {
       // Added here for helping out the ABI
@@ -1293,21 +1355,21 @@ export const CONTRACT_ADDRESSES = {
       FPIS: "0xc2544A32872A91F4A553b404C6950e89De901fdb",
     },
     oracles: {
-      // SDT_WETH: "0xfbe43821dd397afF3341d90211B71C60149DC6D9", 
+      // SDT_WETH: "0xfbe43821dd397afF3341d90211B71C60149DC6D9",
       "FRAX/FPI 0.30%": "0x59985D79E1e69f659f4aB97Db07A35cE73D9174B", // UniV3TWAPOracle, gives FPI price
-      "FRAX/FPIS 1%": "0xfa7c660683Ff22989413256bd57f569562cE1559" // UniV3TWAPOracle, gives FPIS price
+      "FRAX/FPIS 1%": "0xfa7c660683Ff22989413256bd57f569562cE1559", // UniV3TWAPOracle, gives FPIS price
     },
     oracles_other: {
       combo_oracle: "0x878f2059435a19C79c20318ee57657bF4543B6d4", // "0xbdCB57c9d35e8D41babCBcA67416ee6622274caf",
-      combo_oracle_univ2_univ3: "0x1cBE07F3b3bf3BDe44d363cecAecfe9a98EC2dff", // "0xD13c9a29eF6c5ADc7b43BBd5854B07bB9b099862", 
+      combo_oracle_univ2_univ3: "0x1cBE07F3b3bf3BDe44d363cecAecfe9a98EC2dff", // "0xD13c9a29eF6c5ADc7b43BBd5854B07bB9b099862",
       cpi_tracker_oracle: "0x7086F2aCB5558043fF9cE3df346D8E3FB4F4f452", // old: "0x04BaF30115D7bAC714709910Dd286718CfAd8808"
     },
     retired_oracles: {
       FXS_USDC: "0x1F70Af31D041f9C183E23EC6809c04eb8CA006a4", //V1: 0x28fdA30a6Cf71d5fC7Ce17D6d20c788D98Ff2c46
       FXS_WETH: "0x3B11DA52030420c663d263Ad4415a8A02E5f8cf8", // V1: "0x9e483C76D7a66F7E1feeBEAb54c349Df2F00eBdE"
-      FRAX_FXS: "0x4b85bD29f71b364ae6183C9721Ae5f596E7Bfd3d",  // V1: 0xD0435BF68dF2B516C6382caE8847Ab5cdC5c3Ea7
-      FRAX_USDC: "0x2E45C589A9F301A2061f6567B9F432690368E3C6",  // V1: 0x2AD064cEBA948A2B062ba9AfF91c98B9F0a1f608
-      FRAX_WETH: "0x9b1A56A2E7164c43384448d82253781c1318A77E",  // V1: 0xD18660Ab8d4eF5bE062652133fe4348e0cB996DA
+      FRAX_FXS: "0x4b85bD29f71b364ae6183C9721Ae5f596E7Bfd3d", // V1: 0xD0435BF68dF2B516C6382caE8847Ab5cdC5c3Ea7
+      FRAX_USDC: "0x2E45C589A9F301A2061f6567B9F432690368E3C6", // V1: 0x2AD064cEBA948A2B062ba9AfF91c98B9F0a1f608
+      FRAX_WETH: "0x9b1A56A2E7164c43384448d82253781c1318A77E", // V1: 0xD18660Ab8d4eF5bE062652133fe4348e0cB996DA
       USDC_WETH: "0x69B9E922ecA72Cda644a8e32B8427000059388c6", // V1: "0x5e48C34f1005a514DaF0E1aEc53Dbb70fdC2C9F9"
     },
     pid_related: {
@@ -1362,15 +1424,20 @@ export const CONTRACT_ADDRESSES = {
     },
     rari_unitrollers: {
       "Tetranode's Locker (#6)": "0x814b02C1ebc9164972D888495927fe1697F0Fb4c", // Unitrollers
-      "ChainLinkGod's / Tetranode's Up Only Pool (#7)": "0xfb558ecd2d24886e8d2956775c619deb22f154ef",
-      "Frax & Reflexer Stable Asset Pool (#9)": "0xd4bdcca1ca76ced6fc8bb1ba91c5d7c0ca4fe567",
-      "Olympus Pool Party Frax (#18)": "0x621579dd26774022f33147d3852ef4e00024b763",
+      "ChainLinkGod's / Tetranode's Up Only Pool (#7)":
+        "0xfb558ecd2d24886e8d2956775c619deb22f154ef",
+      "Frax & Reflexer Stable Asset Pool (#9)":
+        "0xd4bdcca1ca76ced6fc8bb1ba91c5d7c0ca4fe567",
+      "Olympus Pool Party Frax (#18)":
+        "0x621579dd26774022f33147d3852ef4e00024b763",
       "IndexCoop Pool (#19)": "0x3cb4f05061749497187b7ab4ef6f6f6018b2ee67",
       "Harvest FARMstead (#24)": "0x64858bac30f4cc223ea07adc09a51acdcd225998",
-      "Token Mass Injection Pool (#26)": "0xC202Be8EbaF758A7dc8f227e6De88bE5D28c69dd",
+      "Token Mass Injection Pool (#26)":
+        "0xC202Be8EbaF758A7dc8f227e6De88bE5D28c69dd",
       "Stake DAO Pool (#27)": "0x35De88F04aD31a396aedb33f19aebe7787C02560",
       "NFTX Pool (#31)": "0x26577903c42ce72740a8abb50e7cf97a8e5b5564",
-      "Fraximalist Money Market (#36)": "0x93de950f609f51b1ff0c5bf81d8588fbadde7d5c",
+      "Fraximalist Money Market (#36)":
+        "0x93de950f609f51b1ff0c5bf81d8588fbadde7d5c",
       "DOG PARK (#45)": "0x5BF5718DBC5138DBF863Ba2332c3559c98460265",
       "Float Protocol Pool (#90)": "0xa58056E9DcC7Bf3006DBb695a4cD70A11553b9bF",
       "0xb1s Kitchen Sink (#127)": "0x8922C1147E141C055fdDfc0ED5a119f3378c8ef8",
@@ -1378,15 +1445,20 @@ export const CONTRACT_ADDRESSES = {
     },
     rari_pools: {
       "Tetranode's Locker (#6)": "0x1531C1a63A169aC75A2dAAe399080745fa51dE44", // CErc20Delegators
-      "ChainLinkGod's / Tetranode's Up Only Pool (#7)": "0x6313c160b329db59086df28ed2bf172a82f0d9d1",
-      "Frax & Reflexer Stable Asset Pool (#9)": "0x0f43a7e3f7b529015B0517D0D9Aa9b95701fd2Cb",
-      "Olympus Pool Party Frax (#18)": "0x3e5c122ffa75a9fe16ec0c69f7e9149203ea1a5d",
+      "ChainLinkGod's / Tetranode's Up Only Pool (#7)":
+        "0x6313c160b329db59086df28ed2bf172a82f0d9d1",
+      "Frax & Reflexer Stable Asset Pool (#9)":
+        "0x0f43a7e3f7b529015B0517D0D9Aa9b95701fd2Cb",
+      "Olympus Pool Party Frax (#18)":
+        "0x3e5c122ffa75a9fe16ec0c69f7e9149203ea1a5d",
       "IndexCoop Pool (#19)": "0x64E6aF978138732aef99C0648c195B12A6bc2A38",
       "Harvest FARMstead (#24)": "0x0A6eAfaA84188A146749D7864bB20E63bD16ea2A",
-      "Token Mass Injection Pool (#26)": "0x2e818c80844d35c8e1667ceca03f31074ef6bb46",
+      "Token Mass Injection Pool (#26)":
+        "0x2e818c80844d35c8e1667ceca03f31074ef6bb46",
       "Stake DAO Pool (#27)": "0x9de558FCE4F289b305E38ABe2169b75C626c114e",
       "NFTX Pool (#31)": "0x1BA12ae1FCFadd08FA37Db849Ef4b6e11e435357",
-      "Fraximalist Money Market (#36)": "0x5e116a4521c99324f344eb7c7bfe1f78e3226493",
+      "Fraximalist Money Market (#36)":
+        "0x5e116a4521c99324f344eb7c7bfe1f78e3226493",
       "DOG PARK (#45)": "0xC3b6315132d696302dDa91C294aCEf5031546451",
       "Float Protocol Pool (#90)": "0x182b177541fd35A6cEE5Cda1a5B2456586c799B6",
       "0xb1s Kitchen Sink (#127)": "0x8922C1147E141C055fdDfc0ED5a119f3378c8ef8",
@@ -1397,8 +1469,7 @@ export const CONTRACT_ADDRESSES = {
       frax_oracle_wrapper: "0x2A6ddD9401B14d0443d0738B8a78fd5B99829A80",
       fxs_oracle_wrapper: "0xeE0F15e5Ffc105EBb3d1368cf84F43b40caB3480",
       chainlink_eth_usd: "0xBa6C6EaC41a24F9D39032513f66D738B3559f15a",
-      chainlink_fxs_usd: "0x679a15fe8B2108fdA30f292C92abCDE3a1246324"
-
+      chainlink_fxs_usd: "0x679a15fe8B2108fdA30f292C92abCDE3a1246324",
     },
     bridges: {
       frax: {
@@ -1446,7 +1517,7 @@ export const CONTRACT_ADDRESSES = {
         evmos: "0x0000000000000000000000000000000000000000",
         fantom: "0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE", // anySwap: Dump into bridge
         fuse: "",
-        harmony: "0xB37D31b2A74029B5951a2778F959282E2D518595",  // Not used
+        harmony: "0xB37D31b2A74029B5951a2778F959282E2D518595", // Not used
         moonbeam: "0x88A69B4E698A4B090DF6CF5Bd7B2D47325Ad30A3", // Nomad Bridge: send
         moonriver: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
         optimism: "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1",
@@ -1456,41 +1527,41 @@ export const CONTRACT_ADDRESSES = {
       },
       liquidity_bridgers: {
         arbitrum: {
-          anySwap: "0xddf6b5B2BA110a0267BffB86AeAbFe2637cb8375"
+          anySwap: "0xddf6b5B2BA110a0267BffB86AeAbFe2637cb8375",
         },
         aurora: {
-          rainbow: "0xD4f638819Ed2c349E9Cfb6b5168d9e810a9D4f85"
+          rainbow: "0xD4f638819Ed2c349E9Cfb6b5168d9e810a9D4f85",
         },
         avalanche: {
-          anySwap: "0xBA5478A712b5EA898AF03206ab4c7E0608C3e69D" // Old: 0x1c2eFc27f7E892c2A36B7dE78958F83a231b52f1
+          anySwap: "0xBA5478A712b5EA898AF03206ab4c7E0608C3e69D", // Old: 0x1c2eFc27f7E892c2A36B7dE78958F83a231b52f1
         },
         boba: {
           anySwap: "0x4828D4496Ff8dA2f5c1E7217Dc282b5C69B83263",
         },
         bsc: {
-          anySwap: "0x4572B68296A23B4C66696FAd177c50CBc35c532F"
+          anySwap: "0x4572B68296A23B4C66696FAd177c50CBc35c532F",
         },
         evmos: {
-          nomad: "0x0000000000000000000000000000000000000000"
+          nomad: "0x0000000000000000000000000000000000000000",
         },
         fantom: {
-          anySwap: "0x8575FFE80b94fe58c8e0c735E11658A760109f53"
+          anySwap: "0x8575FFE80b94fe58c8e0c735E11658A760109f53",
         },
         fuse: {},
         harmony: {
-          celer: "0x8D0A8f07F5Ea7F0982Ed116993200C331E4cdD27"
+          celer: "0x8D0A8f07F5Ea7F0982Ed116993200C331E4cdD27",
         },
         moonbeam: {
-          nomad: "0xa5924D9baA4fed0fbd100CB47CBCb61eA5E33219"
+          nomad: "0xa5924D9baA4fed0fbd100CB47CBCb61eA5E33219",
         },
         moonriver: {
-          anySwap: "0xc7F48Fb6Dbb6F8A3Eed90553017cDf5725Dc44ac"
+          anySwap: "0xc7F48Fb6Dbb6F8A3Eed90553017cDf5725Dc44ac",
         },
         optimism: {
-          celer: "0x7F35dc487A5422D6946aAD733C6018F163084ed0"
+          celer: "0x7F35dc487A5422D6946aAD733C6018F163084ed0",
         },
         polygon: {
-          maticBridge: "0x6e1A844AFff1aa2a8ba3127dB83088e196187110"
+          maticBridge: "0x6e1A844AFff1aa2a8ba3127dB83088e196187110",
         },
         solana: {
           wormhole_v2: "0xF3a21b5d9E11eECA3a50BEb654276987164AbC8d",
@@ -1501,26 +1572,29 @@ export const CONTRACT_ADDRESSES = {
     misc: {
       aave_amo: "0x66635DC1EdEfF19e839f152a67278151Aa6e1B61",
       amo_minter: "0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241", // Old: 0xF9931973fCc0c37908687Eec2CCB28fC3B94B086
-      amo_minter_old: "0x36a0B6a5F7b318A2B4Af75FFFb1b51a5C78dEB8C", 
-      bundle_utils: "0xD1a7b80a954e56bfd7bd889aF6e2BE8674719F5d", 
+      amo_minter_old: "0x36a0B6a5F7b318A2B4Af75FFFb1b51a5C78dEB8C",
+      bundle_utils: "0xD1a7b80a954e56bfd7bd889aF6e2BE8674719F5d",
       convex_amo: "0x49ee75278820f409ecd67063D8D717B38d66bd71", // Impl: 0x49f77ddd4d57636ab4c98d8f18ca5f4b5210983d
       convex_amo_admin: "0xE53d45ABe10Ce20427D20c5a1b6360Fa5BA0cE0A",
-      crosschain_liquidity_tracker: "", 
+      crosschain_liquidity_tracker: "",
       crvFRAX_vault: "0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139",
       curve_amo: "0x72170Cdc48C33a6AE6B3E83CD387ca3Fb9105da2", // Impl: 0xC3204838aF4CE0597476aDF367B4C9a3cf9a1B51
       curve_amo_impl: "0x5840db064e17480f8e8e74fd6714c9c316f7ddfe", // Old2: 0xbd061885260F176e05699fED9C5a4604fc7F2BDC", Old1: 0x77746DC37Deae008c7149EDc1b1A8D6d63e08Be5, Old2: 0x25e9702359bAf56E505F0BA981eeBFA23ceB030A, Old3: 0x19a47F38D39692617C9D9012eC0176C9ead00a5e
       curve_amo_V1: "0xbd061885260F176e05699fED9C5a4604fc7F2BDC",
       curve_amo_V2: "0xD103FEf74D05FbC20B5184FE85c7187735355DB3", //0xeF8c0b4902b985bF64B8cfF6BbCD0AC1FDc8d5d3", // Proxy: "0x7e983e4f98b16cee76f8f9a6a1e87b5861de8769"
       curve_amo_admin: "0x900909C07c2761d84C5d863FF5905102916DF69C",
-      curve_metapool_locker: "0x70F55767B11c047C8397285E852919F5f6c8DC60", 
-      curve_metapool_locker_2: "0xE4BD0461AE7fdc76c61CE286a80c9B55d83B204a", 
+      curve_metapool_locker: "0x70F55767B11c047C8397285E852919F5f6c8DC60",
+      curve_metapool_locker_2: "0xE4BD0461AE7fdc76c61CE286a80c9B55d83B204a",
       cvx_locker_amo: "0x7038C406e7e2C9F81571557190d26704bB39B8f3",
       fpi_controller_amo: "0x2397321b301B80A1C0911d6f9ED4b6033d43cF51", // Old: "0x309AC8840f9b4C7eEB5bAb1e89669d8dbb86c060",
-      frax3crv_curve_fxs_distributor: "0xBBbAf1adf4d39B2843928CCa1E65564e5ce99ccC", // MAY NEED TO CALL APPROVE FIRST
-      frax3crv_curve_rewards_distributor_eoa: "0x73f9f84b04584227b4f0baffd8b37d6d0c11a23c",
+      frax3crv_curve_fxs_distributor:
+        "0xBBbAf1adf4d39B2843928CCa1E65564e5ce99ccC", // MAY NEED TO CALL APPROVE FIRST
+      frax3crv_curve_rewards_distributor_eoa:
+        "0x73f9f84b04584227b4f0baffd8b37d6d0c11a23c",
       frax_gauge_controller: "0x44ade9AA409B0C29463fF7fcf07c9d3c939166ce",
       frax_gauge_controller_v2: "0x3669C421b77340B2979d1A00a792CC2ee0FcE737",
-      frax_gauge_rewards_distributor: "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34",
+      frax_gauge_rewards_distributor:
+        "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34",
       frax_gauge_v2: "0x72e158d38dbd50a483501c24f792bdaaa3e7d55c",
       fxs_1559_amo: "0x9C6a04871D11b33645ab592f68C41bb2B41F51EE", // Old1: "0xaf02be5968D8Fe9536e24E4c7e888C59A58Bc077"
       fxs_1559_amo_v2: "0xC80C48862E4254F37047235298eDb6AA35717C24", // Proxy
@@ -1542,20 +1616,20 @@ export const CONTRACT_ADDRESSES = {
       ohm_amo: "0x5699d20732a2EFa9A895EF04bb210aa751C4dB96", // Impl: 0x89a5CeC88598c0CE4d4E331D0b027499edd3dfFa
       ohm_amo_admin: "0xE53d45ABe10Ce20427D20c5a1b6360Fa5BA0cE0A",
       rari_amo: "0x96665d63c1B53f8335e3c9287Ee255f306C93c45",
-      stakedao_amo: "0x375278D3C65f29C1A90E8550888f1439cFeFe465", // Impl: 0xcf1e6926b2167f83ec3300bed04a672abd93e646 
+      stakedao_amo: "0x375278D3C65f29C1A90E8550888f1439cFeFe465", // Impl: 0xcf1e6926b2167f83ec3300bed04a672abd93e646
       staking_utilities: "0xE4de6E1DF1FE135D6462554d0Fd36A14d787f689",
       timelock: "0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA",
       token_tracker_amo: "0x3F702a8F6c9f9F7ABdfEA67f89d33F18e0368600",
       token_tracker_v2: "0x37336AD1F3A145C710247E6a14C9AcC7f34D09eE",
       twamm_amo: "0x0000000000000000000000000000000000000000",
-      uniV2_to_uniV3_migrator_address: "0x7b50137E8996A1717a6D97a0527e4c5D2D133405",
+      uniV2_to_uniV3_migrator_address:
+        "0x7b50137E8996A1717a6D97a0527e4c5D2D133405",
       uniV3_liquidity_amo: "0x3814307b86b54b1d8e7B2Ac34662De9125F8f4E6", // Old: "0xef2b0895f986Afd7Eb7939B65E2883C5e199751f",
       vefxs_smart_wallet_checker: "0x53c13BA8834a1567474b19822aAD85c6F90D9f9F",
       vefxs_yield_distributor: "0x19a0a70a68fbC604Bf20A03b787df8f7AC1d50f0",
       vefxs_yield_distributor_v2: "0x62C4cf364078C98fA08AfDB4D3d8D87e780Ebd45",
       vefxs_yield_distributor_v3: "0xed2647Bbf875b2936AAF95a3F5bbc82819e3d3FE",
       vefxs_yield_distributor_v4: "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
-
     },
     libraries: {
       UniswapV2OracleLibrary: "0xeB85Dd2374a44F80342AcF8010d585Bda32B77a0",
@@ -1610,7 +1684,7 @@ export const CONTRACT_ADDRESSES = {
       saddleD4: "0xd48cF4D7FB0824CC8bAe055dF3092584d0a1726A",
       saddleD4_Pool: "0xC69DDcd4DFeF25D8a793241834d4cc4b3668EAD6",
       "sdFRAX3CRV-f": "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7",
-      "stkcvxFPIFRAX": "0x7287488F8Df7dddc5f373142D4827aAF92AAC845",
+      stkcvxFPIFRAX: "0x7287488F8Df7dddc5f373142D4827aAF92AAC845",
       OGTemple: "0x654590F810f01B51dc7B86915D4632977e49EA33",
       gOHM: "0x0ab87046fBb341D058F17CBC4c1133F25a20a52f",
       sOHM: "0x04F2694C8fcee23e8Fd0dfEA1d4f5Bb8c352111F",
@@ -1624,7 +1698,8 @@ export const CONTRACT_ADDRESSES = {
       yvUSDC: "0xa354f35829ae975e850e23e9615b11da1b3dc4de", // V2: "0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9"
     },
     saddle_pools: {
-      "Saddle alUSD/FEI/FRAX/LUSD": "0xC69DDcd4DFeF25D8a793241834d4cc4b3668EAD6",
+      "Saddle alUSD/FEI/FRAX/LUSD":
+        "0xC69DDcd4DFeF25D8a793241834d4cc4b3668EAD6",
     },
     uniswap: {
       router: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
@@ -1645,13 +1720,13 @@ export const CONTRACT_ADDRESSES = {
       "Uniswap V3 FRAX/USDC": "0xc63B0708E2F7e69CB8A1df0e1389A98C35A76D52",
       "Uniswap V3 FRAX/WETH": "0x92c7b5ce4cb0e5483f3365c1449f21578ee9f21a",
       "FRAX/FPI 0.30%": "0xd2a9F2B88d6DF8830522D624db491445362a2797",
-      "FRAX/FPIS 1%": "0x8fE536c7dC019455cce34746755C64bBE2Aa163b"
+      "FRAX/FPIS 1%": "0x8fE536c7dC019455cce34746755C64bBE2Aa163b",
     },
     investor_custodian: "0x5180db0237291A6449DdA9ed33aD90a38787621c",
     multisigs: {
       FPI_Comptroller: "0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502",
-			FPI_Treasury: "0x5181C3c36bD52F783e6E1771d80b1e3AdCB36019",
-			FPI_Core_Contributors_Team: "0x708695db8dF61e646571E78b9b3e2BAd7D6c42E3",
+      FPI_Treasury: "0x5181C3c36bD52F783e6E1771d80b1e3AdCB36019",
+      FPI_Core_Contributors_Team: "0x708695db8dF61e646571E78b9b3e2BAd7D6c42E3",
       Community: "0x63278bF9AcdFC9fA65CFa2940b89A34ADfbCb4A1",
       Team: "0x8D4392F55bC76A046E443eb3bab99887F4366BB0",
       Investors: "0xa95f86fE0409030136D6b82491822B3D70F890b3",
@@ -1678,7 +1753,8 @@ export const CONTRACT_ADDRESSES = {
       "Fraxswap FRAX/WETH": "0x8300f0528e00Ad33b218bb05D396F61A9FDd68Cd", // Old: "0xf2E9fda1fE6a21E519174852A5c752Bd9FBA05A4",
       "Fraxswap FXS/FPIS": "0x1306b420B4B5f99cBeE938E369f06863a0f419A5", // Old: "0xfCCDE09b708115246174DAAFCB13a63332Fc22f0",
       "Gelato Uniswap FRAX/DAI": "0xb1Cfdc7370550f5e421E1bf0BF3CADFaDF3C4141",
-      "Saddle alUSD/FEI/FRAX/LUSD": "0xd48cF4D7FB0824CC8bAe055dF3092584d0a1726A",
+      "Saddle alUSD/FEI/FRAX/LUSD":
+        "0xd48cF4D7FB0824CC8bAe055dF3092584d0a1726A",
       "StakeDAO sdETH-FraxPut": "0x839A989bE40f2D60f00beEB648903732c041CBd7",
       "StakeDAO sdFRAX3CRV-f": "0x5af15DA84A4a6EDf2d9FA6720De921E1026E37b7",
       "Sushi FRAX/SUSHI": "0xe06F8d30AC334c857Fc8c380C85969C150f38A6A",
@@ -1699,13 +1775,14 @@ export const CONTRACT_ADDRESSES = {
       "Vesper Orbit FRAX": "0xc14900dFB1Aa54e7674e1eCf9ce02b3b35157ba5",
       // "Curve FRAX-DAI-USDC-USDT": "0x83D2944d5fC10A064451Dc5852f4F47759F249B6", // Proxied Implementation: https://etherscan.io/address/0x2c7796c0590cc100d70af473993890d457cb2ac9#code
       // "Sushi FRAX/FXS": "0xc218001e3D102e3d1De9bf2c0F7D9626d76C6f30",
-      // "Sushi FXS/WETH": "0x61eB53ee427aB4E007d78A9134AaCb3101A2DC23",   
+      // "Sushi FXS/WETH": "0x61eB53ee427aB4E007d78A9134AaCb3101A2DC23",
     },
     staking_contracts: {
       "Aave aFRAX": "0x02577b426F223A6B4f2351315A19ecD6F357d65c",
       "Convex stkcvxFPIFRAX": "0x0a08673E3d7c454E1c6b27acD059C50Df6727FC9",
       "Gelato Uniswap FRAX/DAI": "0xcdfc491804A420b677f8e788B5157856910E2F6f",
-      "Saddle alUSD/FEI/FRAX/LUSD": "0x0639076265e9f88542C91DCdEda65127974A5CA5",
+      "Saddle alUSD/FEI/FRAX/LUSD":
+        "0x0639076265e9f88542C91DCdEda65127974A5CA5",
       "StakeDAO sdETH-FraxPut": "0x0A53544b2194Dd8Ebc62c779043fc0624705BB56",
       "StakeDAO sdFRAX3CRV-f": "0xEB81b86248d3C2b618CcB071ADB122109DA96Da2",
       "Sushi FRAX/SUSHI": "0xb4Ab0dE6581FBD3A02cF8f9f265138691c3A7d5D",
@@ -1731,7 +1808,8 @@ export const CONTRACT_ADDRESSES = {
       "Angle FRAX/agEUR Perpetuals": "",
       "Aave FRAX Lending": "",
       "APY.Finance Curve FRAX": "",
-      "Axial AC4D TSD/MIM/FRAX/DAI.e": "0x4da067E13974A4d32D342d86fBBbE4fb0f95f382",
+      "Axial AC4D TSD/MIM/FRAX/DAI.e":
+        "0x4da067E13974A4d32D342d86fBBbE4fb0f95f382",
       "Beefy Finance [Avalanche]": "",
       "Beefy Finance [BSC]": "",
       "Beefy Finance [Fantom]": "",
@@ -1744,9 +1822,12 @@ export const CONTRACT_ADDRESSES = {
       "Curve FRAX3CRV-f-2": "",
       "dForce FRAX Lending": "",
       "Echidna Finance FRAX": "",
-      "Hundred FRAX Lending [Arbitrum]": "0xb1c4426C86082D91a6c097fC588E5D5d8dD1f5a8",
-      "Hundred FRAX Lending [Fantom]": "0xb4300e088a3AE4e624EE5C71Bc1822F68BB5f2bc",
-      "Hundred FRAX Lending [Moonriver]": "0x8e15a22853a0a60a0fbb0d875055a8e66cff0235",
+      "Hundred FRAX Lending [Arbitrum]":
+        "0xb1c4426C86082D91a6c097fC588E5D5d8dD1f5a8",
+      "Hundred FRAX Lending [Fantom]":
+        "0xb4300e088a3AE4e624EE5C71Bc1822F68BB5f2bc",
+      "Hundred FRAX Lending [Moonriver]":
+        "0x8e15a22853a0a60a0fbb0d875055a8e66cff0235",
       "Liquid Driver FRAX/FTM": "",
       "Lobis FXS Bonds": "",
       "Market.xyz FRAX Lending": "",
@@ -1756,7 +1837,8 @@ export const CONTRACT_ADDRESSES = {
       "Pickle Finance FRAX/DAI": "",
       "Pickle Finance FRAX/USDC": "",
       "Pickle Finance pveFXS": "",
-      "Planet Finance FRAX Lending": "0x6022bA7e5A70E1bAA98d47a566F3495A26511b25",
+      "Planet Finance FRAX Lending":
+        "0x6022bA7e5A70E1bAA98d47a566F3495A26511b25",
       "Platypus FRAX": "",
       "Rari FRAX Lending": "",
       "Saber wFRAX/USDC": "", // FRAXXvt2ucEsxYPK4nufDy5zKhb2xysieqRBE1dQTqnK
@@ -1770,12 +1852,14 @@ export const CONTRACT_ADDRESSES = {
       "SpiritSwap FRAX/FTM": "0x7ed0cdDB9BB6c6dfEa6fB63E117c8305479B8D7D", // MasterChef Pool #14
       "SpiritSwap FRAX/USDC": "0x1478AEC7896e40aE5fB858C77D389F0B3e6CbC5d",
       // "SpiritSwap FRAX/FXS": "0x100FcF27C87D1cc7b8D6c28b69b84A359e4fd377", // MasterChef Pool #16
-      "SpiritSwap/Ola FRAX Lending": "0x88c05534566f3bd6b6d704c9259408ff1f1a3f00",
+      "SpiritSwap/Ola FRAX Lending":
+        "0x88c05534566f3bd6b6d704c9259408ff1f1a3f00",
       "StakeDAO sdFXS": "",
       "Sushi FRAX/ETH": "0xeC8C342bc3E07F05B9a782bc34e7f04fB9B44502",
       "Sushi FRAX/ETH [Harmony]": "",
       "Sushi FRAX/FXS [Polygon]": "0xdf45b5b68d9dc84173dd963c763aea8cad3e24a6",
-      "Sushi FRAX/USDC [Moonriver]": "0x310C4d18640aF4878567c4A31cB9cBde7Cd234A3",
+      "Sushi FRAX/USDC [Moonriver]":
+        "0x310C4d18640aF4878567c4A31cB9cBde7Cd234A3",
       "Tokemak FRAX Staking": "",
       "Tokemak FXS Staking": "",
       "Trader Joe FRAX/AVAX": "0x862905a82382db9405a40dcaa8ee9e8f4af52c89",
@@ -1830,7 +1914,7 @@ export const CONTRACT_ADDRESSES = {
     },
     multisigs: {
       Comptrollers: "0xe61D9ed1e5Dc261D1e90a99304fADCef2c76FD10",
-      FPI_Comptroller: "0xF0D5007dB0393c9D5F6A88A5F82Df520EA483fDb"
+      FPI_Comptroller: "0xF0D5007dB0393c9D5F6A88A5F82Df520EA483fDb",
     },
     oracles: {
       single_assets: {
@@ -1848,7 +1932,7 @@ export const CONTRACT_ADDRESSES = {
       v3_nft_manager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
       v3_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
       fraxswap_factory: "0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E",
-      fraxswap_router: "0xc2544A32872A91F4A553b404C6950e89De901fdb"
+      fraxswap_router: "0xc2544A32872A91F4A553b404C6950e89De901fdb",
     },
     amos: {
       curve: "0x62544Bd5da87F51934C09cD6464757ACecaf8e49",
@@ -1859,7 +1943,7 @@ export const CONTRACT_ADDRESSES = {
       weth: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
       SPELL: "0x3E6648C5a70A150A88bCE65F4aD4d506Fe15d2AF",
       SDL: "0x75c9bc761d88f70156daf83aa010e84680baf131",
-      VSTA: "0xa684cd057951541187f288294a1e1C2646aA2d24"
+      VSTA: "0xa684cd057951541187f288294a1e1C2646aA2d24",
     },
     bearer_tokens: {
       curve4pool: "0x1C5ffa4FB4907B681c61B8c82b28C4672ceb1974",
@@ -1988,7 +2072,7 @@ export const CONTRACT_ADDRESSES = {
     },
     multisigs: {
       Comptrollers: "0xc036Caff65c1A31eAa53e60F6E17f1E6689937AA",
-      FPI_Comptroller: "0xB3e03c9C1820C6216953FB1BBC6fFd232ac12a19"
+      FPI_Comptroller: "0xB3e03c9C1820C6216953FB1BBC6fFd232ac12a19",
     },
     oracles: {
       single_assets: {
@@ -2007,7 +2091,7 @@ export const CONTRACT_ADDRESSES = {
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
       fraxswap_factory: "0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E",
-      fraxswap_router: "0xc2544A32872A91F4A553b404C6950e89De901fdb"
+      fraxswap_router: "0xc2544A32872A91F4A553b404C6950e89De901fdb",
     },
     amos: {
       axial: "0x81C9e3327e620e74e41cF14b2FD7319084E6a246",
@@ -2019,7 +2103,8 @@ export const CONTRACT_ADDRESSES = {
     },
     bearer_tokens: {
       curve4pool: "0xcb11EE4B70d73e38a383b8691cAFb221059669cC",
-      "Axial AC4D TSD/MIM/FRAX/DAI.e": "0x4da067E13974A4d32D342d86fBBbE4fb0f95f382",
+      "Axial AC4D TSD/MIM/FRAX/DAI.e":
+        "0x4da067E13974A4d32D342d86fBBbE4fb0f95f382",
       "FRAX3CRV-f": "0xE013593CEA239E445d2271106836b00C9E7356ae",
       gOHM: "0x321E7092a180BB43555132ec53AaA65a5bF84251",
     },
@@ -2150,7 +2235,7 @@ export const CONTRACT_ADDRESSES = {
     },
     multisigs: {
       Comptrollers: "0x8811Da0385cCf1848B21475A42eA4D07Fc5d964a",
-      FPI_Comptroller: "0x49f9cbf5333d8e50c9BE76c775777DB2ACb1d456"
+      FPI_Comptroller: "0x49f9cbf5333d8e50c9BE76c775777DB2ACb1d456",
     },
     collaterals: {
       BUSD: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
@@ -2180,7 +2265,7 @@ export const CONTRACT_ADDRESSES = {
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
       fraxswap_factory: "0xa007a9716dba05289df85A90d0Fd9D39BEE808dE",
-      fraxswap_router: "0x0AE84c1A6E142Ed90f8A35a7E7B216CB25469E37"
+      fraxswap_router: "0x0AE84c1A6E142Ed90f8A35a7E7B216CB25469E37",
     },
     amos: {
       apeswap_liquidity: "0xD900397B25Cb25043C9d850c3ECfaEe1884de470",
@@ -2217,7 +2302,8 @@ export const CONTRACT_ADDRESSES = {
       "ApeSwap canFXS/WBNB": "0x5c8D727b265DBAfaba67E050f2f739cAeEB4A6F9", // MasterApe
       "Impossible FRAX/IF": "0x5e1F728C0123f7e8B237F61D0105bf9CBd8867B5",
       "Impossible FRAX/FXS": "0x5BE579e5fFF39a958E6269C6D011cd5f21e2cc32",
-      "Planet Finance FRAX Lending": "0x6022bA7e5A70E1bAA98d47a566F3495A26511b25",
+      "Planet Finance FRAX Lending":
+        "0x6022bA7e5A70E1bAA98d47a566F3495A26511b25",
     },
   },
   evmos: {
@@ -2275,7 +2361,7 @@ export const CONTRACT_ADDRESSES = {
     reward_tokens: {
       madWETH: "0x5842C5532b61aCF3227679a8b1BD0242a41752f2",
       weth: "0x5842C5532b61aCF3227679a8b1BD0242a41752f2",
-      wevmos: "0xD4949664cD82660AaE99bEdc034a0deA8A0bd517"
+      wevmos: "0xD4949664cD82660AaE99bEdc034a0deA8A0bd517",
     },
     vamms: {},
     pair_tokens: {
@@ -2327,19 +2413,21 @@ export const CONTRACT_ADDRESSES = {
       },
       cross_chain_oracle: "0xD41c352bcF599C4C3C7b516eA005ADb2dB219f2c",
       solidex: {
-        'Solidly StableV1 AMM - USDC/FRAX': "0xb712C352D6338f1aDe3Ee20C1297Bfd1b68F5c22",
-        'Solidly VolatileV1 AMM - FXS/FRAX': "0x1CdAB56fd36196AF27029cD482Aa7B79E9be547C"
-      }
+        "Solidly StableV1 AMM - USDC/FRAX":
+          "0xb712C352D6338f1aDe3Ee20C1297Bfd1b68F5c22",
+        "Solidly VolatileV1 AMM - FXS/FRAX":
+          "0x1CdAB56fd36196AF27029cD482Aa7B79E9be547C",
+      },
     },
     oracles_other: {
       combo_oracle: "0x496E5c8F169C2930Dd67B821d8DdDDC78542f290", // "0xde606CB6Ff5d897Ad8396C6fd9C830D1B81Aca13",
       combo_oracle_univ2_univ3: "0x689C5BC12B0A80a8aa33dc38dfDFB7E858A49601", // "0x4aF1C4dFe82C20481EA07755b200c29dD285E175",
-      cpi_tracker_oracle: "0x2ef9CEf769fB9E529C681193D20DE4d682B49eb4"
+      cpi_tracker_oracle: "0x2ef9CEf769fB9E529C681193D20DE4d682B49eb4",
     },
     multisigs: {
       Comptrollers: "0xE838c61635dd1D41952c68E47159329443283d90",
       FPI_Comptroller: "0xe722B0fA594e290a8E53bFB5654cE4Ad8a4BE811",
-      InvestorCustodian: "0x5180db0237291A6449DdA9ed33aD90a38787621c"
+      InvestorCustodian: "0x5180db0237291A6449DdA9ed33aD90a38787621c",
     },
     uniswap: {
       v2_router: "0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52",
@@ -2347,7 +2435,7 @@ export const CONTRACT_ADDRESSES = {
       v3_nft_manager: "0x0000000000000000000000000000000000000000",
       v3_router: "0x0000000000000000000000000000000000000000",
       fraxswap_factory: "0xF55C563148cA0c0F1626834ec1B8651844D76792",
-      fraxswap_router: "0xa007a9716dba05289df85A90d0Fd9D39BEE808dE"
+      fraxswap_router: "0xa007a9716dba05289df85A90d0Fd9D39BEE808dE",
     },
     amos: {
       curve: "0x442A3c0B86981e33b28011428d6A752eD983b81a",
@@ -2376,10 +2464,13 @@ export const CONTRACT_ADDRESSES = {
       oxSOLID: "0xDA0053F0bEfCbcaC208A3f867BB243716734D809",
       "Saddle FRAX/USDC": "0xc969dD0A7AB0F8a0C5A69C0839dB39b6C928bC08",
       scFRAX: "0x4E6854EA84884330207fB557D1555961D85Fc17E",
-      "sex-sAMM-USDC/FRAX Deposit": "0xF3E57E9cba43F9998559161DDd40aaeB2225E700",
+      "sex-sAMM-USDC/FRAX Deposit":
+        "0xF3E57E9cba43F9998559161DDd40aaeB2225E700",
       "sex-vAMM-FXS/FRAX Deposit": "0xa5944150136aCF58e4e9752703Fcf7B13e8579E7",
-      "Solidly StableV1 AMM - USDC/FRAX": "0x154eA0E896695824C87985a52230674C2BE7731b",
-      "Solidly VolatileV1 AMM - FXS/FRAX": "0x4bBd8467ccd49D5360648CE14830f43a7fEB6e45",
+      "Solidly StableV1 AMM - USDC/FRAX":
+        "0x154eA0E896695824C87985a52230674C2BE7731b",
+      "Solidly VolatileV1 AMM - FXS/FRAX":
+        "0x4bBd8467ccd49D5360648CE14830f43a7fEB6e45",
     },
     vamms: {
       USDC: "0xBea9F78090bDB9e662d8CB301A00ad09A5b756e9", // Saddle FRAX/USDC SwapFlashLoan
@@ -2394,7 +2485,8 @@ export const CONTRACT_ADDRESSES = {
       "Liquid Driver FRAX/FTM": "0x7ed0cdDB9BB6c6dfEa6fB63E117c8305479B8D7D", // Same as SpiritSwap FRAX/FTM
       "SpiritSwap canFRAX/canFXS": "0x7a2aD237e389De505DE7a89768143337E516C6Ce",
       "SpiritSwap canFRAX/FTM": "0x7ed0cddb9bb6c6dfea6fb63e117c8305479b8d7d",
-      "SpiritSwap canFRAX/anyUSDC": "0x1478aec7896e40ae5fb858c77d389f0b3e6cbc5d",
+      "SpiritSwap canFRAX/anyUSDC":
+        "0x1478aec7896e40ae5fb858c77d389f0b3e6cbc5d",
       "SpiritSwap canFXS/anyUSDC": "0xb269a9969a437e778a8bfdb48a720ad366742554",
       "SpiritSwap FRAX/FXS": "0x100FcF27C87D1cc7b8D6c28b69b84A359e4fd377", // old anyFRAX/anyFXS
       "SpiritSwap FRAX/FTM": "0x7ed0cdDB9BB6c6dfEa6fB63E117c8305479B8D7D",
@@ -2411,43 +2503,43 @@ export const CONTRACT_ADDRESSES = {
   fuse: {
     chain_id: 122,
     main: {
-      FRAX: '',
-      FXS: '',
+      FRAX: "",
+      FXS: "",
     },
     canonicals: {
-      FRAX: '',
-      FXS: '',
+      FRAX: "",
+      FXS: "",
     },
     bridge_tokens: {},
     collaterals: {
-      USDC: '',
+      USDC: "",
     },
     bridges: {},
     bridge_backers: {},
     oracles: {
       single_assets: {
-        FRAX: '',
-        FXS: '',
-        USDC: '',
+        FRAX: "",
+        FXS: "",
+        USDC: "",
       },
-      cross_chain_oracle: '',
+      cross_chain_oracle: "",
     },
     oracles_other: {
-      combo_oracle: '',
-      combo_oracle_univ2_univ3: '',
+      combo_oracle: "",
+      combo_oracle_univ2_univ3: "",
     },
     multisigs: {
-      Comptrollers: '',
+      Comptrollers: "",
     },
     uniswap: {
-      v2_router: '',
-      v3_factory: '0x0000000000000000000000000000000000000000',
-      v3_nft_manager: '0x0000000000000000000000000000000000000000',
-      v3_router: '0x0000000000000000000000000000000000000000',
+      v2_router: "",
+      v3_factory: "0x0000000000000000000000000000000000000000",
+      v3_nft_manager: "0x0000000000000000000000000000000000000000",
+      v3_router: "0x0000000000000000000000000000000000000000",
     },
     amos: {},
     reward_tokens: {
-      wfuse: '0x0BE9e53fd7EDaC9F859882AfdDa116645287C629',
+      wfuse: "0x0BE9e53fd7EDaC9F859882AfdDa116645287C629",
     },
     vamms: {},
     pair_tokens: {},
@@ -2560,7 +2652,7 @@ export const CONTRACT_ADDRESSES = {
       madUSDC: "0xD3dfD3eDe74E0DCEBC1AA685e151332857efCe2d", // Nomad Bridge
     }, // https://app.nomad.xyz/
     bridge_backers: {
-      nomad: "0xa5924D9baA4fed0fbd100CB47CBCb61eA5E33219"
+      nomad: "0xa5924D9baA4fed0fbd100CB47CBCb61eA5E33219",
     },
     oracles: {
       single_assets: {
@@ -2587,7 +2679,7 @@ export const CONTRACT_ADDRESSES = {
       v3_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
       fraxswap_factory: "0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E",
       fraxswap_router: "0xc2544A32872A91F4A553b404C6950e89De901fdb",
-    },    
+    },
     amos: {},
     reward_tokens: {
       WGLMR: "0xAcc15dC74880C9944775448304B263D191c6077F",
@@ -2622,13 +2714,13 @@ export const CONTRACT_ADDRESSES = {
       anyFXS: "0x338726dd694dB9e2230eC2bB8624a2d7F566C96d",
       celrFRAX: "0x8c75adB1D9f38F6C2AF54BE8120F598b9dba446C",
       celrFXS: "0xC1d6E421a062Fdbb26C31Db4a2113dF0F678CD04",
-      synFRAX: "0xE96AC70907ffF3Efee79f502C985A7A21Bce407d"
+      synFRAX: "0xE96AC70907ffF3Efee79f502C985A7A21Bce407d",
     },
     collaterals: {
       // MIM: "0x0caE51e1032e8461f4806e26332c030E34De3aDb",
       anyUSDC: "0xE3F5a90F9cb311505cd691a46596599aA1A0AD7D",
       USDC: "0xE3F5a90F9cb311505cd691a46596599aA1A0AD7D",
-      USDT: "0xB44a9B6905aF7c801311e8F4E76932ee959c663C"
+      USDT: "0xB44a9B6905aF7c801311e8F4E76932ee959c663C",
     },
     bridges: {
       anyFRAX: "0x10c6b61DbF44a083Aec3780aCF769C77BE747E23",
@@ -2675,7 +2767,8 @@ export const CONTRACT_ADDRESSES = {
     pair_tokens: {
       "Solarbeam FRAX/ROME": "0x069c2065100b4d3d982383f7ef3ecd1b95c05894",
       "Solarbeam FRAX/MOVR": "0x2cc54b4A3878e36E1C754871438113C1117a3ad7",
-      "Sushi FRAX/USDC [Moonriver]": "0x310C4d18640aF4878567c4A31cB9cBde7Cd234A3", // Same as Sushi canFRAX/anyUSDC
+      "Sushi FRAX/USDC [Moonriver]":
+        "0x310C4d18640aF4878567c4A31cB9cBde7Cd234A3", // Same as Sushi canFRAX/anyUSDC
       "Sushi canFRAX/canFXS": "0xC5147A6E773343aFE527249a26EF16AFc6a0013F",
       "Sushi canFRAX/anyUSDC": "0x310C4d18640aF4878567c4A31cB9cBde7Cd234A3", // Same as Sushi FRAX/USDC
       "Sushi canFRAX/WMOVR": "0x756057872D1Ad41C703B68e12701D27874fbe533",
@@ -2699,7 +2792,7 @@ export const CONTRACT_ADDRESSES = {
     },
     collaterals: {
       USDC: "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
-      optiUSDC: "0x7F5c764cBc14f9669B88837ca1490cCa17c31607"
+      optiUSDC: "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
     },
     bridges: {
       celrFRAX: "0x61f85fF2a2f4289Be4bb9B72Fc7010B3142B5f41", // IPeggedTokenBridge burn
@@ -2708,7 +2801,7 @@ export const CONTRACT_ADDRESSES = {
       optiUSDC: "0x4200000000000000000000000000000000000010", // IL2StandardBridge withdraw
     },
     bridge_backers: {
-      celer: "0x7F35dc487A5422D6946aAD733C6018F163084ed0"
+      celer: "0x7F35dc487A5422D6946aAD733C6018F163084ed0",
     },
     oracles: {
       single_assets: {
@@ -2733,9 +2826,9 @@ export const CONTRACT_ADDRESSES = {
       v3_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     },
     uni_v3_pools: {
-      'Uniswap V3 FRAX/USDC': '0x98D9aE198f2018503791D1cAf23c6807C135bB6b', // 0.05% Fee
-      'Uniswap V3 FRAX/WETH': '0x1D26A8c06a8020A26C914eA67eC6d30963d2ddD4', // 0.30% Fee
-      'Uniswap V3 FRAX/FXS': '0x01e37e62733d1792e3cF8ce45630589B8Ac7C2ba', // 0.30% Fee
+      "Uniswap V3 FRAX/USDC": "0x98D9aE198f2018503791D1cAf23c6807C135bB6b", // 0.05% Fee
+      "Uniswap V3 FRAX/WETH": "0x1D26A8c06a8020A26C914eA67eC6d30963d2ddD4", // 0.30% Fee
+      "Uniswap V3 FRAX/FXS": "0x01e37e62733d1792e3cF8ce45630589B8Ac7C2ba", // 0.30% Fee
     },
     amos: {},
     reward_tokens: {
@@ -2778,7 +2871,7 @@ export const CONTRACT_ADDRESSES = {
       polyDAI: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063",
       polyUSDC: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
       polyUSDT: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
-      MAI: "0xa3Fa99A148fA48D14Ed51d610c367C61876997F1"
+      MAI: "0xa3Fa99A148fA48D14Ed51d610c367C61876997F1",
     },
     bridges: {
       anyFRAX: "0xfE952465773bE3802eAc343C89aD351C77c00ab1", // Router anyFRAX
@@ -2811,11 +2904,12 @@ export const CONTRACT_ADDRESSES = {
       v3_nft_manager: "0xc36442b4a4522e871399cd717abdd847ab11fe88",
       v3_router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
       fraxswap_factory: "0xc2544A32872A91F4A553b404C6950e89De901fdb",
-      fraxswap_router: "0x9bc2152fD37b196C0Ff3C16f5533767c9A983971"
+      fraxswap_router: "0x9bc2152fD37b196C0Ff3C16f5533767c9A983971",
     },
     rari_pools: {
       "Index Coop Pool (#2)": "0x164835016E1590EE91Eb479c4Eeb1249779856aa",
-      "Green Leverage Locker (#5)": "0xdc546C7CDEbCef7C2123500328feeE15f67F330e",
+      "Green Leverage Locker (#5)":
+        "0xdc546C7CDEbCef7C2123500328feeE15f67F330e",
     },
     amos: {
       curve: "0x0eBA9254301B972f8a6A6bB2D576b2B1e0017C18",
@@ -2881,58 +2975,57 @@ export const CONTRACT_ADDRESSES = {
   zksync: {
     chain_id: 122,
     main: {
-      FRAX: '',
-      FXS: '',
+      FRAX: "",
+      FXS: "",
     },
     canonicals: {
-      FRAX: '',
-      FXS: '',
+      FRAX: "",
+      FXS: "",
     },
     bridge_tokens: {},
     collaterals: {
-      USDC: '',
+      USDC: "",
     },
     bridges: {},
     bridge_backers: {},
     oracles: {
       single_assets: {
-        FRAX: '',
-        FXS: '',
-        USDC: '',
+        FRAX: "",
+        FXS: "",
+        USDC: "",
       },
-      cross_chain_oracle: '',
+      cross_chain_oracle: "",
     },
     oracles_other: {
-      combo_oracle: '',
-      combo_oracle_univ2_univ3: '',
+      combo_oracle: "",
+      combo_oracle_univ2_univ3: "",
     },
     multisigs: {
-      Comptrollers: '',
+      Comptrollers: "",
     },
     uniswap: {
-      v2_router: '',
-      v3_factory: '0x0000000000000000000000000000000000000000',
-      v3_nft_manager: '0x0000000000000000000000000000000000000000',
-      v3_router: '0x0000000000000000000000000000000000000000',
+      v2_router: "",
+      v3_factory: "0x0000000000000000000000000000000000000000",
+      v3_nft_manager: "0x0000000000000000000000000000000000000000",
+      v3_router: "0x0000000000000000000000000000000000000000",
     },
     amos: {},
     reward_tokens: {
-      WETH: '',
+      WETH: "",
     },
     vamms: {},
     pair_tokens: {},
     staking_contracts: {},
   },
-}
-
+};
 
 export const INVESTOR_ALLOCATIONS = {
-  "Aave_AMO": [
+  Aave_AMO: [
     { title: "Unallocated FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "aFRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
   ],
-  "AxialAMO": [
+  AxialAMO: [
     { title: "TSD", big_base: BIG18, symbol: "TSD" },
     { title: "MIM", big_base: BIG18, symbol: "MIM" },
     { title: "FRAX", big_base: BIG18, symbol: "FRAX" },
@@ -2942,20 +3035,28 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Total AC4D USD value", big_base: BIG18, symbol: "USD" },
     { title: "Total USD value", big_base: BIG18, symbol: "USD" },
   ],
-  "Convex_AMO": [
+  Convex_AMO: [
     { title: "Unallocated FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "FRAX withdrawable from LP", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Free Collateral", big_base: BIG6, symbol: "USDC" },
-    { title: "Collateral withdrawable from LP", big_base: BIG6, symbol: "USDC" },
+    {
+      title: "Collateral withdrawable from LP",
+      big_base: BIG6,
+      symbol: "USDC",
+    },
     { title: "Subtotal Collateral", big_base: BIG6, symbol: "USDC" },
     { title: "Total Collateral", big_base: BIG6, symbol: "USDC" },
-    { title: "FRAX3CRV-2-f Free and Owned", big_base: BIG18, symbol: "FRAX3CRV" },
+    {
+      title: "FRAX3CRV-2-f Free and Owned",
+      big_base: BIG18,
+      symbol: "FRAX3CRV",
+    },
     { title: "FRAX3CRV-2-f Total Supply", big_base: BIG18, symbol: "FRAX3CRV" },
     { title: "3CRV Withdrawable", big_base: BIG18, symbol: "3CRV" },
     { title: "FRAX3CRV Value in Vault", big_base: BIG18, symbol: "USD" },
   ],
-  "CROSS_CHAIN_BRIDGE_BACKER": [
+  CROSS_CHAIN_BRIDGE_BACKER: [
     { title: "Free FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Lent FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
@@ -2969,26 +3070,38 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Total Collateral [USD VALUE]", big_base: BIG18, symbol: "USD" },
     { title: "Total USD Value", big_base: BIG18, symbol: "USD" },
   ],
-  "CCFrax1to1AMM": [
+  CCFrax1to1AMM: [
     { title: "Free FRAX", big_base: BIG18, symbol: "canFRAX" },
-    { title: "Free collat, native precision", big_base: BIG6, symbol: "Collat" },
+    {
+      title: "Free collat, native precision",
+      big_base: BIG6,
+      symbol: "Collat",
+    },
     { title: "Free collat, E18", big_base: BIG18, symbol: "Collat" },
     { title: "Total USD Value", big_base: BIG18, symbol: "USD" },
   ],
-  "Curve_AMO": [
+  Curve_AMO: [
     { title: "Unallocated FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "FRAX withdrawable from LP", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Free Collateral", big_base: BIG6, symbol: "USDC" },
-    { title: "Collateral withdrawable from LP", big_base: BIG6, symbol: "USDC" },
+    {
+      title: "Collateral withdrawable from LP",
+      big_base: BIG6,
+      symbol: "USDC",
+    },
     { title: "Subtotal Collateral", big_base: BIG6, symbol: "USDC" },
     { title: "Total Collateral", big_base: BIG6, symbol: "USDC" },
-    { title: "FRAX3CRV-2-f Free and Owned", big_base: BIG18, symbol: "FRAX3CRV" },
+    {
+      title: "FRAX3CRV-2-f Free and Owned",
+      big_base: BIG18,
+      symbol: "FRAX3CRV",
+    },
     { title: "FRAX3CRV-2-f Total Supply", big_base: BIG18, symbol: "FRAX3CRV" },
     { title: "3CRV Withdrawable", big_base: BIG18, symbol: "3CRV" },
     { title: "FRAX3CRV Value in Vault", big_base: BIG18, symbol: "USD" },
   ],
-  "CurveAMO_ARBI": [
+  CurveAMO_ARBI: [
     { title: "FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "USDC", big_base: BIG6, symbol: "USDC" },
     { title: "USDC USD value", big_base: BIG18, symbol: "USD" },
@@ -3002,7 +3115,7 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "FRAX2pool USD value", big_base: BIG18, symbol: "USD" },
     { title: "Total USD value", big_base: BIG18, symbol: "USD" },
   ],
-  "CurveAMO_FTM": [
+  CurveAMO_FTM: [
     { title: "FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "DAI", big_base: BIG18, symbol: "DAI" },
     { title: "USDC", big_base: BIG6, symbol: "USDC" },
@@ -3015,7 +3128,7 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "FRAX2pool USD value", big_base: BIG18, symbol: "USD" },
     { title: "Total USD value", big_base: BIG18, symbol: "USD" },
   ],
-  "CurveAMO_POLY": [
+  CurveAMO_POLY: [
     { title: "FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "DAI", big_base: BIG18, symbol: "DAI" },
     { title: "DAI USD value", big_base: BIG18, symbol: "USD" },
@@ -3031,7 +3144,7 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "FRAX3pool USD value", big_base: BIG18, symbol: "USD" },
     { title: "Total USD value", big_base: BIG18, symbol: "USD" },
   ],
-  "CurveMetapoolLockerAMO": [
+  CurveMetapoolLockerAMO: [
     { title: "Free LP", big_base: BIG18, symbol: "LP" },
     { title: "Staked LP in the vault", big_base: BIG18, symbol: "LP" },
     { title: "Free + Staked LP", big_base: BIG18, symbol: "LP" },
@@ -3039,50 +3152,54 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Free Collateral, in E18", big_base: BIG18, symbol: "USDC" },
     { title: "Total USD Value", big_base: BIG18, symbol: "USD" },
   ],
-  "Investor_V1": [
-      { title: "Unallocated", big_base: BIG6, symbol: "USDC" },
-      { title: "yearn", big_base: BIG6, symbol: "USDC" },
-      { title: "AAVE", big_base: BIG6, symbol: "USDC" },
-      { title: "Compound", big_base: BIG6, symbol: "USDC" },
-      { title: "Total", big_base: BIG6, symbol: "USDC" }
-  ],
-  "Investor_AMO_V3": [
+  Investor_V1: [
     { title: "Unallocated", big_base: BIG6, symbol: "USDC" },
     { title: "yearn", big_base: BIG6, symbol: "USDC" },
     { title: "AAVE", big_base: BIG6, symbol: "USDC" },
     { title: "Compound", big_base: BIG6, symbol: "USDC" },
-    { title: "Total", big_base: BIG6, symbol: "USDC" }
+    { title: "Total", big_base: BIG6, symbol: "USDC" },
   ],
-  "Lending_AMO": [
-      { title: "Unallocated FRAX", big_base: BIG18, symbol: "FRAX" },
-      { title: "crFRAX", big_base: BIG18, symbol: "FRAX" },
-      { title: "FRAX Total", big_base: BIG18, symbol: "FRAX" },
+  Investor_AMO_V3: [
+    { title: "Unallocated", big_base: BIG6, symbol: "USDC" },
+    { title: "yearn", big_base: BIG6, symbol: "USDC" },
+    { title: "AAVE", big_base: BIG6, symbol: "USDC" },
+    { title: "Compound", big_base: BIG6, symbol: "USDC" },
+    { title: "Total", big_base: BIG6, symbol: "USDC" },
   ],
-  "MIM_Convex_AMO": [
+  Lending_AMO: [
+    { title: "Unallocated FRAX", big_base: BIG18, symbol: "FRAX" },
+    { title: "crFRAX", big_base: BIG18, symbol: "FRAX" },
+    { title: "FRAX Total", big_base: BIG18, symbol: "FRAX" },
+  ],
+  MIM_Convex_AMO: [
     { title: "Unallocated MIM", big_base: BIG18, symbol: "MIM" },
     { title: "MIM withdrawable from LP", big_base: BIG18, symbol: "MIM" },
     { title: "Total MIM", big_base: BIG18, symbol: "MIM" },
     { title: "Free Collateral", big_base: BIG6, symbol: "USDC" },
-    { title: "Collateral withdrawable from LP", big_base: BIG6, symbol: "USDC" },
+    {
+      title: "Collateral withdrawable from LP",
+      big_base: BIG6,
+      symbol: "USDC",
+    },
     { title: "Total Collateral", big_base: BIG6, symbol: "USDC" },
     { title: "MIM3CRV Free and Owned", big_base: BIG18, symbol: "MIM3CRV" },
     { title: "MIM3CRV Total Supply", big_base: BIG18, symbol: "MIM3CRV" },
     { title: "3CRV Withdrawable", big_base: BIG18, symbol: "3CRV" },
     { title: "MIM3CRV Value in Vault", big_base: BIG18, symbol: "USD" },
   ],
-  "RARI_AMO": [
+  RARI_AMO: [
     { title: "Unallocated FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "FRAX in Pools", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
   ],
-  "OHM_AMO": [
+  OHM_AMO: [
     { title: "Unallocated FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "OHM Value", big_base: BIG18, symbol: "FRAX" },
     { title: "sOHM Value", big_base: BIG18, symbol: "FRAX" },
     { title: "Bonded OHM Value", big_base: BIG18, symbol: "FRAX" },
     { title: "Total USD Value", big_base: BIG18, symbol: "FRAX" },
   ],
-  "PangolinLiquidityAMO": [
+  PangolinLiquidityAMO: [
     { title: "Free FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "FRAX in LP", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
@@ -3101,7 +3218,7 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Total USD Value in all LPs", big_base: BIG18, symbol: "USD" },
     { title: "Total USD Value in entire AMO", big_base: BIG18, symbol: "USD" },
   ],
-  "LIQUIDITY_BRIDGER": [
+  LIQUIDITY_BRIDGER: [
     { title: "Unbridged FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Bridged FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
@@ -3113,7 +3230,7 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Total Collateral", big_base: BIG18, symbol: "Collat" },
     { title: "Total USD Value", big_base: BIG18, symbol: "USD" },
   ],
-  "MSIG_HELPER": [
+  MSIG_HELPER: [
     { title: "Free FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Lent FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
@@ -3125,14 +3242,14 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Total Collateral", big_base: BIG18, symbol: "Collat" },
     { title: "Total USD Value", big_base: BIG18, symbol: "USD" },
   ],
-  "ScreamAMO": [
+  ScreamAMO: [
     { title: "Free canFRAX", big_base: BIG18, symbol: "canFRAX" },
     { title: "Free scFRAX", big_base: BIG8, symbol: "scFRAX" },
     { title: "Free scFRAX, E18", big_base: BIG18, symbol: "scFRAX" },
     { title: "scFRAX USD Value", big_base: BIG18, symbol: "USD" },
     { title: "Total USD Value", big_base: BIG18, symbol: "FRAX" },
   ],
-  "SpiritSwapLiquidityAMO": [
+  SpiritSwapLiquidityAMO: [
     { title: "Free FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "FRAX in LP", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
@@ -3151,20 +3268,28 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Total USD Value in all LPs", big_base: BIG18, symbol: "USD" },
     { title: "Total USD Value in entire AMO", big_base: BIG18, symbol: "USD" },
   ],
-  "StakeDAO_AMO": [
+  StakeDAO_AMO: [
     { title: "Unallocated FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "FRAX withdrawable from LP", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Free Collateral", big_base: BIG6, symbol: "USDC" },
-    { title: "Collateral withdrawable from LP", big_base: BIG6, symbol: "USDC" },
+    {
+      title: "Collateral withdrawable from LP",
+      big_base: BIG6,
+      symbol: "USDC",
+    },
     { title: "Subtotal Collateral", big_base: BIG6, symbol: "USDC" },
     { title: "Total Collateral", big_base: BIG6, symbol: "USDC" },
-    { title: "FRAX3CRV-2-f Free and Owned", big_base: BIG18, symbol: "FRAX3CRV" },
+    {
+      title: "FRAX3CRV-2-f Free and Owned",
+      big_base: BIG18,
+      symbol: "FRAX3CRV",
+    },
     { title: "FRAX3CRV-2-f Total Supply", big_base: BIG18, symbol: "FRAX3CRV" },
     { title: "3CRV Withdrawable", big_base: BIG18, symbol: "3CRV" },
     { title: "FRAX3CRV Value in Vault", big_base: BIG18, symbol: "USD" },
   ],
-  "SushiSwapLiquidityAMO_HARM": [
+  SushiSwapLiquidityAMO_HARM: [
     { title: "Free FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "FRAX in LP", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
@@ -3183,7 +3308,7 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Total USD Value in all LPs", big_base: BIG18, symbol: "USD" },
     { title: "Total USD Value in entire AMO", big_base: BIG18, symbol: "USD" },
   ],
-  "SushiSwapLiquidityAMO_ARBI": [
+  SushiSwapLiquidityAMO_ARBI: [
     { title: "Free FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "FRAX in LP", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
@@ -3202,7 +3327,7 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Total USD Value in all LPs", big_base: BIG18, symbol: "USD" },
     { title: "Total USD Value in entire AMO", big_base: BIG18, symbol: "USD" },
   ],
-  "SushiSwapLiquidityAMO_POLY": [
+  SushiSwapLiquidityAMO_POLY: [
     { title: "Free FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "FRAX in LP", big_base: BIG18, symbol: "FRAX" },
     { title: "Total FRAX", big_base: BIG18, symbol: "FRAX" },
@@ -3221,17 +3346,33 @@ export const INVESTOR_ALLOCATIONS = {
     { title: "Total USD Value in all LPs", big_base: BIG18, symbol: "USD" },
     { title: "Total USD Value in entire AMO", big_base: BIG18, symbol: "USD" },
   ],
-  "Truefi_AMO": [
+  Truefi_AMO: [
     { title: "Unallocated FRAX", big_base: exports.BIG18, symbol: "FRAX" },
-    { title: "Allocated FRAX in Core Pool", big_base: exports.BIG18, symbol: "FRAX" },
-    { title: "Allocated FRAX in Managed Portfolios", big_base: exports.BIG18, symbol: "FRAX" },
+    {
+      title: "Allocated FRAX in Core Pool",
+      big_base: exports.BIG18,
+      symbol: "FRAX",
+    },
+    {
+      title: "Allocated FRAX in Managed Portfolios",
+      big_base: exports.BIG18,
+      symbol: "FRAX",
+    },
     { title: "Total FRAX", big_base: exports.BIG18, symbol: "FRAX" },
     { title: "Unallocated USDC", big_base: exports.BIG6, symbol: "USDC" },
-    { title: "Allocated USDC in Core Pool", big_base: exports.BIG6, symbol: "USDC" },
-    { title: "Allocated USDC in Managed Portfolios", big_base: exports.BIG6, symbol: "USDC" },
+    {
+      title: "Allocated USDC in Core Pool",
+      big_base: exports.BIG6,
+      symbol: "USDC",
+    },
+    {
+      title: "Allocated USDC in Managed Portfolios",
+      big_base: exports.BIG6,
+      symbol: "USDC",
+    },
     { title: "Total USDC", big_base: exports.BIG6, symbol: "USDC" },
   ],
-  "UniV3_Liquidity_AMO": [
+  UniV3_Liquidity_AMO: [
     { title: "Unallocated FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Unallocated Collateral E18", big_base: BIG18, symbol: "USD" },
     { title: "Total FRAX as Liquidity", big_base: BIG18, symbol: "FRAX" },
@@ -3240,7 +3381,7 @@ export const INVESTOR_ALLOCATIONS = {
 };
 
 export const INVESTOR_REWARDS = {
-  "Convex_AMO": [
+  Convex_AMO: [
     // { title: "CRV in contract", big_base: BIG18, symbol: "CRV" },
     { title: "CRV claimable", big_base: BIG18, symbol: "CRV" },
     // { title: "CVX in contract", big_base: BIG18, symbol: "CVX" },
@@ -3250,18 +3391,14 @@ export const INVESTOR_REWARDS = {
     // { title: "FXS in contract", big_base: BIG18, symbol: "FXS" },
     { title: "FXS claimable", big_base: BIG18, symbol: "FXS" },
   ],
-  "Curve_AMO": [
-    { title: "CRV", big_base: BIG18, symbol: "CRV" }
-  ],
-  "Investor_V1": [
-    { title: "COMP", big_base: BIG18, symbol: "COMP" }
-  ],
-  "Investor_AMO_V3": [
+  Curve_AMO: [{ title: "CRV", big_base: BIG18, symbol: "CRV" }],
+  Investor_V1: [{ title: "COMP", big_base: BIG18, symbol: "COMP" }],
+  Investor_AMO_V3: [
     { title: "COMP", big_base: BIG18, symbol: "COMP" },
     { title: "stkAAVE", big_base: BIG18, symbol: "stkAAVE" },
-    { title: "AAVE", big_base: BIG18, symbol: "AAVE" }
+    { title: "AAVE", big_base: BIG18, symbol: "AAVE" },
   ],
-  "MIM_Convex_AMO": [
+  MIM_Convex_AMO: [
     // { title: "CRV in contract", big_base: BIG18, symbol: "CRV" },
     { title: "CRV claimable", big_base: BIG18, symbol: "CRV" },
     // { title: "CVX in contract", big_base: BIG18, symbol: "CVX" },
@@ -3271,60 +3408,58 @@ export const INVESTOR_REWARDS = {
     // { title: "FXS in contract", big_base: BIG18, symbol: "FXS" },
     { title: "SPELL claimable", big_base: BIG18, symbol: "SPELL" },
   ],
-  "Lending_AMO": [
-    { title: "FNX", big_base: BIG18, symbol: "FNX" }
-  ],
-  "ScreamAMO": [
+  Lending_AMO: [{ title: "FNX", big_base: BIG18, symbol: "FNX" }],
+  ScreamAMO: [
     { title: "Free SCREAM", big_base: BIG18, symbol: "SCREAM" },
     { title: "Unclaimed SCREAM", big_base: BIG18, symbol: "SCREAM" },
     { title: "Free xSCREAM", big_base: BIG18, symbol: "xSCREAM" },
     { title: "SCREAM value of xSCREAM", big_base: BIG18, symbol: "xSCREAM" },
-    { title: "Total SCREAM equivalents", big_base: BIG18, symbol: "SCREAM" }
+    { title: "Total SCREAM equivalents", big_base: BIG18, symbol: "SCREAM" },
   ],
 };
 
 export const TOKEN_BALANCES = {
-  "CROSS_CHAIN_BRIDGE_BACKER": [
+  CROSS_CHAIN_BRIDGE_BACKER: [
     { title: "Free anyFRAX", big_base: BIG18, symbol: "anyFRAX" },
     { title: "Free canFRAX", big_base: BIG18, symbol: "canFRAX" },
     { title: "Free anyFXS", big_base: BIG18, symbol: "anyFXS" },
     { title: "Free canFXS", big_base: BIG18, symbol: "canFXS" },
     { title: "Free Collateral", big_base: BIG6, symbol: "Collat" },
   ],
-  "ScreamAMO": [
+  ScreamAMO: [
     { title: "Free canFRAX", big_base: BIG18, symbol: "canFRAX" },
     { title: "Free scFRAX", big_base: BIG8, symbol: "scFRAX" },
   ],
-  "PangolinLiquidityAMO": [
+  PangolinLiquidityAMO: [
     { title: "Free canFRAX", big_base: BIG18, symbol: "canFRAX" },
     { title: "Free canFXS", big_base: BIG18, symbol: "canFXS" },
     { title: "Free Collateral", big_base: BIG6, symbol: "Collat" },
   ],
-  "SpiritSwapLiquidityAMO": [
+  SpiritSwapLiquidityAMO: [
     { title: "Free canFRAX", big_base: BIG18, symbol: "canFRAX" },
     { title: "Free canFXS", big_base: BIG18, symbol: "canFXS" },
     { title: "Free Collateral", big_base: BIG6, symbol: "Collat" },
   ],
-  "SushiSwapLiquidityAMO_HARM": [
+  SushiSwapLiquidityAMO_HARM: [
     { title: "Free canFRAX", big_base: BIG18, symbol: "canFRAX" },
     { title: "Free canFXS", big_base: BIG18, symbol: "canFXS" },
     { title: "Free Collateral", big_base: BIG6, symbol: "Collat" },
   ],
-  "SushiSwapLiquidityAMO_POLY": [
+  SushiSwapLiquidityAMO_POLY: [
     { title: "Free canFRAX", big_base: BIG18, symbol: "canFRAX" },
     { title: "Free canFXS", big_base: BIG18, symbol: "canFXS" },
     { title: "Free Collateral", big_base: BIG6, symbol: "Collat" },
   ],
-  "LIQUIDITY_BRIDGER": [
+  LIQUIDITY_BRIDGER: [
     { title: "Free FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Free FXS", big_base: BIG18, symbol: "FXS" },
     { title: "Free Collateral", big_base: BIG6, symbol: "Collat" },
   ],
-  "MSIG_HELPER": [
+  MSIG_HELPER: [
     { title: "Free FRAX", big_base: BIG18, symbol: "FRAX" },
     { title: "Free FXS", big_base: BIG18, symbol: "FXS" },
     { title: "Free Collateral", big_base: BIG6, symbol: "Collat" },
   ],
-}
+};
 
-export { }; // Force this file to be a module
+export {}; // Force this file to be a module
