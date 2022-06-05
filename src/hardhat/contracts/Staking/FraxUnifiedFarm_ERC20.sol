@@ -20,9 +20,9 @@ import "./FraxUnifiedFarmTemplate.sol";
 // -------------------- VARIES --------------------
 
 // Convex stkcvxFPIFRAX
-import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
-import "../Misc_AMOs/convex/IDepositToken.sol";
-import "../Misc_AMOs/curve/I2pool.sol";
+// import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
+// import "../Misc_AMOs/convex/IDepositToken.sol";
+// import "../Misc_AMOs/curve/I2pool.sol";
 
 // G-UNI
 // import "../Misc_AMOs/gelato/IGUniPool.sol";
@@ -36,8 +36,8 @@ import "../Misc_AMOs/curve/I2pool.sol";
 // StakeDAO Vault
 // import '../Misc_AMOs/stakedao/IStakeDaoVault.sol';
 
-// Uniswap V2
-// import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
+// Uniswap V2 / Fraxswap
+import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
 
 // Vesper
 // import '../Misc_AMOs/vesper/IVPool.sol';
@@ -51,8 +51,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // -------------------- VARIES --------------------
 
     // Convex stkcvxFPIFRAX
-    IConvexStakingWrapperFrax public stakingToken;
-    I2pool public curvePool;
+    // IConvexStakingWrapperFrax public stakingToken;
+    // I2pool public curvePool;
 
     // G-UNI
     // IGUniPool public stakingToken;
@@ -67,7 +67,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // IStakeDaoVault public stakingToken;
 
     // Uniswap V2
-    // IUniswapV2Pair public stakingToken;
+    IUniswapV2Pair public stakingToken;
 
     // Vesper
     // IVPool public stakingToken;
@@ -104,8 +104,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // -------------------- VARIES --------------------
         // Convex stkcvxFPIFRAX
-        stakingToken = IConvexStakingWrapperFrax(_stakingToken);
-        curvePool = I2pool(0xf861483fa7E511fbc37487D91B6FAa803aF5d37c);
+        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        // curvePool = I2pool(0xf861483fa7E511fbc37487D91B6FAa803aF5d37c);
 
         // G-UNI
         // stakingToken = IGUniPool(_stakingToken);
@@ -122,10 +122,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // stakingToken = IStakeDaoVault(_stakingToken);
 
         // Uniswap V2
-        // stakingToken = IUniswapV2Pair(_stakingToken);
-        // address token0 = stakingToken.token0();
-        // if (token0 == frax_address) frax_is_token0 = true;
-        // else frax_is_token0 = false;
+        stakingToken = IUniswapV2Pair(_stakingToken);
+        address token0 = stakingToken.token0();
+        if (token0 == frax_address) frax_is_token0 = true;
+        else frax_is_token0 = false;
 
         // Vesper
         // stakingToken = IVPool(_stakingToken);
@@ -145,7 +145,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             // frax_per_lp_token = curvePool.get_virtual_price() / 2; 
             // Count full value here since FRAX and FPI are both part of FRAX ecosystem
             // frax_per_lp_token = curvePool.get_virtual_price(); // BAD
-            frax_per_lp_token = curvePool.lp_price() / 2;
+            // frax_per_lp_token = curvePool.lp_price() / 2;
         }
 
         // G-UNI
@@ -186,14 +186,14 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // Uniswap V2
         // ============================================
-        // {
-        //     uint256 total_frax_reserves;
-        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-        //     if (frax_is_token0) total_frax_reserves = reserve0;
-        //     else total_frax_reserves = reserve1;
+        {
+            uint256 total_frax_reserves;
+            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+            if (frax_is_token0) total_frax_reserves = reserve0;
+            else total_frax_reserves = reserve1;
 
-        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
-        // }
+            frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
+        }
 
         // Vesper
         // ============================================
