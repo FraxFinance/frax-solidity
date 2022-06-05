@@ -516,7 +516,11 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         for (uint256 i = 0; i < rewardTokens.length; i++){ 
             rewards_before[i] = rewards[rewardee][i];
             rewards[rewardee][i] = 0;
-            if (rewards_before[i] > 0) TransferHelper.safeTransfer(rewardTokens[i], destination_address, rewards_before[i]);
+            if (rewards_before[i] > 0) {
+                TransferHelper.safeTransfer(rewardTokens[i], destination_address, rewards_before[i]);
+
+                emit RewardPaid(rewardee, rewards_before[i], rewardTokens[i], destination_address);
+            }
         }
 
         // Handle additional reward logic
@@ -722,6 +726,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     function changeTokenManager(address reward_token_address, address new_manager_address) external onlyTknMgrs(reward_token_address) {
         rewardManagers[reward_token_address] = new_manager_address;
     }
+
+    /* ========== EVENTS ========== */
+    event RewardPaid(address indexed user, uint256 amount, address token_address, address destination_address);
 
     /* ========== A CHICKEN ========== */
     //

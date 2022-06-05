@@ -184,7 +184,7 @@ contract TWAMM_AMO is Owned {
         emit SwapInitiated(new_order_id, frax_to_use, fxs_to_use, block.timestamp);
     }
 
-    function cancelTWAMMOrder(uint256 order_id) public onlyByOwnGov {
+    function cancelTWAMMOrder(uint256 order_id) external onlyByOwnGov {
         // Cancel the order
         fraxswap_pair.cancelLongTermSwap(order_id);
 
@@ -235,7 +235,7 @@ contract TWAMM_AMO is Owned {
     /* ========== Burns and givebacks ========== */
    
     // Burn unneeded or excess FRAX. Goes through the minter
-    function burnFRAX(uint256 frax_amount) internal onlyByOwnGov {
+    function burnFRAX(uint256 frax_amount) public onlyByOwnGov {
         FRAX.approve(address(amo_minter), frax_amount);
         amo_minter.burnFraxFromAMO(frax_amount);
 
@@ -243,7 +243,7 @@ contract TWAMM_AMO is Owned {
     }
 
     // Burn unneeded FXS. Goes through the minter
-    function burnFXS(uint256 fxs_amount) internal onlyByOwnGov {
+    function burnFXS(uint256 fxs_amount) public onlyByOwnGov {
         FXS.approve(address(amo_minter), fxs_amount);
         amo_minter.burnFxsFromAMO(fxs_amount);
 
