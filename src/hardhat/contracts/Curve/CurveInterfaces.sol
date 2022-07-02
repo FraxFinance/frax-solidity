@@ -85,8 +85,34 @@ interface IStash{
 }
 
 interface IFeeDistro{
-    function claim() external;
-    function token() external view returns(address);
+  function checkpoint_token() external;
+  function ve_for_at(address _user, uint256 _timestamp) external view returns(uint256);
+  function checkpoint_total_supply() external;
+  function claim() external returns(uint256);
+  function claim(address _addr) external returns(uint256);
+  function claim_many(address[20] memory _receivers) external returns(bool);
+  function burn(address _coin) external returns(bool);
+  function commit_admin(address _addr) external;
+  function apply_admin() external;
+  function toggle_allow_checkpoint_token() external;
+  function kill_me() external;
+  function recover_balance(address _coin) external returns(bool);
+  function start_time() external view returns(uint256);
+  function time_cursor() external view returns(uint256);
+  function time_cursor_of(address arg0) external view returns(uint256);
+  function user_epoch_of(address arg0) external view returns(uint256);
+  function last_token_time() external view returns(uint256);
+  function tokens_per_week(uint256 arg0) external view returns(uint256);
+  function voting_escrow() external view returns(address);
+  function token() external view returns(address);
+  function total_received() external view returns(uint256);
+  function token_last_balance() external view returns(uint256);
+  function ve_supply(uint256 arg0) external view returns(uint256);
+  function admin() external view returns(address);
+  function future_admin() external view returns(address);
+  function can_checkpoint_token() external view returns(bool);
+  function emergency_return() external view returns(address);
+  function is_killed() external view returns(bool);
 }
 
 interface ITokenMinter{

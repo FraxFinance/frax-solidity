@@ -127,9 +127,11 @@ contract('veFPIS Tests', async (accounts) => {
 		console.log(chalk.hex("#ff8b3d").bold("=====================QUICK 4 YEAR TEST [NO INCREASES]====================="));
 
 		// Create a new veFPIS table
+		const head_col_titles = ['Month', 'User FPIS', 'User veFPIS', 'User Slope', 'User Bias', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt', 'Pxy Brw', 'FPIS Ctc BlOf'];
+		const head_col_widths = [8, 15, 15, 15, 15, 12, 15, 15, 15, 15, 9, 15];
 		const veFPIS_table_4_years = new Table({
-			head: ['Per.', 'User FPIS', 'User veFPIS', 'User Slope', 'User Bias', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt', 'Pxy Brw', 'FPIS Ctc BlOf'], 
-			colWidths: [5, 15, 15, 15, 15, 12, 15, 15, 15, 15, 9, 9]
+			head: head_col_titles, 
+			colWidths: head_col_widths
 		});
 
 		const deposit_amount_quick_e18_4_yr = new BigNumber(`100e18`);
@@ -149,7 +151,10 @@ contract('veFPIS Tests', async (accounts) => {
 		console.log(`Advance ${LOOP_MAX_4_YR} blocks and ${deposit_quick_days_4_yr} days, checkpointing each time`);
 		
 		for (let j = 0; j <= (LOOP_MAX_4_YR + 2); j++){
-			// console.log("Loop #: ", j);
+			// Print column titles periodically
+			if (j > 0 && (j % 15 == 0)) {
+				veFPIS_table_4_years.push(head_col_titles);
+			}
 
 			// Withdraw at the end
 			if (j == (LOOP_MAX_4_YR + 1)) {
@@ -198,13 +203,13 @@ contract('veFPIS Tests', async (accounts) => {
 
 		console.log(chalk.hex("#ff8b3d").bold("=====================QUICK 4 YEAR TEST [HAS PROXY LOANS]====================="));
 		// Allow the proxy
-		await veFPIS_instance.adminToggleProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
+		await veFPIS_instance.adminSetProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
 		await veFPIS_instance.stakerSetProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: STAKING_OWNER });
 
 		// Create a new veFPIS table
 		const veFPIS_table_4_years_PXY_TX_TO = new Table({
-			head: ['Per.', 'User FPIS', 'User veFPIS', 'User Slope', 'User Bias', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt', 'Pxy Brw', 'FPIS Ctc BlOf'], 
-			colWidths: [5, 15, 15, 15, 15, 12, 15, 15, 15, 15, 9, 9]
+			head: head_col_titles, 
+			colWidths: head_col_widths
 		});
 
 		const deposit_amount_quick_e18_4_yr_PXY_TX_TO = new BigNumber(`100e18`);
@@ -224,7 +229,10 @@ contract('veFPIS Tests', async (accounts) => {
 		console.log(`Advance ${LOOP_MAX_4_YR_PXY_TX_TO} blocks and ${deposit_quick_days_4_yr_PXY_TX_TO} days, checkpointing each time`);
 		
 		for (let j = 0; j <= (LOOP_MAX_4_YR_PXY_TX_TO); j++){
-			// console.log("Loop #: ", j);
+			// Print column titles periodically
+			if (j > 0 && (j % 15 == 0)) {
+				veFPIS_table_4_years_PXY_TX_TO.push(head_col_titles);
+			}
 
 			// Proxy transfer every 10 instances, skipping the first
 			if ((((j + 1) % 10) == 0) && (j < (LOOP_MAX_4_YR_PXY_TX_TO - 10))) {
@@ -325,18 +333,20 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Disallow the proxy
 		await veFPIS_instance.stakerSetProxy(ZERO_ADDRESS, { from: STAKING_OWNER });
-		await veFPIS_instance.adminToggleProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
+		await veFPIS_instance.adminSetProxy(ZERO_ADDRESS, { from: DEPLOYER_ADDRESS });
 
 
 		console.log(chalk.hex("#ff8b3d").bold("=====================QUICK 4 YEAR TEST [HAS PROXY LOANS + LIQUIDATIONS]====================="));
 		// Allow the proxy
-		await veFPIS_instance.adminToggleProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
+		await veFPIS_instance.adminSetProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
 		await veFPIS_instance.stakerSetProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: STAKING_OWNER });
 
 		// Create a new veFPIS table
+		const head_col_titles_2 = ['Month', 'User FPIS', 'User veFPIS', 'User Slope', 'User Bias', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt', 'Pxy Brw', 'FPIS BalOf'];
+		const head_col_widths_2 = [8, 15, 15, 15, 15, 12, 15, 15, 15, 15, 9, 15];
 		const veFPIS_table_4_years_PXY_TX_AND_LIQ = new Table({
-			head: ['Per.', 'User FPIS', 'User veFPIS', 'User Slope', 'User Bias', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt', 'Pxy Brw', 'FPIS BlOf'], 
-			colWidths: [5, 15, 15, 15, 15, 12, 15, 15, 15, 15, 9, 9]
+			head: head_col_titles_2, 
+			colWidths: head_col_widths_2
 		});
 
 		const deposit_amount_quick_e18_4_yr_PXY_TX_AND_LIQ = new BigNumber(`1000e18`);
@@ -357,7 +367,10 @@ contract('veFPIS Tests', async (accounts) => {
 		console.log(`Advance ${LOOP_MAX_4_YR_PXY_TX_AND_LIQ} blocks and ${deposit_quick_days_4_yr_PXY_TX_AND_LIQ} days, checkpointing each time`);
 		
 		for (let j = 0; j <= (LOOP_MAX_4_YR_PXY_TX_AND_LIQ); j++){
-			// console.log("Loop #: ", j);
+			// Print column titles periodically
+			if (j > 0 && (j % 15 == 0)) {
+				veFPIS_table_4_years_PXY_TX_AND_LIQ.push(head_col_titles_2);
+			}
 
 			// Proxy transfer once, at week 6
 			if (j == 6) {
@@ -373,7 +386,7 @@ contract('veFPIS Tests', async (accounts) => {
 			if ((((j + 1) % 10) == 0) && (j < (LOOP_MAX_4_YR_PXY_TX_AND_LIQ - 10))) {
 				console.log(`In loop #${j}`);
 				// Liquidate
-				const liq_fee = deposit_amount_liq_e18_4_yr_PXY_TX_AND_LIQ.multipliedBy(0.1);
+				const liq_fee = deposit_amount_liq_e18_4_yr_PXY_TX_AND_LIQ.multipliedBy(0.1); // 10% fee for testing
 				await veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, 0, deposit_amount_liq_e18_4_yr_PXY_TX_AND_LIQ, liq_fee, { from: GOVERNOR_GUARDIAN_ADDRESS })
 				veFPIS_table_4_years_PXY_TX_AND_LIQ.push(["-", "PXY LIQ", "-", "PXY LIQ", "-", "PXY LIQ", "-", "PXY LIQ", "-", "PXY LIQ", "-", "PXY LIQ"]);
 				await veFPIS_instance.checkpoint();
@@ -402,7 +415,7 @@ contract('veFPIS Tests', async (accounts) => {
 				// Get the amount of FPIS borrowed
 				let user_fpis_in_proxy_bn = new BigNumber(await veFPIS_instance.user_fpis_in_proxy(STAKING_OWNER));
 				user_fpis_in_proxy_bn = user_fpis_in_proxy_bn.multipliedBy(0.5);
-				const liq_fee = user_fpis_in_proxy_bn.multipliedBy(0.1);
+				const liq_fee = user_fpis_in_proxy_bn.multipliedBy(0.1); // 10% fee for testing
 
 				// Liquidate
 				console.log(chalk.yellow("PROXY LIQUIDATES HALF OF REMAINING"));
@@ -417,7 +430,7 @@ contract('veFPIS Tests', async (accounts) => {
 				// Get the amount of FPIS borrowed
 				let user_fpis_in_proxy_bn = new BigNumber(await veFPIS_instance.user_fpis_in_proxy(STAKING_OWNER));
 				user_fpis_in_proxy_bn = user_fpis_in_proxy_bn;
-				const liq_fee = user_fpis_in_proxy_bn.multipliedBy(0.1);
+				const liq_fee = user_fpis_in_proxy_bn.multipliedBy(0.1); // 10% fee for testing
 
 				// Pay back
 				console.log(chalk.yellow("PROXY PAYS BACK LEFTOVERS"));
@@ -473,16 +486,18 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Disallow the proxy
 		await veFPIS_instance.stakerSetProxy(ZERO_ADDRESS, { from: STAKING_OWNER });
-		await veFPIS_instance.adminToggleProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
+		await veFPIS_instance.adminSetProxy(ZERO_ADDRESS, { from: DEPLOYER_ADDRESS });
 
 
 
 		console.log(chalk.hex("#ff8b3d").bold("=====================QUICK 4 YEAR TEST [DOUBLE STAKERS]====================="));
 
 		// Create a new veFPIS table
+		const head_col_titles_3 = ['Month', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'];
+		const head_col_widths_3 = [8, 17, 15, 17, 17, 17];
 		const veFPIS_table_4_years_2stkrs = new Table({
-			head: ['Per.', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
-			colWidths: [5, 17, 15, 17, 17, 17]
+			head: head_col_titles_3, 
+			colWidths: head_col_widths_3
 		});
 
 		const deposit_amount_quick_e18_4_yr_2stkrs = new BigNumber(`100e18`);
@@ -506,7 +521,10 @@ contract('veFPIS Tests', async (accounts) => {
 		console.log(`Advance ${LOOP_MAX_4_YR_2stkrs} blocks and ${deposit_quick_days_4_yr_2stkrs} days, checkpointing each time`);
 		
 		for (let j = 0; j <= (LOOP_MAX_4_YR_2stkrs + 2); j++){
-			// console.log("Loop #: ", j);
+			// Print column titles periodically
+			if (j > 0 && (j % 15 == 0)) {
+				veFPIS_table_4_years_2stkrs.push(head_col_titles_3);
+			}
 
 			// Withdraw at the end
 			if (j == (LOOP_MAX_4_YR_2stkrs + 1)) {
@@ -542,9 +560,11 @@ contract('veFPIS Tests', async (accounts) => {
 		await veFPIS_instance.checkpoint();
 
 		// Create a new veFPIS table
+		const head_col_titles_days = ['Day', 'User FPIS', 'User veFPIS', 'User Slope', 'User Bias', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt', 'Pxy Brw', 'FPIS Ctc BlOf'];
+		const head_col_widths_days = [8, 15, 15, 15, 15, 12, 15, 15, 15, 15, 9, 15];
 		const veFPIS_table_30_day = new Table({
-			head: ['Per.', 'User FPIS', 'User veFPIS', 'User Slope', 'User Bias', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt', 'Pxy Brw', 'FPIS Ctc BlOf'], 
-			colWidths: [5, 15, 15, 15, 15, 12, 15, 15, 15, 15, 9, 9]
+			head: head_col_titles_days, 
+			colWidths: head_col_widths_days
 		});
 
 		const deposit_amount_quick_e18_30_days = new BigNumber(`1000e18`);
@@ -564,7 +584,10 @@ contract('veFPIS Tests', async (accounts) => {
 		console.log(`Advance ${LOOP_MAX_30_DAYS} blocks and ${deposit_quick_days_30_days} days, checkpointing each time`);
 		
 		for (let j = 0; j <= (LOOP_MAX_30_DAYS + 2); j++){
-			// console.log("Loop #: ", j);
+			// Print column titles periodically
+			if (j > 0 && (j % 15 == 0)) {
+				veFPIS_table_30_day.push(head_col_titles_days);
+			}
 
 			// Withdraw at the end
 			if (j == (LOOP_MAX_30_DAYS + 1)) {
@@ -599,7 +622,7 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Print the table
 		console.log(chalk.yellow.bold("STARTING WITH 1000 FPIS"));
-		console.log(chalk.yellow.bold(`${deposit_quick_days_30_days} days / 4 years`));
+		console.log(chalk.yellow.bold(`${deposit_quick_days_30_days} days / 0.833 years`));
 		console.log(veFPIS_table_30_day.toString());
 
 
@@ -629,13 +652,14 @@ contract('veFPIS Tests', async (accounts) => {
 		console.log("post_deposit_veFPIS [8]:", post_deposit_veFPIS_8);
 		console.log(`effective multiplier [1]: ${post_deposit_veFPIS_1 / deposit_amount}x`);
 		console.log(`effective multiplier [8]: ${post_deposit_veFPIS_8 / deposit_amount}x`);
-		assert(post_deposit_veFPIS_1 > pre_deposit_veFPIS_1, 'Should have increased the veFPIS');
-		assert(post_deposit_veFPIS_8 > pre_deposit_veFPIS_8, 'Should have increased the veFPIS');
+		expect(post_deposit_veFPIS_1 / deposit_amount).to.be.closeTo(2, deposit_amount * .01, "Should have increased the veFPIS multiplier to 2x");
+		expect(post_deposit_veFPIS_8 / deposit_amount).to.be.closeTo(2, deposit_amount * .01, "Should have increased the veFPIS multiplier to 2x");
+
 
 		// Create a new quick table
 		const quick_table_0 = new Table({
-			head: ['Per.', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
-			colWidths: [5, 17, 15, 17, 17, 17]
+			head: ['Month', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
+			colWidths: [8, 17, 15, 17, 17, 17]
 		});
 
 		// Print a quick table with info
@@ -669,8 +693,8 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Create a new quick table
 		const quick_table_1 = new Table({
-			head: ['Per.', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
-			colWidths: [5, 17, 15, 17, 17, 17]
+			head: ['Month', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
+			colWidths: [8, 17, 15, 17, 17, 17]
 		});
 
 		// Print a quick table with info
@@ -723,8 +747,8 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Create a new quick table
 		const quick_table_2 = new Table({
-			head: ['Per.', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
-			colWidths: [5, 17, 15, 17, 17, 17]
+			head: ['Month', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
+			colWidths: [8, 17, 15, 17, 17, 17]
 		});
 
 		// Print a quick table with info
@@ -752,8 +776,8 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Create a new quick table
 		const quick_table_2a = new Table({
-			head: ['Per.', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
-			colWidths: [5, 17, 15, 17, 17, 17]
+			head: ['Month', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
+			colWidths: [8, 17, 15, 17, 17, 17]
 		});
 
 		// Print a quick table with info
@@ -807,8 +831,8 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Create a new quick table
 		const quick_table_2b = new Table({
-			head: ['Per.', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
-			colWidths: [5, 17, 15, 17, 17, 17]
+			head: ['Month', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
+			colWidths: [8, 17, 15, 17, 17, 17]
 		});
 
 		// Print a quick table with info
@@ -865,8 +889,8 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Create a new quick table
 		const quick_table_3 = new Table({
-			head: ['Per.', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
-			colWidths: [5, 17, 15, 17, 17, 17]
+			head: ['Month', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
+			colWidths: [8, 17, 15, 17, 17, 17]
 		});
 
 		// Print a quick table with info
@@ -901,8 +925,8 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Create a new quick table
 		const quick_table_4 = new Table({
-			head: ['Per.', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
-			colWidths: [5, 17, 15, 17, 17, 17]
+			head: ['Month', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
+			colWidths: [8, 17, 15, 17, 17, 17]
 		});
 
 		// Print a quick table with info
@@ -965,8 +989,8 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Create a new quick table
 		const quick_table_5 = new Table({
-			head: ['Per.', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
-			colWidths: [5, 17, 15, 17, 17, 17]
+			head: ['Month', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
+			colWidths: [8, 17, 15, 17, 17, 17]
 		});
 
 		// Print a quick table with info
@@ -1008,8 +1032,8 @@ contract('veFPIS Tests', async (accounts) => {
 
 		// Create a new quick table
 		const quick_table_6 = new Table({
-			head: ['Per.', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
-			colWidths: [5, 17, 15, 17, 17, 17]
+			head: ['Month', 'Ttl FPIS', 'Ttl veFPIS', 'Ttl Slope', 'Ttl Bias', 'Ttl fpis_amt'], 
+			colWidths: [8, 17, 15, 17, 17, 17]
 		});
 
 		// Print a quick table with info
@@ -1036,7 +1060,7 @@ contract('veFPIS Tests', async (accounts) => {
 		// =========================================================================
 		console.log(chalk.hex("#ff8b3d").bold("=============DEPOSIT/PAYBACK/LIQUIDATION TESTS [PRE-EXPIRATION]============="));
 		// console.log(chalk.yellow("ADMIN BLACKLISTS GOVERNOR_GUARDIAN_ADDRESS AS A PROXY "));
-		// veFPIS_instance.adminToggleProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
+		// veFPIS_instance.adminSetProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
 
 		console.log("---------TRY TO PAY BACK NOT AS ADMIN WHITELISTED---------");
 		await expectRevert(
@@ -1052,12 +1076,12 @@ contract('veFPIS Tests', async (accounts) => {
 
 		console.log("---------TRY TO TOGGLE PROXY NOT AS AN ADMIN---------");
 		await expectRevert(
-			veFPIS_instance.adminToggleProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: POOL_CREATOR }),
+			veFPIS_instance.adminSetProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: POOL_CREATOR }),
 			"Admin only"
 		);
 
 		console.log(chalk.yellow("ADMIN WHITELISTS GOVERNOR_GUARDIAN_ADDRESS AS A PROXY "));
-		veFPIS_instance.adminToggleProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
+		veFPIS_instance.adminSetProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
 
 		console.log("---------TRY TO PAY BACK NOT AS STAKER APPROVED---------");
 		await expectRevert(

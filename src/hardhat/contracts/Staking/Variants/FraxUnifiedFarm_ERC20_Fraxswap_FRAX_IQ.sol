@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "../FraxUnifiedFarm_ERC20.sol";
 
-contract FraxUnifiedFarm_ERC20_Vesper_Orbit_FRAX is FraxUnifiedFarm_ERC20 {
+contract FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ is FraxUnifiedFarm_ERC20 {
     constructor (
         address _owner,
         address[] memory _rewardTokens,

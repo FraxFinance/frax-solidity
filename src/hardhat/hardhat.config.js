@@ -32,6 +32,7 @@ module.exports = {
     defaultNetwork: "hardhat",
     networks: {
 		hardhat: {
+			// chainId: 1337, // Ethereum (alternate / frontend testing)
 			forking: {
 				// url: `${process.env.ARBITRUM_NETWORK_ENDPOINT}`, // Arbitrum
 				// url: `${process.env.AURORA_NETWORK_ENDPOINT}`, // Aurora
@@ -40,7 +41,6 @@ module.exports = {
 				// url: `${process.env.BSC_NETWORK_ENDPOINT}`, // BSC
 				url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}`, // Ethereum
 				// url: `${process.env.EVMOS_NETWORK_ENDPOINT}`, // Evmos
-				// url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}` // Ethereum (alternate)
 				// url: `${process.env.FANTOM_FORKING_NETWORK_ENDPOINT}`, // Fantom
 				// url: `${process.env.FUSE_NETWORK_ENDPOINT}`, // Fuse
 				// url: `${process.env.HARMONY_NETWORK_ENDPOINT}`, // Harmony
@@ -49,6 +49,11 @@ module.exports = {
 				// url: `${process.env.OPTIMISM_NETWORK_ENDPOINT}`, // Optimism
 				// url: `${process.env.POLYGON_NETWORK_ENDPOINT}`, // Polygon
 				// url: `${process.env.ZKSYNC_NETWORK_ENDPOINT}`, // zkSync
+
+				// TESTING (npx hardhat node --hostname 0.0.0.0)
+				// Also see src/hardhat/justin-scripts/instructions.txt
+				// url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`, // Ethereum (alternate)
+				// blockNumber: 14806990 // Ethereum (alternate)
 				
 			},
 			accounts: {
@@ -62,7 +67,7 @@ module.exports = {
 			},
 			chainId: 42161,
 			gas: "auto",
-			gasPrice: 3500000000, // 3.5 Gwei
+			gasPrice: 500000000, // 0.5 Gwei
 			gasMultiplier: 1.2
 		},
 		aurora: {
@@ -102,18 +107,18 @@ module.exports = {
 			},
 			chainId: 56,
 			gas: "auto",
-			gasPrice: 10000000000, // 10 Gwei
+			gasPrice: 6000000000, // 6 Gwei
 			gasMultiplier: 1.2
 		},
 		ethereum: {
 			url:`${process.env.ETHEREUM_NETWORK_ENDPOINT}`,
 			accounts: {
-				mnemonic: process.env.MNEMONIC_PHRASE
+				mnemonic: process.env.MNEMONIC_PHRASE,
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 80000000000, // 80 Gwei
-			gasMultiplier: 1.2
+			gasPrice: 65000000000, // 65 Gwei
+			gasMultiplier: 1.2,
 		},
 		evmos: {
 			url: process.env.EVMOS_NETWORK_ENDPOINT,
@@ -132,7 +137,7 @@ module.exports = {
 			},
 			chainId: 250,
 			gas: "auto",
-			gasPrice: 400000000000, // 400 Gwei
+			gasPrice: 750000000000, // 750 Gwei
 			gasMultiplier: 1.2
 		},
 		// fuse: {
@@ -321,6 +326,15 @@ module.exports = {
 			},
 			{
 				version: "0.8.13",
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 100000
+					}
+				  }
+			},
+			{
+				version: "0.8.15",
 				settings: {
 					optimizer: {
 						enabled: true,

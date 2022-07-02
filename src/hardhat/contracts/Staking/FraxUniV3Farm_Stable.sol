@@ -26,7 +26,6 @@ pragma experimental ABIEncoderV2;
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
 // Dennis: github.com/denett
-// Sam Sun: https://github.com/samczsun
 
 // Originally inspired by Synthetix.io, but heavily modified by the Frax team
 // (Locked, veFXS, and UniV3 portions are new)
