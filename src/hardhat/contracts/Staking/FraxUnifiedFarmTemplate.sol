@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.0;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -12,7 +11,7 @@ pragma experimental ABIEncoderV2;
 // ====================================================================
 // ====================== FraxUnifiedFarmTemplate =====================
 // ====================================================================
-// Migratable Farming contract that accounts for veFXS
+// Farming contract that accounts for veFXS
 // Overrideable for UniV3, ERC20s, etc
 // New for V2
 //      - Multiple reward tokens possible
@@ -30,7 +29,6 @@ pragma experimental ABIEncoderV2;
 // Jason Huan: https://github.com/jasonhuan
 // Sam Kazemian: https://github.com/samkazemian
 // Dennis: github.com/denett
-// Sam Sun: https://github.com/samczsun
 
 // Originally inspired by Synthetix.io, but heavily modified by the Frax team
 // (Locked, veFXS, and UniV3 portions are new)
@@ -55,10 +53,10 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     /* ========== STATE VARIABLES ========== */
 
     // Instances
-    IveFXS private veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
+    IveFXS private immutable veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
     
     // Frax related
-    address internal constant frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
+    address internal immutable frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
     bool internal frax_is_token0;
     uint256 public fraxPerLPStored;
 
@@ -70,15 +68,15 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     uint256 public lastUpdateTime;
 
     // Lock time and multiplier settings
-    uint256 public lock_max_multiplier = uint256(3e18); // E18. 1x = e18
-    uint256 public lock_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
+    uint256 public lock_max_multiplier = uint256(2e18); // E18. 1x = e18
+    uint256 public lock_time_for_max_multiplier = 1 * 365 * 86400; // 1 year
     // uint256 public lock_time_for_max_multiplier = 2 * 86400; // 2 days
-    uint256 public lock_time_min = 86400; // 1 * 86400  (1 day)
+    uint256 public lock_time_min = 604800; // 7 * 86400 (7 day)
 
     // veFXS related
     uint256 public vefxs_boost_scale_factor = uint256(4e18); // E18. 4x = 4e18; 100 / scale_factor = % vefxs supply needed for max boost
     uint256 public vefxs_max_multiplier = uint256(2e18); // E18. 1x = 1e18
-    uint256 public vefxs_per_frax_for_max_boost = uint256(2e18); // E18. 2e18 means 2 veFXS must be held by the staker per 1 FRAX
+    uint256 public vefxs_per_frax_for_max_boost = uint256(4e18); // E18. 2e18 means 2 veFXS must be held by the staker per 1 FRAX
     mapping(address => uint256) internal _vefxsMultiplierStored;
     mapping(address => bool) internal valid_vefxs_proxies;
     mapping(address => mapping(address => bool)) internal proxy_allowed_stakers;
@@ -98,7 +96,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     uint256[] private rewardsPerTokenStored;
     mapping(address => mapping(uint256 => uint256)) private userRewardsPerTokenPaid; // staker addr -> token id -> paid amount
     mapping(address => mapping(uint256 => uint256)) private rewards; // staker addr -> token id -> reward amount
-    mapping(address => uint256) internal lastRewardClaimTime; // staker addr -> timestamp
+    mapping(address => uint256) public lastRewardClaimTime; // staker addr -> timestamp
     
     // Gauge tracking
     uint256[] private last_gauge_relative_weights;
@@ -111,16 +109,12 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     mapping(address => uint256) internal _combined_weights;
     mapping(address => uint256) public proxy_lp_balances; // Keeps track of LP balances proxy-wide. Needed to make sure the proxy boost is kept in line
 
-    // List of valid migrators (set by governance)
-    mapping(address => bool) internal valid_migrators;
 
-    // Stakers set which migrator(s) they want to use
-    mapping(address => mapping(address => bool)) internal staker_allowed_migrators;
+    // Stakers set which proxy(s) they want to use
     mapping(address => address) public staker_designated_proxies; // Keep public so users can see on the frontend if they have a proxy
 
-    // Admin booleans for emergencies, migrations, and overrides
+    // Admin booleans for emergencies and overrides
     bool public stakesUnlocked; // Release locked stakes in case of emergency
-    bool internal migrationsOn; // Used for migrations. Prevents new stakes, but allows LP and reward withdrawals
     bool internal withdrawalsPaused; // For emergencies
     bool internal rewardsCollectionPaused; // For emergencies
     bool internal stakingPaused; // For emergencies
@@ -138,11 +132,6 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     modifier onlyTknMgrs(address reward_token_address) {
         require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "Not owner or tkn mgr");
-        _;
-    }
-
-    modifier isMigrating() {
-        require(migrationsOn == true, "Not in migration");
         _;
     }
 
@@ -303,11 +292,15 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // Multiplier amount, given the length of the lock
     function lockMultiplier(uint256 secs) public view returns (uint256) {
+        // return Math.min(
+        //     lock_max_multiplier,
+        //     uint256(MULTIPLIER_PRECISION) + (
+        //         (secs * (lock_max_multiplier - MULTIPLIER_PRECISION)) / lock_time_for_max_multiplier
+        //     )
+        // ) ;
         return Math.min(
             lock_max_multiplier,
-            uint256(MULTIPLIER_PRECISION) + (
-                (secs * (lock_max_multiplier - MULTIPLIER_PRECISION)) / lock_time_for_max_multiplier
-            )
+            (secs * lock_max_multiplier) / lock_time_for_max_multiplier
         ) ;
     }
 
@@ -388,16 +381,10 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     /* =============== MUTATIVE FUNCTIONS =============== */
 
-    // ------ MIGRATIONS ------
-
-    // Staker can allow a migrator 
-    function stakerToggleMigrator(address migrator_address) external {
-        require(valid_migrators[migrator_address], "Invalid migrator address");
-        staker_allowed_migrators[msg.sender][migrator_address] = !staker_allowed_migrators[msg.sender][migrator_address]; 
-    }
 
     // Proxy can allow a staker to use their veFXS balance (the staker will have to reciprocally toggle them too)
     // Must come before stakerSetVeFXSProxy
+    // CALLED BY PROXY
     function proxyToggleStaker(address staker_address) external {
         require(valid_vefxs_proxies[msg.sender], "Invalid proxy");
         proxy_allowed_stakers[msg.sender][staker_address] = !proxy_allowed_stakers[msg.sender][staker_address]; 
@@ -412,9 +399,19 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     // Staker can allow a veFXS proxy (the proxy will have to toggle them first)
+    // CALLED BY STAKER
     function stakerSetVeFXSProxy(address proxy_address) external {
         require(valid_vefxs_proxies[proxy_address], "Invalid proxy");
         require(proxy_allowed_stakers[proxy_address][msg.sender], "Proxy has not allowed you yet");
+        
+        // Corner case sanity check to make sure LP isn't double counted
+        address old_proxy_addr = staker_designated_proxies[msg.sender];
+        if (old_proxy_addr != address(0)) {
+            // Remove the LP count from the old proxy
+            proxy_lp_balances[old_proxy_addr] -= _locked_liquidity[msg.sender];
+        }
+
+        // Set the new proxy
         staker_designated_proxies[msg.sender] = proxy_address; 
 
         // Add the the LP as well
@@ -507,6 +504,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // No withdrawer == msg.sender check needed since this is only internally callable
     function _getReward(address rewardee, address destination_address, bool do_extra_logic) internal updateRewardAndBalance(rewardee, true) returns (uint256[] memory rewards_before) {
+        // Update the last reward claim time first, as an extra reentrancy safeguard
+        lastRewardClaimTime[rewardee] = block.timestamp;
+        
         // Make sure rewards collection isn't paused
         require(rewardsCollectionPaused == false, "Rewards collection paused");
         
@@ -527,9 +527,6 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         if (do_extra_logic) {
             _getRewardExtraLogic(rewardee, destination_address);
         }
-
-        // Update the last reward claim time
-        lastRewardClaimTime[rewardee] = block.timestamp;
     }
 
 
@@ -631,7 +628,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         }
     }
 
-    /* ========== RESTRICTED FUNCTIONS - Curator / migrator callable ========== */
+    /* ========== RESTRICTED FUNCTIONS - Curator callable ========== */
     
     // ------ FARM SYNCING ------
     // In children...
@@ -652,15 +649,6 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     
     function unlockStakes() external onlyByOwnGov {
         stakesUnlocked = !stakesUnlocked;
-    }
-
-    function toggleMigrations() external onlyByOwnGov {
-        migrationsOn = !migrationsOn;
-    }
-
-    // Adds supported migrator address
-    function toggleMigrator(address migrator_address) external onlyByOwnGov {
-        valid_migrators[migrator_address] = !valid_migrators[migrator_address];
     }
 
     // Adds a valid veFXS proxy address

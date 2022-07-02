@@ -153,7 +153,6 @@ contract CurveVoterProxy is Owned {
         uint256 _balance = 0;
         try IMinter(mintr).mint(_gauge){
             _balance = IERC20(crv).balanceOf(address(this));
-            IERC20(crv).safeTransfer(operator, _balance);
         } catch {
 
         }
@@ -181,7 +180,8 @@ contract CurveVoterProxy is Owned {
 
     function claimEverything(address[] memory _gauges) external onlyOperator returns (bool) {
         // CRV fee distributor
-        feeDistroDefault.claim();
+        address p = address(this);
+        feeDistroDefault.claim_many([p, p, p, p, p, p, p, p, p, p, p, p, p, p, p, p, p, p, p, p]);
 
         // Gauge specific rewards
         for (uint256 i = 0; i < _gauges.length; i++){
@@ -191,12 +191,20 @@ contract CurveVoterProxy is Owned {
         return true;
     }
 
-    function claimFees(address _distroContract, address _token) public onlyOperator returns (uint256) {
-        IFeeDistro(_distroContract).claim();
+    function claimFees(address _distroContract, address _token, uint256 arr_length) public onlyOperator returns (uint256) {
+        address p = address(this);
+        IFeeDistro(_distroContract).claim_many([p, p, p, p, p, p, p, p, p, p, p, p, p, p, p, p, p, p, p, p]);
         uint256 _balance = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(operator, _balance);
         return _balance;
-    }    
+    }  
+
+    function recoverManyERC20s(address[] memory tokenAddresses, uint256[] memory tokenAmounts, bool withdraw_entire_balance) external onlyOperator { 
+        for (uint256 i = 0; i < tokenAddresses.length; i++){
+            uint256 balance_to_use = withdraw_entire_balance ? IERC20(tokenAddresses[i]).balanceOf(address(this)) : tokenAmounts[i];
+            IERC20(tokenAddresses[i]).safeTransfer(operator, balance_to_use);
+        }
+    }
 
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyOperator {
         TransferHelper.safeTransfer(address(tokenAddress), msg.sender, tokenAmount);

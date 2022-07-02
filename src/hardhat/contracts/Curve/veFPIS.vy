@@ -142,7 +142,7 @@ event ProxyTransferTosToggled:
 event ProxyPaybackOrLiquidationsToggled:
     proxyPaybackOrLiquidationsEnabled: bool
 
-event ValidProxyToggled:
+event LendingProxySet:
     proxy_address: address
 
 event StakerProxySet:
@@ -168,7 +168,7 @@ user_point_history: public(HashMap[address, Point[1000000000]])  # user -> Point
 user_point_epoch: public(HashMap[address, uint256])
 slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
 
-# Aragon's view methods for compatibility
+# Misc
 controller: public(address)
 transfersEnabled: public(bool)
 proxyTransferTosEnabled: public(bool)
@@ -178,7 +178,7 @@ proxyPaybackOrLiquidationsEnabled: public(bool)
 emergencyUnlockActive: public(bool)
 
 # Proxies (allow withdrawal / deposits for lending protocols, etc.)
-admin_whitelisted_proxies: public(HashMap[address, bool]) # Set by admin
+lending_proxy: public(address) # Set by admin
 staker_whitelisted_proxy: public(HashMap[address, address])  # user -> proxy. Set by user
 user_fpis_in_proxy: public(HashMap[address, uint256]) # user -> amount held in proxy
 
@@ -422,10 +422,10 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
 
         # -------------------------------- New method B --------------------------------
         if old_locked.end > block.timestamp and old_locked.amount > 0:
-            u_old.slope = (old_locked.amount / MAXTIME_I128) * VOTE_WEIGHT_MULTIPLIER_I128
+            u_old.slope = (old_locked.amount * VOTE_WEIGHT_MULTIPLIER_I128) / MAXTIME_I128 
             u_old.bias = old_locked.amount + (u_old.slope * convert(old_locked.end - block.timestamp, int128))
         if new_locked.end > block.timestamp and new_locked.amount > 0:
-            u_new.slope = (new_locked.amount / MAXTIME_I128) * VOTE_WEIGHT_MULTIPLIER_I128
+            u_new.slope = (new_locked.amount * VOTE_WEIGHT_MULTIPLIER_I128) / MAXTIME_I128
             u_new.bias = new_locked.amount + (u_new.slope * convert(new_locked.end - block.timestamp, int128))
 
         # ==============================================================================
@@ -744,7 +744,7 @@ def proxy_payback_or_liquidate(
     """
     # Make sure that the function isn't disabled, and also that the proxy is valid
     assert (self.proxyPaybackOrLiquidationsEnabled), "Currently disabled"
-    assert (self.admin_whitelisted_proxies[msg.sender]), "Proxy not whitelisted [admin level]"
+    assert (self.lending_proxy == msg.sender), "Proxy not whitelisted [admin level]"
     assert (self.staker_whitelisted_proxy[_staker_addr] == msg.sender), "Proxy not whitelisted [staker level]"
 
     # Get the staker's locked position and proxy balance
@@ -822,7 +822,7 @@ def transfer_to_proxy(_staker_addr: address, _transfer_amt: int128):
     """
     # Make sure that the function isn't disabled, and also that the proxy is valid
     assert (self.proxyTransferTosEnabled), "Currently disabled"
-    assert (self.admin_whitelisted_proxies[msg.sender]), "Proxy not whitelisted [admin level]"
+    assert (self.lending_proxy == msg.sender), "Proxy not whitelisted [admin level]"
     assert (self.staker_whitelisted_proxy[_staker_addr] == msg.sender), "Proxy not whitelisted [staker level]"
     
     # Get the staker's locked position
@@ -1161,15 +1161,15 @@ def toggleProxyPaybackOrLiquidations():
     log ProxyPaybackOrLiquidationsToggled(self.proxyPaybackOrLiquidationsEnabled)
 
 @external
-def adminToggleProxy(_proxy: address):
+def adminSetProxy(_proxy: address):
     """
-    @dev Admin whitelists a proxy address that other users can use
-    @param _proxy The address to be whitelisted 
+    @dev Admin sets the lending proxy
+    @param _proxy The lending proxy address 
     """
     assert msg.sender == self.admin, "Admin only"  # dev: admin only
-    self.admin_whitelisted_proxies[_proxy] = not (self.admin_whitelisted_proxies[_proxy])
+    self.lending_proxy = _proxy
 
-    log ValidProxyToggled(_proxy)
+    log LendingProxySet(_proxy)
 
 
 @external
@@ -1180,7 +1180,7 @@ def stakerSetProxy(_proxy: address):
     @param _proxy The address the staker will let withdraw/deposit for them 
     """
     # Do some checks
-    assert (_proxy == ZERO_ADDRESS or self.admin_whitelisted_proxies[_proxy]), "Proxy not whitelisted [admin level]"
+    assert (_proxy == ZERO_ADDRESS or self.lending_proxy == _proxy), "Proxy not whitelisted [admin level]"
     assert (self.user_fpis_in_proxy[msg.sender] == 0), "Outstanding FPIS in proxy. Have proxy use proxy_payback_or_liquidate"
 
     # Set the proxy

@@ -226,44 +226,17 @@ module.exports = async (deployer) => {
     // );
 
 
-    // console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE =========="));
-    // // FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE 
-    // fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.new(
-    //     THE_ACCOUNTS[6], 
-    //     [
-    //         "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
-    //         "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7" // TEMPLE
-    //     ], 
-    //     [
-    //         "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
-    //         "0x4D6175d58C5AceEf30F546C0d5A557efFa53A950" // Temple DAO Msig
-    //     ],
-    //     [
-    //         11574074074074, 
-    //         0
-    //     ],
-    //     [
-    //         "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
-    //         "0x0000000000000000000000000000000000000000"
-    //     ],
-    //     [
-    //         "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
-    //         "0x0000000000000000000000000000000000000000"
-    //     ],
-    //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Temple FRAX/TEMPLE'],
-    // );
-
-    console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS =========="));
-    // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS 
-    fraxUnifiedFarm_Fraxswap_FRAX_pitchFXS_instance = await FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS.new(
+    console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE =========="));
+    // FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE 
+    fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.new(
         THE_ACCOUNTS[6], 
         [
             "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
-            "0x49d9ef84464c53c04934b8d23d7b1733fdcfd302" // PITCH
+            "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7" // TEMPLE
         ], 
         [
             "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
-            "0x8A421C3A25e8158b9aC815aE1319fBCf83F6bD6c" // Pitch Msig
+            "0x4D6175d58C5AceEf30F546C0d5A557efFa53A950" // Temple DAO Msig
         ],
         [
             11574074074074, 
@@ -277,8 +250,35 @@ module.exports = async (deployer) => {
             "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
             "0x0000000000000000000000000000000000000000"
         ],
-        CONTRACT_ADDRESSES.ethereum.pair_tokens['Fraxswap FRAX/pitchFXS'],
+        CONTRACT_ADDRESSES.ethereum.pair_tokens['Temple FRAX/TEMPLE'],
     );
+
+    // console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS =========="));
+    // // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS 
+    // fraxUnifiedFarm_Fraxswap_FRAX_pitchFXS_instance = await FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS.new(
+    //     THE_ACCOUNTS[6], 
+    //     [
+    //         "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
+    //         "0x49d9ef84464c53c04934b8d23d7b1733fdcfd302" // PITCH
+    //     ], 
+    //     [
+    //         "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
+    //         "0x8A421C3A25e8158b9aC815aE1319fBCf83F6bD6c" // Pitch Msig
+    //     ],
+    //     [
+    //         11574074074074, 
+    //         0
+    //     ],
+    //     [
+    //         "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
+    //         "0x0000000000000000000000000000000000000000"
+    //     ],
+    //     [
+    //         "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
+    //         "0x0000000000000000000000000000000000000000"
+    //     ],
+    //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Fraxswap FRAX/pitchFXS'],
+    // );
 
     // console.log(chalk.yellow("========== FraxUnifiedFarm_PosRebase_aFRAX =========="));
     // // FraxUnifiedFarm_PosRebase_aFRAX 
@@ -472,8 +472,6 @@ module.exports = async (deployer) => {
     FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_pitchFXS_instance);
     FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.setAsDeployed(fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance);
     FraxUnifiedFarm_PosRebase_aFRAX.setAsDeployed(fraxUnifiedFarm_PosRebase_aFRAX_instance);
-
-    
 
     console.log(chalk.yellow("--------DEPLOYING TWAMM CONTRACTS--------"));
     UniV2TWAMMFactory.setAsDeployed(fraxswap_factory_instance);

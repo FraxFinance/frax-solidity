@@ -139,6 +139,20 @@ export const printVeFXS_Points = async (vefxs_instance: any, epoch: any, addr: a
     console.log(`User Point ${addr}: `, converted_user_point);
 }
 
+export const cleanLockedStakes = (locked_stake_arr: any[]) => {
+    const return_arr = [];
+    for (let i = 0; i < locked_stake_arr.length; i++) {
+        return_arr.push({
+            kek_id: locked_stake_arr[i].kek_id,
+            start_timestamp: new BigNumber(locked_stake_arr[i].start_timestamp).toString(),
+            liquidity: new BigNumber(locked_stake_arr[i].liquidity).toString(),
+            ending_timestamp: new BigNumber(locked_stake_arr[i].ending_timestamp).toString(),
+            lock_multiplier: (new BigNumber(locked_stake_arr[i].lock_multiplier)).div(BIG18).toString(),
+        })
+    }
+    return return_arr;
+}
+
 export const cleanLockedStake = (locked_stake_info: any) => {
     return {
         kek_id: locked_stake_info.kek_id,

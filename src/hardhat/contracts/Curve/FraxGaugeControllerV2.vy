@@ -1,4 +1,4 @@
-# @version 0.3.1
+# @version 0.3.2
 
 """
 @title Gauge Controller
@@ -575,8 +575,8 @@ def vote_for_gauge_weights(_gauge_addr: address, _user_weight: uint256):
     old_bias: uint256 = old_slope.slope * old_dt
     new_slope: VotedSlope = VotedSlope({
         slope: slope * _user_weight / 10000,
-        end: lock_end,
-        power: _user_weight
+        power: _user_weight,
+        end: lock_end
     })
     new_dt: uint256 = lock_end - next_time  # dev: raises when expired
     new_bias: uint256 = new_slope.slope * new_dt

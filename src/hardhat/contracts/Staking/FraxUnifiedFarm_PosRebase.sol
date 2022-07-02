@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.0;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -249,7 +248,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         _updateRewardAndBalance(msg.sender, false);
     }
 
-    // Two different stake functions are needed because of delegateCall and msg.sender issues (important for migration)
+    // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
     function stakeLocked(uint256 liquidity, uint256 secs) nonReentrant external returns (bytes32) {
         return _stakeLocked(msg.sender, msg.sender, liquidity, secs, block.timestamp);
     }
@@ -263,7 +262,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) returns (bytes32) {
-        require(stakingPaused == false || valid_migrators[msg.sender] == true, "Staking paused or in migration");
+        require(stakingPaused == false, "Staking paused");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
 
@@ -305,14 +304,13 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
 
     // ------ WITHDRAWING ------
 
-    // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
+    // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for proxies)
     function withdrawLocked(bytes32 kek_id, address destination_address) nonReentrant external returns (uint256) {
         require(withdrawalsPaused == false, "Withdrawals paused");
         return _withdrawLocked(msg.sender, destination_address, kek_id);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
-    // functions like migrator_withdraw_locked() and withdrawLocked()
     function _withdrawLocked(
         address staker_address,
         address destination_address,
@@ -328,7 +326,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         (thisStake, ) = _accrueInterest(staker_address, thisStake, theArrayIndex);
 
         // Do safety checks
-        require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true || valid_migrators[msg.sender] == true, "Stake is still locked!");
+        require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true, "Stake is still locked!");
         uint256 liquidity = thisStake.liquidity;
 
         if (liquidity > 0) {
@@ -345,7 +343,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
 
             // Give the tokens to the destination_address
             // Should throw if insufficient balance
-            stakingToken.transfer(destination_address, liquidity);
+            TransferHelper.safeTransfer(address(stakingToken), destination_address, liquidity);
 
             // Need to call again to make sure everything is correct
             _updateRewardAndBalance(staker_address, false);
@@ -390,20 +388,6 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
 
     function _getRewardExtraLogic(address rewardee, address destination_address) internal override {
         // Do nothing
-    }
-
-     /* ========== RESTRICTED FUNCTIONS - Curator / migrator callable ========== */
-
-    // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can). 
-    function migrator_stakeLocked_for(address staker_address, uint256 amount, uint256 secs, uint256 start_timestamp) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
-        _stakeLocked(staker_address, msg.sender, amount, secs, start_timestamp);
-    }
-
-    // Used for migrations
-    function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
-        require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
-        _withdrawLocked(staker_address, msg.sender, kek_id);
     }
     
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */

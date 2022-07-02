@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.0;
-pragma experimental ABIEncoderV2;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -351,7 +350,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         _updateRewardAndBalance(msg.sender, false);
     }
 
-    // Two different stake functions are needed because of delegateCall and msg.sender issues (important for migration)
+    // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
     function stakeLocked(uint256 token_id, uint256 secs) nonReentrant external {
         _stakeLocked(msg.sender, msg.sender, token_id, secs, block.timestamp);
     }
@@ -365,7 +364,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) {
-        require(stakingPaused == false || valid_migrators[msg.sender] == true, "Staking paused or in migration");
+        require(stakingPaused == false, "Staking paused");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
         (, uint256 liquidity, int24 tick_lower, int24 tick_upper) = checkUniV3NFT(token_id, true); // Should throw if false
@@ -404,14 +403,13 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
 
     // ------ WITHDRAWING ------
 
-    // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
+    // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for proxies)
     function withdrawLocked(uint256 token_id, address destination_address) nonReentrant external returns (uint256) {
         require(withdrawalsPaused == false, "Withdrawals paused");
         return _withdrawLocked(msg.sender, destination_address, token_id);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
-    // functions like migrator_withdraw_locked() and withdrawLocked()
     function _withdrawLocked(
         address staker_address,
         address destination_address,
@@ -431,7 +429,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
             }
         }
         require(thisNFT.token_id == token_id, "Token ID not found");
-        require(block.timestamp >= thisNFT.ending_timestamp || stakesUnlocked == true || valid_migrators[msg.sender] == true, "Stake is still locked!");
+        require(block.timestamp >= thisNFT.ending_timestamp || stakesUnlocked == true, "Stake is still locked!");
 
         uint256 theLiquidity = thisNFT.liquidity;
 
@@ -482,31 +480,11 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
             }
         }
     }
-
-    /* ========== RESTRICTED FUNCTIONS - Curator / migrator callable ========== */
-
-    // [DISABLED FOR SPACE CONCERNS. ALSO, HARD TO GET UNIQUE TOKEN IDS DURING MIGRATIONS?]
-    // // Migrator can stake for someone else (they won't be able to withdraw it back though, only staker_address can).
-    // function migrator_stakeLocked_for(address staker_address, uint256 token_id, uint256 secs, uint256 start_timestamp) external isMigrating {
-    //     require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
-    //     _stakeLocked(staker_address, msg.sender, token_id, secs, start_timestamp);
-    // }
-
-    // // Used for migrations
-    // function migrator_withdraw_locked(address staker_address, uint256 token_id) external isMigrating {
-    //     require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
-    //     _withdrawLocked(staker_address, msg.sender, token_id);
-    // }
     
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
 
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
     function recoverERC721(address tokenAddress, uint256 token_id) external onlyByOwnGov {
-        // Admin cannot withdraw the staking token from the contract unless currently migrating
-        if (!migrationsOn) {
-            require(tokenAddress != address(stakingTokenNFT), "Not in migration"); // Only Governance / Timelock can trigger a migration
-        }
-        
         // Only the owner address can ever receive the recovery withdrawal
         // INonfungiblePositionManager inherits IERC721 so the latter does not need to be imported
         INonfungiblePositionManager(tokenAddress).safeTransferFrom(address(this), owner, token_id);
