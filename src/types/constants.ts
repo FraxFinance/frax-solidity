@@ -445,7 +445,7 @@ export const StakeChoices: StakeChoices = {
 		reward_tokens: ["FXS", "FPIS"],
     reward_token_decimals: [18, 18],
 		reward_token_coingecko_slugs: ["frax-share", "frax-price-index-share"],
-		version: 102
+		version: 104
 	},
   "Fraxswap FRAX/FXS": {
     lp_logo: "frax",
@@ -465,7 +465,7 @@ export const StakeChoices: StakeChoices = {
 		reward_tokens: ["FXS"],
     reward_token_decimals: [18],
 		reward_token_coingecko_slugs: ["frax-share"],
-		version: 102
+		version: 104
 	},
   'Fraxswap FRAX/IQ': {
     lp_logo: 'frax',
@@ -485,7 +485,7 @@ export const StakeChoices: StakeChoices = {
     reward_tokens: ['FXS', 'IQ'],
     reward_token_decimals: [18, 18],
     reward_token_coingecko_slugs: ['frax-share', 'everipedia'],
-    version: 102,
+    version: 103,
   },
   "Fraxswap FRAX/pitchFXS": {
     lp_logo: "frax",
@@ -505,8 +505,28 @@ export const StakeChoices: StakeChoices = {
 		reward_tokens: ["FXS", "PITCH"],
     reward_token_decimals: [18, 18],
 		reward_token_coingecko_slugs: ["frax-share", "pitch"],
-		version: 102
+		version: 103
 	},
+  "Fraxswap FRAX/SYN": {
+    lp_logo: "frax",
+    slug: "Fraxswap_FRAX_SYN",
+    label: "Fraxswap FRAX/SYN",
+    chain: "ethereum",
+    info_link: "/swap/main?from=0x853d955aCEf822Db058eb8505911ED77F175b99e&to=0x0f2D719407FdBeFF09D87557AbB7232601FD9F29",
+    add_liq_link: "/swap/liquidity?from=0x853d955aCEf822Db058eb8505911ED77F175b99e&to=0x0f2D719407FdBeFF09D87557AbB7232601FD9F29",
+    trade_link: "/swap/main?from=0x853d955aCEf822Db058eb8505911ED77F175b99e&to=0x0f2D719407FdBeFF09D87557AbB7232601FD9F29",
+    farming_link: "/staking/fraxswap-frax-syn",
+    starting_block: 15084640,
+    staking_enabled: true,
+    vefxs_enabled: true,
+    external_contract: false,
+    is_gauged: true,
+    pool_tokens: ["FRAX", "SYN"],
+    reward_tokens: ["FXS", "SYN"],
+    reward_token_decimals: [18, 18],
+    reward_token_coingecko_slugs: ["frax-share", "synapse-2"],
+    version: 104,
+  },
 	"FXS": {
 		lp_logo: "frax",
 		label: "Frax Shares Staking (veFXS)",
@@ -1665,6 +1685,7 @@ export const CONTRACT_ADDRESSES = {
       pitch: "0x49d9ef84464c53c04934b8d23d7b1733fdcfd302",
       sdt: "0x73968b9a57c6e53d41345fd57a6e6ae27d6cdb2f",
       sushi: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
+      syn: "0x0f2D719407FdBeFF09D87557AbB7232601FD9F29",
       temple: "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7",
       toke: "0x2e9d63788249371f1DFC918a52f8d799F4a38C94",
       tribe: "0xc7283b66eb1eb5fb86327f08e1b5816b0720212b",
@@ -1762,6 +1783,7 @@ export const CONTRACT_ADDRESSES = {
       "Fraxswap FRAX/FXS": "0x8206412c107eF1aDb70B9277974f5163760E128E", // Old "0x122F21a89a0A7197FF18C6e2995322ac29f42873",
       "Fraxswap FRAX/IQ": "0xcB0bC7C879bb3E9CFEB9d8EFef653F33B3d242e9",
       "Fraxswap FRAX/pitchFXS": "0x0a92aC70B5A187fB509947916a8F63DD31600F80",
+      "Fraxswap FRAX/SYN": "0x750Bb20608601e4C44aCbE774fAC8F37dab67c86", 
       "Fraxswap FRAX/WETH": "0x8300f0528e00Ad33b218bb05D396F61A9FDd68Cd", // Old: "0xf2E9fda1fE6a21E519174852A5c752Bd9FBA05A4",
       "Fraxswap FXS/FPIS": "0x1306b420B4B5f99cBeE938E369f06863a0f419A5", // Old: "0xfCCDE09b708115246174DAAFCB13a63332Fc22f0",
       "Gelato Uniswap FRAX/DAI": "0xb1Cfdc7370550f5e421E1bf0BF3CADFaDF3C4141",
@@ -1795,6 +1817,7 @@ export const CONTRACT_ADDRESSES = {
       "Fraxswap FRAX/FXS": "0x06b7C6E8d22ecE102fb282C41075Bcc968b6E046",
       "Fraxswap FRAX/IQ": "0x5e15E40A3AA06bECA711EdE9F3F76E1d80C34490", // Old: "0x53C2758fbA4063AA9eb1D1d7A481d53266214f2e",
       "Fraxswap FRAX/pitchFXS": "0x9E66E7811fEacf5402B65021475d1A293f7ea797",
+      "Fraxswap FRAX/SYN": "0xb8e49724a342c5F4C02918a1cDa6B3b25632d04b", // Old: "0xe679312C16200Bc42B7a05eddE8B0162b340a1f3", 
       "Gelato Uniswap FRAX/DAI": "0xcdfc491804A420b677f8e788B5157856910E2F6f",
       "Saddle alUSD/FEI/FRAX/LUSD": "0x0639076265e9f88542C91DCdEda65127974A5CA5",
       "StakeDAO sdETH-FraxPut": "0x0A53544b2194Dd8Ebc62c779043fc0624705BB56",
