@@ -145,6 +145,10 @@ event ProxyPaybackOrLiquidationsToggled:
 event LendingProxySet:
     proxy_address: address
 
+event HistoricalProxyToggled:
+    proxy_address: address
+    enabled: bool
+
 event StakerProxySet:
     proxy_address: address
 
@@ -179,6 +183,7 @@ emergencyUnlockActive: public(bool)
 
 # Proxies (allow withdrawal / deposits for lending protocols, etc.)
 lending_proxy: public(address) # Set by admin
+historical_proxies: public(HashMap[address, bool]) # Set by admin. Used for paying back / liquidating after the main lending_proxy changes
 staker_whitelisted_proxy: public(HashMap[address, address])  # user -> proxy. Set by user
 user_fpis_in_proxy: public(HashMap[address, uint256]) # user -> amount held in proxy
 
@@ -744,7 +749,7 @@ def proxy_payback_or_liquidate(
     """
     # Make sure that the function isn't disabled, and also that the proxy is valid
     assert (self.proxyPaybackOrLiquidationsEnabled), "Currently disabled"
-    assert (self.lending_proxy == msg.sender), "Proxy not whitelisted [admin level]"
+    assert (self.lending_proxy == msg.sender or self.historical_proxies[msg.sender]), "Proxy not whitelisted [admin level]"
     assert (self.staker_whitelisted_proxy[_staker_addr] == msg.sender), "Proxy not whitelisted [staker level]"
 
     # Get the staker's locked position and proxy balance
@@ -785,6 +790,7 @@ def proxy_payback_or_liquidate(
     # Handle the liquidation (proxy takes FPIS from the user's veFPIS position)
     if (_liquidation_amt > 0): 
         # Prevents unknown exploits from wiping the entire veFPIS contract
+        # No need to be here since withdraw() handles it
         # assert (_liquidation_amt + _liquidation_fee_amt) <= convert(_locked.amount, uint256), "Cannot liquidate more than the user has"
 
         # Withdraw the amount to liquidate from the staker's core position and give it to the proxy
@@ -1168,8 +1174,21 @@ def adminSetProxy(_proxy: address):
     """
     assert msg.sender == self.admin, "Admin only"  # dev: admin only
     self.lending_proxy = _proxy
+    self.historical_proxies[_proxy] = True
 
     log LendingProxySet(_proxy)
+
+@external
+def adminToggleHistoricalProxy(_proxy: address):
+    """
+    @dev Admin can manipulate a historical proxy if needed (normally done automatically in adminSetProxy)
+    @dev This is needed if the main lending_proxy changes and and old proxy needs to pay back or liquidate a user
+    @param _proxy The lending proxy address 
+    """
+    assert msg.sender == self.admin, "Admin only"  # dev: admin only
+    self.historical_proxies[_proxy] = not self.historical_proxies[_proxy]
+
+    log HistoricalProxyToggled(_proxy, self.historical_proxies[_proxy])
 
 
 @external

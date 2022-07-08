@@ -103,6 +103,7 @@ contract('veFPIS Tests', async (accounts) => {
 		await fpis_instance.transfer(COLLATERAL_FRAX_AND_FXS_OWNER, new BigNumber("100000e18"), { from: ADDRESS_WITH_FPIS });
 		await fpis_instance.transfer(INVESTOR_CUSTODIAN_ADDRESS, new BigNumber("100000e18"), { from: ADDRESS_WITH_FPIS });
 		await fpis_instance.transfer(GOVERNOR_GUARDIAN_ADDRESS, new BigNumber("1000e18"), { from: ADDRESS_WITH_FPIS });
+		await fpis_instance.transfer(STAKING_REWARDS_DISTRIBUTOR, new BigNumber("1000e18"), { from: ADDRESS_WITH_FPIS });
 
 		await hre.network.provider.request({
 			method: "hardhat_stopImpersonatingAccount",
@@ -1052,6 +1053,8 @@ contract('veFPIS Tests', async (accounts) => {
 	it("Proxy Fail Tests ", async () => {
 		const test_amount_1_initial = new BigNumber("100e18");
 		const test_amount_1_increment = new BigNumber("10e18");
+		const test_amount_1_increment_half = test_amount_1_increment.div(2);
+		const test_amount_1_increment_quarter = test_amount_1_increment.div(4);
 		const test_amount_1_liq_fee_amt = test_amount_1_increment.multipliedBy(0.01);
 		const curr_ts = (await time.latest()).toNumber();
 		const test_deposit_ts = curr_ts + ((30 * 86400) + 1);
@@ -1064,13 +1067,13 @@ contract('veFPIS Tests', async (accounts) => {
 
 		console.log("---------TRY TO PAY BACK NOT AS ADMIN WHITELISTED---------");
 		await expectRevert(
-			veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, test_amount_1_initial, 0, 0, { from: GOVERNOR_GUARDIAN_ADDRESS }),
+			veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, test_amount_1_initial, 0, 0, { from: TIMELOCK_ADMIN }),
 			"Proxy not whitelisted [admin level]"
 		);
 
 		console.log("---------TRY TO LIQUIDATE NOT AS ADMIN WHITELISTED---------");
 		await expectRevert(
-			veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, 0, test_amount_1_initial, test_amount_1_liq_fee_amt, { from: GOVERNOR_GUARDIAN_ADDRESS }),
+			veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, 0, test_amount_1_initial, test_amount_1_liq_fee_amt, { from: TIMELOCK_ADMIN }),
 			"Proxy not whitelisted [admin level]"
 		);
 
@@ -1138,8 +1141,34 @@ contract('veFPIS Tests', async (accounts) => {
 		console.log(chalk.yellow("PROXY APPROVES veFPIS TO TAKE FPIS"));
 		await fpis_instance.approve(veFPIS_instance.address, test_amount_1_increment, { from: GOVERNOR_GUARDIAN_ADDRESS });
 
-		console.log(chalk.yellow("PROXY PAYS BACK INCREMENT AMOUNT CORRECTLY"));
-		await veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, test_amount_1_increment, 0, 0, { from: GOVERNOR_GUARDIAN_ADDRESS });
+		console.log(chalk.yellow("PROXY PAYS BACK HALF INCREMENT AMOUNT CORRECTLY"));
+		await veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, test_amount_1_increment_half, 0, 0, { from: GOVERNOR_GUARDIAN_ADDRESS });
+
+
+		console.log(chalk.hex("#ff8b3d").bold("=============SWITCH PROXY WITH OUTSTANDING BALANCE============="));
+
+		console.log(chalk.yellow("ADMIN WHITELISTS STAKING_REWARDS_DISTRIBUTOR AS A PROXY "));
+		veFPIS_instance.adminSetProxy(STAKING_REWARDS_DISTRIBUTOR, { from: DEPLOYER_ADDRESS });
+
+		console.log(chalk.yellow("OLD PROXY PAYS BACK TO STAKER"));
+		await veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, test_amount_1_increment_quarter, 0, 0, { from: GOVERNOR_GUARDIAN_ADDRESS });
+
+		console.log(chalk.yellow("ADMIN DISABLES HISTORICAL GOVERNOR_GUARDIAN_ADDRESS PROXY "));
+		veFPIS_instance.adminToggleHistoricalProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
+
+		console.log(chalk.yellow("OLD (NOW DISABLED) PROXY TRIES PAYING BACK TO STAKER (SHOULD FAIL)"));
+		await expectRevert(
+			veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, test_amount_1_increment_quarter, 0, 0, { from: GOVERNOR_GUARDIAN_ADDRESS }),
+			"Proxy not whitelisted [admin level]"
+		);
+
+		console.log(chalk.yellow("ADMIN RE-ENABLES HISTORICAL GOVERNOR_GUARDIAN_ADDRESS PROXY "));
+		veFPIS_instance.adminToggleHistoricalProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
+ 
+		console.log(chalk.yellow("OLD (NOW RE-ENABLED) PROXY PAYS BACK TO STAKER"));
+		await veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, test_amount_1_increment_quarter, 0, 0, { from: GOVERNOR_GUARDIAN_ADDRESS });
+
+
 
 
 		console.log(chalk.hex("#ff8b3d").bold("=============WITHDRAWAL TESTS [PRE-EXPIRATION]============="));
@@ -1149,8 +1178,19 @@ contract('veFPIS Tests', async (accounts) => {
 			"The lock didn't expire"
 		);
 
-		console.log(chalk.yellow("TRANSFER 2X AN INCREMENT AMOUNT TO THE PROXY CORRECTLY"));
-		await veFPIS_instance.transfer_to_proxy(STAKING_OWNER, test_amount_1_increment.multipliedBy(2), { from: GOVERNOR_GUARDIAN_ADDRESS })
+		console.log(chalk.yellow("TRY TRANSFERRING 2X AN INCREMENT AMOUNT TO THE PROXY (SHOULD FAIL)"));
+		await expectRevert(
+			veFPIS_instance.transfer_to_proxy(STAKING_OWNER, test_amount_1_increment.multipliedBy(2), { from: GOVERNOR_GUARDIAN_ADDRESS }),
+			"Proxy not whitelisted [admin level]"
+		);
+
+		console.log(chalk.yellow("ADMIN SETS GOVERNOR_GUARDIAN_ADDRESS BACK AS MAIN PROXY "));
+		veFPIS_instance.adminSetProxy(GOVERNOR_GUARDIAN_ADDRESS, { from: DEPLOYER_ADDRESS });
+
+		console.log(chalk.yellow("TRANSFER 2X AN INCREMENT AMOUNT TO THE PROXY"));
+		console.log("FPIS IN PROXY [STAKING_OWNER]", (new BigNumber(await veFPIS_instance.user_fpis_in_proxy(STAKING_OWNER)).div(BIG18).toNumber()));
+		veFPIS_instance.transfer_to_proxy(STAKING_OWNER, test_amount_1_increment.multipliedBy(2), { from: GOVERNOR_GUARDIAN_ADDRESS }),
+		console.log("FPIS IN PROXY [STAKING_OWNER]", (new BigNumber(await veFPIS_instance.user_fpis_in_proxy(STAKING_OWNER)).div(BIG18).toNumber()));
 
 		// const user_fpis_in_proxy = new BigNumber(await veFPIS_instance.user_fpis_in_proxy(STAKING_OWNER)).div(BIG18).toNumber();
 		// const user_fpis_ttl_proxied = new BigNumber(await veFPIS_instance.user_ttl_proxied_fpis(STAKING_OWNER)).div(BIG18).toNumber();
@@ -1179,7 +1219,7 @@ contract('veFPIS Tests', async (accounts) => {
 		);
 
 		console.log(chalk.yellow("PROXY PAYS BACK A SMALL AMOUNT CORRECTLY"));
-		await veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, test_amount_1_increment, 0, 0, { from: GOVERNOR_GUARDIAN_ADDRESS });
+		await veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, test_amount_1_increment.multipliedBy(0.5), 0, 0, { from: GOVERNOR_GUARDIAN_ADDRESS });
 
 		console.log("---------TRY TO LIQUIDATE TOO MUCH [PROXY]---------");
 		await expectRevert(
@@ -1188,7 +1228,10 @@ contract('veFPIS Tests', async (accounts) => {
 		);
 
 		console.log(chalk.yellow("PROXY LIQUIDATES A SMALL AMOUNT"));
-		await veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, 0, test_amount_1_increment.multipliedBy(0.5), test_amount_1_liq_fee_amt, { from: GOVERNOR_GUARDIAN_ADDRESS });
+		console.log("FPIS IN PROXY [STAKING_OWNER]", (new BigNumber(await veFPIS_instance.user_fpis_in_proxy(STAKING_OWNER)).div(BIG18).toNumber()));
+		await veFPIS_instance.proxy_payback_or_liquidate(STAKING_OWNER, 0, test_amount_1_increment.multipliedBy(0.25), test_amount_1_liq_fee_amt, { from: GOVERNOR_GUARDIAN_ADDRESS });
+		console.log("FPIS IN PROXY [STAKING_OWNER]", (new BigNumber(await veFPIS_instance.user_fpis_in_proxy(STAKING_OWNER)).div(BIG18).toNumber()));
+
 
 		console.log(chalk.hex("#ff8b3d").bold("=============WITHDRAWAL TESTS [POST-EXPIRATION]============="));
 		console.log("---------TRY TO TRANSFER AFTER EXPIRATION, BUT WITH DEBTS [PROXY]---------");
@@ -1198,6 +1241,7 @@ contract('veFPIS Tests', async (accounts) => {
 		);
 
 		console.log("---------TRY TO WITHDRAW AFTER EXPIRATION, BUT WITH DEBTS [STAKER]---------");
+		console.log("FPIS IN PROXY [STAKING_OWNER]", (new BigNumber(await veFPIS_instance.user_fpis_in_proxy(STAKING_OWNER)).div(BIG18).toNumber()));
 		await expectRevert(
 			veFPIS_instance.withdraw({ from: STAKING_OWNER }),
 			"Outstanding FPIS in proxy. Have proxy use proxy_payback_or_liquidate"
