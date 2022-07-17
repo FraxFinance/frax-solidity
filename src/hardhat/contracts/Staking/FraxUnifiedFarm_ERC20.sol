@@ -23,6 +23,9 @@ import "./FraxUnifiedFarmTemplate.sol";
 // import "../Misc_AMOs/convex/IDepositToken.sol";
 // import "../Misc_AMOs/curve/I2pool.sol";
 
+// Fraxswap
+import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
+
 // G-UNI
 // import "../Misc_AMOs/gelato/IGUniPool.sol";
 
@@ -35,8 +38,8 @@ import "./FraxUnifiedFarmTemplate.sol";
 // StakeDAO Vault
 // import '../Misc_AMOs/stakedao/IStakeDaoVault.sol';
 
-// Uniswap V2 / Fraxswap
-import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
+// Uniswap V2
+// import '../Uniswap/Interfaces/IUniswapV2Pair.sol';
 
 // Vesper
 // import '../Misc_AMOs/vesper/IVPool.sol';
@@ -53,6 +56,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // IConvexStakingWrapperFrax public stakingToken;
     // I2pool public curvePool;
 
+    // Fraxswap
+    IFraxswapPair public stakingToken;
+
     // G-UNI
     // IGUniPool public stakingToken;
     
@@ -66,7 +72,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // IStakeDaoVault public stakingToken;
 
     // Uniswap V2
-    IUniswapV2Pair public stakingToken;
+    // IUniswapV2Pair public stakingToken;
 
     // Vesper
     // IVPool public stakingToken;
@@ -106,6 +112,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
         // curvePool = I2pool(0xf861483fa7E511fbc37487D91B6FAa803aF5d37c);
 
+        // Fraxswap
+        stakingToken = IFraxswapPair(_stakingToken);
+        address token0 = stakingToken.token0();
+        if (token0 == frax_address) frax_is_token0 = true;
+        else frax_is_token0 = false;
+
         // G-UNI
         // stakingToken = IGUniPool(_stakingToken);
         // address token0 = address(stakingToken.token0());
@@ -121,10 +133,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // stakingToken = IStakeDaoVault(_stakingToken);
 
         // Uniswap V2
-        stakingToken = IUniswapV2Pair(_stakingToken);
-        address token0 = stakingToken.token0();
-        if (token0 == frax_address) frax_is_token0 = true;
-        else frax_is_token0 = false;
+        // stakingToken = IUniswapV2Pair(_stakingToken);
+        // address token0 = stakingToken.token0();
+        // if (token0 == frax_address) frax_is_token0 = true;
+        // else frax_is_token0 = false;
 
         // Vesper
         // stakingToken = IVPool(_stakingToken);
@@ -145,6 +157,17 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             // Count full value here since FRAX and FPI are both part of FRAX ecosystem
             // frax_per_lp_token = curvePool.get_virtual_price(); // BAD
             // frax_per_lp_token = curvePool.lp_price() / 2;
+        }
+
+        // Fraxswap
+        // ============================================
+        {
+            uint256 total_frax_reserves;
+            (uint256 _reserve0, uint256 _reserve1, , ,) = (stakingToken.getReserveAfterTwamm(block.timestamp));
+            if (frax_is_token0) total_frax_reserves = _reserve0;
+            else total_frax_reserves = _reserve1;
+
+            frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
         }
 
         // G-UNI
@@ -183,16 +206,16 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         //    frax_per_lp_token = ((frax3crv_held * 1e18) / stakingToken.totalSupply()) / 2;
         // }
 
-        // Uniswap V2 / Fraxswap
+        // Uniswap V2
         // ============================================
-        {
-            uint256 total_frax_reserves;
-            (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
-            if (frax_is_token0) total_frax_reserves = reserve0;
-            else total_frax_reserves = reserve1;
+        // {
+        //     uint256 total_frax_reserves;
+        //     (uint256 reserve0, uint256 reserve1, ) = (stakingToken.getReserves());
+        //     if (frax_is_token0) total_frax_reserves = reserve0;
+        //     else total_frax_reserves = reserve1;
 
-            frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
-        }
+        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
+        // }
 
         // Vesper
         // ============================================
@@ -347,7 +370,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     }
 
     // Add additional LPs to an existing locked stake
-    function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant updateRewardAndBalance(msg.sender, true) public {
+    function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
 
@@ -378,13 +401,13 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         }
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(msg.sender, false);
+        updateRewardAndBalance(msg.sender, false);
 
         emit LockedAdditional(msg.sender, kek_id, addl_liq);
     }
 
     // Extends the lock of an existing stake
-    function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant updateRewardAndBalance(msg.sender, true) public {
+    function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
 
@@ -411,7 +434,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         );
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(msg.sender, false);
+        updateRewardAndBalance(msg.sender, false);
 
         emit LockedLonger(msg.sender, kek_id, new_secs, block.timestamp, new_ending_ts);
     }
@@ -431,7 +454,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 liquidity,
         uint256 secs,
         uint256 start_timestamp
-    ) internal updateRewardAndBalance(staker_address, true) returns (bytes32) {
+    ) internal updateRewardAndBalanceMdf(staker_address, true) returns (bytes32) {
         require(stakingPaused == false, "Staking paused");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
@@ -462,7 +485,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         }
         
         // Need to call again to make sure everything is correct
-        _updateRewardAndBalance(staker_address, false);
+        updateRewardAndBalance(staker_address, false);
 
         emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
 
@@ -509,7 +532,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             delete lockedStakes[staker_address][theArrayIndex];
 
             // Need to call again to make sure everything is correct
-            _updateRewardAndBalance(staker_address, false);
+            updateRewardAndBalance(staker_address, false);
 
             emit WithdrawLocked(staker_address, liquidity, kek_id, destination_address);
         }

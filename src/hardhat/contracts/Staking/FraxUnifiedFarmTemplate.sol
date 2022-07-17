@@ -135,8 +135,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         _;
     }
 
-    modifier updateRewardAndBalance(address account, bool sync_too) {
-        _updateRewardAndBalance(account, sync_too);
+    modifier updateRewardAndBalanceMdf(address account, bool sync_too) {
+        updateRewardAndBalance(account, sync_too);
         _;
     }
 
@@ -428,7 +428,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // ------ REWARDS SYNCING ------
 
-    function _updateRewardAndBalance(address account, bool sync_too) internal {
+    function updateRewardAndBalance(address account, bool sync_too) public {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
         if (sync_too){
             sync();
@@ -503,7 +503,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable
-    function _getReward(address rewardee, address destination_address, bool do_extra_logic) internal updateRewardAndBalance(rewardee, true) returns (uint256[] memory rewards_before) {
+    function _getReward(address rewardee, address destination_address, bool do_extra_logic) internal updateRewardAndBalanceMdf(rewardee, true) returns (uint256[] memory rewards_before) {
         // Update the last reward claim time first, as an extra reentrancy safeguard
         lastRewardClaimTime[rewardee] = block.timestamp;
         
