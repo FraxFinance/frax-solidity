@@ -37,6 +37,7 @@ const CPITrackerOracle = artifacts.require("Oracle/CPITrackerOracle");
 const UniV3TWAPOracle = artifacts.require("Oracle/UniV3TWAPOracle"); 
 
 // Staking contracts
+const FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ");
 const FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS");
 const FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE");
 const FraxMiddlemanGauge_ARBI_Curve_VSTFRAX = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_ARBI_Curve_VSTFRAX");
@@ -100,8 +101,9 @@ module.exports = async (deployer) => {
     let univ3_twap_oracle_instance;
 
     // Staking
-    let fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance;
+    let fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance;
     let fraxUnifiedFarm_Fraxswap_FRAX_pitchFXS_instance;
+    let fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance;
     let middlemanGauge_ARBI_Curve_VSTFRAX;
     let fraxUnifiedFarm_PosRebase_aFRAX_instance;
 
@@ -162,6 +164,7 @@ module.exports = async (deployer) => {
 
     // Staking
     middlemanGauge_ARBI_Curve_VSTFRAX = await FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.at(CONTRACT_ADDRESSES.ethereum.middleman_gauges['Curve VSTFRAX-f']);
+    fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance = await FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Fraxswap FRAX/IQ']);
     fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Temple FRAX/TEMPLE']);
     fraxUnifiedFarm_PosRebase_aFRAX_instance = await FraxUnifiedFarm_PosRebase_aFRAX.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Aave aFRAX']);
 
@@ -226,21 +229,23 @@ module.exports = async (deployer) => {
     // );
 
 
-    console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE =========="));
-    // FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE 
-    fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.new(
+    
+
+    console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ =========="));
+    // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ 
+    fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance = await FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.new(
         THE_ACCOUNTS[6], 
         [
             "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
-            "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7" // TEMPLE
+            "0x579CEa1889991f68aCc35Ff5c3dd0621fF29b0C9" // IQ
         ], 
         [
             "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
-            "0x4D6175d58C5AceEf30F546C0d5A557efFa53A950" // Temple DAO Msig
+            "0x8aCc50345921b4A635705Ec7f3AC042B3407BD58" // IQ Msig
         ],
         [
-            11574074074074, 
-            0
+            11574074074074, // 1 FXS per day
+            23148148148148 // 2 IQ per day
         ],
         [
             "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
@@ -250,7 +255,7 @@ module.exports = async (deployer) => {
             "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
             "0x0000000000000000000000000000000000000000"
         ],
-        CONTRACT_ADDRESSES.ethereum.pair_tokens['Temple FRAX/TEMPLE'],
+        CONTRACT_ADDRESSES.ethereum.pair_tokens['Fraxswap FRAX/IQ'],
     );
 
     // console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS =========="));
@@ -278,6 +283,33 @@ module.exports = async (deployer) => {
     //         "0x0000000000000000000000000000000000000000"
     //     ],
     //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Fraxswap FRAX/pitchFXS'],
+    // );
+
+    // console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE =========="));
+    // // FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE 
+    // fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.new(
+    //     THE_ACCOUNTS[6], 
+    //     [
+    //         "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
+    //         "0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7" // TEMPLE
+    //     ], 
+    //     [
+    //         "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
+    //         "0x4D6175d58C5AceEf30F546C0d5A557efFa53A950" // Temple DAO Msig
+    //     ],
+    //     [
+    //         11574074074074, 
+    //         0
+    //     ],
+    //     [
+    //         "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
+    //         "0x0000000000000000000000000000000000000000"
+    //     ],
+    //     [
+    //         "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
+    //         "0x0000000000000000000000000000000000000000"
+    //     ],
+    //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Temple FRAX/TEMPLE'],
     // );
 
     // console.log(chalk.yellow("========== FraxUnifiedFarm_PosRebase_aFRAX =========="));
@@ -469,6 +501,7 @@ module.exports = async (deployer) => {
 
     console.log(chalk.yellow("--------DEPLOY STAKING CONTRACTS--------"));
     FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.setAsDeployed(middlemanGauge_ARBI_Curve_VSTFRAX);
+    FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance);
     FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_pitchFXS_instance);
     FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.setAsDeployed(fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance);
     FraxUnifiedFarm_PosRebase_aFRAX.setAsDeployed(fraxUnifiedFarm_PosRebase_aFRAX_instance);

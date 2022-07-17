@@ -291,7 +291,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         uint256 token0_min_in, 
         uint256 token1_min_in,
         bool use_balof_override // Use balanceOf Override
-    ) updateRewardAndBalance(msg.sender, true) public {
+    ) updateRewardAndBalanceMdf(msg.sender, true) public {
         // Get the stake and its index
         (LockedNFT memory thisNFT, uint256 theArrayIndex) = _getStake(msg.sender, token_id);
 
@@ -347,7 +347,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         }
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(msg.sender, false);
+        updateRewardAndBalance(msg.sender, false);
     }
 
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
@@ -363,7 +363,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         uint256 token_id,
         uint256 secs,
         uint256 start_timestamp
-    ) internal updateRewardAndBalance(staker_address, true) {
+    ) internal updateRewardAndBalanceMdf(staker_address, true) {
         require(stakingPaused == false, "Staking paused");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
@@ -396,7 +396,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         }
 
         // Need to call again to make sure everything is correct
-        _updateRewardAndBalance(staker_address, false);
+        updateRewardAndBalance(staker_address, false);
 
         emit LockNFT(staker_address, liquidity, token_id, secs, source_address);
     }
@@ -446,7 +446,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
             delete lockedNFTs[staker_address][theArrayIndex];
 
             // Need to call again to make sure everything is correct
-            _updateRewardAndBalance(staker_address, false);
+            updateRewardAndBalance(staker_address, false);
 
             // Give the tokens to the destination_address
             stakingTokenNFT.safeTransferFrom(address(this), destination_address, token_id);

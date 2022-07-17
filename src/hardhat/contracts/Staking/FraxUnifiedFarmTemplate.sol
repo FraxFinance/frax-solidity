@@ -71,7 +71,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     uint256 public lock_max_multiplier = uint256(2e18); // E18. 1x = e18
     uint256 public lock_time_for_max_multiplier = 1 * 365 * 86400; // 1 year
     // uint256 public lock_time_for_max_multiplier = 2 * 86400; // 2 days
-    uint256 public lock_time_min = 604800; // 7 * 86400 (7 day)
+    uint256 public lock_time_min = 594000; // 6.875 * 86400 (~7 day)
 
     // veFXS related
     uint256 public vefxs_boost_scale_factor = uint256(4e18); // E18. 4x = 4e18; 100 / scale_factor = % vefxs supply needed for max boost
@@ -135,8 +135,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         _;
     }
 
-    modifier updateRewardAndBalance(address account, bool sync_too) {
-        _updateRewardAndBalance(account, sync_too);
+    modifier updateRewardAndBalanceMdf(address account, bool sync_too) {
+        updateRewardAndBalance(account, sync_too);
         _;
     }
 
@@ -428,7 +428,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // ------ REWARDS SYNCING ------
 
-    function _updateRewardAndBalance(address account, bool sync_too) internal {
+    function updateRewardAndBalance(address account, bool sync_too) public {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
         if (sync_too){
             sync();
@@ -503,7 +503,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable
-    function _getReward(address rewardee, address destination_address, bool do_extra_logic) internal updateRewardAndBalance(rewardee, true) returns (uint256[] memory rewards_before) {
+    function _getReward(address rewardee, address destination_address, bool do_extra_logic) internal updateRewardAndBalanceMdf(rewardee, true) returns (uint256[] memory rewards_before) {
         // Update the last reward claim time first, as an extra reentrancy safeguard
         lastRewardClaimTime[rewardee] = block.timestamp;
         

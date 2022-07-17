@@ -208,7 +208,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
 
     // Add additional LPs to an existing locked stake
     // REBASE: If you simply want to accrue interest, call this with addl_liq = 0
-    function lockAdditional(bytes32 kek_id, uint256 addl_liq) updateRewardAndBalance(msg.sender, true) public {
+    function lockAdditional(bytes32 kek_id, uint256 addl_liq) updateRewardAndBalanceMdf(msg.sender, true) public {
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
 
@@ -245,7 +245,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         }
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(msg.sender, false);
+        updateRewardAndBalance(msg.sender, false);
     }
 
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
@@ -261,7 +261,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         uint256 liquidity,
         uint256 secs,
         uint256 start_timestamp
-    ) internal updateRewardAndBalance(staker_address, true) returns (bytes32) {
+    ) internal updateRewardAndBalanceMdf(staker_address, true) returns (bytes32) {
         require(stakingPaused == false, "Staking paused");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
@@ -295,7 +295,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         }
         
         // Need to call again to make sure everything is correct
-        _updateRewardAndBalance(staker_address, false);
+        updateRewardAndBalance(staker_address, false);
 
         emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
 
@@ -346,7 +346,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
             TransferHelper.safeTransfer(address(stakingToken), destination_address, liquidity);
 
             // Need to call again to make sure everything is correct
-            _updateRewardAndBalance(staker_address, false);
+            updateRewardAndBalance(staker_address, false);
 
             // REBASE: leave liquidity in the event tracking alone, not giveBackAmt
             emit WithdrawLocked(staker_address, liquidity, kek_id, destination_address);
