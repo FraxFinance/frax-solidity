@@ -50,32 +50,35 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     /* ========== STATE VARIABLES ========== */
 
+    // -------------------- COMMON -------------------- 
+    bool internal immutable frax_is_token0;
+
     // -------------------- VARIES --------------------
 
     // Convex stkcvxFPIFRAX
-    // IConvexStakingWrapperFrax public stakingToken;
+    // IConvexStakingWrapperFrax public immutable stakingToken;
     // I2pool public curvePool;
 
     // Fraxswap
-    IFraxswapPair public stakingToken;
+    IFraxswapPair public immutable stakingToken;
 
     // G-UNI
-    // IGUniPool public stakingToken;
+    // IGUniPool public immutable stakingToken;
     
     // mStable
-    // IFeederPool public stakingToken;
+    // IFeederPool public immutable stakingToken;
 
     // sdETH-FraxPut Vault
-    // IOpynPerpVault public stakingToken;
+    // IOpynPerpVault public immutable stakingToken;
 
     // StakeDAO Vault
-    // IStakeDaoVault public stakingToken;
+    // IStakeDaoVault public immutable stakingToken;
 
     // Uniswap V2
-    // IUniswapV2Pair public stakingToken;
+    // IUniswapV2Pair public immutable stakingToken;
 
     // Vesper
-    // IVPool public stakingToken;
+    // IVPool public immutable stakingToken;
 
     // ------------------------------------------------
 
@@ -115,8 +118,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Fraxswap
         stakingToken = IFraxswapPair(_stakingToken);
         address token0 = stakingToken.token0();
-        if (token0 == frax_address) frax_is_token0 = true;
-        else frax_is_token0 = false;
+        frax_is_token0 = (token0 == frax_address);
 
         // G-UNI
         // stakingToken = IGUniPool(_stakingToken);
@@ -297,10 +299,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 midpoint_vefxs_multiplier;
         if (
             (_locked_liquidity[account] == 0 && _combined_weights[account] == 0) || 
-            (new_vefxs_multiplier > _vefxsMultiplierStored[account])
+            (new_vefxs_multiplier >= _vefxsMultiplierStored[account])
         ) {
             // This is only called for the first stake to make sure the veFXS multiplier is not cut in half
-            // Also used if the user increased their position
+            // Also used if the user increased or maintained their position
             midpoint_vefxs_multiplier = new_vefxs_multiplier;
         }
         else {

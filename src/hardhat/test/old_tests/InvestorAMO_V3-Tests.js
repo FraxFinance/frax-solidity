@@ -22,7 +22,7 @@ const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 
 // Uniswap related
 const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
-const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
+const IUniswapV2Pair = artifacts.require("contracts/Uniswap/Interfaces/IUniswapV2Pair.sol:IUniswapV2Pair");
 const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
 
 // Collateral Pools

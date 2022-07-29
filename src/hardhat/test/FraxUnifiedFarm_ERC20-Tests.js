@@ -26,7 +26,7 @@ const hre = require("hardhat");
 const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
 const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 const IFraxswapPair = artifacts.require("Fraxswap/core/interfaces/IFraxswapPair");
-const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
+const IUniswapV2Pair = artifacts.require("contracts/Uniswap/Interfaces/IUniswapV2Pair.sol:IUniswapV2Pair");
 const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
 const IGUniPool = artifacts.require("Misc_AMOs/gelato/IGUniPool");
 const ITempleFraxAMMOps = artifacts.require("Misc_AMOs/temple/ITempleFraxAMMOps");
@@ -871,8 +871,16 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		// Note the FXS balance before the reward claims
 		const fxs_bal_before_claim_wk_5 = new BigNumber(await fxs_instance.balanceOf(staking_instance.address)).div(BIG18).toNumber();
 
-		// Account 9 withdraws and claims its locked stake
+		// First try withdraw somebody else's stake [SHOULD FAIL]
+		await expectRevert(
+			staking_instance.withdrawLocked(locked_stake_structs_9_0[0].kek_id, accounts[9], { from: INVESTOR_CUSTODIAN_ADDRESS }),
+			"Stake not found"
+		);
+
+		// Actually withdraw the stake
 		await staking_instance.withdrawLocked(locked_stake_structs_9_0[0].kek_id, accounts[9], { from: accounts[9] });
+
+		// Claim
 		await staking_instance.getReward(accounts[9], { from: accounts[9] });
 		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_1_0[1].kek_id, COLLATERAL_FRAX_AND_FXS_OWNER, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
 
@@ -1099,7 +1107,16 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// Add 1 more LP token to the lock
 		await pair_instance.approve(staking_instance.address, uni_pool_lock_boundary_check_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		
+		// First try to add to somebody else's stake [SHOULD FAIL]
+		await expectRevert(
+			staking_instance.lockAdditional(add_more_before.kek_id, uni_pool_lock_boundary_check_amount, { from: INVESTOR_CUSTODIAN_ADDRESS }),
+			"Stake not found"
+		);
+
+		// Actually add to the stake
 		await staking_instance.lockAdditional(add_more_before.kek_id, uni_pool_lock_boundary_check_amount, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
 
 		// Print the info for the stake
 		const add_more_after = await staking_instance.lockedStakes.call(COLLATERAL_FRAX_AND_FXS_OWNER, 2);
@@ -1131,6 +1148,14 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		console.log("end_ts_before: ", end_ts_before);
 		console.log("current_timestamp: ", current_timestamp_extend_lock);
 		console.log("end_ts_after_calc: ", end_ts_after_calc);
+
+		// First try to extend somebody else's stake [SHOULD FAIL]
+		await expectRevert(
+			staking_instance.lockLonger(extend_lock_before.kek_id, end_ts_after_calc, { from: INVESTOR_CUSTODIAN_ADDRESS }),
+			"Stake not found"
+		);
+
+		// Actually extend the stake
 		await staking_instance.lockLonger(extend_lock_before.kek_id, end_ts_after_calc, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
 
 		// Print the info for the stake

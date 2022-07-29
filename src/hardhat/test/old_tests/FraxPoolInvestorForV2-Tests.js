@@ -36,7 +36,7 @@ const SafeERC20 = artifacts.require("ERC20/SafeERC20");
 const TransferHelper = artifacts.require("Uniswap/TransferHelper");
 const SwapToPrice = artifacts.require("Uniswap/SwapToPrice");
 const IUniswapV2Factory = artifacts.require("Uniswap/Interfaces/IUniswapV2Factory");
-const IUniswapV2Pair = artifacts.require("Uniswap/Interfaces/IUniswapV2Pair");
+const IUniswapV2Pair = artifacts.require("contracts/Uniswap/Interfaces/IUniswapV2Pair.sol:IUniswapV2Pair");
 const IUniswapV2Router02 = artifacts.require("Uniswap/Interfaces/IUniswapV2Router02");
 
 // Collateral Pools
