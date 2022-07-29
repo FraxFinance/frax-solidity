@@ -21,8 +21,13 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
 
     /* ========== STATE VARIABLES ========== */
 
+    // -------------------- COMMON -------------------- 
+    bool internal immutable frax_is_token0;
+
+    // -------------------- VARIES -------------------- 
+
     // Uniswap V3 related
-    INonfungiblePositionManager private stakingTokenNFT = INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88); // UniV3 uses an NFT
+    INonfungiblePositionManager private immutable stakingTokenNFT = INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88); // UniV3 uses an NFT
     int24 public uni_tick_lower;
     int24 public uni_tick_upper;
     uint24 public uni_required_fee;
@@ -88,7 +93,7 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         uni_token1 = token1;
 
         // Check where FRAX is
-        if (uni_token0 == frax_address) frax_is_token0 = true;
+        frax_is_token0 = (uni_token0 == frax_address);
 
         // Fee, Tick, and Liquidity related
         uni_required_fee = fee;

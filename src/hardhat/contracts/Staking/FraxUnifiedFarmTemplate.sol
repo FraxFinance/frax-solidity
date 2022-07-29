@@ -38,9 +38,8 @@ import "../Math/Math.sol";
 import "../Curve/IveFXS.sol";
 import "../Curve/IFraxGaugeController.sol";
 import "../Curve/IFraxGaugeFXSRewardsDistributor.sol";
-import "../ERC20/ERC20.sol";
+import "../ERC20/IERC20.sol";
 import '../Uniswap/TransferHelper.sol';
-import "../ERC20/SafeERC20.sol";
 import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
 
@@ -48,7 +47,6 @@ import "./Owned.sol";
 import "../Misc_AMOs/convex/IConvexBaseRewardPool.sol";
 
 contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
-    using SafeERC20 for ERC20;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -57,7 +55,6 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     
     // Frax related
     address internal immutable frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
-    bool internal frax_is_token0;
     uint256 public fraxPerLPStored;
 
     // Constant for various precisions
@@ -550,7 +547,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         
         // Make sure there are enough tokens to renew the reward period
         for (uint256 i = 0; i < rewardTokens.length; i++){ 
-            require((rewardRates(i) * rewardsDuration * (num_periods_elapsed + 1)) <= ERC20(rewardTokens[i]).balanceOf(address(this)), string(abi.encodePacked("Not enough reward tokens available: ", rewardTokens[i])) );
+            require((rewardRates(i) * rewardsDuration * (num_periods_elapsed + 1)) <= IERC20(rewardTokens[i]).balanceOf(address(this)), string(abi.encodePacked("Not enough reward tokens available: ", rewardTokens[i])) );
         }
         
         // uint256 old_lastUpdateTime = lastUpdateTime;

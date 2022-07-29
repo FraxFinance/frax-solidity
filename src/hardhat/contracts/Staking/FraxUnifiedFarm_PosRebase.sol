@@ -28,10 +28,13 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
 
     /* ========== STATE VARIABLES ========== */
 
+    // -------------------- COMMON -------------------- 
+    bool internal immutable frax_is_token0;
+
     // -------------------- VARIES --------------------
 
     // Aave V2
-    IAToken public stakingToken;
+    IAToken public immutable stakingToken;
 
     // Need to store this when the user stakes. If they lockAdditional, the base value needs to accrue and the
     // Stored liquidity index needs to be updated
@@ -67,6 +70,9 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
     ) 
     FraxUnifiedFarmTemplate(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers, _rewardDistributors)
     {
+
+
+        frax_is_token0 = true;
 
         // -------------------- VARIES --------------------
   

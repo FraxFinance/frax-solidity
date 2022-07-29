@@ -4,6 +4,7 @@ require('dotenv').config({ path: envPath });
 
 require('hardhat-deploy');
 require('hardhat-contract-sizer');
+require('hardhat-gas-reporter');
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-web3");
@@ -351,7 +352,7 @@ module.exports = {
       artifacts: "./artifacts"
     },
     mocha: {
-      timeout: 500000
+      timeout: 50000000
 	},
 	etherscan: {
 		// apiKey: process.env.BSCSCAN_API_KEY // BSC
@@ -360,7 +361,12 @@ module.exports = {
 		// apiKey: process.env.OPTIMISM_API_KEY, // Optimism
 		// apiKey: process.env.POLYGONSCAN_API_KEY // Polygon
 	},
-
+	gasReporter: {
+		currency: 'USD',
+		gasPrice: 80,
+		enabled: true,
+		maxMethodDiff: 10,
+	},
 	contractSizer: {
 		alphaSort: true,
 		runOnCompile: true,
