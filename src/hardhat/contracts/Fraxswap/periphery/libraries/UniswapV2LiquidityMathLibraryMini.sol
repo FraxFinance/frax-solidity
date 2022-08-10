@@ -42,7 +42,8 @@ library UniswapV2LiquidityMathLibraryMini {
         uint256 inTokenTruePrice,
         uint256 outTokenTruePrice,
         uint256 reserveIn,
-        uint256 reserveOut
+        uint256 reserveOut,
+        uint256 fee
     ) pure internal returns (uint256 amountIn) {
         uint256 invariant = reserveIn * reserveOut;
 
@@ -51,12 +52,12 @@ library UniswapV2LiquidityMathLibraryMini {
 
         uint256 leftSide = Babylonian.sqrt(
             FullMath.mulDiv(
-                (invariant * 1000),
+                (invariant * 10000),
                 inTokenTruePrice,
-                outTokenTruePrice * 997
+                outTokenTruePrice * fee
             )
         );
-        uint256 rightSide = (reserveIn * 1000) / 997;
+        uint256 rightSide = (reserveIn * 10000) / fee;
 
         if (leftSide < rightSide) return (0);
 

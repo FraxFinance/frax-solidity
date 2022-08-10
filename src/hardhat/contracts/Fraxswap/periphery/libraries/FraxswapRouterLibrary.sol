@@ -49,7 +49,7 @@ library FraxswapRouterLibrary {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'56d8137e6dc7681d67b2c0b0ecb99a25da51343f540d36e93a2d172fea4597f7' // init code hash
+                hex'b30650510099c401831deff48a22b0a60dbdcf686e11a77823db9f7fde097aa2' // init code / init hash
             )))));
     }
 
@@ -69,7 +69,7 @@ library FraxswapRouterLibrary {
 
         pair.executeVirtualOrders(block.timestamp);
 
-        (uint reserve0, uint reserve1,,uint twammReserve0, uint twammReserve1) = pair.getTwammReserves();
+        (uint reserve0, uint reserve1,,uint twammReserve0, uint twammReserve1, ) = pair.getTwammReserves();
 
         (reserveA, reserveB, twammReserveA, twammReserveB) = tokenA == token0 ? (reserve0, reserve1, twammReserve0, twammReserve1) : (reserve1, reserve0, twammReserve1, twammReserve0);
     }
@@ -81,34 +81,15 @@ library FraxswapRouterLibrary {
         amountB = amountA * reserveB / reserveA;
     }
 
-    // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
-    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) internal pure returns (uint amountOut) {
-        require(amountIn > 0, 'FraxswapRouterLibrary: INSUFFICIENT_INPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY');
-        uint amountInWithFee = amountIn * 997;
-        uint numerator = amountInWithFee * reserveOut;
-        uint denominator = (reserveIn * 1000) + amountInWithFee;
-        amountOut = numerator / denominator;
-    }
-
-    // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
-    function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) internal pure returns (uint amountIn) {
-        require(amountOut > 0, 'FraxswapRouterLibrary: INSUFFICIENT_OUTPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY');
-        uint numerator = reserveIn * amountOut * 1000;
-        uint denominator = (reserveOut - amountOut) * 997;
-        amountIn = (numerator / denominator) + 1;
-    }
-
     // performs chained getAmountOut calculations on any number of pairs
     function getAmountsOut(address factory, uint amountIn, address[] memory path) internal view returns (uint[] memory amounts) {
         require(path.length >= 2, 'FraxswapRouterLibrary: INVALID_PATH');
         amounts = new uint[](path.length);
         amounts[0] = amountIn;
         for (uint i; i < path.length - 1; i++) {
-            require(IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, path[i], path[i + 1])).twammUpToDate(), 'twamm out of date');
-            (uint reserveIn, uint reserveOut) = getReserves(factory, path[i], path[i + 1]);
-            amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut);
+            IFraxswapPair pair = IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, path[i], path[i + 1]));
+            require(pair.twammUpToDate(), 'twamm out of date');
+            amounts[i + 1] = pair.getAmountOut(amounts[i], path[i]);
         }
     }
 
@@ -118,9 +99,9 @@ library FraxswapRouterLibrary {
         amounts = new uint[](path.length);
         amounts[amounts.length - 1] = amountOut;
         for (uint i = path.length - 1; i > 0; i--) {
-            require(IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, path[i - 1], path[i])).twammUpToDate(), 'twamm out of date');
-            (uint reserveIn, uint reserveOut) = getReserves(factory, path[i - 1], path[i]);
-            amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
+            IFraxswapPair pair = IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, path[i - 1], path[i]));
+            require(pair.twammUpToDate(), 'twamm out of date');
+            amounts[i - 1] = pair.getAmountIn(amounts[i], path[i - 1]);
         }
     }
 
@@ -130,10 +111,9 @@ library FraxswapRouterLibrary {
         amounts = new uint[](path.length);
         amounts[0] = amountIn;
         for (uint i; i < path.length - 1; i++) {
-            address pairAddress = FraxswapRouterLibrary.pairFor(factory, path[i], path[i + 1]);
-            IFraxswapPair(pairAddress).executeVirtualOrders(block.timestamp);
-            (uint reserveIn, uint reserveOut) = getReserves(factory, path[i], path[i + 1]);
-            amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut);
+            IFraxswapPair pair = IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, path[i], path[i + 1]));
+            pair.executeVirtualOrders(block.timestamp);
+            amounts[i + 1] = pair.getAmountOut(amounts[i], path[i]);
         }
     }
 
@@ -143,10 +123,9 @@ library FraxswapRouterLibrary {
         amounts = new uint[](path.length);
         amounts[amounts.length - 1] = amountOut;
         for (uint i = path.length - 1; i > 0; i--) {
-            address pairAddress = FraxswapRouterLibrary.pairFor(factory, path[i - 1], path[i]);
-            IFraxswapPair(pairAddress).executeVirtualOrders(block.timestamp);
-            (uint reserveIn, uint reserveOut) = getReserves(factory, path[i - 1], path[i]);
-            amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
+            IFraxswapPair pair = IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, path[i - 1], path[i]));
+            pair.executeVirtualOrders(block.timestamp);
+            amounts[i - 1] = pair.getAmountIn(amounts[i], path[i - 1]);
         }
     }
 }

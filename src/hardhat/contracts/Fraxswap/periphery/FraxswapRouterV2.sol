@@ -123,13 +123,16 @@ contract FraxswapRouterV2 is ReentrancyGuard, Ownable {
             bool zeroForOne = prevRoute.tokenOut < step.tokenOut;
             if (step.swapType == 0)
                 PoolInterface(step.pool).executeVirtualOrders(block.timestamp);
-            (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(step.pool)
-                .getReserves();
-            amountOut = getAmountOut(
-                amountIn,
-                zeroForOne ? reserve0 : reserve1,
-                zeroForOne ? reserve1 : reserve0
-            );
+            if (step.extraParam1 == 1) { // Fraxswap V2 has getAmountOut in the pair 
+                amountOut = PoolInterface(step.pool).getAmountOut(amountIn, prevRoute.tokenOut);
+            } else {
+                (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(step.pool).getReserves();
+                amountOut = getAmountOut(
+                    amountIn,
+                    zeroForOne ? reserve0 : reserve1,
+                    zeroForOne ? reserve1 : reserve0
+                );
+            }
             TransferHelper.safeTransfer(
                 prevRoute.tokenOut,
                 step.pool,
@@ -402,6 +405,9 @@ contract FraxswapRouterV2 is ReentrancyGuard, Ownable {
 interface PoolInterface {
     // Fraxswap
     function executeVirtualOrders(uint256 blockNumber) external;
+    
+    function getAmountOut(uint amountIn, address tokenIn) external view returns (uint);
+
 
     // Curve
     function exchange(

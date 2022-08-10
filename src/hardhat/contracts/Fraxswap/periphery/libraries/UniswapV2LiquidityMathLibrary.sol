@@ -16,7 +16,8 @@ library UniswapV2LiquidityMathLibrary {
         uint256 truePriceTokenA,
         uint256 truePriceTokenB,
         uint256 reserveA,
-        uint256 reserveB
+        uint256 reserveB,
+        uint256 fee
     ) pure internal returns (bool aToB, uint256 amountIn) {
         aToB = FullMath.mulDiv(reserveA, truePriceTokenB, reserveB) < truePriceTokenA;
 
@@ -24,12 +25,12 @@ library UniswapV2LiquidityMathLibrary {
 
         uint256 leftSide = Babylonian.sqrt(
             FullMath.mulDiv(
-                invariant * 1000,
+                invariant * 10000,
                 aToB ? truePriceTokenA : truePriceTokenB,
-                (aToB ? truePriceTokenB : truePriceTokenA) * 997
+                (aToB ? truePriceTokenB : truePriceTokenA) * fee
             )
         );
-        uint256 rightSide = (aToB ? reserveA : reserveB) * 1000 / 997;
+        uint256 rightSide = (aToB ? reserveA : reserveB) * 10000 / fee;
 
         if (leftSide < rightSide) return (false, 0);
 
@@ -50,8 +51,12 @@ library UniswapV2LiquidityMathLibrary {
 
         require(reserveA > 0 && reserveB > 0, 'UniswapV2ArbitrageLibrary: ZERO_PAIR_RESERVES');
 
+        IFraxswapPair pair = IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, tokenA, tokenB));
+
+        uint256 fee = pair.fee();
+
         // then compute how much to swap to arb to the true price
-        (bool aToB, uint256 amountIn) = computeProfitMaximizingTrade(truePriceTokenA, truePriceTokenB, reserveA, reserveB);
+        (bool aToB, uint256 amountIn) = computeProfitMaximizingTrade(truePriceTokenA, truePriceTokenB, reserveA, reserveB, fee);
 
         if (amountIn == 0) {
             return (reserveA, reserveB);
@@ -59,11 +64,11 @@ library UniswapV2LiquidityMathLibrary {
 
         // now affect the trade to the reserves
         if (aToB) {
-            uint amountOut = FraxswapRouterLibrary.getAmountOut(amountIn, reserveA, reserveB);
+            uint amountOut = pair.getAmountOut(amountIn, tokenA);
             reserveA += amountIn;
             reserveB -= amountOut;
         } else {
-            uint amountOut = FraxswapRouterLibrary.getAmountOut(amountIn, reserveB, reserveA);
+            uint amountOut = pair.getAmountOut(amountIn, tokenB);
             reserveB += amountIn;
             reserveA -= amountOut;
         }
