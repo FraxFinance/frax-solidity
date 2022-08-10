@@ -41,13 +41,14 @@ interface IUniswapV2PairPartialV5 {
     function price0CumulativeLast() external view returns (uint);
     function price1CumulativeLast() external view returns (uint);
     function kLast() external view returns (uint);
+    function fee() external view returns (uint);
 
     function mint(address to) external returns (uint liquidity);
     function burn(address to) external returns (uint amount0, uint amount1);
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external;
     function skim(address to) external;
     function sync() external;
-    function initialize(address, address) external;
+    function initialize(address, address, uint) external;
 
     // TWAMM
 
@@ -57,9 +58,12 @@ interface IUniswapV2PairPartialV5 {
     function withdrawProceedsFromLongTermSwap(uint256 orderId) external returns (bool is_expired, address rewardTkn, uint256 totalReward);
     function executeVirtualOrders(uint256 blockTimestamp) external;
 
+    function getAmountOut(uint amountIn, address tokenIn) external view returns (uint);
+    function getAmountIn(uint amountOut, address tokenOut) external view returns (uint);
+
     function orderTimeInterval() external returns (uint256);
     function getTWAPHistoryLength() external view returns (uint);
-    function getTwammReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast, uint112 _twammReserve0, uint112 _twammReserve1);
+    function getTwammReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast, uint112 _twammReserve0, uint112 _twammReserve1, uint256 _fee);
     function getReserveAfterTwamm(uint256 blockTimestamp) external view returns (uint112 _reserve0, uint112 _reserve1, uint256 lastVirtualOrderTimestamp, uint112 _twammReserve0, uint112 _twammReserve1);
     function getNextOrderID() external view returns (uint256);
     function getOrderIDsForUser(address user) external view returns (uint256[] memory);
@@ -69,7 +73,7 @@ interface IUniswapV2PairPartialV5 {
     function getTwammState() external view returns (uint256 token0Rate, uint256 token1Rate, uint256 lastVirtualOrderTimestamp, uint256 orderTimeInterval_rtn, uint256 rewardFactorPool0, uint256 rewardFactorPool1);
     function getTwammSalesRateEnding(uint256 _blockTimestamp) external view returns (uint256 orderPool0SalesRateEnding, uint256 orderPool1SalesRateEnding);
     function getTwammRewardFactor(uint256 _blockTimestamp) external view returns (uint256 rewardFactorPool0AtTimestamp, uint256 rewardFactorPool1AtTimestamp);
-    function getTwammOrder(uint256 orderId) external view returns (uint256 id, uint256 expirationTimestamp, uint256 saleRate, address owner, address sellTokenAddr, address buyTokenAddr);
+    function getTwammOrder(uint256 orderId) external view returns (uint256 id, uint256 creationTimestamp, uint256 expirationTimestamp, uint256 saleRate, address owner, address sellTokenAddr, address buyTokenAddr);
     function getTwammOrderProceedsView(uint256 orderId, uint256 blockTimestamp) external view returns (bool orderExpired, uint256 totalReward);
     function getTwammOrderProceeds(uint256 orderId) external returns (bool orderExpired, uint256 totalReward);
 

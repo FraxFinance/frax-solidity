@@ -358,7 +358,7 @@ contract FraxswapRouter is IUniswapV2Router02V5 {
             { // scope to avoid stack too deep errors
                 (uint reserveInput, uint reserveOutput, uint twammReserveInput, uint twammReserveOutput) =  FraxswapRouterLibrary.getReservesWithTwamm(factory, input, output);
                 amountInput = IERC20(input).balanceOf(address(pair)) - reserveInput - twammReserveInput;
-                amountOutput = FraxswapRouterLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
+                amountOutput = pair.getAmountOut(amountInput, input);
             }
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
             address to = i < path.length - 2 ? FraxswapRouterLibrary.pairFor(factory, output, path[i + 2]) : _to;
@@ -440,7 +440,7 @@ contract FraxswapRouter is IUniswapV2Router02V5 {
     override
     returns (uint amountOut)
     {
-        return FraxswapRouterLibrary.getAmountOut(amountIn, reserveIn, reserveOut);
+        revert("Deprecated: Use getAmountsOut"); // depends on the fee of the pool
     }
 
     function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut)
@@ -450,7 +450,7 @@ contract FraxswapRouter is IUniswapV2Router02V5 {
     override
     returns (uint amountIn)
     {
-        return FraxswapRouterLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
+        revert("Deprecated: Use getAmountsIn"); // depends on the fee of the pool
     }
 
     function getAmountsOut(uint amountIn, address[] memory path)

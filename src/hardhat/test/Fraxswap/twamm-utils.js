@@ -241,7 +241,7 @@ async function executeVirtualOrdersUntilTimestamp(twamm, blockTimestamp_in, twam
     // console.log(`nextExpiryBlockTimestamp: ${nextExpiryBlockTimestamp}`)
 
     //iterate through time intervals eligible for order expiries, moving state forward
-    while (nextExpiryBlockTimestamp < blockTimestamp) {
+    while (nextExpiryBlockTimestamp <= blockTimestamp) {
 
         // console.log('errr', nextExpiryBlockTimestamp, orderExpiriesAndSellRates[nextExpiryBlockTimestamp])
 
@@ -267,9 +267,7 @@ async function executeVirtualOrdersUntilTimestamp(twamm, blockTimestamp_in, twam
             let _token0Out, _token1Out;
             [
                 _token0Out,
-                _token1Out,
-                _ammEndToken0,
-                _ammEndToken1
+                _token1Out
             ] = computeVirtualBalances(ammEndToken0, ammEndToken1, token0SellAmount, token1SellAmount);
 
             twammReserve0 = twammReserve0.add(_token0Out).sub(token0SellAmount);
@@ -310,8 +308,6 @@ async function executeVirtualOrdersUntilTimestamp(twamm, blockTimestamp_in, twam
         [
             _token0Out,
             _token1Out,
-            _ammEndToken0,
-            _ammEndToken1
         ] = computeVirtualBalances(ammEndToken0, ammEndToken1, token0SellAmount, token1SellAmount);
 
         twammReserve0 = twammReserve0.add(_token0Out).sub(token0SellAmount);
@@ -342,43 +338,32 @@ function computeVirtualBalances(
     token0In,
     token1In
 ) {
-    let token0Out = 0;
-    let token1Out = 0;
-    let ammEndToken0 = token0Start;
-    let ammEndToken1 = token1Start;
+    let token0Out = BigNumber.from(0);
+    let token1Out = BigNumber.from(0);
     //if no tokens are sold to the pool, we don't need to execute any orders
-    if (token0In == 0 && token1In == 0) {
+    if (token0In.lte(1) && token1In.lte(1)) {
         // skip
     }
     //in the case where only one pool is selling, we just perform a normal swap
-    else if (token0In == 0) {
+    else if (token0In.lte(1)) {
         //constant product formula
         const token1InWithFee = token1In.mul(997);
         token0Out = token0Start.mul(token1InWithFee).div(token1Start.mul(1000).add(token1InWithFee));
-        ammEndToken0 = token0Start.sub(token0Out);
-        ammEndToken1 = token1Start.add(token1In);
-    } else if (token1In == 0) {
+    } else if (token1In.lte(1)) {
         //contant product formula
         const token0InWithFee = token0In.mul(997);
         token1Out = token1Start.mul(token0InWithFee).div(token0Start.mul(1000).add(token0InWithFee));
-        ammEndToken0 = token0Start.add(token0In);
-        ammEndToken1 = token1Start.sub(token1Out);
     }
     //when both pools sell, we use the TWAMM formula
     else {
-        const aIn = token0In.mul(997).div(1000);
-        const bIn = token1In.mul(997).div(1000);
-        const k = token0Start.mul(token1Start);
-        ammEndToken1 = token0Start.mul(token1Start.add(bIn)).div(token0Start.add(aIn));
-        ammEndToken0 = k.div(ammEndToken1);
-        token0Out = token0Start.add(aIn).sub(ammEndToken0);
-        token1Out = token1Start.add(bIn).sub(ammEndToken1);
+        const newToken0 = token0Start.add(token0In.mul(997).div(1000));
+        const newToken1 = token1Start.add(token1In.mul(997).div(1000));
+        token0Out = newToken0.sub(token1Start.mul(newToken0).div(newToken1));
+        token1Out = newToken1.sub(token0Start.mul(newToken1).div(newToken0));
     }
     return [
         token0Out,
-        token1Out,
-        ammEndToken0,
-        ammEndToken1
+        token1Out
     ]
 }
 

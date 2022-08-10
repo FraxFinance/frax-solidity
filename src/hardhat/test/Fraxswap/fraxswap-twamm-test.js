@@ -1,8 +1,8 @@
-const {expect} = require("chai");
-const {ethers, network} = require("hardhat");
-const {BigNumber} = require('ethers');
+const { expect } = require("chai");
+const { ethers, network } = require("hardhat");
+const { BigNumber } = require('ethers');
 const UniV2TWAMMPair = require('../../artifacts/contracts/Fraxswap/core/FraxswapPair.sol/FraxswapPair');
-const {BIG6, BIG18, bigNumberify, expandTo18Decimals, sleep} = require('./utilities');
+const { BIG6, BIG18, bigNumberify, expandTo18Decimals, sleep } = require('./utilities');
 const {
     calculateTwammExpectedFraxswapIntervals,
     calculateTwammExpectedFraxswap,
@@ -51,14 +51,16 @@ function outputRatio(A, B) {
 
 const transactionInSingleBlock = async (func) => {
     await network.provider.send("evm_setAutomine", [false]);
+    let results;
     try {
-        await func();
+        results = await func();
     } catch (e) {
         console.log(e);
         // reset the block mining
     }
     await network.provider.send("evm_setAutomine", [true]);
     await network.provider.send("evm_mine")
+    return results;
 }
 
 const initialLiquidityProvided = expandTo18Decimals(100000);
@@ -92,7 +94,7 @@ async function setupContracts(createPair = true) {
 
     let pair;
     if (createPair) {
-        await factory.createPair(token0.address, token1.address);
+        await factory['createPair(address,address)'](token0.address, token1.address);
         const pairAddress = await factory.getPair(token0.address, token1.address);
         pair = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
     }
@@ -188,7 +190,7 @@ const runOnce = () => describe("Test to Run Once", function () {
             await network.provider.send("evm_mine");
 
             const swap1To0 = BigNumber.from(`1`)
-            const ltOrder0 = await addTwammOrderFrom1To0(twamm, token1, addr1, swap1To0, 0)
+            const ltOrder0 = await (await addTwammOrderFrom1To0(twamm, token1, addr1, swap1To0, 0)).getResults()
 
             await mineTimeIntervals(2);
             await expect(twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp() + 1)).to.be.not.reverted
@@ -203,7 +205,7 @@ const runOnce = () => describe("Test to Run Once", function () {
             await network.provider.send("evm_mine");
 
             const swap0To1 = BigNumber.from(`1`)
-            const ltOrder1 = await addTwammOrderFrom0To1(twamm, token0, addr2, swap0To1, 0)
+            const ltOrder1 = await (await addTwammOrderFrom0To1(twamm, token0, addr2, swap0To1, 0)).getResults()
 
             await mineTimeIntervals(2);
             await expect(twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp() + 1)).to.be.not.reverted
@@ -217,13 +219,17 @@ const runOnce = () => describe("Test to Run Once", function () {
             await network.provider.send("evm_setNextBlockTimestamp", [currentBlockTimestamp - (currentBlockTimestamp % 3600) + 3600 - 4]);
             await network.provider.send("evm_mine");
 
-            await transactionInSingleBlock(async () => {
+            const promisesToWaitFor = await transactionInSingleBlock(async () => {
                 const swap1To0 = BigNumber.from(`1`)
                 const ltOrder0 = await addTwammOrderFrom1To0(twamm, token1, addr1, swap1To0, 0)
 
                 const swap0To1 = maxUint112.div(2)
                 const ltOrder1 = await addTwammOrderFrom0To1(twamm, token0, addr2, swap0To1, 0)
+
+                return [ltOrder0, ltOrder1]
             });
+
+            await Promise.all(promisesToWaitFor.map(o=>o.getResults()))
 
             await mineTimeIntervals(2);
             await expect(twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp() + 1)).to.be.not.reverted
@@ -237,13 +243,17 @@ const runOnce = () => describe("Test to Run Once", function () {
             await network.provider.send("evm_setNextBlockTimestamp", [currentBlockTimestamp - (currentBlockTimestamp % 3600) + 3600 - 4]);
             await network.provider.send("evm_mine");
 
-            await transactionInSingleBlock(async () => {
+            const promisesToWaitFor = await transactionInSingleBlock(async () => {
                 const swap1To0 = maxUint112.div(2)
                 const ltOrder0 = await addTwammOrderFrom1To0(twamm, token1, addr1, swap1To0, 0)
 
                 const swap0To1 = BigNumber.from(`1`)
                 const ltOrder1 = await addTwammOrderFrom0To1(twamm, token0, addr2, swap0To1, 0)
+
+                return [ltOrder0, ltOrder1]
             });
+
+            await Promise.all(promisesToWaitFor.map(o=>o.getResults()))
 
             await mineTimeIntervals(2);
             await expect(twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp() + 1)).to.be.not.reverted
@@ -257,14 +267,18 @@ const runOnce = () => describe("Test to Run Once", function () {
             await network.provider.send("evm_setNextBlockTimestamp", [currentBlockTimestamp - (currentBlockTimestamp % 3600) + 3600 - 4]);
             await network.provider.send("evm_mine");
 
-            await transactionInSingleBlock(async () => {
+            const promisesToWaitFor = await transactionInSingleBlock(async () => {
                 const swap1To0 = BigNumber.from(`1`)
                 const ltOrder0 = await addTwammOrderFrom1To0(twamm, token1, addr1, swap1To0, 0)
 
                 const swap0To1 = BigNumber.from(`1`)
                 const ltOrder1 = await addTwammOrderFrom0To1(twamm, token0, addr2, swap0To1, 0)
+
+                return [ltOrder0, ltOrder1]
             });
 
+            await Promise.all(promisesToWaitFor.map(o=>o.getResults()))
+            
             await mineTimeIntervals(2);
             await expect(twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp() + 1)).to.be.not.reverted
 
@@ -285,6 +299,42 @@ const runOnce = () => describe("Test to Run Once", function () {
         runComputeVirtualBalancesTest(BigNumber.from(1e8).mul(8e8), 1);
         runComputeVirtualBalancesTest(BigNumber.from(1e9).mul(8e8), 1);//80000000000000000000
         runComputeVirtualBalancesTest(BigNumber.from(1e10).mul(8e8), 1);
+
+        it("Brick contract", async function () {
+
+            // due to rounding in the smart contract
+
+            const newLiquidity = bigNumberify(10).pow(28);
+            await addLiquidity(twamm, token0, token1, addr1, newLiquidity, newLiquidity)
+
+            const timeIntervals = 2;
+            const token18 = 300;
+            const amountIn1 = expandTo18Decimals(token18);
+
+            // align so long term order will be on
+            const currentBlockTimestamp = await getBlockTimestamp()
+            await network.provider.send("evm_setNextBlockTimestamp", [currentBlockTimestamp - (currentBlockTimestamp % 3600) + 3600 - 4]);
+            await network.provider.send("evm_mine");
+
+            // open a long term order and then cancel it
+            const ltOrder1 = await addTwammOrderFrom0To1(twamm, token0, addr2, amountIn1, timeIntervals)
+            const result1 = await ltOrder1.getResults()
+
+            // console.log(await getBlockTimestampFromBlock(ltOrder1.blockNumber))
+
+            const ordr = await twamm.getTwammOrder(0)
+
+            // execute some of the twamm orders
+            await mineTimeIntervals(5);
+
+            await twamm.executeVirtualOrders(ordr.expirationTimestamp, { gasLimit: 5000000 }); // BRICK
+
+            // execute some of the twamm orders
+            await mineTimeIntervals(1);
+            const currentBlockTimestamp2 = await getBlockTimestamp()
+            await expect(twamm.executeVirtualOrders(currentBlockTimestamp2, { gasLimit: 5000000 })).to.be.not.reverted; // FAIL
+
+        });
 
         it("Long-term order timeInterval 0", async function () {
 
@@ -310,7 +360,7 @@ const runOnce = () => describe("Test to Run Once", function () {
 
             const ordr = await twamm.getTwammOrder(0)
 
-            // should be almost aligned so he difference between the two would be 1
+            // should be almost aligned so the difference between the two would be 1
             expect(ordr.expirationTimestamp.sub(await getBlockTimestampFromBlock(ltOrder1.blockNumber))).to.be.eq(bigNumberify(1))
             expect(ordr['saleRate'].div(SELL_RATE_ADDITIONAL_PRECISION)).to.be.eq(amountIn1)
 
@@ -353,23 +403,25 @@ const runOnce = () => describe("Test to Run Once", function () {
             const ltOrder1 = await addTwammOrderFrom0To1(twamm, token0, addr2, amountIn1, timeIntervals)
             const result1 = await ltOrder1.getResults()
 
+            // console.log('getBlockNumber', await getBlockNumber())
+
             // execute some of the twamm orders
             await mineTimeIntervals(99);
 
             const cancelTxReceipt = await (await cancelTwammOrder(twamm, addr2, result1.orderId)).wait()
             const cancelEvent = cancelTxReceipt.events.find(evt => evt.event == 'CancelLongTermOrder');
 
-            expect(cancelTxReceipt.cumulativeGasUsed).to.be.lt(bigNumberify(800000))
-            expect(cancelEvent.args['unsoldAmount']).to.be.lt(bigNumberify(5e18))
-            expect(cancelEvent.args['purchasedAmount']).to.be.gt(bigNumberify(290e18))
-
             // console.log('cancelTxReceipt.cumulativeGasUsed', cancelTxReceipt.cumulativeGasUsed)
             // console.log(`unsoldAmount: ${ethers.utils.formatEther(cancelEvent.args['unsoldAmount'])}`)
             // console.log(`purchasedAmount: ${ethers.utils.formatEther(cancelEvent.args['purchasedAmount'])}`)
 
+            expect(cancelTxReceipt.cumulativeGasUsed).to.be.lt(bigNumberify(800000))
+            expect(cancelEvent.args['unsoldAmount']).to.be.lt(bigNumberify(5e18))
+            expect(cancelEvent.args['purchasedAmount']).to.be.gt(bigNumberify(290e18))
+
             const [, , , twammReserve0, twammReserve1] = await twamm.getTwammReserves();
 
-            // console.log(twammReserve0)
+            // console.log(twammReserve0, twammReserve1)
 
             // should be very small
             expect(twammReserve0).to.be.lte(2)
@@ -428,7 +480,7 @@ const runOnce = () => describe("Test to Run Once", function () {
             await addLiquidity(twamm, token0, token1, addr1, maxUint112, maxUint112)
 
             // fail to add liquidity above max
-            await expect(addLiquidity(twamm, token0, token1, addr2, bigNumberify(1), bigNumberify(1))).to.be.revertedWith("EC02")
+            await expect(addLiquidity(twamm, token0, token1, addr2, bigNumberify(1), bigNumberify(1))).to.be.revertedWith("Uint112Overflow")
 
         })
 
@@ -448,7 +500,7 @@ const runOnce = () => describe("Test to Run Once", function () {
             await addLiquidity(twamm, token0, token1, addr1, maxUint112.sub(twammReserves._reserve0), maxUint112.sub(twammReserves._reserve0))
 
             // over the uint112
-            await expect(addLiquidity(twamm, token0, token1, addr1, bigNumberify(10), bigNumberify(10))).to.be.revertedWith("EC02");
+            await expect(addLiquidity(twamm, token0, token1, addr1, bigNumberify(10), bigNumberify(10))).to.be.revertedWith("Uint112Overflow");
 
         })
 
@@ -468,7 +520,7 @@ const runOnce = () => describe("Test to Run Once", function () {
             await addLiquidity(twamm, token0, token1, addr1, maxUint112.sub(twammReserves._reserve1), maxUint112.sub(twammReserves._reserve1))
 
             // over the uint112
-            await expect(addLiquidity(twamm, token0, token1, addr1, bigNumberify(10), bigNumberify(10))).to.be.revertedWith("EC02");
+            await expect(addLiquidity(twamm, token0, token1, addr1, bigNumberify(10), bigNumberify(10))).to.be.revertedWith("Uint112Overflow");
 
         })
 
@@ -536,7 +588,7 @@ const runOnce = () => describe("Test to Run Once", function () {
             expect(_reserve0_2.add(_twammReserve0_2)).to.be.eq(maxUint112)
 
             // sync will fail
-            await expect(twamm.sync()).to.be.revertedWith("EC02");
+            await expect(twamm.sync()).to.be.revertedWith("Uint112Overflow");
 
             // skim extra tokens
             await twamm.connect(addr3).skim(addr3.address);
@@ -561,7 +613,7 @@ const runOnce = () => describe("Test to Run Once", function () {
         });
         it("Everyone can call executeVirtualOrders", async function () {
 
-            await factory.createPair(token0.address, token1.address);
+            await factory['createPair(address,address)'](token0.address, token1.address);
             const pairAddress = await factory.getPair(token0.address, token1.address);
             twamm = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
 
@@ -584,7 +636,7 @@ const runOnce = () => describe("Test to Run Once", function () {
         });
         it("Pause enabled, withdraw", async function () {
 
-            await factory.createPair(token0.address, token1.address);
+            await factory['createPair(address,address)'](token0.address, token1.address);
             const pairAddress = await factory.getPair(token0.address, token1.address);
             twamm = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
 
@@ -607,6 +659,7 @@ const runOnce = () => describe("Test to Run Once", function () {
             await twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp());
 
             // enabled twamm pause
+            await factory.toggleGlobalPause(); // enable it
             await twamm.togglePauseNewSwaps();
 
             //trigger long term order that should fail
@@ -627,7 +680,7 @@ const runOnce = () => describe("Test to Run Once", function () {
 
         it("execVirtualOrders invalid timestamp", async function () {
 
-            await factory.createPair(token0.address, token1.address);
+            await factory['createPair(address,address)'](token0.address, token1.address);
             const pairAddress = await factory.getPair(token0.address, token1.address);
             twamm = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
 
@@ -1323,18 +1376,18 @@ const allTwammTests = (multiplier) => describe(`TWAMM - swap multiplier: ${multi
 
 describe("Multiple TWAMM Tests", function () {
     runOnce()
-    allTwammTests(1)
-    allTwammTests(10)
-    allTwammTests(100)
-    allTwammTests(1000)
-    allTwammTests(2000)
-    allTwammTests(3000)
-    allTwammTests(4000)
-    allTwammTests(5000)
-    allTwammTests(6000)
-    allTwammTests(7000)
-    allTwammTests(8000)
-    allTwammTests(9000)
+    // allTwammTests(1)
+    // allTwammTests(10)
+    // allTwammTests(100)
+    // allTwammTests(1000)
+    // allTwammTests(2000)
+    // allTwammTests(3000)
+    // allTwammTests(4000)
+    // allTwammTests(5000)
+    // allTwammTests(6000)
+    // allTwammTests(7000)
+    // allTwammTests(8000)
+    // allTwammTests(9000)
 })
 
 async function mineBlocks(blockNumber) {

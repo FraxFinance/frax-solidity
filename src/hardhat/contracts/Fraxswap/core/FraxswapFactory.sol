@@ -37,9 +37,14 @@ import './FraxswapPair.sol';
 contract FraxswapFactory is IUniswapV2FactoryV5 {
     address public override feeTo;
     address public override feeToSetter;
+    bool public override globalPause;
 
     mapping(address => mapping(address => address)) public override getPair;
     address[] public override allPairs;
+
+    error IdenticalAddress();
+    error ZeroAddress();
+    error PairExists();
 
     constructor(address _feeToSetter) {
         feeToSetter = _feeToSetter;
@@ -56,16 +61,20 @@ contract FraxswapFactory is IUniswapV2FactoryV5 {
     }
 
     function createPair(address tokenA, address tokenB) external override returns (address pair) {
-        require(tokenA != tokenB, "IDENTICAL_ADDRESSES"); // IDENTICAL_ADDRESSES
+        return createPair(tokenA, tokenB, 30); // default fee 0.30%
+    }
+
+    function createPair(address tokenA, address tokenB, uint fee) public override returns (address pair) {
+        if(tokenA == tokenB) revert IdenticalAddress(); // IDENTICAL_ADDRESSES
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), "ZERO_ADDRESS"); // ZERO_ADDRESS
-        require(getPair[token0][token1] == address(0), "PAIR_EXISTS"); // PAIR_EXISTS // single check is sufficient
+        if(token0 == address(0)) revert ZeroAddress(); // ZERO_ADDRESS
+        if(getPair[token0][token1] != address(0)) revert PairExists(); // PAIR_EXISTS // single check is sufficient
         bytes memory bytecode = type(FraxswapPair).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         assembly {
             pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
-        FraxswapPair(pair).initialize(token0, token1);
+        FraxswapPair(pair).initialize(token0, token1, fee);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
@@ -78,5 +87,10 @@ contract FraxswapFactory is IUniswapV2FactoryV5 {
 
     function setFeeToSetter(address _feeToSetter) external override onlyFTS {
         feeToSetter = _feeToSetter;
+    }
+
+    function toggleGlobalPause() external override onlyFTS {
+        require(!globalPause);
+        globalPause = true;
     }
 }

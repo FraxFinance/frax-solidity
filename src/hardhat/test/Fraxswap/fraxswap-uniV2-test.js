@@ -295,12 +295,12 @@ describe("UniswapV2 Tests", function () {
 
         async function createPair(tokens) {
             const create2Address = getCreate2Address(factory.address, tokens, UniV2TWAMMPair.bytecode)
-            await expect(factory.createPair(...tokens))
+            await expect(factory['createPair(address,address)'](...tokens))
                 .to.emit(factory, 'PairCreated')
                 .withArgs(TEST_ADDRESSES[0], TEST_ADDRESSES[1], create2Address, bigNumberify(1))
 
-            await expect(factory.createPair(...tokens)).to.be.reverted // UniswapV2: PAIR_EXISTS
-            await expect(factory.createPair(...tokens.slice().reverse())).to.be.reverted // UniswapV2: PAIR_EXISTS
+            await expect(factory['createPair(address,address)'](...tokens)).to.be.reverted // UniswapV2: PAIR_EXISTS
+            await expect(factory['createPair(address,address)'](...tokens.slice().reverse())).to.be.reverted // UniswapV2: PAIR_EXISTS
             expect(await factory.getPair(...tokens)).to.eq(create2Address)
             expect(await factory.getPair(...tokens.slice().reverse())).to.eq(create2Address)
             expect(await factory.allPairs(0)).to.eq(create2Address)
@@ -341,7 +341,7 @@ describe("UniswapV2 Tests", function () {
         })
 
         it('createPair:gas', async () => {
-            const tx = await factory.createPair(...TEST_ADDRESSES)
+            const tx = await factory['createPair(address,address)'](...TEST_ADDRESSES)
             const receipt = await tx.wait()
             // expect(receipt.gasUsed).to.eq(2512920) // previous gas usage
             expect(parseInt(receipt.gasUsed)).to.be.lessThan(5000000)
@@ -521,29 +521,35 @@ describe("UniswapV2 Tests", function () {
         describe("FraxswapRouter", function () {
 
             it('quote', async () => {
-                expect(await router.quote(bigNumberify(1), bigNumberify(100), bigNumberify(200))).to.eq(bigNumberify(2))
-                expect(await router.quote(bigNumberify(2), bigNumberify(200), bigNumberify(100))).to.eq(bigNumberify(1))
-                await expect(router.quote(bigNumberify(0), bigNumberify(100), bigNumberify(200))).to.be.revertedWith(
-                    'FraxswapRouterLibrary: INSUFFICIENT_AMOUNT'
-                )
-                await expect(router.quote(bigNumberify(1), bigNumberify(0), bigNumberify(200))).to.be.revertedWith(
-                    'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
-                )
+                // expect(await router.quote(bigNumberify(1), bigNumberify(100), bigNumberify(200))).to.eq(bigNumberify(2))
+                // expect(await router.quote(bigNumberify(2), bigNumberify(200), bigNumberify(100))).to.eq(bigNumberify(1))
+                // await expect(router.quote(bigNumberify(0), bigNumberify(100), bigNumberify(200))).to.be.revertedWith(
+                //     'FraxswapRouterLibrary: INSUFFICIENT_AMOUNT'
+                // )
+                // await expect(router.quote(bigNumberify(1), bigNumberify(0), bigNumberify(200))).to.be.revertedWith(
+                //     'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
+                // )
+                // await expect(router.quote(bigNumberify(1), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
+                //     'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
+                // )
                 await expect(router.quote(bigNumberify(1), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
-                    'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
+                    'Deprecated: Use getAmountsOut'
                 )
             })
 
             it('getAmountOut', async () => {
-                expect(await router.getAmountOut(bigNumberify(2), bigNumberify(100), bigNumberify(100))).to.eq(bigNumberify(1))
-                await expect(router.getAmountOut(bigNumberify(0), bigNumberify(100), bigNumberify(100))).to.be.revertedWith(
-                    'FraxswapRouterLibrary: INSUFFICIENT_INPUT_AMOUNT'
-                )
-                await expect(router.getAmountOut(bigNumberify(2), bigNumberify(0), bigNumberify(100))).to.be.revertedWith(
-                    'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
-                )
+                // expect(await router.getAmountOut(bigNumberify(2), bigNumberify(100), bigNumberify(100))).to.eq(bigNumberify(1))
+                // await expect(router.getAmountOut(bigNumberify(0), bigNumberify(100), bigNumberify(100))).to.be.revertedWith(
+                //     'FraxswapRouterLibrary: INSUFFICIENT_INPUT_AMOUNT'
+                // )
+                // await expect(router.getAmountOut(bigNumberify(2), bigNumberify(0), bigNumberify(100))).to.be.revertedWith(
+                //     'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
+                // )
+                // await expect(router.getAmountOut(bigNumberify(2), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
+                //     'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
+                // )
                 await expect(router.getAmountOut(bigNumberify(2), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
-                    'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
+                    'Deprecated: Use getAmountsIn'
                 )
             })
 
@@ -621,7 +627,7 @@ describe("UniswapV2 Tests", function () {
                 DTT = setupCnt.deflatingERC20;
                 WETH = setupCnt.weth9;
 
-                await factory.createPair(DTT.address, WETH.address);
+                await factory['createPair(address,address)'](DTT.address, WETH.address);
                 const pairAddress = await factory.getPair(DTT.address, WETH.address);
                 pair = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
             });
@@ -800,7 +806,7 @@ describe("UniswapV2 Tests", function () {
                 )).deploy(expandTo18Decimals(10000));
                 await DTT2.transfer(user1.address, expandTo18Decimals(10000));
 
-                await factory.createPair(DTT.address, DTT2.address);
+                await factory['createPair(address,address)'](DTT.address, DTT2.address);
                 const pairAddress = await factory.getPair(DTT.address, DTT2.address);
                 pair = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
             })
@@ -1027,8 +1033,8 @@ describe("UniswapV2 Tests", function () {
                     const [reserveA, reserveB] = await computeLiquidityValue.getReservesAfterArbitrage(
                         token0.address,
                         token1.address,
-                        constants.MaxUint256.div(1000),
-                        constants.MaxUint256.div(1000)
+                        constants.MaxUint256.div(10000),
+                        constants.MaxUint256.div(10000)
                     )
                     // diff of 30 bips
                     expect(reserveA).to.eq('100120248075158403008')
@@ -1322,7 +1328,7 @@ async function setupContracts(createPair = true, deployDTT = false) {
 
     let pair;
     if (createPair) {
-        await factory.createPair(token0.address, token1.address);
+        await factory['createPair(address,address)'](token0.address, token1.address);
         const pairAddress = await factory.getPair(token0.address, token1.address);
         pair = new ethers.Contract(pairAddress, UniV2TWAMMPair.abi).connect(owner);
     }
