@@ -22,6 +22,7 @@ import "./FraxUnifiedFarmTemplate.sol";
 import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
 import "../Misc_AMOs/convex/IDepositToken.sol";
 import "../Misc_AMOs/curve/I2pool.sol";
+import "../Misc_AMOs/curve/I2poolToken.sol";
 
 // Fraxswap
 // import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
@@ -55,9 +56,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // -------------------- VARIES --------------------
 
-    // Convex stkcvxFPIFRAX
+    // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
     IConvexStakingWrapperFrax public immutable stakingToken;
-    I2pool public curvePool;
+    I2poolToken public immutable curveToken;
+    I2pool public immutable curvePool;
 
     // Fraxswap
     // IFraxswapPair public immutable stakingToken;
@@ -111,11 +113,18 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     {
 
         // -------------------- VARIES --------------------
-        // Convex stkcvxFPIFRAX
+        // Convex stkcvxFPIFRAX and stkcvxFRAXBP only
+        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        // curveToken = I2poolToken(stakingToken.curveToken());
+        // curvePool = I2pool(curveToken.minter());
+        // address token0 = curvePool.coins(0);
+        // frax_is_token0 = (token0 == frax_address);
+
+        // Convex stkcvxBUSDBP and other metaFRAXBPs, where the token is also the pool
         stakingToken = IConvexStakingWrapperFrax(_stakingToken);
-        curvePool = I2pool(0xDcEF968d416a41Cdac0ED8702fAC8128A64241A2);
-        address token0 = curvePool.coins(0);
-        frax_is_token0 = (token0 == frax_address);
+        curveToken = I2poolToken(stakingToken.curveToken());
+        curvePool = I2pool(address(curveToken));
+        frax_is_token0 = false; // Irrelevant here, as token 0 will be FRAXBP
 
         // Fraxswap
         // stakingToken = IFraxswapPair(_stakingToken);
@@ -154,13 +163,20 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
-        // Convex stkcvxFPIFRAX
+        // Convex stkcvxFPIFRAX and stkcvxFRAXBP only
+        // ============================================
+        // {
+        //     // Half of the LP is FRAXBP
+        //     // Using 0.5 * virtual price for gas savings
+        //     frax_per_lp_token = curvePool.get_virtual_price() / 2; 
+        // }
+
+        // Convex stkcvxBUSDBP and other metaFRAXBPs
         // ============================================
         {
-            frax_per_lp_token = curvePool.get_virtual_price() / 2; 
-            // Count full value here since FRAX and FPI are both part of FRAX ecosystem
-            // frax_per_lp_token = curvePool.get_virtual_price(); // BAD
-            // frax_per_lp_token = curvePool.lp_price() / 2;
+            // Half of the LP is FRAXBP. Half of that should be FRAX.
+            // Using 0.25 * virtual price for gas savings
+            frax_per_lp_token = curvePool.get_virtual_price() / 4; 
         }
 
         // Fraxswap

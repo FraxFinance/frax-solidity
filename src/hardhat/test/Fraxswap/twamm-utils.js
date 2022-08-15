@@ -78,7 +78,7 @@ function calculateTwammExpectedParadigm(tokenAIn, tokenBIn, tokenAReserveRet, to
     return [finalAReserveExpectedBN, finalBReserveExpectedBN, tokenAOutBN, tokenBOutBN]
 }
 
-function calculateTwammExpectedFraxswap(tokenAIn, tokenBIn, tokenAReserveRet, tokenBReserveRet, timeIntervals) {
+function calculateTwammExpectedFraxswap(tokenAIn, tokenBIn, tokenAReserveRet, tokenBReserveRet, timeIntervals, fee) {
 
     // uint256 aIn = token0In * 997 / 1000;
     // uint256 bIn = token1In * 997 / 1000;
@@ -88,8 +88,8 @@ function calculateTwammExpectedFraxswap(tokenAIn, tokenBIn, tokenAReserveRet, to
     // token0Out = token0Start + aIn - ammEndToken0;
     // token1Out = token1Start + bIn - ammEndToken1;
 
-    const token0InWithFee = tokenAIn.mul(997).div(1000); // bigmath.bignumber(tokenAIn.toString()).mul(997).div(1000);
-    const token1InWithFee = tokenBIn.mul(997).div(1000); // bigmath.bignumber(tokenBIn.toString()).mul(997).div(1000);
+    const token0InWithFee = tokenAIn.mul(fee).div(10000); // bigmath.bignumber(tokenAIn.toString()).mul(997).div(1000);
+    const token1InWithFee = tokenBIn.mul(fee).div(10000); // bigmath.bignumber(tokenBIn.toString()).mul(997).div(1000);
     const token0Reserve = tokenAReserveRet // bigmath.bignumber(tokenAReserveRet.toString())
     const token1Reserve = tokenBReserveRet // bigmath.bignumber(tokenBReserveRet.toString())
 
@@ -164,7 +164,8 @@ async function twammStateSnapshot(twamm) {
         _reserve1,
         _blockTimestampLast,
         _twammReserve0,
-        _twammReserve1
+        _twammReserve1,
+        _fee
     ] = await twamm.getTwammReserves();
 
     const orderExpiriesAndSellRates = {};
@@ -191,7 +192,8 @@ async function twammStateSnapshot(twamm) {
         _blockTimestampLast,
         _twammReserve0,
         _twammReserve1,
-        orderExpiriesAndSellRates
+        orderExpiriesAndSellRates,
+        _fee
     });
 }
 
@@ -213,7 +215,8 @@ async function executeVirtualOrdersUntilTimestamp(twamm, blockTimestamp_in, twam
         _blockTimestampLast,
         _twammReserve0,
         _twammReserve1,
-        orderExpiriesAndSellRates
+        orderExpiriesAndSellRates,
+        _fee
     } = twammstate;
 
     let currentSalesRate0 = BigNumber.from(token0Rate);
@@ -268,7 +271,7 @@ async function executeVirtualOrdersUntilTimestamp(twamm, blockTimestamp_in, twam
             [
                 _token0Out,
                 _token1Out
-            ] = computeVirtualBalances(ammEndToken0, ammEndToken1, token0SellAmount, token1SellAmount);
+            ] = computeVirtualBalances(ammEndToken0, ammEndToken1, token0SellAmount, token1SellAmount, _fee);
 
             twammReserve0 = twammReserve0.add(_token0Out).sub(token0SellAmount);
             twammReserve1 = twammReserve1.add(_token1Out).sub(token1SellAmount);
@@ -308,7 +311,7 @@ async function executeVirtualOrdersUntilTimestamp(twamm, blockTimestamp_in, twam
         [
             _token0Out,
             _token1Out,
-        ] = computeVirtualBalances(ammEndToken0, ammEndToken1, token0SellAmount, token1SellAmount);
+        ] = computeVirtualBalances(ammEndToken0, ammEndToken1, token0SellAmount, token1SellAmount, _fee);
 
         twammReserve0 = twammReserve0.add(_token0Out).sub(token0SellAmount);
         twammReserve1 = twammReserve1.add(_token1Out).sub(token1SellAmount);
@@ -336,28 +339,30 @@ function computeVirtualBalances(
     token0Start,
     token1Start,
     token0In,
-    token1In
+    token1In,
+    _fee
 ) {
+    const minusFee = BigNumber.from('10000').sub(_fee);
     let token0Out = BigNumber.from(0);
     let token1Out = BigNumber.from(0);
     //if no tokens are sold to the pool, we don't need to execute any orders
-    if (token0In.lte(1) && token1In.lte(1)) {
+    if (token0In.lt(2) && token1In.lt(2)) {
         // skip
     }
     //in the case where only one pool is selling, we just perform a normal swap
-    else if (token0In.lte(1)) {
+    else if (token0In.lt(2)) {
         //constant product formula
-        const token1InWithFee = token1In.mul(997);
-        token0Out = token0Start.mul(token1InWithFee).div(token1Start.mul(1000).add(token1InWithFee));
-    } else if (token1In.lte(1)) {
+        const token1InWithFee = token1In.mul(minusFee);
+        token0Out = token0Start.mul(token1InWithFee).div(token1Start.mul(10000).add(token1InWithFee));
+    } else if (token1In.lt(2)) {
         //contant product formula
-        const token0InWithFee = token0In.mul(997);
-        token1Out = token1Start.mul(token0InWithFee).div(token0Start.mul(1000).add(token0InWithFee));
+        const token0InWithFee = token0In.mul(minusFee);
+        token1Out = token1Start.mul(token0InWithFee).div(token0Start.mul(10000).add(token0InWithFee));
     }
     //when both pools sell, we use the TWAMM formula
     else {
-        const newToken0 = token0Start.add(token0In.mul(997).div(1000));
-        const newToken1 = token1Start.add(token1In.mul(997).div(1000));
+        const newToken0 = token0Start.add(token0In.mul(minusFee).div(10000));
+        const newToken1 = token1Start.add(token1In.mul(minusFee).div(10000));
         token0Out = newToken0.sub(token1Start.mul(newToken0).div(newToken1));
         token1Out = newToken1.sub(token0Start.mul(newToken1).div(newToken0));
     }
@@ -375,16 +380,20 @@ async function addLiquidity(twamm, token0, token1, signer, amountIn0, amountIn1)
 
     let [token0ReserveBefore, token1ReserveBefore, blockTimestampLastBefore, twammReserve0Before, twammReserve1Before] = await twamm.getTwammReserves();
 
-    await token0.transfer(signer.address, amountIn0);
-    await token1.transfer(signer.address, amountIn1);
+    let promises = [];
 
-    await token0.connect(signer).approve(twamm.address, amountIn0);
-    await token1.connect(signer).approve(twamm.address, amountIn1);
+    promises.push(await token0.transfer(signer.address, amountIn0));
+    promises.push(await token1.transfer(signer.address, amountIn1));
 
-    await token0.connect(signer).transfer(twamm.address, amountIn0);
-    await token1.connect(signer).transfer(twamm.address, amountIn1);
+    promises.push(await token0.connect(signer).approve(twamm.address, amountIn0));
+    promises.push(await token1.connect(signer).approve(twamm.address, amountIn1));
 
-    await twamm.connect(signer).mint(signer.address);
+    promises.push(await token0.connect(signer).transfer(twamm.address, amountIn0));
+    promises.push(await token1.connect(signer).transfer(twamm.address, amountIn1));
+
+    promises.push(await twamm.connect(signer).mint(signer.address));
+
+    Promise.all(promises.map(tx=>tx.wait()));
 
     let [token0ReserveAfter, token1ReserveAfter, blockTimestampLastAfter, twammReserve0After, twammReserve1After] = await twamm.getTwammReserves();
 

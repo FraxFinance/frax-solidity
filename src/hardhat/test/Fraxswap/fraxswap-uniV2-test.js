@@ -523,17 +523,14 @@ describe("UniswapV2 Tests", function () {
             it('quote', async () => {
                 // expect(await router.quote(bigNumberify(1), bigNumberify(100), bigNumberify(200))).to.eq(bigNumberify(2))
                 // expect(await router.quote(bigNumberify(2), bigNumberify(200), bigNumberify(100))).to.eq(bigNumberify(1))
-                // await expect(router.quote(bigNumberify(0), bigNumberify(100), bigNumberify(200))).to.be.revertedWith(
-                //     'FraxswapRouterLibrary: INSUFFICIENT_AMOUNT'
-                // )
-                // await expect(router.quote(bigNumberify(1), bigNumberify(0), bigNumberify(200))).to.be.revertedWith(
-                //     'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
-                // )
-                // await expect(router.quote(bigNumberify(1), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
-                //     'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
-                // )
+                await expect(router.quote(bigNumberify(0), bigNumberify(100), bigNumberify(200))).to.be.revertedWith(
+                    'FraxswapRouterLibrary: INSUFFICIENT_AMOUNT'
+                )
+                await expect(router.quote(bigNumberify(1), bigNumberify(0), bigNumberify(200))).to.be.revertedWith(
+                    'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
+                )
                 await expect(router.quote(bigNumberify(1), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
-                    'Deprecated: Use getAmountsOut'
+                    'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
                 )
             })
 
@@ -549,20 +546,24 @@ describe("UniswapV2 Tests", function () {
                 //     'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
                 // )
                 await expect(router.getAmountOut(bigNumberify(2), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
-                    'Deprecated: Use getAmountsIn'
+                    'Deprecated: Use getAmountsOut'
                 )
             })
 
             it('getAmountIn', async () => {
-                expect(await router.getAmountIn(bigNumberify(1), bigNumberify(100), bigNumberify(100))).to.eq(bigNumberify(2))
-                await expect(router.getAmountIn(bigNumberify(0), bigNumberify(100), bigNumberify(100))).to.be.revertedWith(
-                    'FraxswapRouterLibrary: INSUFFICIENT_OUTPUT_AMOUNT'
-                )
-                await expect(router.getAmountIn(bigNumberify(1), bigNumberify(0), bigNumberify(100))).to.be.revertedWith(
-                    'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
-                )
+                // expect(await router.getAmountIn(bigNumberify(1), bigNumberify(100), bigNumberify(100))).to.eq(bigNumberify(2))
+                // await expect(router.getAmountIn(bigNumberify(0), bigNumberify(100), bigNumberify(100))).to.be.revertedWith(
+                //     'FraxswapRouterLibrary: INSUFFICIENT_OUTPUT_AMOUNT'
+                // )
+                // await expect(router.getAmountIn(bigNumberify(1), bigNumberify(0), bigNumberify(100))).to.be.revertedWith(
+                //     'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
+                // )
+                // await expect(router.getAmountIn(bigNumberify(1), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
+                //     'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
+                // )
+                
                 await expect(router.getAmountIn(bigNumberify(1), bigNumberify(100), bigNumberify(0))).to.be.revertedWith(
-                    'FraxswapRouterLibrary: INSUFFICIENT_LIQUIDITY'
+                    'Deprecated: Use getAmountsIn'
                 )
             })
 
@@ -1089,7 +1090,7 @@ describe("UniswapV2 Tests", function () {
                                 100,
                                 expandTo18Decimals(5)
                             ))
-                        ).to.be.lessThan(25000)
+                        ).to.be.lessThan(26000)
                     })
 
                     it('gas higher price', async () => {
@@ -1101,7 +1102,7 @@ describe("UniswapV2 Tests", function () {
                                 105,
                                 expandTo18Decimals(5)
                             ))
-                        ).to.be.lessThan(25000)
+                        ).to.be.lessThan(26000)
                     })
 
                     it('gas lower price', async () => {
@@ -1113,7 +1114,7 @@ describe("UniswapV2 Tests", function () {
                                 95,
                                 expandTo18Decimals(5)
                             ))
-                        ).to.be.lessThan(25000)
+                        ).to.be.lessThan(26000)
                     })
 
                     describe('after a swap', () => {
