@@ -37,6 +37,24 @@ library LongTermOrdersLib {
     using LongTermOrdersLib for OrderPool;
 
     /// ---------------------------
+    /// ---------- Events ---------
+    /// ---------------------------
+
+    ///@notice An event emitted when virtual orders are executed
+    event VirtualOrderExecution(
+        uint256 blockTimestamp,
+        uint256 blockTimestampElapsed,
+        uint256 newReserve0,
+        uint256 newReserve1,
+        uint256 newTwammReserve0,
+        uint256 newTwammReserve1,
+        uint256 token0Bought,
+        uint256 token1Bought,
+        uint256 token0Sold,
+        uint256 token1Sold
+    );
+
+    /// ---------------------------
     /// ----- LongTerm Orders -----
     /// ---------------------------
 
@@ -84,11 +102,6 @@ library LongTermOrdersLib {
         uint256 newTwammReserve0;
         uint256 newTwammReserve1;
         uint256 fee;
-        uint256 token0Bought;
-        uint256 token1Bought;
-        uint256 token0Sold;
-        uint256 token1Sold;
-        uint256 expiries;
     }
 
     ///@notice initialize state
@@ -212,11 +225,6 @@ library LongTermOrdersLib {
         reserveResult.newTwammReserve1 = reserveResult.newTwammReserve1 + token1Out - token1SellAmount;
         reserveResult.newReserve0 = uint112(bal0 - reserveResult.newTwammReserve0); // calculate reserve0 incl LP fees
         reserveResult.newReserve1 = uint112(bal1 - reserveResult.newTwammReserve1); // calculate reserve1 incl LP fees
-        reserveResult.token0Bought += token0Out;
-        reserveResult.token1Bought += token1Out;
-        reserveResult.token0Sold += token0SellAmount;
-        reserveResult.token1Sold += token1SellAmount;
-        reserveResult.expiries += 1;
     }
 
     ///@notice executes all virtual orders until blockTimestamp is reached.
@@ -249,6 +257,19 @@ library LongTermOrdersLib {
                 orderPoolUpdateStateFromTimestampExpiry(orderPool0, nextExpiryBlockTimestamp);
                 orderPoolUpdateStateFromTimestampExpiry(orderPool1, nextExpiryBlockTimestamp);
 
+                emit VirtualOrderExecution(
+                    nextExpiryBlockTimestamp,
+                    blockTimestampElapsed,
+                    reserveResult.newReserve0,
+                    reserveResult.newReserve1,
+                    reserveResult.newTwammReserve0,
+                    reserveResult.newTwammReserve1,
+                    token0Out,
+                    token1Out,
+                    token0SellAmount,
+                    token1SellAmount
+                );
+
                 lastVirtualOrderTimestampLocal = nextExpiryBlockTimestamp;
             }
             nextExpiryBlockTimestamp += orderTimeInterval;
@@ -263,6 +284,19 @@ library LongTermOrdersLib {
 
             (uint256 token0Out, uint256 token1Out) = executeVirtualTradesAndOrderExpiries(reserveResult, token0SellAmount, token1SellAmount);
 
+            emit VirtualOrderExecution(
+                blockTimestamp,
+                blockTimestampElapsed,
+                reserveResult.newReserve0,
+                reserveResult.newReserve1,
+                reserveResult.newTwammReserve0,
+                reserveResult.newTwammReserve1,
+                token0Out,
+                token1Out,
+                token0SellAmount,
+                token1SellAmount
+            );
+            
             //distribute proceeds to pools
             orderPoolDistributePayment(orderPool0, token1Out);
             orderPoolDistributePayment(orderPool1, token0Out);
@@ -422,7 +456,7 @@ library LongTermOrdersLib {
         uint256 rewardFactorAtSubmission = orderPool.rewardFactorAtSubmission[orderId];
 
         //if order has expired, we need to calculate the reward factor at expiry
-        if (blockTimestamp > orderExpiry) {
+        if (blockTimestamp >= orderExpiry) {
             uint256 rewardFactorAtExpiry = orderPool.rewardFactorAtTimestamp[orderExpiry];
             unchecked { // subtraction is with underflow
                 totalReward = ((rewardFactorAtExpiry - rewardFactorAtSubmission) * stakedAmount / SELL_RATE_ADDITIONAL_PRECISION) / Q112;

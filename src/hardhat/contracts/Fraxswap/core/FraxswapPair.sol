@@ -106,8 +106,8 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
     ///@notice An event emitted when a long term swap is withdrawn
     event WithdrawProceedsFromLongTermOrder(address indexed addr, uint256 orderId, address indexed proceedToken, uint256 proceeds, bool orderExpired);
 
-    ///@notice An event emitted when virtual orders are executed
-    event VirtualOrderExecution(uint256 newReserve0, uint256 newReserve1, uint256 newTwammReserve0, uint256 newTwammReserve1, uint256 token0Bought, uint256 token1Bought, uint256 token0Sold, uint256 token1Sold, uint256 expiries);
+    ///@notice An event emitted when lp fee is updated
+    event LpFeeUpdated(uint256 fee);
 
     /// ---------------------------
     /// --------- Errors ----------
@@ -176,8 +176,7 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
 
     function getDetailedOrdersForUser(address user, uint256 offset, uint256 limit) external view returns (LongTermOrdersLib.Order[] memory detailed_orders) {
         uint256[] memory order_ids = orderIDsForUser[user];
-        uint256 length_remaining = order_ids.length - offset;
-        uint256 limit_to_use = Math.min(limit, length_remaining);
+        uint256 limit_to_use = Math.min(limit, order_ids.length - offset);
         detailed_orders = new LongTermOrdersLib.Order[](limit_to_use);
 
         for (uint256 i = 0; i < limit_to_use; i++){ 
@@ -190,7 +189,7 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
     }
 
     function getTwammReserves() public override view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast, uint112 _twammReserve0, uint112 _twammReserve1, uint256 _fee) {
-        return (reserve0, reserve1, blockTimestampLast, twammReserve0, twammReserve1, fee);
+        return (reserve0, reserve1, blockTimestampLast, twammReserve0, twammReserve1, 10000-fee);
     }
 
     // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
@@ -231,6 +230,8 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
 
         // TWAMM
         longTermOrders.initialize(_token0);
+        
+        emit LpFeeUpdated(_fee);
     }
 
     function _getTimeElapsed() private view returns (uint32) {
@@ -479,8 +480,7 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
             reserve1,
             twammReserve0,
             twammReserve1,
-            fee,
-            0, 0, 0, 0, 0
+            fee
         );
 
         longTermOrders.executeVirtualOrdersUntilTimestamp(blockTimestamp, result);
@@ -494,17 +494,6 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
         uint32 timeElapsed = _getTimeElapsed();
         // update reserve0 and reserve1
         if ( timeElapsed > 0 && (newReserve0 != reserve0 || newReserve1 != reserve1)) {
-            emit VirtualOrderExecution(
-                result.newReserve0,
-                result.newReserve1,
-                result.newTwammReserve0,
-                result.newTwammReserve1,
-                result.token0Bought,
-                result.token1Bought,
-                result.token0Sold,
-                result.token1Sold,
-                result.expiries
-            );
             _update(newReserve0, newReserve1, reserve0, reserve1, timeElapsed);
         } else {
             reserve0 = newReserve0;
@@ -515,9 +504,10 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
     ///@notice convenience function to execute virtual orders. Note that this already happens
     ///before most interactions with the AMM
     function executeVirtualOrders(uint256 blockTimestamp) public override lock {
-        // blockTimestamp is valid
-        require(longTermOrders.lastVirtualOrderTimestamp <= blockTimestamp && blockTimestamp <= block.timestamp); // INVALID TIMESTAMP
-        if (longTermOrders.lastVirtualOrderTimestamp != blockTimestamp) executeVirtualOrdersInternal(blockTimestamp);
+        // blockTimestamp is valid then execute the long term orders otherwise noop
+        if(longTermOrders.lastVirtualOrderTimestamp < blockTimestamp && blockTimestamp <= block.timestamp){
+            executeVirtualOrdersInternal(blockTimestamp);
+        }
     }
 
     /// ---------------------------
@@ -550,8 +540,7 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
             reserve1,
             twammReserve0,
             twammReserve1,
-            fee,
-            0, 0, 0, 0, 0
+            fee
         );
 
         longTermOrders.executeVirtualOrdersUntilTimestampView(blockTimestamp, result);
@@ -650,6 +639,7 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
     ///@notice sets the pool's lp fee
     function setFee(uint256 newFee) feeCheck(newFee) external onlyOwnerOrFactory {
         fee = 10000 - newFee; // newFee should be in basis points (100th of a pecent). 30 = 0.3%
+        emit LpFeeUpdated(newFee);
     }
 
 }
