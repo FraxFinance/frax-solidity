@@ -49,7 +49,7 @@ library FraxswapRouterLibrary {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'6817b2be2a00d871fb36b36499b6bb7701b4d6f0750a4695da2445c5ab572554' // init code / init hash
+                hex'4ce0b4ab368f39e4bd03ec712dfc405eb5a36cdb0294b3887b441cd1c743ced3' // init code / init hash
             )))));
     }
 

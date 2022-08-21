@@ -2,6 +2,7 @@ const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
 const { BigNumber } = require('ethers');
 const UniV2TWAMMPair = require('../../artifacts/contracts/Fraxswap/core/FraxswapPair.sol/FraxswapPair');
+const LongTermOrdersAbi = require('../../artifacts/contracts/Fraxswap/twamm/LongTermOrders.sol/LongTermOrdersLib');
 const { BIG6, BIG18, bigNumberify, expandTo18Decimals, sleep } = require('./utilities');
 const {
     calculateTwammExpectedFraxswap,
@@ -19,6 +20,36 @@ const {
 } = require('./twamm-utils')
 const chalk = require('chalk');
 const util = require('util');
+
+const outputVirtualOrderExecutions = async (twamm, txToWaitFor, toRevert = null) => {
+
+    const longTermOrderInterface = new ethers.utils.Interface(LongTermOrdersAbi.abi);
+
+    toRevert == 'revert' && await expect(txToWaitFor).to.be.reverted;
+    toRevert == 'not-revert' && await expect(txToWaitFor).to.be.not.reverted;
+
+    const txReceipt = await (await txToWaitFor).wait()
+
+    // console.log(txReceipt.logs)
+
+    const iface = twamm.interface;
+
+    const decodedLogs = txReceipt.logs
+        .map((log) => {
+            try {
+                return iface.parseLog(log);
+            } catch (e) {
+                try {
+                    return longTermOrderInterface.parseLog(log)
+                } catch (e) {
+                    return;
+                }
+            }
+        })
+    //   .filter((log) => log?.name == "VirtualOrderExecution");
+
+    console.log("decodedLogs", decodedLogs);
+}
 
 async function getBlockNumber() {
     return (await ethers.provider.getBlock("latest")).number
@@ -102,7 +133,7 @@ async function setupContracts(createPair = true, fee = null) {
 
     let pair;
     if (createPair) {
-        if(fee) {
+        if (fee) {
             await factory['createPair(address,address,uint256)'](token0.address, token1.address, fee);
         } else {
             await factory['createPair(address,address)'](token0.address, token1.address);
@@ -194,7 +225,7 @@ const runOnce = (runOnceFee) => describe(`Test to Run Once. fee: ${runOnceFee}}`
 
         it(`computeVirtualBalances no liquidity, swap1To0 = 1, swap0To1 = none`, async function () {
 
-            
+
             // align so long term order will be on
             await alignBlockTimestamp(4)
 
@@ -208,7 +239,7 @@ const runOnce = (runOnceFee) => describe(`Test to Run Once. fee: ${runOnceFee}}`
 
         it(`computeVirtualBalances no liquidity, swap1To0 = none, swap0To1 = 1`, async function () {
 
-            
+
             // align so long term order will be on
             await alignBlockTimestamp(4)
 
@@ -235,7 +266,7 @@ const runOnce = (runOnceFee) => describe(`Test to Run Once. fee: ${runOnceFee}}`
                 return [ltOrder0, ltOrder1]
             });
 
-            await Promise.all(promisesToWaitFor.map(o=>o.getResults()))
+            await Promise.all(promisesToWaitFor.map(o => o.getResults()))
 
             await mineTimeIntervals(2);
             await expect(twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp() + 1)).to.be.not.reverted
@@ -244,7 +275,7 @@ const runOnce = (runOnceFee) => describe(`Test to Run Once. fee: ${runOnceFee}}`
 
         it(`computeVirtualBalances no liquidity, swap1To0 = large, swap0To1 = 1`, async function () {
 
-            
+
             // align so long term order will be on
             await alignBlockTimestamp(0)
 
@@ -258,7 +289,7 @@ const runOnce = (runOnceFee) => describe(`Test to Run Once. fee: ${runOnceFee}}`
                 return [ltOrder0, ltOrder1]
             });
 
-            await Promise.all(promisesToWaitFor.map(o=>o.getResults()))
+            await Promise.all(promisesToWaitFor.map(o => o.getResults()))
 
             await mineTimeIntervals(2);
             await expect(twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp() + 1)).to.be.not.reverted
@@ -280,7 +311,7 @@ const runOnce = (runOnceFee) => describe(`Test to Run Once. fee: ${runOnceFee}}`
                 return [ltOrder0, ltOrder1]
             });
 
-            await Promise.all(promisesToWaitFor.map(o=>o.getResults()))
+            await Promise.all(promisesToWaitFor.map(o => o.getResults()))
 
             await mineTimeIntervals(2);
             await expect(twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp() + 1)).to.be.not.reverted
@@ -314,7 +345,7 @@ const runOnce = (runOnceFee) => describe(`Test to Run Once. fee: ${runOnceFee}}`
             const token18 = 300;
             const amountIn1 = expandTo18Decimals(token18);
 
-            
+
             // align so long term order will be on
             await alignBlockTimestamp(4)
 
@@ -659,7 +690,8 @@ const runOnce = (runOnceFee) => describe(`Test to Run Once. fee: ${runOnceFee}}`
 
             //move blocks forward, and execute virtual orders
             await mineTimeIntervals(3)
-            await twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp());
+            // await twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp());
+            await outputVirtualOrderExecutions(twamm, twamm.connect(addr1).executeVirtualOrders(await getBlockTimestamp()), 'not-revert')
 
             // enabled twamm pause
             await factory.toggleGlobalPause(); // enable it
@@ -689,11 +721,16 @@ const runOnce = (runOnceFee) => describe(`Test to Run Once. fee: ${runOnceFee}}`
 
             const currentTimestamp = await getBlockTimestamp();
 
-            await expect(twamm.executeVirtualOrders(currentTimestamp)).to.be.not.reverted;
+            await outputVirtualOrderExecutions(twamm, twamm.executeVirtualOrders(currentTimestamp), 'not-revert')
 
             await mineTimeIntervals(2);
 
-            await expect(twamm.executeVirtualOrders(currentTimestamp - 1)).to.be.reverted;
+            await outputVirtualOrderExecutions(twamm, twamm.executeVirtualOrders(currentTimestamp - 1))
+
+            await outputVirtualOrderExecutions(twamm, twamm.executeVirtualOrders(await getBlockTimestamp()))
+
+            // await expect(twamm.executeVirtualOrders(currentTimestamp - 1)).to.be.reverted;
+
         });
     });
 
@@ -766,7 +803,7 @@ const allTwammTests = (multiplier, testFee) => describe(`TWAMM - fee: ${testFee}
                 await token1.transfer(addr1.address, amountIn.mul(2));
                 await token1.connect(addr1).approve(twamm.address, amountIn.mul(2));
 
-                
+
                 // align so long term order will be on
                 await alignBlockTimestamp(0)
 
@@ -862,6 +899,53 @@ const allTwammTests = (multiplier, testFee) => describe(`TWAMM - fee: ${testFee}
             });
         });
 
+        describe("Fee update tests", function () {
+
+            it("normal swap with fee change mid way", async function () {
+                const amountIn0 = expandTo18Decimals(10 * multiplier);
+
+                const amountIn0MinusFee = amountIn0.mul(getFee(testFee))
+                const [token0Reserve, token1Reserve, blockTimestampLast, twammReserve0, twammReserve1] = await twamm.getTwammReserves();
+                const expectedOut =
+                    (token1Reserve
+                        .mul(amountIn0MinusFee)
+                        .div(token0Reserve.mul(10000).add(amountIn0MinusFee)));
+
+                await token0.transfer(addr1.address, amountIn0);
+                await token0.connect(addr1).transfer(twamm.address, amountIn0)
+                await expect(twamm.connect(addr1).swap(0, expectedOut, addr1.address, '0x'))
+                .to.emit(token1, 'Transfer')
+                .withArgs(twamm.address, addr1.address, expectedOut)
+                .to.emit(twamm, 'Swap')
+                .withArgs(addr1.address, amountIn0, 0, 0, expectedOut, addr1.address)
+
+                await expect(twamm.connect(addr1).setFee(88)).to.be.reverted; // fee to 0.88% but with user address
+                await expect(twamm.connect(owner).setFee(88)).to.be.not.reverted; // using owner
+                
+                // uint amountInWithFee = amountIn * fee;
+                // uint numerator = amountInWithFee * reserveOut;
+                // uint denominator = (reserveIn * 10000) + amountInWithFee;
+                // return numerator / denominator;
+
+                const _amountIn0MinusFee = amountIn0.mul(getFee(88))
+                const [token0Reserve_, token1Reserve_, blockTimestampLast_, twammReserve0_, twammReserve1_] = await twamm.getTwammReserves();
+
+                const _expectedOut =
+                    (token1Reserve_
+                        .mul(_amountIn0MinusFee)
+                        .div(token0Reserve_.mul(10000).add(_amountIn0MinusFee)));
+
+                await token0.transfer(addr2.address, amountIn0);
+                await token0.connect(addr2).transfer(twamm.address, amountIn0)
+                await expect(twamm.connect(addr2).swap(0, _expectedOut, addr2.address, '0x'))
+                .to.emit(token1, 'Transfer')
+                .withArgs(twamm.address, addr2.address, _expectedOut)
+                .to.emit(twamm, 'Swap')
+                .withArgs(addr2.address, amountIn0, 0, 0, _expectedOut, addr2.address)
+            })
+
+        })
+
         describe("Long term swaps", function () {
 
             it("Single sided long term order behaves like normal swap", async function () {
@@ -884,7 +968,7 @@ const allTwammTests = (multiplier, testFee) => describe(`TWAMM - fee: ${testFee}
 
                 // align so long term order will be on
                 await alignBlockTimestamp(0)
-                
+
                 //trigger long term order
                 await twamm.connect(addr1).longTermSwapFrom0To1(amountIn0, 2)
 
@@ -1425,7 +1509,7 @@ describe("Multiple TWAMM Tests", function () {
     allTwammTests(7000, 5)
     allTwammTests(8000, 5)
     allTwammTests(9000, 5)
-    
+
     allTwammTests(1, 50)
     allTwammTests(10, 50)
     allTwammTests(100, 50)

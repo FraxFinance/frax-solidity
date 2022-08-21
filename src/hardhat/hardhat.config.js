@@ -118,7 +118,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 75000000000, // 75 Gwei
+			gasPrice: 35000000000, // 35 Gwei
 			gasMultiplier: 1.2,
 		},
 		evmos: {
@@ -198,7 +198,7 @@ module.exports = {
 			},
 			chainId: 137,
 			gas: "auto",
-			gasPrice: 60000000000, // 60 Gwei
+			gasPrice: 125000000000, // 125 Gwei
 			gasMultiplier: 1.2
 		},
 		polygon_mumbai: {
