@@ -637,7 +637,7 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
     /* ========== RESTRICTED FUNCTIONS - Owner only ========== */
 
     ///@notice sets the pool's lp fee
-    function setFee(uint256 newFee) feeCheck(newFee) external onlyOwnerOrFactory {
+    function setFee(uint256 newFee) execVirtualOrders feeCheck(newFee) external onlyOwnerOrFactory {
         fee = 10000 - newFee; // newFee should be in basis points (100th of a pecent). 30 = 0.3%
         emit LpFeeUpdated(newFee);
     }

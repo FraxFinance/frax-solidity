@@ -35,8 +35,8 @@ import './interfaces/IUniswapV2ERC20V5.sol';
 
 contract FraxswapERC20 is IUniswapV2ERC20V5 {
 
-    string public constant override name = 'Fraxswap V1';
-    string public constant override symbol = 'FS-V1';
+    string public constant override name = 'Fraxswap V2';
+    string public constant override symbol = 'FS-V2';
     uint8 public constant override decimals = 18;
     uint  public override totalSupply;
     mapping(address => uint) public override balanceOf;

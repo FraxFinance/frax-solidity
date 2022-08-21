@@ -4,8 +4,8 @@
   */
 const FRAXSWAP_POOLS = [
   {
-    name: 'Fraxswap V1 FPI/FRAX',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 FPI/FRAX',
+    symbol: 'FS-V2',
     address: '0x5A1eA0130Dc4DC38420AA77929f992f1FBd482Bb',
     coins: ['0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     underlying_coins: ['0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
@@ -14,8 +14,8 @@ const FRAXSWAP_POOLS = [
     swapType: 0,
   },
   {
-    name: 'Fraxswap V1 FRAX/FPIS',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 FRAX/FPIS',
+    symbol: 'FS-V2',
     address: '0x99887AC15eBCcbad52FA2c9ceDc9D91A91e36051',
     coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xc2544A32872A91F4A553b404C6950e89De901fdb'],
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xc2544A32872A91F4A553b404C6950e89De901fdb'],
@@ -24,8 +24,8 @@ const FRAXSWAP_POOLS = [
     swapType: 0,
   },
   {
-    name: 'Fraxswap V1 FXS/FRAX',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 FXS/FRAX',
+    symbol: 'FS-V2',
     address: '0x8206412c107eF1aDb70B9277974f5163760E128E',
     coins: ['0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     underlying_coins: ['0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
@@ -34,8 +34,8 @@ const FRAXSWAP_POOLS = [
     swapType: 0,
   },
   {
-    name: 'Fraxswap V1 FRAX/WETH',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 FRAX/WETH',
+    symbol: 'FS-V2',
     address: '0x8300f0528e00Ad33b218bb05D396F61A9FDd68Cd',
     coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'],
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'],
@@ -44,8 +44,8 @@ const FRAXSWAP_POOLS = [
     swapType: 0,
   },
   {
-    name: 'Fraxswap V1 FPI/FPIS',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 FPI/FPIS',
+    symbol: 'FS-V2',
     address: '0xD3542ec999ceA6C79f09483fF88833f154a5e92f',
     coins: ['0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E', '0xc2544A32872A91F4A553b404C6950e89De901fdb'],
     underlying_coins: ['0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E', '0xc2544A32872A91F4A553b404C6950e89De901fdb'],
@@ -54,8 +54,8 @@ const FRAXSWAP_POOLS = [
     swapType: 0,
   },
   {
-    name: 'Fraxswap V1 FXS/FPI',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 FXS/FPI',
+    symbol: 'FS-V2',
     address: '0x843B5Ae5861362F20A3aC185A2dD2393D7526C65',
     coins: ['0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0', '0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E'],
     underlying_coins: ['0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0', '0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E'],
@@ -64,8 +64,8 @@ const FRAXSWAP_POOLS = [
     swapType: 0,
   },
   {
-    name: 'Fraxswap V1 FXS/FPIS',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 FXS/FPIS',
+    symbol: 'FS-V2',
     address: '0x1306b420B4B5f99cBeE938E369f06863a0f419A5',
     coins: ['0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0', '0xc2544A32872A91F4A553b404C6950e89De901fdb'],
     underlying_coins: ['0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0', '0xc2544A32872A91F4A553b404C6950e89De901fdb'],
@@ -74,8 +74,8 @@ const FRAXSWAP_POOLS = [
     swapType: 0,
   },
   {
-    name: 'Fraxswap V1 IQ/FRAX',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 IQ/FRAX',
+    symbol: 'FS-V2',
     address: '0xcB0bC7C879bb3E9CFEB9d8EFef653F33B3d242e9',
     coins: ['0x579CEa1889991f68aCc35Ff5c3dd0621fF29b0C9', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     underlying_coins: ['0x579CEa1889991f68aCc35Ff5c3dd0621fF29b0C9', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
@@ -84,8 +84,8 @@ const FRAXSWAP_POOLS = [
     swapType: 0,
   },
   {
-    name: 'Fraxswap V1 pitchFXS/FRAX',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 pitchFXS/FRAX',
+    symbol: 'FS-V2',
     address: '0x0a92aC70B5A187fB509947916a8F63DD31600F80',
     coins: ['0x11EBe21e9d7BF541A18e1E3aC94939018Ce88F0b', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     underlying_coins: ['0x11EBe21e9d7BF541A18e1E3aC94939018Ce88F0b', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
@@ -94,8 +94,8 @@ const FRAXSWAP_POOLS = [
     swapType: 0,
   },
   {
-    name: 'Fraxswap V1 LINK/FRAX',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 LINK/FRAX',
+    symbol: 'FS-V2',
     address: '0x146F7D2f5953346B773dcf3c0B80A247f991610f',
     coins: ['0x514910771AF9Ca656af840dff83E8264EcF986CA', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     underlying_coins: ['0x514910771AF9Ca656af840dff83E8264EcF986CA', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
@@ -104,8 +104,8 @@ const FRAXSWAP_POOLS = [
     swapType: 0,
   },
   {
-    name: 'Fraxswap V1 pitchFXS/FXS',
-    symbol: 'FS-V1',
+    name: 'Fraxswap V2 pitchFXS/FXS',
+    symbol: 'FS-V2',
     address: '0xC416Be7D09818abFe2713090C81FE8F3F7eeB553',
     coins: ['0x11EBe21e9d7BF541A18e1E3aC94939018Ce88F0b', '0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0'],
     underlying_coins: ['0x11EBe21e9d7BF541A18e1E3aC94939018Ce88F0b', '0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0'],

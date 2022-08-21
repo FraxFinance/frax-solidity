@@ -42,10 +42,11 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
     address public bot_address;
 
     // Data
-    uint256 public cpi_last = 28012600000; // Dec 2021 CPI-U, 280.126 * 100000000
-    uint256 public cpi_target = 28193300000; // Jan 2022 CPI-U, 281.933 * 100000000
-    uint256 public peg_price_last = 1e18; // Use currPegPrice(). Will always be in Dec 2021 dollars
-    uint256 public peg_price_target = 1006450668627688968; // Will always be in Dec 2021 dollars
+    // CPI-U: https://data.bls.gov/timeseries/CUSR0000SA0
+    uint256 public cpi_last = 29532800000; // Jun 2022 CPI-U
+    uint256 public cpi_target = 29527100000; // Jul 2022 CPI-U
+    uint256 public peg_price_last = 1054268436346501214; // Use currPegPrice(). Will always be in Dec 2021 dollars
+    uint256 public peg_price_target = 1054064956483867970; // Will always be in Dec 2021 dollars
 
     // Chainlink
     address public oracle; // Chainlink CPI oracle address
@@ -54,8 +55,8 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
 
     // Tracking
     uint256 public stored_year = 2022; // Last time (year) the stored CPI data was updated
-    uint256 public stored_month = 1; // Last time (month) the stored CPI data was updated
-    uint256 public lastUpdateTime = 1644886800; // Last time the stored CPI data was updated.
+    uint256 public stored_month = 7; // Last time (month) the stored CPI data was updated
+    uint256 public lastUpdateTime = 1660665713; // Last time the stored CPI data was updated.
     uint256 public ramp_period = 28 * 86400; // Apply the CPI delta to the peg price over a set period
     uint256 public future_ramp_period = 28 * 86400;
     CPIObservation[] public cpi_observations; // Historical tracking of CPI data
@@ -94,7 +95,8 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
 
     constructor (
         address _creator_address,
-        address _timelock_address
+        address _timelock_address,
+        CPIObservation[] memory initial_observations
     ) Owned(_creator_address) {
         timelock_address = _timelock_address;
 
@@ -117,11 +119,11 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
 
         // CPI [Ethereum]
         // =================================
-        // setPublicChainlinkToken();
-        // time_contract = BokkyPooBahsDateTimeContract(0x90503D86E120B3B309CEBf00C2CA013aB3624736);
-        // oracle = 0x049Bd8C3adC3fE7d3Fc2a44541d955A537c2A484;
-        // jobId = "1c309d42c7084b34b1acf1a89e7b51fc";
-        // fee = 50e18; // 50 LINK
+        setPublicChainlinkToken();
+        time_contract = BokkyPooBahsDateTimeContract(0x90503D86E120B3B309CEBf00C2CA013aB3624736);
+        oracle = 0x049Bd8C3adC3fE7d3Fc2a44541d955A537c2A484;
+        jobId = "1c309d42c7084b34b1acf1a89e7b51fc";
+        fee = 50e18; // 50 LINK
 
         // CPI [Polygon Mainnet]
         // =================================
@@ -133,29 +135,17 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
 
         // CPI [Polygon Mumbai]
         // =================================
-        setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
-        time_contract = BokkyPooBahsDateTimeContract(0x2Dd1B4D4548aCCeA497050619965f91f78b3b532);
-        oracle = 0x3c30c5c415B2410326297F0f65f5Cbb32f3aefCc;
-        jobId = "32c3e7b12fe44665a4e2bb87aa9779af";
-        fee = 1e17; // 0.1 LINK
+        // setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
+        // time_contract = BokkyPooBahsDateTimeContract(0x2Dd1B4D4548aCCeA497050619965f91f78b3b532);
+        // oracle = 0x3c30c5c415B2410326297F0f65f5Cbb32f3aefCc;
+        // jobId = "32c3e7b12fe44665a4e2bb87aa9779af";
+        // fee = 1e17; // 0.1 LINK
 
-        // Add the first observation
-        cpi_observations.push(CPIObservation(
-            2021,
-            12,
-            cpi_last,
-            peg_price_last,
-            1642208400 // Dec data observed on Jan 15 2021
-        ));
+        // Add some observations
 
-        // Add the second observation
-        cpi_observations.push(CPIObservation(
-            2022,
-            1,
-            cpi_target,
-            peg_price_target,
-            1644886800 // Jan data observed on Feb 15 2022
-        ));
+        for (uint256 i = 0; i < initial_observations.length; i++){ 
+            cpi_observations.push(initial_observations[i]);
+        }
     }
 
     /* ========== VIEWS ========== */
@@ -189,14 +179,15 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
 
     // Delta between the current and previous peg prices
     function currDeltaFracE6() public view returns (int256) {
-        return int256(((peg_price_target - peg_price_last) * 1e6) / peg_price_last);
+        int256 price_diff = (int256(peg_price_target) - int256(peg_price_last)) * 1e6;
+        return (price_diff / int256(peg_price_last));
     }
 
     // Absolute value of the delta between the current and previous peg prices
     function currDeltaFracAbsE6() public view returns (uint256) {
         int256 curr_delta_frac = currDeltaFracE6();
-        if (curr_delta_frac > 0) return uint256(curr_delta_frac);
-        else return uint256(-curr_delta_frac);
+        if (curr_delta_frac >= 0) return uint256(curr_delta_frac);
+        else return uint256(-1 * curr_delta_frac);
     }
 
     // Current peg price in E18, accounting for the ramping
@@ -208,7 +199,7 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
         else {
             // Calculate the fraction of the delta to use, based on the elapsed time
             // Can be negative in case of deflation (that never happens right :])
-            int256 fractional_price_delta = (int256(peg_price_target - peg_price_last) * int256(elapsed_time)) / int256(ramp_period);
+            int256 fractional_price_delta = ((int256(peg_price_target) - int256(peg_price_last)) * int256(elapsed_time)) / int256(ramp_period);
             return uint256(int256(peg_price_last) + int256(fractional_price_delta));
         }
     }
