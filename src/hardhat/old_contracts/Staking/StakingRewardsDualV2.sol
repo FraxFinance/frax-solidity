@@ -548,7 +548,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
             "Reward period incomplete"
         );
         rewardsDuration = _rewardsDuration;
-        emit RewardsDurationUpdated(rewardsDuration);
+        emit RewardsDurationUpdated(_rewardsDuration);
     }
 
     function setMultipliers(uint256 _locked_stake_max_multiplier, uint256 _cr_boost_max_multiplier) external onlyByOwnGov {
@@ -558,8 +558,8 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
         locked_stake_max_multiplier = _locked_stake_max_multiplier;
         cr_boost_max_multiplier = _cr_boost_max_multiplier;
         
-        emit MaxCRBoostMultiplier(cr_boost_max_multiplier);
-        emit LockedStakeMaxMultiplierUpdated(locked_stake_max_multiplier);
+        emit MaxCRBoostMultiplier(_cr_boost_max_multiplier);
+        emit LockedStakeMaxMultiplierUpdated(_locked_stake_max_multiplier);
     }
 
     function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _locked_stake_time_for_max_multiplier, uint256 _locked_stake_min_time) external onlyByOwnGov {
@@ -571,7 +571,7 @@ contract StakingRewardsDualV2 is IStakingRewardsDual, Owned, ReentrancyGuard, Pa
         locked_stake_min_time = _locked_stake_min_time;
         locked_stake_min_time_str = StringHelpers.uint2str(_locked_stake_min_time);
 
-        emit LockedStakeTimeForMaxMultiplier(locked_stake_time_for_max_multiplier);
+        emit LockedStakeTimeForMaxMultiplier(_locked_stake_time_for_max_multiplier);
         emit LockedStakeMinTime(_locked_stake_min_time);
     }
 

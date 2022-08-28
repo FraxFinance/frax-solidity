@@ -573,7 +573,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
             "Reward period incomplete"
         );
         rewardsDuration = _rewardsDuration;
-        emit RewardsDurationUpdated(rewardsDuration);
+        emit RewardsDurationUpdated(_rewardsDuration);
     }
 
     function setMultipliers(uint256 _lock_max_multiplier) external onlyByOwner {
@@ -589,7 +589,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
         lock_time_for_max_multiplier = _lock_time_for_max_multiplier;
         lock_time_min = _lock_time_min;
 
-        emit LockedStakeTimeForMaxMultiplier(lock_time_for_max_multiplier);
+        emit LockedStakeTimeForMaxMultiplier(_lock_time_for_max_multiplier);
         emit LockedStakeMinTime(_lock_time_min);
     }
 

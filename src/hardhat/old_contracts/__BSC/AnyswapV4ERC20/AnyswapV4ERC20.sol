@@ -229,7 +229,7 @@ contract AnyswapV4ERC20 is IAnyswapV3ERC20 {
         require(newVault != address(0), "AnyswapV3ERC20: address(0x0)");
         pendingVault = newVault;
         delayVault = block.timestamp + delay;
-        emit LogChangeVault(vault, pendingVault, delayVault);
+        emit LogChangeVault(vault, newVault, delayVault);
         return true;
     }
 
@@ -237,7 +237,7 @@ contract AnyswapV4ERC20 is IAnyswapV3ERC20 {
         require(newVault != address(0), "AnyswapV3ERC20: address(0x0)");
         pendingVault = newVault;
         delayVault = block.timestamp + delay;
-        emit LogChangeMPCOwner(vault, pendingVault, delayVault);
+        emit LogChangeMPCOwner(vault, newVault, delayVault);
         return true;
     }
 

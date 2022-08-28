@@ -284,7 +284,7 @@ contract veFXSYieldDistributorV2 is Owned, ReentrancyGuard {
             "Previous yield period must be complete before changing the duration for the new period"
         );
         yieldDuration = _yieldDuration;
-        emit YieldDurationUpdated(yieldDuration);
+        emit YieldDurationUpdated(_yieldDuration);
     }
 
     function initializeDefault() external onlyByOwnGov {

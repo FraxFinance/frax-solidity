@@ -705,9 +705,9 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         vefxs_max_multiplier = _vefxs_max_multiplier;
         vefxs_per_frax_for_max_boost = _vefxs_per_frax_for_max_boost;
 
-        emit MaxVeFXSMultiplier(vefxs_max_multiplier);
-        emit LockedStakeMaxMultiplierUpdated(lock_max_multiplier);
-        emit veFXSPerFraxForMaxBoostUpdated(vefxs_per_frax_for_max_boost);
+        emit MaxVeFXSMultiplier(_vefxs_max_multiplier);
+        emit LockedStakeMaxMultiplierUpdated(_lock_max_multiplier);
+        emit veFXSPerFraxForMaxBoostUpdated(_vefxs_per_frax_for_max_boost);
     }
 
     function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnGov {
@@ -717,7 +717,7 @@ contract FraxCrossChainFarm is Owned, ReentrancyGuard {
         lock_time_for_max_multiplier = _lock_time_for_max_multiplier;
         lock_time_min = _lock_time_min;
 
-        emit LockedStakeTimeForMaxMultiplier(lock_time_for_max_multiplier);
+        emit LockedStakeTimeForMaxMultiplier(_lock_time_for_max_multiplier);
         emit LockedStakeMinTime(_lock_time_min);
     }
 

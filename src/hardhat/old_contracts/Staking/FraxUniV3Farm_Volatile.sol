@@ -746,9 +746,9 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
         vefxs_max_multiplier = _vefxs_max_multiplier;
         vefxs_per_frax_for_max_boost = _vefxs_per_frax_for_max_boost;
 
-        emit MaxVeFXSMultiplier(vefxs_max_multiplier);
-        emit LockedNFTMaxMultiplierUpdated(lock_max_multiplier);
-        emit veFXSPctForMaxBoostUpdated(vefxs_per_frax_for_max_boost);
+        emit MaxVeFXSMultiplier(_vefxs_max_multiplier);
+        emit LockedNFTMaxMultiplierUpdated(_lock_max_multiplier);
+        emit veFXSPctForMaxBoostUpdated(_vefxs_per_frax_for_max_boost);
     }
 
     function setLockedNFTTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnGov {
@@ -758,7 +758,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
         lock_time_for_max_multiplier = _lock_time_for_max_multiplier;
         lock_time_min = _lock_time_min;
 
-        emit LockedNFTTimeForMaxMultiplier(lock_time_for_max_multiplier);
+        emit LockedNFTTimeForMaxMultiplier(_lock_time_for_max_multiplier);
         emit LockedNFTMinTime(_lock_time_min);
     }
 

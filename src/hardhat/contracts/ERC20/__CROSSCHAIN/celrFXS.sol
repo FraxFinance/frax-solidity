@@ -112,7 +112,7 @@ contract celrFXS is ERC20Virtual, Ownable {
 
     function updateBridge(address _bridge) external onlyOwner {
         bridge = _bridge;
-        emit BridgeUpdated(bridge);
+        emit BridgeUpdated(_bridge);
     }
 
     function decimals() public view virtual override returns (uint8) {

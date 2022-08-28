@@ -333,7 +333,7 @@ contract veFXSYieldDistributorV4 is Owned, ReentrancyGuard {
     function setYieldDuration(uint256 _yieldDuration) external onlyByOwnGov {
         require( periodFinish == 0 || block.timestamp > periodFinish, "Previous yield period must be complete before changing the duration for the new period");
         yieldDuration = _yieldDuration;
-        emit YieldDurationUpdated(yieldDuration);
+        emit YieldDurationUpdated(_yieldDuration);
     }
 
     function greylistAddress(address _address) external onlyByOwnGov {

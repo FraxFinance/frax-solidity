@@ -523,7 +523,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
             "Reward period incomplete"
         );
         rewardsDuration = _rewardsDuration;
-        emit RewardsDurationUpdated(rewardsDuration);
+        emit RewardsDurationUpdated(_rewardsDuration);
     }
 
     function setMultipliers(uint256 _lock_max_multiplier) external onlyByOwnGov {
@@ -531,7 +531,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
 
         lock_max_multiplier = _lock_max_multiplier;
 
-        emit LockedStakeMaxMultiplierUpdated(lock_max_multiplier);
+        emit LockedStakeMaxMultiplierUpdated(_lock_max_multiplier);
     }
 
     function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwnGov {
@@ -541,7 +541,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
         lock_time_for_max_multiplier = _lock_time_for_max_multiplier;
         lock_time_min = _lock_time_min;
 
-        emit LockedStakeTimeForMaxMultiplier(lock_time_for_max_multiplier);
+        emit LockedStakeTimeForMaxMultiplier(_lock_time_for_max_multiplier);
         emit LockedStakeMinTime(_lock_time_min);
     }
 

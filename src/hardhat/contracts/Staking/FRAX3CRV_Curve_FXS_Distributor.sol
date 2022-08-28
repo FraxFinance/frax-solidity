@@ -243,7 +243,7 @@ contract Pausable is Owned {
         }
 
         // Let everyone know that our pause state has changed.
-        emit PauseChanged(paused);
+        emit PauseChanged(_paused);
     }
 
     event PauseChanged(bool isPaused);
@@ -580,7 +580,7 @@ contract FRAX3CRV_Curve_FXS_Distributor is IStakingRewards, RewardsDistributionR
             "Reward period incomplete"
         );
         rewardsDuration = _rewardsDuration;
-        emit RewardsDurationUpdated(rewardsDuration);
+        emit RewardsDurationUpdated(_rewardsDuration);
     }
 
     /* ========== MODIFIERS ========== */
