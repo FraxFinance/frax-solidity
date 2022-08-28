@@ -579,7 +579,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     function setMultipliers(uint256 _lock_max_multiplier) external onlyByOwner {
         require(_lock_max_multiplier >= uint256(1e18), "Multiplier must be greater than or equal to 1e18");
         lock_max_multiplier = _lock_max_multiplier;
-        emit LockedStakeMaxMultiplierUpdated(lock_max_multiplier);
+        emit LockedStakeMaxMultiplierUpdated(_lock_max_multiplier);
     }
 
     function setLockedStakeTimeForMinAndMaxMultiplier(uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min) external onlyByOwner {
