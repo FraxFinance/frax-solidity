@@ -274,22 +274,24 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// ---------------------------------------------------------------
 		// ONLY IF LIVE TESTING
-		console.log("Set Ropsten [6] as the owner");
-		await hre.network.provider.request({
-			method: "hardhat_impersonateAccount",
-			params: [process.env.STAKING_OWNER_ADDRESS]
-		});
+		// console.log("Set Ropsten [6] as the owner");
+		// await hre.network.provider.request({
+		// 	method: "hardhat_impersonateAccount",
+		// 	params: [process.env.STAKING_OWNER_ADDRESS]
+		// });
 
-		// Set the owner as Ropsten[6]
-		await staking_instance.nominateNewOwner(STAKING_OWNER, { from: process.env.STAKING_OWNER_ADDRESS });
+		// // Set the owner as Ropsten[6]
+		// await staking_instance.nominateNewOwner(STAKING_OWNER, { from: process.env.STAKING_OWNER_ADDRESS });
 		
-		await hre.network.provider.request({
-			method: "hardhat_stopImpersonatingAccount",
-			params: [process.env.STAKING_OWNER_ADDRESS]
-		});
+		// await hre.network.provider.request({
+		// 	method: "hardhat_stopImpersonatingAccount",
+		// 	params: [process.env.STAKING_OWNER_ADDRESS]
+		// });
 
 		// Accept ownership
-		await staking_instance.acceptOwnership({ from: STAKING_OWNER });
+		// await staking_instance.acceptOwnership({ from: STAKING_OWNER });
+
+		// ---------------------------------------------------------------
 
 		// Set the locking time back
 		await staking_instance.setMiscVariables(
@@ -315,8 +317,6 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 
 		// ---------------------------------------------------------------
 
-		console.log("Add a migrator address");
-		await staking_instance.toggleMigrator(MIGRATOR_ADDRESS, { from: STAKING_OWNER });
 
 		console.log("Move to the end of the gauge controller period");
 		const current_timestamp_00 = (new BigNumber(await time.latest())).toNumber();
@@ -1119,149 +1119,6 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		);
 	});
 
-	it("Migration Staking / Withdrawal Tests", async () => {
-		console.log(chalk.hex("#ff8b3d").bold("==============Migration Staking / Withdrawal Tests=============="));
-
-		// Advance 1 day
-		await time.increase((1 * 86400) + 1);
-		await time.advanceBlock();
-
-		// Refresh oracle
-		try {
-			await oracle_instance_FXS_WETH.update();
-		}
-		catch (err) {}
-
-		// Untoggle the stake unlocking
-		await staking_instance.unlockStakes({ from: STAKING_OWNER });
-
-		// Stake normally again for next part
-		// Need to approve first so the staking can use transfer
-		const stake_amt_locked = new BigNumber("5e18");
-
-		// Allow the migrator function to migrate for you
-		await staking_instance.stakerToggleMigrator(MIGRATOR_ADDRESS, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		
-		// Print the balance
-		console.log("accounts[1] ERC20 balanceOf LP:", (new BigNumber(await pair_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-		
-		// Stake Locked
-		await pair_instance.approve(staking_instance.address, stake_amt_locked, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await staking_instance.stakeLocked(stake_amt_locked, 7 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-
-		// Show the stake structs
-		const locked_stake_structs = await staking_instance.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		console.log("LOCKED STAKES [1]: ", locked_stake_structs);
-
-		// Turn on migrations
-		await staking_instance.toggleMigrations({ from: STAKING_OWNER });
-
-		// Print balances before
-		console.log("accounts[1] staked lockedLiquidityOf <BEFORE>:", (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-		console.log("accounts[1] staked combinedWeightOf <BEFORE>:", (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber());
-
-		console.log(chalk.yellow("---Have the migrator withdraw locked tokens---"));
-		const withdraw_locked_amt = new BigNumber ("5e18");
-		const locked_liq_before0 = (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
-		const combined_weight_before0 = (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
-		await staking_instance.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[3].kek_id, { from: MIGRATOR_ADDRESS });		
-		console.log(`Migrator (accounts[10]) withdrew ${withdraw_locked_amt.div(BIG18)} (E18) locked LP tokens from accounts[1]`);
-		console.log("Migrator (accounts[10]) ERC20 balanceOf:", (new BigNumber(await pair_instance.balanceOf(MIGRATOR_ADDRESS))).div(BIG18).toNumber());
-		const locked_liq_after0 = (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
-		const combined_weight_after0 = (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
-		console.log("accounts[1] lockedLiquidityOf change:", locked_liq_after0 - locked_liq_before0);
-		console.log("accounts[1] combinedWeightOf change:", combined_weight_after0 - combined_weight_before0);
-		assert(locked_liq_after0 < locked_liq_before0, "Locked liquidity should be lower");
-		assert(combined_weight_after0 < combined_weight_before0, "Combined weight should be lower");
-		console.log("");
-
-		console.log(chalk.yellow("---Proxy locked stake for someone else as the migrator---"));
-		const proxy_stake_lock_amt = new BigNumber ("5e18");
-		const locked_liq_before1 = (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
-		const combined_weight_before1 = (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
-		await pair_instance.approve(staking_instance.address, proxy_stake_lock_amt, { from: MIGRATOR_ADDRESS });
-		let block_time_current_1 = (await time.latest()).toNumber();
-		await staking_instance.migrator_stakeLocked_for(COLLATERAL_FRAX_AND_FXS_OWNER, proxy_stake_lock_amt, 28 * 86400, block_time_current_1, { from: MIGRATOR_ADDRESS });		
-		console.log(`accounts[1] lock staked ${proxy_stake_lock_amt.div(BIG18)} (E18) LP tokens for account[8]`);
-		console.log("Migrator (accounts[10]) ERC20 balanceOf:", (new BigNumber(await pair_instance.balanceOf(MIGRATOR_ADDRESS))).div(BIG18).toNumber());
-		const locked_liq_after1 = (new BigNumber(await staking_instance.lockedLiquidityOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
-		const combined_weight_after1 = (new BigNumber(await staking_instance.combinedWeightOf(COLLATERAL_FRAX_AND_FXS_OWNER))).div(BIG18).toNumber();
-		console.log("accounts[1] lockedLiquidityOf change:", locked_liq_after1 - locked_liq_before1);
-		console.log("accounts[1] combinedWeightOf change:", combined_weight_after1 - combined_weight_before1);
-		assert(locked_liq_after1 > locked_liq_before1, "Locked liquidity should be higher");
-		assert(combined_weight_after1 > combined_weight_before1, "Combined weight should be higher");
-		console.log("");
-	});
-
-	it("Migration Fail Tests ", async () => {
-		console.log(chalk.hex("#ff8b3d").bold("==============Migration Fail Tests=============="));
-
-		const test_amount_1 = new BigNumber ("1e18");
-		const locked_stake_structs = await staking_instance.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
-		
-		console.log(chalk.blue("=============TEST NOT IN MIGRATION [SHOULD FAIL]============="));
-
-		// Turn off migrations
-		await staking_instance.toggleMigrations({ from: STAKING_OWNER });
-
-		console.log("---------TRY TO migrator_withdraw_locked WHILE NOT IN MIGRATION---------");
-		await expectRevert(
-			staking_instance.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[2].kek_id, { from: MIGRATOR_ADDRESS }),
-			"Not in migration"
-		);
-
-		console.log("---------TRY TO migrator_stakeLocked_for WHILE NOT IN MIGRATION---------");
-		let block_time_current_2 = (await time.latest()).toNumber();
-		await expectRevert(
-			staking_instance.migrator_stakeLocked_for(COLLATERAL_FRAX_AND_FXS_OWNER, test_amount_1, 28 * 86400, block_time_current_2, { from: MIGRATOR_ADDRESS }),
-			"Not in migration"
-		);
-
-		console.log("---------TRY TO ALLOW A WRONG MIGRATOR---------");
-		await expectRevert(
-			staking_instance.stakerToggleMigrator(INVESTOR_CUSTODIAN_ADDRESS, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
-			"Invalid migrator address"
-		);
-
-		console.log(chalk.blue("=============TEST TRYING TO MIGRATE NOT AS A MIGRATOR [SHOULD FAIL]============="));
-
-		// Turn on migrations
-		await staking_instance.toggleMigrations({ from: STAKING_OWNER });
-	
-		console.log("---------TRY TO migrator_withdraw_locked NOT AS THE MIGRATOR---------");
-		await expectRevert(
-			staking_instance.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[2].kek_id, { from: INVESTOR_CUSTODIAN_ADDRESS }),
-			"Mig. invalid or unapproved"
-		);
-
-		console.log("---------TRY TO migrator_stakeLocked_for NOT AS THE MIGRATOR---------");
-		let block_time_current_3 = (await time.latest()).toNumber();
-		await expectRevert(
-			staking_instance.migrator_stakeLocked_for(COLLATERAL_FRAX_AND_FXS_OWNER, test_amount_1, 28 * 86400, block_time_current_3, { from: INVESTOR_CUSTODIAN_ADDRESS }),
-			"Mig. invalid or unapproved"
-		);
-
-		console.log("---------TRY TO migrator_withdraw_locked AS A NOW NON-APPROVED MIGRATOR ---------");
-		// Staker disallows MIGRATOR_ADDRESS
-		await staking_instance.stakerToggleMigrator(MIGRATOR_ADDRESS, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
-		
-		await expectRevert(
-			staking_instance.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[2].kek_id, { from: MIGRATOR_ADDRESS }),
-			"Mig. invalid or unapproved"
-		);
-
-		console.log("---------TRY TO migrator_withdraw_unlocked AS A NOW INVALID MIGRATOR ---------");
-		// Staker re-allows MIGRATOR_ADDRESS
-		await staking_instance.stakerToggleMigrator(MIGRATOR_ADDRESS, { from: COLLATERAL_FRAX_AND_FXS_OWNER })
-
-		// But governance now disallows it
-		await staking_instance.toggleMigrator(MIGRATOR_ADDRESS, { from: STAKING_OWNER });
-
-		await expectRevert(
-			staking_instance.migrator_withdraw_locked(COLLATERAL_FRAX_AND_FXS_OWNER, locked_stake_structs[2].kek_id, { from: MIGRATOR_ADDRESS }),
-			"Mig. invalid or unapproved"
-		);
-	});
 
 	it("Proxy Tests", async () => {
 		console.log(chalk.hex("#ff8b3d").bold("==============Proxy Tests=============="));

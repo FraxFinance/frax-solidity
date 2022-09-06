@@ -19,13 +19,13 @@ import "./FraxUnifiedFarmTemplate.sol";
 // -------------------- VARIES --------------------
 
 // Convex wrappers
-import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
-import "../Misc_AMOs/convex/IDepositToken.sol";
-import "../Misc_AMOs/curve/I2pool.sol";
-import "../Misc_AMOs/curve/I2poolToken.sol";
+// import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
+// import "../Misc_AMOs/convex/IDepositToken.sol";
+// import "../Misc_AMOs/curve/I2pool.sol";
+// import "../Misc_AMOs/curve/I2poolToken.sol";
 
 // Fraxswap
-// import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
+import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
 
 // G-UNI
 // import "../Misc_AMOs/gelato/IGUniPool.sol";
@@ -57,12 +57,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // -------------------- VARIES --------------------
 
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
-    IConvexStakingWrapperFrax public immutable stakingToken;
-    I2poolToken public immutable curveToken;
-    I2pool public immutable curvePool;
+    // IConvexStakingWrapperFrax public immutable stakingToken;
+    // I2poolToken public immutable curveToken;
+    // I2pool public immutable curvePool;
 
     // Fraxswap
-    // IFraxswapPair public immutable stakingToken;
+    IFraxswapPair public immutable stakingToken;
 
     // G-UNI
     // IGUniPool public immutable stakingToken;
@@ -121,15 +121,15 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // frax_is_token0 = (token0 == frax_address);
 
         // Convex stkcvxBUSDBP and other metaFRAXBPs, where the token is also the pool
-        stakingToken = IConvexStakingWrapperFrax(_stakingToken);
-        curveToken = I2poolToken(stakingToken.curveToken());
-        curvePool = I2pool(address(curveToken));
-        frax_is_token0 = false; // Irrelevant here, as token 0 will be FRAXBP
+        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        // curveToken = I2poolToken(stakingToken.curveToken());
+        // curvePool = I2pool(address(curveToken));
+        // frax_is_token0 = false; // Irrelevant here, as token 0 will be FRAXBP
 
         // Fraxswap
-        // stakingToken = IFraxswapPair(_stakingToken);
-        // address token0 = stakingToken.token0();
-        // frax_is_token0 = (token0 == frax_address);
+        stakingToken = IFraxswapPair(_stakingToken);
+        address token0 = stakingToken.token0();
+        frax_is_token0 = (token0 == frax_address);
 
         // G-UNI
         // stakingToken = IGUniPool(_stakingToken);
@@ -173,22 +173,22 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // Convex stkcvxBUSDBP and other metaFRAXBPs
         // ============================================
-        {
-            // Half of the LP is FRAXBP. Half of that should be FRAX.
-            // Using 0.25 * virtual price for gas savings
-            frax_per_lp_token = curvePool.get_virtual_price() / 4; 
-        }
+        // {
+        //     // Half of the LP is FRAXBP. Half of that should be FRAX.
+        //     // Using 0.25 * virtual price for gas savings
+        //     frax_per_lp_token = curvePool.get_virtual_price() / 4; 
+        // }
 
         // Fraxswap
         // ============================================
-        // {
-        //     uint256 total_frax_reserves;
-        //     (uint256 _reserve0, uint256 _reserve1, , ,) = (stakingToken.getReserveAfterTwamm(block.timestamp));
-        //     if (frax_is_token0) total_frax_reserves = _reserve0;
-        //     else total_frax_reserves = _reserve1;
+        {
+            uint256 total_frax_reserves;
+            (uint256 _reserve0, uint256 _reserve1, , ,) = (stakingToken.getReserveAfterTwamm(block.timestamp));
+            if (frax_is_token0) total_frax_reserves = _reserve0;
+            else total_frax_reserves = _reserve1;
 
-        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
-        // }
+            frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
+        }
 
         // G-UNI
         // ============================================

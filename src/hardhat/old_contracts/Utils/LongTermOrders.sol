@@ -198,7 +198,7 @@ library LongTermOrdersLib {
         }
         else if (tokenBIn == 0) {
             tokenAOut = 0;
-            //contant product formula
+            //constant product formula
             tokenBOut =  tokenBStart * tokenAIn / (tokenAStart + tokenAIn);
             ammEndTokenA = tokenAStart + tokenAIn;
             ammEndTokenB = tokenBStart - tokenBOut;

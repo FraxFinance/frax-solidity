@@ -164,14 +164,14 @@ module.exports = async (deployer) => {
 
     // Staking
     middlemanGauge_ARBI_Curve_VSTFRAX = await FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.at(CONTRACT_ADDRESSES.ethereum.middleman_gauges['Curve VSTFRAX-f']);
-    fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance = await FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Fraxswap FRAX/IQ']);
+    fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance = await FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Fraxswap V1 FRAX/IQ']);
     fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Temple FRAX/TEMPLE']);
     fraxUnifiedFarm_PosRebase_aFRAX_instance = await FraxUnifiedFarm_PosRebase_aFRAX.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Aave aFRAX']);
 
     // TWAMM
-    fraxswap_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.ethereum.uniswap.fraxswap_factory);
-    twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap FRAX/FPI"]);
-    fraxswap_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.ethereum.uniswap.fraxswap_router);
+    fraxswap_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.ethereum.uniswap.fraxswap_factory_v2);
+    twamm_pair_instance = await UniV2TWAMMPair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap V2 FRAX/FPI"]);
+    fraxswap_router_instance = await UniV2TWAMMRouter.at(CONTRACT_ADDRESSES.ethereum.uniswap.fraxswap_router_v2);
 
     // Uniswap
     routerInstance = await IUniswapV2Router02.at(CONTRACT_ADDRESSES.ethereum.uniswap.router); 
@@ -231,32 +231,32 @@ module.exports = async (deployer) => {
 
     
 
-    console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ =========="));
-    // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ 
-    fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance = await FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.new(
-        THE_ACCOUNTS[6], 
-        [
-            "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
-            "0x579CEa1889991f68aCc35Ff5c3dd0621fF29b0C9" // IQ
-        ], 
-        [
-            "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
-            "0x8aCc50345921b4A635705Ec7f3AC042B3407BD58" // IQ Msig
-        ],
-        [
-            11574074074074, // 1 FXS per day
-            23148148148148 // 2 IQ per day
-        ],
-        [
-            "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
-            "0x0000000000000000000000000000000000000000"
-        ],
-        [
-            "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
-            "0x0000000000000000000000000000000000000000"
-        ],
-        CONTRACT_ADDRESSES.ethereum.pair_tokens['Fraxswap FRAX/IQ'],
-    );
+    // console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ =========="));
+    // // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ 
+    // fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance = await FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.new(
+    //     THE_ACCOUNTS[6], 
+    //     [
+    //         "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
+    //         "0x579CEa1889991f68aCc35Ff5c3dd0621fF29b0C9" // IQ
+    //     ], 
+    //     [
+    //         "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
+    //         "0x8aCc50345921b4A635705Ec7f3AC042B3407BD58" // IQ Msig
+    //     ],
+    //     [
+    //         11574074074074, // 1 FXS per day
+    //         23148148148148 // 2 IQ per day
+    //     ],
+    //     [
+    //         "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
+    //         "0x0000000000000000000000000000000000000000"
+    //     ],
+    //     [
+    //         "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
+    //         "0x0000000000000000000000000000000000000000"
+    //     ],
+    //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Fraxswap V1 FRAX/IQ'],
+    // );
 
     // console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS =========="));
     // // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS 
@@ -282,7 +282,7 @@ module.exports = async (deployer) => {
     //         "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
     //         "0x0000000000000000000000000000000000000000"
     //     ],
-    //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Fraxswap FRAX/pitchFXS'],
+    //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Fraxswap V1 FRAX/pitchFXS'],
     // );
 
     // console.log(chalk.yellow("========== FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE =========="));
@@ -312,32 +312,32 @@ module.exports = async (deployer) => {
     //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Temple FRAX/TEMPLE'],
     // );
 
-    // console.log(chalk.yellow("========== FraxUnifiedFarm_PosRebase_aFRAX =========="));
-    // // FraxUnifiedFarm_PosRebase_aFRAX 
-    // fraxUnifiedFarm_PosRebase_aFRAX_instance = await FraxUnifiedFarm_PosRebase_aFRAX.new(
-    //     THE_ACCOUNTS[6], 
-    //     [
-    //         "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
-    //         "0x4da27a545c0c5B758a6BA100e3a049001de870f5" // stkAAVE
-    //     ], 
-    //     [
-    //         "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
-    //         "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27" // Frax Msig (stkAAVE is auto-claimed and the rate is set once per week)
-    //     ],
-    //     [
-    //         11574074074074, // 1 FXS per day. Connect the gauge later
-    //         11574074074 // 0.001 stkAAVE per day. Connect the gauge later
-    //     ],
-    //     [
-    //         "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
-    //         "0x0000000000000000000000000000000000000000"
-    //     ],
-    //     [
-    //         "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
-    //         "0x0000000000000000000000000000000000000000"
-    //     ],
-    //     CONTRACT_ADDRESSES.ethereum.bearer_tokens.aFRAX,
-    // );
+    console.log(chalk.yellow("========== FraxUnifiedFarm_PosRebase_aFRAX =========="));
+    // FraxUnifiedFarm_PosRebase_aFRAX 
+    fraxUnifiedFarm_PosRebase_aFRAX_instance = await FraxUnifiedFarm_PosRebase_aFRAX.new(
+        THE_ACCOUNTS[6], 
+        [
+            "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
+            "0x4da27a545c0c5B758a6BA100e3a049001de870f5" // stkAAVE
+        ], 
+        [
+            "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
+            "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27" // Frax Msig (stkAAVE is auto-claimed and the rate is set once per week)
+        ],
+        [
+            11574074074074, // 1 FXS per day. Connect the gauge later
+            11574074074 // 0.001 stkAAVE per day. Connect the gauge later
+        ],
+        [
+            "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
+            "0x0000000000000000000000000000000000000000"
+        ],
+        [
+            "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
+            "0x0000000000000000000000000000000000000000"
+        ],
+        CONTRACT_ADDRESSES.ethereum.bearer_tokens.aFRAX,
+    );
 
     // console.log(chalk.yellow('========== FPI =========='));
     // // FPI
@@ -392,7 +392,7 @@ module.exports = async (deployer) => {
         [
             frax_instance.address,
             fxs_instance.address,
-            CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap FRAX/FXS"],
+            CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap V2 FRAX/FXS"],
             "0xB9E1E3A9feFf48998E45Fa90847ed4D467E8BcfD", // Ethereum CHAINLINK FRAX
             "0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f", // Ethereum CHAINLINK FXS
             CONTRACT_ADDRESSES.ethereum.multisigs.Comptrollers,
