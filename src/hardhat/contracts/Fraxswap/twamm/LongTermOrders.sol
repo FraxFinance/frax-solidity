@@ -186,7 +186,7 @@ library LongTermOrdersLib {
             token0Out = token0Start * token1InWithFee / ((token1Start * 10000) + token1InWithFee);
         }
         else if (token1In < 2) {
-            //contant product formula
+            //constant product formula
             uint token0InWithFee = token0In * fee;
             token1Out = token1Start * token0InWithFee / ((token0Start * 10000) + token0InWithFee);
         }

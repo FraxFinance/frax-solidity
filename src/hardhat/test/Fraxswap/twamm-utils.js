@@ -355,7 +355,7 @@ function computeVirtualBalances(
         const token1InWithFee = token1In.mul(minusFee);
         token0Out = token0Start.mul(token1InWithFee).div(token1Start.mul(10000).add(token1InWithFee));
     } else if (token1In.lt(2)) {
-        //contant product formula
+        //constant product formula
         const token0InWithFee = token0In.mul(minusFee);
         token1Out = token1Start.mul(token0InWithFee).div(token0Start.mul(10000).add(token0InWithFee));
     }

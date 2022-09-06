@@ -211,6 +211,7 @@ export const printCollateralInfo = async (pool_multicollateral_contract: any, co
     console.log("Collateral Info: ", collateral_info);
 }
 
+
 export const printCalcCurCombinedWeight = async (contract: any, addr: any) => {
     const pack = await contract.calcCurCombinedWeight(addr);
     const converted_pack = {

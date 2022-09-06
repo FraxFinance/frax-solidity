@@ -134,7 +134,7 @@ contract('FraxUnifiedFarm_ERC20-Tests', async (accounts) => {
 		// Get instances of the Uniswap pairs
 
 		// pair_instance_FRAX_SUSHI_Sushi = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Sushi FRAX/SUSHI"]);
-		pair_instance_Fraxswap_FRAX_IQ = await IFraxswapPair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap FRAX/IQ"]);
+		pair_instance_Fraxswap_FRAX_IQ = await IFraxswapPair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap V1 FRAX/IQ"]);
 		// pair_instance_Gelato_FRAX_DAI = await IGUniPool.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Gelato Uniswap FRAX/DAI"]);
 		// pair_instance_Temple_FRAX_TEMPLE = await IUniswapV2Pair.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Temple FRAX/TEMPLE"]);
 		// pair_instance_Vesper_FRAX = await IVPool.at(CONTRACT_ADDRESSES.ethereum.pair_tokens["Vesper Orbit FRAX"]);

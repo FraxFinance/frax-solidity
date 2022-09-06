@@ -104,6 +104,59 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
 
     // ------ LIQUIDITY AND WEIGHTS ------
 
+    function calcCurrLockMultiplier(address account, uint256 stake_idx) public view returns (uint256 midpoint_lock_multiplier) {
+        // Get the stake
+        LockedStake memory thisStake = lockedStakes[account][stake_idx];
+
+        // Handles corner case where user never claims for a new stake
+        // Don't want the multiplier going above the max
+        uint256 accrue_start_time;
+        if (lastRewardClaimTime[account] < thisStake.start_timestamp) {
+            accrue_start_time = thisStake.start_timestamp;
+        }
+        else {
+            accrue_start_time = lastRewardClaimTime[account];
+        }
+        
+        // If the lock is expired
+        if (thisStake.ending_timestamp <= block.timestamp) {
+            // If the lock expired in the time since the last claim, the weight needs to be proportionately averaged this time
+            if (lastRewardClaimTime[account] < thisStake.ending_timestamp){
+                uint256 time_before_expiry = thisStake.ending_timestamp - accrue_start_time;
+                uint256 time_after_expiry = block.timestamp - thisStake.ending_timestamp;
+
+                // Average the pre-expiry lock multiplier
+                uint256 pre_expiry_avg_multiplier = lockMultiplier(time_before_expiry / 2);
+
+                // Get the weighted-average lock_multiplier
+                // uint256 numerator = (pre_expiry_avg_multiplier * time_before_expiry) + (MULTIPLIER_PRECISION * time_after_expiry);
+                uint256 numerator = (pre_expiry_avg_multiplier * time_before_expiry) + (0 * time_after_expiry);
+                midpoint_lock_multiplier = numerator / (time_before_expiry + time_after_expiry);
+            }
+            else {
+                // Otherwise, it needs to just be 1x
+                // midpoint_lock_multiplier = MULTIPLIER_PRECISION;
+
+                // Otherwise, it needs to just be 0x
+                midpoint_lock_multiplier = 0;
+            }
+        }
+        // If the lock is not expired
+        else {
+            // Decay the lock multiplier based on the time left
+            uint256 avg_time_left;
+            {
+                uint256 time_left_p1 = thisStake.ending_timestamp - accrue_start_time;
+                uint256 time_left_p2 = thisStake.ending_timestamp - block.timestamp;
+                avg_time_left = (time_left_p1 + time_left_p2) / 2;
+            }
+            midpoint_lock_multiplier = lockMultiplier(avg_time_left);
+        }
+
+        // Sanity check: make sure it never goes above the initial multiplier
+        if (midpoint_lock_multiplier > thisStake.lock_multiplier) midpoint_lock_multiplier = thisStake.lock_multiplier;
+    }
+
     // Calculate the combined weight for an account
     function calcCurCombinedWeight(address account) public override view
         returns (
@@ -120,11 +173,16 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         new_vefxs_multiplier = veFXSMultiplier(account);
 
         uint256 midpoint_vefxs_multiplier;
-        if (_locked_liquidity[account] == 0 && _combined_weights[account] == 0) {
+        if (
+            (_locked_liquidity[account] == 0 && _combined_weights[account] == 0) || 
+            (new_vefxs_multiplier >= _vefxsMultiplierStored[account])
+        ) {
             // This is only called for the first stake to make sure the veFXS multiplier is not cut in half
+            // Also used if the user increased or maintained their position
             midpoint_vefxs_multiplier = new_vefxs_multiplier;
         }
         else {
+            // Handles natural decay with a non-increased veFXS position
             midpoint_vefxs_multiplier = (new_vefxs_multiplier + _vefxsMultiplierStored[account]) / 2;
         }
 
@@ -132,28 +190,14 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         new_combined_weight = 0;
         for (uint256 i = 0; i < lockedStakes[account].length; i++) {
             LockedStake memory thisStake = lockedStakes[account][i];
-            uint256 lock_multiplier = thisStake.lock_multiplier;
 
-            // If the lock is expired
-            if (thisStake.ending_timestamp <= block.timestamp) {
-                // If the lock expired in the time since the last claim, the weight needs to be proportionately averaged this time
-                if (lastRewardClaimTime[account] < thisStake.ending_timestamp){
-                    uint256 time_before_expiry = thisStake.ending_timestamp - lastRewardClaimTime[account];
-                    uint256 time_after_expiry = block.timestamp - thisStake.ending_timestamp;
+            // Calculate the midpoint lock multiplier
+            uint256 midpoint_lock_multiplier = calcCurrLockMultiplier(account, i);
 
-                    // Get the weighted-average lock_multiplier
-                    uint256 numerator = (lock_multiplier * time_before_expiry) + (MULTIPLIER_PRECISION * time_after_expiry);
-                    lock_multiplier = numerator / (time_before_expiry + time_after_expiry);
-                }
-                // Otherwise, it needs to just be 1x
-                else {
-                    lock_multiplier = MULTIPLIER_PRECISION;
-                }
-            }
-
+            // Calculate the combined boost
             uint256 liquidity = thisStake.liquidity;
-            uint256 combined_boosted_amount = (liquidity * (lock_multiplier + midpoint_vefxs_multiplier)) / MULTIPLIER_PRECISION;
-            new_combined_weight = new_combined_weight + combined_boosted_amount;
+            uint256 combined_boosted_amount = liquidity + ((liquidity * (midpoint_lock_multiplier + midpoint_vefxs_multiplier)) / MULTIPLIER_PRECISION);
+            new_combined_weight += combined_boosted_amount;
         }
     }
 
@@ -214,7 +258,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
 
     // Add additional LPs to an existing locked stake
     // REBASE: If you simply want to accrue interest, call this with addl_liq = 0
-    function lockAdditional(bytes32 kek_id, uint256 addl_liq) updateRewardAndBalanceMdf(msg.sender, true) public {
+    function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
 
@@ -252,7 +296,44 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
 
         // Need to call to update the combined weights
         updateRewardAndBalance(msg.sender, false);
+
+        emit LockedAdditional(msg.sender, kek_id, addl_liq);
     }
+
+    // Extends the lock of an existing stake
+    function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
+        // Get the stake and its index
+        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
+
+        // Check
+        require(new_ending_ts > block.timestamp, "Must be in the future");
+
+        // Calculate some times
+        uint256 time_left = (thisStake.ending_timestamp > block.timestamp) ? thisStake.ending_timestamp - block.timestamp : 0;
+        uint256 new_secs = new_ending_ts - block.timestamp;
+
+        // Checks
+        // require(time_left > 0, "Already expired");
+        require(new_secs > time_left, "Cannot shorten lock time");
+        require(new_secs >= lock_time_min, "Minimum stake time not met");
+        require(new_secs <= lock_time_for_max_multiplier, "Trying to lock for too long");
+
+        // Update the stake
+        lockedStakes[msg.sender][theArrayIndex] = LockedStake(
+            kek_id,
+            block.timestamp,
+            thisStake.liquidity,
+            new_ending_ts,
+            lockMultiplier(new_secs)
+        );
+
+        // Need to call to update the combined weights
+        updateRewardAndBalance(msg.sender, false);
+
+        emit LockedLonger(msg.sender, kek_id, new_secs, block.timestamp, new_ending_ts);
+    }
+
+    
 
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
     function stakeLocked(uint256 liquidity, uint256 secs) nonReentrant external returns (bytes32) {
@@ -336,6 +417,11 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         uint256 liquidity = thisStake.liquidity;
 
         if (liquidity > 0) {
+
+            // Give the tokens to the destination_address
+            // Should throw if insufficient balance
+            TransferHelper.safeTransfer(address(stakingToken), destination_address, liquidity);
+
             // Update liquidities
             _total_liquidity_locked -= liquidity;
             _locked_liquidity[staker_address] -= liquidity;
@@ -346,10 +432,6 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
 
             // Remove the stake from the array
             delete lockedStakes[staker_address][theArrayIndex];
-
-            // Give the tokens to the destination_address
-            // Should throw if insufficient balance
-            TransferHelper.safeTransfer(address(stakingToken), destination_address, liquidity);
 
             // Need to call again to make sure everything is correct
             updateRewardAndBalance(staker_address, false);
@@ -401,7 +483,8 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
     // Inherited...
 
     /* ========== EVENTS ========== */
-
+    event LockedAdditional(address indexed user, bytes32 kek_id, uint256 amount);
+    event LockedLonger(address indexed user, bytes32 kek_id, uint256 new_secs, uint256 new_start_ts, uint256 new_end_ts);
     event StakeLocked(address indexed user, uint256 amount, uint256 secs, bytes32 kek_id, address source_address);
     event WithdrawLocked(address indexed user, uint256 liquidity, bytes32 kek_id, address destination_address);
 }
