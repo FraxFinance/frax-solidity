@@ -118,7 +118,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 25000000000, // 25 Gwei
+			gasPrice: 20000000000, // 20 Gwei
 			gasMultiplier: 1.2,
 		},
 		evmos: {
@@ -351,6 +351,15 @@ module.exports = {
 						runs: 100000
 					}
 				  }
+			},
+			{
+				version: "0.8.17",
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 100000
+					}
+				  }
 			}
 		],
 	},
@@ -384,7 +393,7 @@ module.exports = {
     vyper: {
 		// version: "0.2.15"
 		// version: "0.2.16"
-		version: "0.3.2"
+		version: "0.3.7"
     }
 };
 

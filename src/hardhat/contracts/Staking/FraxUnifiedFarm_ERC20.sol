@@ -57,30 +57,30 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // -------------------- VARIES --------------------
 
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
-    // IConvexStakingWrapperFrax public immutable stakingToken;
-    // I2poolToken public immutable curveToken;
-    // I2pool public immutable curvePool;
+    // IConvexStakingWrapperFrax public stakingToken;
+    // I2poolToken public curveToken;
+    // I2pool public curvePool;
 
     // Fraxswap
-    IFraxswapPair public immutable stakingToken;
+    IFraxswapPair public stakingToken;
 
     // G-UNI
-    // IGUniPool public immutable stakingToken;
+    // IGUniPool public stakingToken;
     
     // mStable
-    // IFeederPool public immutable stakingToken;
+    // IFeederPool public stakingToken;
 
     // sdETH-FraxPut Vault
-    // IOpynPerpVault public immutable stakingToken;
+    // IOpynPerpVault public stakingToken;
 
     // StakeDAO Vault
-    // IStakeDaoVault public immutable stakingToken;
+    // IStakeDaoVault public stakingToken;
 
     // Uniswap V2
-    // IUniswapV2Pair public immutable stakingToken;
+    // IUniswapV2Pair public stakingToken;
 
     // Vesper
-    // IVPool public immutable stakingToken;
+    // IVPool public stakingToken;
 
     // ------------------------------------------------
 
@@ -113,23 +113,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     {
 
         // -------------------- VARIES --------------------
-        // Convex stkcvxFPIFRAX and stkcvxFRAXBP only
-        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
-        // curveToken = I2poolToken(stakingToken.curveToken());
-        // curvePool = I2pool(curveToken.minter());
-        // address token0 = curvePool.coins(0);
-        // frax_is_token0 = (token0 == frax_address);
-
-        // Convex stkcvxBUSDBP and other metaFRAXBPs, where the token is also the pool
-        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
-        // curveToken = I2poolToken(stakingToken.curveToken());
-        // curvePool = I2pool(address(curveToken));
-        // frax_is_token0 = false; // Irrelevant here, as token 0 will be FRAXBP
 
         // Fraxswap
-        stakingToken = IFraxswapPair(_stakingToken);
-        address token0 = stakingToken.token0();
-        frax_is_token0 = (token0 == frax_address);
+        // stakingToken = IFraxswapPair(_stakingToken);
+        // address token0 = stakingToken.token0();
+        // frax_is_token0 = (token0 == frax_address);
 
         // G-UNI
         // stakingToken = IGUniPool(_stakingToken);
@@ -159,7 +147,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // ------ FRAX RELATED ------
 
-    function fraxPerLPToken() public view override returns (uint256) {
+    function fraxPerLPToken() public virtual view override returns (uint256) {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
@@ -171,7 +159,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         //     frax_per_lp_token = curvePool.get_virtual_price() / 2; 
         // }
 
-        // Convex stkcvxBUSDBP and other metaFRAXBPs
+        // Convex Stable/FRAXBP
         // ============================================
         // {
         //     // Half of the LP is FRAXBP. Half of that should be FRAX.
@@ -179,16 +167,24 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         //     frax_per_lp_token = curvePool.get_virtual_price() / 4; 
         // }
 
+        // Convex Volatile/FRAXBP
+        // ============================================
+        // {
+        //     // Half of the LP is FRAXBP. Half of that should be FRAX.
+        //     // Using 0.25 * lp price for gas savings
+        //     frax_per_lp_token = curvePool.lp_price() / 4; 
+        // }
+
         // Fraxswap
         // ============================================
-        {
-            uint256 total_frax_reserves;
-            (uint256 _reserve0, uint256 _reserve1, , ,) = (stakingToken.getReserveAfterTwamm(block.timestamp));
-            if (frax_is_token0) total_frax_reserves = _reserve0;
-            else total_frax_reserves = _reserve1;
+        // {
+        //     uint256 total_frax_reserves;
+        //     (uint256 _reserve0, uint256 _reserve1, , ,) = (stakingToken.getReserveAfterTwamm(block.timestamp));
+        //     if (frax_is_token0) total_frax_reserves = _reserve0;
+        //     else total_frax_reserves = _reserve1;
 
-            frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
-        }
+        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
+        // }
 
         // G-UNI
         // ============================================

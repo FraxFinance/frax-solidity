@@ -1,4 +1,4 @@
-# @version 0.3.2
+# @version 0.3.7
 """
 @title Voting Escrow
 @author Curve Finance
@@ -23,6 +23,7 @@
 
 # Original idea and credit:
 # Curve Finance's veCRV
+# https://curve.readthedocs.io/dao-vecrv.html
 # https://resources.curve.fi/faq/vote-locking-boost
 # https://github.com/curvefi/curve-dao-contracts/blob/master/contracts/VotingEscrow.vy
 # veFPIS is basically a fork, with the key difference that 1 FPIS locked for 1 second would be ~ 1 veFPIS,
@@ -43,13 +44,13 @@
 # to the future of (whatever they are voting for).
 # The weight in this implementation is linear, and lock cannot be more than maxtime:
 # w ^
-# 1 +        /
+# 4 +        /
 #   |      /
 #   |    /
 #   |  /
 #   |/
-# 0 +--------+------> time
-#       maxtime (4 years?)
+# 1 +--------+------> time
+#       maxtime (4 years)
 
 struct Point:
     bias: int128 # principal FPIS amount locked
@@ -82,6 +83,7 @@ interface ERC20:
 interface SmartWalletChecker:
     def check(addr: address) -> bool: nonpayable
 
+# Some constants
 DEPOSIT_FOR_TYPE: constant(int128) = 0
 CREATE_LOCK_TYPE: constant(int128) = 1
 INCREASE_LOCK_AMOUNT: constant(int128) = 2
@@ -90,6 +92,7 @@ USER_WITHDRAW: constant(int128) = 4
 PROXY_TRANSFER: constant(int128) = 5
 PROXY_PAYBACK: constant(int128) = 6
 PROXY_LIQUIDATION: constant(int128) = 7
+PROXY_SLASH: constant(int128) = 8
 
 event CommitOwnership:
     admin: address
@@ -120,12 +123,13 @@ event TransferToProxy:
     proxy_addr: indexed(address)
     transfer_amt: uint256
 
-event ProxyPaybackOrLiquidation:
+event ProxyPaybackLiqOrSlash:
     staker_addr: indexed(address)
     proxy_addr: indexed(address)
     payback_amt: uint256
     liquidation_amt: uint256
     liquidation_fee: uint256
+    slash_amt: uint256
 
 event SmartWalletCheckerComitted:
     future_smart_wallet_checker: address
@@ -139,8 +143,8 @@ event EmergencyUnlockToggled:
 event ProxyTransferTosToggled:
     proxyTransferTosEnabled: bool
 
-event ProxyPaybackOrLiquidationsToggled:
-    proxyPaybackOrLiquidationsEnabled: bool
+event ProxyPaybackLiqOrSlashsToggled:
+    ProxyPaybackLiqOrSlashsEnabled: bool
 
 event LendingProxySet:
     proxy_address: address
@@ -164,25 +168,26 @@ VOTE_WEIGHT_MULTIPLIER_I128: constant(int128) = 4 - 1 # 4x gives 300% boost at 4
 token: public(address)
 supply: public(uint256) # Tracked FPIS in the contract
 
-locked: public(HashMap[address, LockedBalance])
+locked: public(HashMap[address, LockedBalance]) # user -> locked balance position info
 
 epoch: public(uint256)
 point_history: public(Point[100000000000000000000000000000])  # epoch -> unsigned point
 user_point_history: public(HashMap[address, Point[1000000000]])  # user -> Point[user_epoch]
-user_point_epoch: public(HashMap[address, uint256])
-slope_changes: public(HashMap[uint256, int128])  # time -> signed slope change
+user_point_epoch: public(HashMap[address, uint256]) # user -> last week epoch their slope and bias were checkpointed
 
+# time -> signed slope change. Stored ahead of time so we can keep track of expiring users.
+# Time will always be a multiple of 1 week
+slope_changes: public(HashMap[uint256, int128])  
+                                                 
 # Misc
-controller: public(address)
-transfersEnabled: public(bool)
-proxyTransferTosEnabled: public(bool)
-proxyPaybackOrLiquidationsEnabled: public(bool)
+proxyTransferTosEnabled: public(bool) # Whether FPIS can be lent to a proxy or not
+ProxyPaybackLiqOrSlashsEnabled: public(bool) # Whether the proxy can back pay and/or liquidate the user's position
 
 # Emergency Unlock
 emergencyUnlockActive: public(bool)
 
 # Proxies (allow withdrawal / deposits for lending protocols, etc.)
-lending_proxy: public(address) # Set by admin
+lending_proxy: public(address) # Set by admin. Can only be one at any given time
 historical_proxies: public(HashMap[address, bool]) # Set by admin. Used for paying back / liquidating after the main lending_proxy changes
 staker_whitelisted_proxy: public(HashMap[address, address])  # user -> proxy. Set by user
 user_fpis_in_proxy: public(HashMap[address, uint256]) # user -> amount held in proxy
@@ -216,10 +221,8 @@ def __init__(token_addr: address, _name: String[64], _symbol: String[32], _versi
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
     self.point_history[0].fpis_amt = 0
-    self.controller = msg.sender
-    self.transfersEnabled = True
     self.proxyTransferTosEnabled = True
-    self.proxyPaybackOrLiquidationsEnabled = True
+    self.ProxyPaybackLiqOrSlashsEnabled = True
 
     _decimals: uint256 = ERC20(token_addr).decimals()
     assert _decimals <= 255
@@ -388,7 +391,6 @@ def next_period_start() -> uint256:
     """
     return (WEEK + (block.timestamp / WEEK * WEEK))
 
-
 @internal
 def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBalance, flag: int128):
     """
@@ -397,96 +399,109 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     @param old_locked Previous locked amount / end lock time for the user
     @param new_locked New locked amount / end lock time for the user
     """
-    u_old: Point = empty(Point)
-    u_new: Point = empty(Point)
-    old_dslope: int128 = 0
-    new_dslope: int128 = 0
+    usr_old_pt: Point = empty(Point)
+    usr_new_pt: Point = empty(Point)
+    old_gbl_dslope: int128 = 0 # Old global slope change
+    new_gbl_dslope: int128 = 0 # New global slope change
     _epoch: uint256 = self.epoch
 
+    # ////////////////////////////////// STEP 1 //////////////////////////////////
+    # Take note of any user bias and slope changes
+    # Also note previous global slope and point
+    # ////////////////////////////////////////////////////////////////////////////
+    # Skip if a user isn't being checkpointed
     if addr != ZERO_ADDRESS:
         # Calculate slopes and biases
         # Kept at zero when they have to
 
-
         # ==============================================================================
-        # -------------------------------- veCRV method --------------------------------
+        # -------------------------------- Old veCRV method --------------------------------
         # if old_locked.end > block.timestamp and old_locked.amount > 0:
-        #     u_old.slope = old_locked.amount / MAXTIME_I128
-        #     u_old.bias = u_old.slope * convert(old_locked.end - block.timestamp, int128)
+        #     usr_old_pt.slope = old_locked.amount / MAXTIME_I128
+        #     usr_old_pt.bias = usr_old_pt.slope * convert(old_locked.end - block.timestamp, int128)
         # if new_locked.end > block.timestamp and new_locked.amount > 0:
-        #     u_new.slope = new_locked.amount / MAXTIME_I128
-        #     u_new.bias = u_new.slope * convert(new_locked.end - block.timestamp, int128)
+        #     usr_new_pt.slope = new_locked.amount / MAXTIME_I128
+        #     usr_new_pt.bias = usr_new_pt.slope * convert(new_locked.end - block.timestamp, int128)
 
-        # -------------------------------- New method A --------------------------------
-        # if old_locked.end > block.timestamp and old_locked.amount > 0:
-        #     u_old.slope = (old_locked.amount / MAXTIME_I128) * VOTE_WEIGHT_MULTIPLIER_I128
-        #     u_old.bias = u_old.slope * convert(old_locked.end - block.timestamp, int128)
-        # if new_locked.end > block.timestamp and new_locked.amount > 0:
-        #     u_new.slope = (new_locked.amount / MAXTIME_I128) * VOTE_WEIGHT_MULTIPLIER_I128
-        #     u_new.bias = u_new.slope * convert(new_locked.end - block.timestamp, int128)
-
-        # -------------------------------- New method B --------------------------------
+        # -------------------------------- New method for veFPIS --------------------------------
         if old_locked.end > block.timestamp and old_locked.amount > 0:
-            u_old.slope = (old_locked.amount * VOTE_WEIGHT_MULTIPLIER_I128) / MAXTIME_I128 
-            u_old.bias = old_locked.amount + (u_old.slope * convert(old_locked.end - block.timestamp, int128))
+            usr_old_pt.slope = (old_locked.amount * VOTE_WEIGHT_MULTIPLIER_I128) / MAXTIME_I128 
+            usr_old_pt.bias = old_locked.amount + (usr_old_pt.slope * convert(old_locked.end - block.timestamp, int128))
         if new_locked.end > block.timestamp and new_locked.amount > 0:
-            u_new.slope = (new_locked.amount * VOTE_WEIGHT_MULTIPLIER_I128) / MAXTIME_I128
-            u_new.bias = new_locked.amount + (u_new.slope * convert(new_locked.end - block.timestamp, int128))
-
+            usr_new_pt.slope = (new_locked.amount * VOTE_WEIGHT_MULTIPLIER_I128) / MAXTIME_I128
+            usr_new_pt.bias = new_locked.amount + (usr_new_pt.slope * convert(new_locked.end - block.timestamp, int128))
         # ==============================================================================
 
         # Read values of scheduled changes in the slope
         # old_locked.end can be in the past and in the future
         # new_locked.end can ONLY by in the FUTURE unless everything expired: than zeros
-        old_dslope = self.slope_changes[old_locked.end]
+        old_gbl_dslope = self.slope_changes[old_locked.end]
         if new_locked.end != 0:
             if new_locked.end == old_locked.end:
-                new_dslope = old_dslope
+                new_gbl_dslope = old_gbl_dslope
             else:
-                new_dslope = self.slope_changes[new_locked.end]
+                new_gbl_dslope = self.slope_changes[new_locked.end]
 
+    # Get last global point and checkpoint time
     last_point: Point = Point({bias: 0, slope: 0, ts: block.timestamp, blk: block.number, fpis_amt: 0})
     if _epoch > 0:
         last_point = self.point_history[_epoch]
-    # else:
-    #     last_point.fpis_amt = ERC20(self.token).balanceOf(self) # saves gas by only calling once
     last_checkpoint: uint256 = last_point.ts
+
     # initial_last_point is used for extrapolation to calculate block number
     # (approximately, for *At methods) and save them
     # as we cannot figure that out exactly from inside the contract
     initial_last_point: Point = last_point
+
+    # Calculate the average blocks per second since the last checkpoint
+    # Will use this to estimate block numbers at intermediate points in Step 2
     block_slope: uint256 = 0  # dblock/dt
     if block.timestamp > last_point.ts:
         block_slope = MULTIPLIER * (block.number - last_point.blk) / (block.timestamp - last_point.ts)
     # If last point is already recorded in this block, slope=0
     # But that's ok b/c we know the block in such case
 
-    # Go over weeks to fill history and calculate what the current point is
-    t_i: uint256 = (last_checkpoint / WEEK) * WEEK
+
+    # ////////////////////////////////// STEP 2 //////////////////////////////////
+    # Go over past weeks to fill history and calculate what the current point is
+    # Basically "catches up" the global state
+    # Ignore user-specific deltas right now, they will be handled later
+    # ////////////////////////////////////////////////////////////////////////////
+    latest_checkpoint_ts: uint256 = (last_checkpoint / WEEK) * WEEK
     for i in range(255):
         # Hopefully it won't happen that this won't get used in 5 years!
         # If it does, users will be able to withdraw but vote weight will be broken
-        t_i += WEEK
+        latest_checkpoint_ts += WEEK
         d_slope: int128 = 0
-        if t_i > block.timestamp:
-            t_i = block.timestamp
+        if latest_checkpoint_ts > block.timestamp:
+            latest_checkpoint_ts = block.timestamp
         else:
-            d_slope = self.slope_changes[t_i]
-        last_point.bias -= last_point.slope * convert(t_i - last_checkpoint, int128)
+            d_slope = self.slope_changes[latest_checkpoint_ts]
+
+        # Subtract the elapsed bias (slope * elapsed time) from the bias total
+        last_point.bias -= last_point.slope * convert(latest_checkpoint_ts - last_checkpoint, int128)
+
+        # Add / Subtract the pre-recorded change in slope (d_slope) for this epoch to the total slope
+        # d_slope can be either positive or negative
         last_point.slope += d_slope
+
+        # Safety checks
         if last_point.bias < 0:  # This can happen
             last_point.bias = 0
         if last_point.slope < 0:  # This cannot happen - just in case
             last_point.slope = 0
-        last_checkpoint = t_i
-        last_point.ts = t_i
-        last_point.blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / MULTIPLIER
+
+        # Update the latest checkpoint, last_point info, and epoch
+        last_checkpoint = latest_checkpoint_ts
+        last_point.ts = latest_checkpoint_ts
+
+        # This block number is an estimate
+        last_point.blk = initial_last_point.blk + block_slope * (latest_checkpoint_ts - initial_last_point.ts) / MULTIPLIER
         _epoch += 1
 
         # Fill for the current block, if applicable
-        if t_i == block.timestamp:
+        if latest_checkpoint_ts == block.timestamp:
             last_point.blk = block.number
-            # last_point.fpis_amt = ERC20(self.token).balanceOf(self)
             break
         else:
             self.point_history[_epoch] = last_point
@@ -494,53 +509,20 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     self.epoch = _epoch
     # Now point_history is filled until t=now
 
+
+    # ////////////////////////////////// STEP 3 //////////////////////////////////
+    # Handle some special cases
+    # ////////////////////////////////////////////////////////////////////////////
+    # Skip if a user isn't being checkpointed
     if addr != ZERO_ADDRESS:
         # If last point was in this block, the slope change has been applied already
         # But in such case we have 0 slope(s)
-        last_point.slope += (u_new.slope - u_old.slope)
-        last_point.bias += (u_new.bias - u_old.bias)
+        last_point.slope += (usr_new_pt.slope - usr_old_pt.slope)
+        last_point.bias += (usr_new_pt.bias - usr_old_pt.bias)
         
 
         # ==============================================================================
         # Handle FPIS balance change (withdrawals and deposits)
-        # -------------------------------- veFXS method --------------------------------
-        # Nothing
-
-        # -------------------------------- New method A --------------------------------
-        # if (new_locked.amount > old_locked.amount):
-        #     last_point.fpis_amt += convert(new_locked.amount - old_locked.amount, uint256)
-
-        # # Withdraw condition. Need to reduce the total bias (we use the locked amount as the floor, as opposed to veCRV using 0)
-        # if (new_locked.amount == 0 and new_locked.end == 0):
-        #     last_point.fpis_amt -= convert(old_locked.amount, uint256)
-
-        #     # Remove the offset
-        #     # Corner case to fix issue because emergency unlock allows withdrawal before expiry and disrupts the math
-        #     if not (self.emergencyUnlockActive):
-        #         last_point.bias -= old_locked.amount
-            
-        # --------------- New method B [veFPIS changes on proxy activity] --------------
-        # if (new_locked.amount > old_locked.amount):
-        #     last_point.fpis_amt += convert(new_locked.amount - old_locked.amount, uint256)
-
-        #     # Add the bias back if you are paying back after expiry
-        #     if ((flag == PROXY_PAYBACK) and (new_locked.end < block.timestamp)):
-        #         last_point.bias -= old_locked.amount
-
-        # elif (new_locked.amount < old_locked.amount):
-        #     last_point.fpis_amt -= convert(old_locked.amount - new_locked.amount, uint256)
-
-        #     # Subtract the bias if you are liquidating after expiry
-        #     if ((flag == PROXY_LIQUIDATION) and (new_locked.end < block.timestamp)):
-        #         last_point.bias -= old_locked.amount
-
-        #     # Remove the offset
-        #     # Corner case to fix issue because emergency unlock allows withdrawal before expiry and disrupts the math
-        #     if (new_locked.amount == 0):
-        #         if (not (self.emergencyUnlockActive)):
-        #             last_point.bias -= old_locked.amount
-
-        # ---------- New method C [No veFPIS changes except for liquidations] ----------
         if (new_locked.amount > old_locked.amount):
             last_point.fpis_amt += convert(new_locked.amount - old_locked.amount, uint256)
 
@@ -548,7 +530,7 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
             last_point.fpis_amt -= convert(old_locked.amount - new_locked.amount, uint256)
 
             # Subtract the bias if you are liquidating after expiry
-            if ((flag == PROXY_LIQUIDATION) and (new_locked.end < block.timestamp)):
+            if ((flag == PROXY_LIQUIDATION or flag == PROXY_SLASH) and (new_locked.end < block.timestamp)):
                 last_point.bias -= old_locked.amount
 
             # Remove the offset
@@ -569,31 +551,37 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
     # Record the changed point into history
     self.point_history[_epoch] = last_point
 
+
+    # ////////////////////////////////// STEP 4 //////////////////////////////////
+    # Handle global slope changes and user point historical info
+    # ////////////////////////////////////////////////////////////////////////////
+    # Skip if a user isn't being checkpointed
     if addr != ZERO_ADDRESS:
         # Schedule the slope changes (slope is going down)
         # We subtract new_user_slope from [new_locked.end]
         # and add old_user_slope to [old_locked.end]
         if old_locked.end > block.timestamp:
-            # old_dslope was <something> - u_old.slope, so we cancel that
-            old_dslope += u_old.slope
+            # old_gbl_dslope was <something> - usr_old_pt.slope, so we cancel that
+            old_gbl_dslope += usr_old_pt.slope
             if new_locked.end == old_locked.end:
-                old_dslope -= u_new.slope  # It was a new deposit, not extension
-            self.slope_changes[old_locked.end] = old_dslope
+                old_gbl_dslope -= usr_new_pt.slope  # It was a new deposit, not extension
+            self.slope_changes[old_locked.end] = old_gbl_dslope
 
         if new_locked.end > block.timestamp:
             if new_locked.end > old_locked.end:
-                new_dslope -= u_new.slope  # old slope disappeared at this point
-                self.slope_changes[new_locked.end] = new_dslope
-            # else: we recorded it already in old_dslope
+                new_gbl_dslope -= usr_new_pt.slope  # old slope disappeared at this point
+                self.slope_changes[new_locked.end] = new_gbl_dslope
+            # else: we recorded it already in old_gbl_dslope
 
         # Now handle user history
         user_epoch: uint256 = self.user_point_epoch[addr] + 1
 
+        # Update tracked info for user
         self.user_point_epoch[addr] = user_epoch
-        u_new.ts = block.timestamp
-        u_new.blk = block.number
-        u_new.fpis_amt = convert(self.locked[addr].amount, uint256)
-        self.user_point_history[addr][user_epoch] = u_new
+        usr_new_pt.ts = block.timestamp
+        usr_new_pt.blk = block.number
+        usr_new_pt.fpis_amt = convert(self.locked[addr].amount, uint256)
+        self.user_point_history[addr][user_epoch] = usr_new_pt
 
 
 @internal
@@ -606,32 +594,34 @@ def _deposit_for(_staker_addr: address, _payer_addr: address, _value: uint256, u
     @param unlock_time New time when to unlock the tokens, or 0 if unchanged
     @param locked_balance Previous locked amount / timestamp
     """
-    # Get the staker's balance and the total supply
-    _locked: LockedBalance = locked_balance
+
+    # Pull in the tokens first before modifying state
+    if _value != 0:
+        assert ERC20(self.token).transferFrom(_payer_addr, self, _value)
+
+    # Note original data
+    old_locked: LockedBalance = locked_balance
     supply_before: uint256 = self.supply
 
+    # Get the staker's balance and the total supply
+    new_locked: LockedBalance = old_locked # Will be incremented soon
+    
     # Increase the supply
     self.supply = supply_before + _value
 
-    # Not the old position
-    old_locked: LockedBalance = _locked
-
-    # Adding to existing lock, or if a lock is expired - creating a new one
-    _locked.amount += convert(_value, int128)
+    # Add to an existing lock, or if the lock is expired - create a new one
+    new_locked.amount += convert(_value, int128)
     if unlock_time != 0:
-        _locked.end = unlock_time
-    self.locked[_staker_addr] = _locked
+        new_locked.end = unlock_time
+    self.locked[_staker_addr] = new_locked
 
     # Possibilities:
     # Both old_locked.end could be current or expired (>/< block.timestamp)
     # value == 0 (extend lock) or value > 0 (add to lock or extend lock)
-    # _locked.end > block.timestamp (always)
-    self._checkpoint(_staker_addr, old_locked, _locked, type)
+    # new_locked.end > block.timestamp (always)
+    self._checkpoint(_staker_addr, old_locked, new_locked, type)
 
-    if _value != 0:
-        assert ERC20(self.token).transferFrom(_payer_addr, self, _value)
-
-    log Deposit(_staker_addr, _payer_addr, _value, _locked.end, type, block.timestamp)
+    log Deposit(_staker_addr, _payer_addr, _value, new_locked.end, type, block.timestamp)
     log Supply(supply_before, supply_before + _value)
 
 
@@ -727,6 +717,7 @@ def _withdraw(staker_addr: address, addr_out: address, locked_in: LockedBalance,
     # addr: address, old_locked: LockedBalance, new_locked: LockedBalance
     self._checkpoint(staker_addr, old_locked, _locked, flag)
 
+    # Transfer out the tokens at the very end
     assert ERC20(self.token).transfer(addr_out, value), "ERC20 transfer out failed"
 
     log Withdraw(staker_addr, addr_out, value, block.timestamp)
@@ -734,23 +725,24 @@ def _withdraw(staker_addr: address, addr_out: address, locked_in: LockedBalance,
 
 @external
 @nonreentrant('lock')
-def proxy_payback_or_liquidate(
+def proxy_pbk_liq_slsh(
     _staker_addr: address, 
     _payback_amt: uint256, 
     _liquidation_amt: uint256,
-    _liquidation_fee_amt: uint256
+    _liquidation_fee_amt: uint256,
+    _slash_amt: uint256
 ):
     """
-    @notice Proxy pays back `_staker_addr`'s loan and increases the veFPIS base / bias. 
-    @dev Also optionally liquidates part of the staker's core veFPIS position to cover bad debt
+    @notice Proxy pays back `_staker_addr`'s loan and increases the veFPIS base / bias. Proxy can also slash
+    @dev Also optionally liquidates or slashes part of the staker's core veFPIS position
     @dev E.g. $10K loan is now worth $8K and staker wants to close it out (or the proxy wants to liquidate it)
     @dev Then call with _payback_amt = $8K and _liquidation_amt = $2K
     @dev Usually triggered by the staker at the dapp level
     """
     # Make sure that the function isn't disabled, and also that the proxy is valid
-    assert (self.proxyPaybackOrLiquidationsEnabled), "Currently disabled"
-    assert (self.lending_proxy == msg.sender or self.historical_proxies[msg.sender]), "Proxy not whitelisted [admin level]"
-    assert (self.staker_whitelisted_proxy[_staker_addr] == msg.sender), "Proxy not whitelisted [staker level]"
+    assert (self.ProxyPaybackLiqOrSlashsEnabled), "Currently disabled"
+    assert (msg.sender == self.lending_proxy or self.historical_proxies[msg.sender]), "Proxy not whitelisted [admin level]"
+    assert (msg.sender == self.staker_whitelisted_proxy[_staker_addr]), "Proxy not whitelisted [staker level]"
 
     # Get the staker's locked position and proxy balance
     _locked: LockedBalance = self.locked[_staker_addr]
@@ -787,17 +779,18 @@ def proxy_payback_or_liquidate(
         _locked = self.locked[_staker_addr]
         _proxy_balance = self.user_fpis_in_proxy[_staker_addr]
 
-    # Handle the liquidation (proxy takes FPIS from the user's veFPIS position)
-    if (_liquidation_amt > 0): 
-        # Prevents unknown exploits from wiping the entire veFPIS contract
-        # No need to be here since withdraw() handles it
-        # assert (_liquidation_amt + _liquidation_fee_amt) <= convert(_locked.amount, uint256), "Cannot liquidate more than the user has"
-
+    # Handle a liquidation (proxy takes FPIS from the user's veFPIS position)
+    if (_liquidation_fee_amt > 0 or _liquidation_amt > 0): 
         # Withdraw the amount to liquidate from the staker's core position and give it to the proxy
         # Also add the fee, if any
         self._withdraw(_staker_addr, msg.sender, _locked, convert(_liquidation_amt + _liquidation_fee_amt, int128), PROXY_LIQUIDATION)
+    
+    # Handle a slash (proxy takes FPIS from the user's veFPIS position)
+    if (_slash_amt > 0): 
+        # Withdraw the amount to slash from the staker's core position and give it to the proxy
+        self._withdraw(_staker_addr, msg.sender, _locked, convert(_slash_amt, int128), PROXY_SLASH)
 
-    log ProxyPaybackOrLiquidation(_staker_addr, msg.sender, _payback_amt, _liquidation_amt, _liquidation_fee_amt)
+    log ProxyPaybackLiqOrSlash(_staker_addr, msg.sender, _payback_amt, _liquidation_amt, _liquidation_fee_amt, _slash_amt)
 
 
 @external
@@ -813,7 +806,7 @@ def withdraw():
 
     # Validate some things
     assert ((block.timestamp >= _locked.end) or (self.emergencyUnlockActive)), "The lock didn't expire"
-    assert (self.user_fpis_in_proxy[msg.sender] == 0), "Outstanding FPIS in proxy. Have proxy use proxy_payback_or_liquidate"
+    assert (self.user_fpis_in_proxy[msg.sender] == 0), "Outstanding FPIS in proxy. Have proxy use proxy_pbk_liq_slsh"
     
     # Allow the withdrawal
     self._withdraw(msg.sender, msg.sender, _locked, _locked.amount, USER_WITHDRAW)
@@ -828,8 +821,8 @@ def transfer_to_proxy(_staker_addr: address, _transfer_amt: int128):
     """
     # Make sure that the function isn't disabled, and also that the proxy is valid
     assert (self.proxyTransferTosEnabled), "Currently disabled"
-    assert (self.lending_proxy == msg.sender), "Proxy not whitelisted [admin level]"
-    assert (self.staker_whitelisted_proxy[_staker_addr] == msg.sender), "Proxy not whitelisted [staker level]"
+    assert (msg.sender == self.lending_proxy), "Proxy not whitelisted [admin level]"
+    assert (msg.sender == self.staker_whitelisted_proxy[_staker_addr]), "Proxy not whitelisted [staker level]"
     
     # Get the staker's locked position
     _locked: LockedBalance = self.locked[_staker_addr]
@@ -904,20 +897,6 @@ def balanceOf(addr: address, _t: uint256 = block.timestamp) -> uint256:
         # -------------------------------- veCRV method --------------------------------
         # weighted_supply: uint256 = convert(last_point.bias, uint256)
 
-        # -------------------------------- veFXS method --------------------------------
-        # unweighted_supply: uint256 = convert(last_point.bias, uint256)
-        # weighted_supply: uint256 = last_point.fpis_amt + (VOTE_WEIGHT_MULTIPLIER * unweighted_supply)
-
-        # -------------------------------- New method A --------------------------------
-        # unweighted_supply: uint256 = last_point.fpis_amt
-        # weighted_supply: uint256 = unweighted_supply + convert(last_point.bias, uint256)
-
-        # -------------------------------- New method B --------------------------------
-        # unweighted_supply: uint256 = last_point.fpis_amt
-        # weighted_supply: uint256 = convert(last_point.bias, uint256)
-        # if weighted_supply < last_point.fpis_amt:
-        #     weighted_supply = last_point.fpis_amt
-
         # -------------------------------- veFPIS --------------------------------
         # Mainly used to counter negative biases
         weighted_supply: uint256 = convert(last_point.bias, uint256)
@@ -983,20 +962,6 @@ def balanceOfAt(addr: address, _block: uint256) -> uint256:
     # else:
     #     return 0
 
-    # -------------------------------- veFXS method --------------------------------
-    # unweighted_supply: uint256 = convert(upoint.bias, uint256) # Original from veCRV
-    # weighted_supply: uint256 = upoint.fxs_amt + (VOTE_WEIGHT_MULTIPLIER * unweighted_supply)
-
-    # -------------------------------- New method A --------------------------------
-    # unweighted_supply: uint256 = upoint.fpis_amt
-    # weighted_supply: uint256 = unweighted_supply + convert(upoint.bias, uint256)
-
-    # -------------------------------- New method B --------------------------------
-    # unweighted_supply: uint256 = upoint.fpis_amt
-    # weighted_supply: uint256 = convert(upoint.bias, uint256)
-    # if weighted_supply < upoint.fpis_amt:
-    #     weighted_supply = upoint.fpis_amt
-
     # ----------------------------------- veFPIS -----------------------------------
     if ((upoint.bias >= 0) or (upoint.fpis_amt >= 0)):
         return convert(upoint.bias, uint256)
@@ -1035,20 +1000,6 @@ def supply_at(point: Point, t: uint256) -> uint256:
     # ==============================================================================
     # ----------------------------------- veCRV ------------------------------------
     # weighted_supply: uint256 = convert(last_point.bias, uint256)
-
-    # ----------------------------------- veFXS ------------------------------------
-    # unweighted_supply: uint256 = convert(last_point.bias, uint256)
-    # weighted_supply: uint256 = last_point.fpis_amt + (VOTE_WEIGHT_MULTIPLIER * unweighted_supply)
-
-    # -------------------------------- New method A --------------------------------
-    # unweighted_supply: uint256 = last_point.fpis_amt
-    # weighted_supply: uint256 = unweighted_supply + convert(last_point.bias, uint256)
-
-    # -------------------------------- New method B --------------------------------
-    # unweighted_supply: uint256 = last_point.fpis_amt
-    # weighted_supply: uint256 = convert(last_point.bias, uint256)
-    # if weighted_supply < last_point.fpis_amt:
-    #     weighted_supply = last_point.fpis_amt
 
     # ----------------------------------- veFPIS -----------------------------------
     weighted_supply: uint256 = convert(last_point.bias, uint256)
@@ -1125,15 +1076,6 @@ def totalFPISSupplyAt(_block: uint256) -> uint256:
     return point.fpis_amt
 
 @external
-def changeController(_newController: address):
-    """
-    @dev Dummy method required for Aragon compatibility
-    """
-    assert msg.sender == self.controller
-    self.controller = _newController
-
-
-@external
 def toggleEmergencyUnlock():
     """
     @dev Used to allow early withdrawals of veFPIS back into FPIS, in case of an emergency
@@ -1156,15 +1098,15 @@ def toggleProxyTransferTos():
     log ProxyTransferTosToggled(self.proxyTransferTosEnabled)
 
 @external
-def toggleProxyPaybackOrLiquidations():
+def toggleProxyPaybackLiqOrSlashs():
     """
     @dev Toggles the ability for the proxy to pay back or liquidate a user 
     """
     assert msg.sender == self.admin  # dev: admin only
-    self.proxyPaybackOrLiquidationsEnabled = not (self.proxyPaybackOrLiquidationsEnabled)
+    self.ProxyPaybackLiqOrSlashsEnabled = not (self.ProxyPaybackLiqOrSlashsEnabled)
     self._checkpoint(ZERO_ADDRESS, empty(LockedBalance), empty(LockedBalance), 0)
 
-    log ProxyPaybackOrLiquidationsToggled(self.proxyPaybackOrLiquidationsEnabled)
+    log ProxyPaybackLiqOrSlashsToggled(self.ProxyPaybackLiqOrSlashsEnabled)
 
 @external
 def adminSetProxy(_proxy: address):
@@ -1200,7 +1142,7 @@ def stakerSetProxy(_proxy: address):
     """
     # Do some checks
     assert (_proxy == ZERO_ADDRESS or self.lending_proxy == _proxy), "Proxy not whitelisted [admin level]"
-    assert (self.user_fpis_in_proxy[msg.sender] == 0), "Outstanding FPIS in proxy. Have proxy use proxy_payback_or_liquidate"
+    assert (self.user_fpis_in_proxy[msg.sender] == 0), "Outstanding FPIS in proxy. Have proxy use proxy_pbk_liq_slsh"
 
     # Set the proxy
     self.staker_whitelisted_proxy[msg.sender] = _proxy
