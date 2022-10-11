@@ -39,6 +39,24 @@ describe("Fraxferry", function () {
       await expect(contracts.ferryAB.connect(user).embark(BigInt(1e39))).to.be.revertedWith("Amount too high");
    });
 
+   it("embarkWithRecipient", async function () {
+		const [owner,user,captain,firstOfficer,crewmember,user2] = await ethers.getSigners();
+		var contracts = await setupContracts();
+		var bridgeAmount = BigInt(1000*1e18);
+		await contracts.token0.connect(user).approve(contracts.ferryAB.address,bridgeAmount);
+		await contracts.ferryAB.connect(user).embarkWithRecipient(bridgeAmount,user2.address);
+		wait(100*60);
+		var nextBatch = await contracts.ferryAB.getNextBatch(0,10);
+		await contracts.ferryBA.connect(captain).depart(nextBatch.start,nextBatch.end,nextBatch.hash);
+		wait(100*60);
+		var fee = BigInt(await contracts.ferryAB.FEE());
+		var batch = await contracts.ferryAB.getBatchData(nextBatch.start,nextBatch.end);
+		var userBalanceBefore = BigInt(await contracts.token1.balanceOf(user2.address));
+      await contracts.ferryBA.connect(firstOfficer).disembark(batch);
+      var userBalanceAfter = BigInt(await contracts.token1.balanceOf(user2.address));
+		expect(userBalanceAfter-userBalanceBefore).to.equal(bridgeAmount-fee);
+   });
+
    it("depart", async function () {
       const [owner,user,captain,firstOfficer,crewmember] = await ethers.getSigners();
       var contracts = await setupContracts();
@@ -118,6 +136,30 @@ describe("Fraxferry", function () {
       await contracts.ferryBA.connect(firstOfficer).disembark(batch1);
       await expect(contracts.ferryBA.connect(firstOfficer).disembark(batch1)).to.be.revertedWith("Wrong start");
       await contracts.ferryBA.connect(firstOfficer).disembark(batch3);
+   });
+
+   it("multiple trips", async function () {
+      const [owner,user,captain,firstOfficer,crewmember] = await ethers.getSigners();
+      var contracts = await setupContracts();
+      var bridgeAmount = BigInt(1000*1e18);
+      var pos=0;
+      for (var i=0;i<10;i++) {
+			await contracts.token0.connect(user).approve(contracts.ferryAB.address,bridgeAmount*BigInt(10));
+			await contracts.ferryAB.connect(user).embark(bridgeAmount);
+			await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(2));
+			await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(4));
+			wait(100*60);
+			var nextBatch = await contracts.ferryAB.getNextBatch(pos,10);
+			if (pos!=0) await expect(contracts.ferryBA.connect(captain).depart(BigInt(nextBatch.start)-BigInt(1),BigInt(nextBatch.end)-BigInt(1),nextBatch.hash)).to.be.revertedWith("Wrong start");
+			await expect(contracts.ferryBA.connect(captain).depart(BigInt(nextBatch.start)+BigInt(1),BigInt(nextBatch.end)+BigInt(1),nextBatch.hash)).to.be.revertedWith("Wrong start");
+			await contracts.ferryBA.connect(captain).depart(nextBatch.start,nextBatch.end,nextBatch.hash);
+			wait(60*60);
+			var transactionsHash = await contracts.ferryAB.getTransactionsHash(nextBatch.start,nextBatch.end);
+			await expect(transactionsHash).to.equal(nextBatch.hash);
+      	var batch = await contracts.ferryAB.getBatchData(nextBatch.start,nextBatch.end);
+         await contracts.ferryBA.connect(firstOfficer).disembark(batch);
+         pos=BigInt(nextBatch.end)+BigInt(1);
+		}
    });
 
    it("jettison", async function () {
@@ -370,16 +412,24 @@ describe("Fraxferry", function () {
 		await contracts.ferryAB.connect(owner).setFirstOfficer(user2.address);
       expect(await contracts.ferryAB.firstOfficer()).to.equals(user2.address);
 
-		//setOwner
-		await expect(contracts.ferryAB.connect(user).setOwner(user2.address)).to.be.revertedWith("Not owner");
-		await expect(contracts.ferryAB.connect(captain).setOwner(user2.address)).to.be.revertedWith("Not owner");
-		await expect(contracts.ferryAB.connect(firstOfficer).setOwner(user2.address)).to.be.revertedWith("Not owner");
-		await expect(contracts.ferryAB.connect(crewmember).setOwner(user2.address)).to.be.revertedWith("Not owner");
-		await expect(contracts.ferryAB.connect(owner).setOwner("0x0000000000000000000000000000000000000000")).to.be.revertedWith("Zero address not allowed");
-
+		//nominateNewOwner
+		expect(await contracts.ferryAB.nominatedOwner()).to.equals("0x0000000000000000000000000000000000000000");
+		await expect(contracts.ferryAB.connect(user).nominateNewOwner(user2.address)).to.be.revertedWith("Not owner");
+		await expect(contracts.ferryAB.connect(captain).nominateNewOwner(user2.address)).to.be.revertedWith("Not owner");
+		await expect(contracts.ferryAB.connect(firstOfficer).nominateNewOwner(user2.address)).to.be.revertedWith("Not owner");
+		await expect(contracts.ferryAB.connect(crewmember).nominateNewOwner(user2.address)).to.be.revertedWith("Not owner");
 		expect(await contracts.ferryAB.owner()).to.not.equals(user2.address);
-		await contracts.ferryAB.connect(owner).setOwner(user2.address);
+		await contracts.ferryAB.connect(owner).nominateNewOwner(user2.address);
+		expect(await contracts.ferryAB.nominatedOwner()).to.equals(user2.address);
+
+		//acceptOwnership
+		await expect(contracts.ferryAB.connect(user).acceptOwnership()).to.be.revertedWith("You must be nominated before you can accept ownership");
+		await expect(contracts.ferryAB.connect(captain).acceptOwnership()).to.be.revertedWith("You must be nominated before you can accept ownership");
+		await expect(contracts.ferryAB.connect(firstOfficer).acceptOwnership()).to.be.revertedWith("You must be nominated before you can accept ownership");
+		await expect(contracts.ferryAB.connect(crewmember).acceptOwnership()).to.be.revertedWith("You must be nominated before you can accept ownership");
+		await contracts.ferryAB.connect(user2).acceptOwnership();
       expect(await contracts.ferryAB.owner()).to.equals(user2.address);
+      expect(await contracts.ferryAB.nominatedOwner()).to.equals("0x0000000000000000000000000000000000000000");
    });
 
    it("Parameters management", async function () {

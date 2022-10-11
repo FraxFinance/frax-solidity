@@ -15,6 +15,7 @@ const FPIControllerPool = artifacts.require("FPI/FPIControllerPool.sol");
 // FRAX Core
 const FRAXStablecoin = artifacts.require("Frax/IFrax");
 const FRAXShares = artifacts.require("FXS/FRAXShares");
+const GovernorAlpha = artifacts.require("Governance/GovernorAlpha");
 const Timelock = artifacts.require("Governance/Timelock");
 const FraxPoolV3 = artifacts.require("Frax/Pools/FraxPoolV3");
 
@@ -37,9 +38,9 @@ const CPITrackerOracle = artifacts.require("Oracle/CPITrackerOracle");
 const UniV3TWAPOracle = artifacts.require("Oracle/UniV3TWAPOracle"); 
 
 // Staking contracts
-const FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ");
-const FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS");
-const FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE");
+// const FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ");
+// const FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS");
+// const FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE");
 const FraxMiddlemanGauge_ARBI_Curve_VSTFRAX = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_ARBI_Curve_VSTFRAX");
 const FraxUnifiedFarm_PosRebase_aFRAX = artifacts.require("Staking/Variants/FraxUnifiedFarm_PosRebase_aFRAX");
 
@@ -80,9 +81,10 @@ module.exports = async (deployer) => {
     let fpi_controller_pool_instance;
 
     // FRAX Core
-	let timelockInstance;
 	let frax_instance;
 	let fxs_instance;
+    let governance_instance;
+	let timelock_instance;
     let pool_instance_v3;
 
     // Gauge
@@ -139,9 +141,10 @@ module.exports = async (deployer) => {
     fpi_controller_pool_instance = await FPIControllerPool.at(CONTRACT_ADDRESSES.ethereum.misc.fpi_controller_amo);
 
     // FRAX Core
-    timelockInstance = await Timelock.at(CONTRACT_ADDRESSES.ethereum.misc.timelock);
     frax_instance = await FRAXStablecoin.at(CONTRACT_ADDRESSES.ethereum.main.FRAX);
     fxs_instance = await FRAXShares.at(CONTRACT_ADDRESSES.ethereum.main.FXS);
+    timelock_instance = await Timelock.at(CONTRACT_ADDRESSES.ethereum.misc.timelock);
+    governance_instance = await GovernorAlpha.at(CONTRACT_ADDRESSES.ethereum.governance);
     pool_instance_v3 = await FraxPoolV3.at(CONTRACT_ADDRESSES.ethereum.pools.V3);
 
     // Gauge
@@ -164,9 +167,9 @@ module.exports = async (deployer) => {
 
     // Staking
     middlemanGauge_ARBI_Curve_VSTFRAX = await FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.at(CONTRACT_ADDRESSES.ethereum.middleman_gauges['Curve VSTFRAX-f']);
-    fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance = await FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Fraxswap V1 FRAX/IQ']);
-    fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Temple FRAX/TEMPLE']);
-    fraxUnifiedFarm_PosRebase_aFRAX_instance = await FraxUnifiedFarm_PosRebase_aFRAX.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Aave aFRAX']);
+    // fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance = await FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Fraxswap V1 FRAX/IQ']);
+    // fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance = await FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Temple FRAX/TEMPLE']);
+    // fraxUnifiedFarm_PosRebase_aFRAX_instance = await FraxUnifiedFarm_PosRebase_aFRAX.at(CONTRACT_ADDRESSES.ethereum.staking_contracts['Aave aFRAX']);
 
     // TWAMM
     fraxswap_factory_instance = await UniV2TWAMMFactory.at(CONTRACT_ADDRESSES.ethereum.uniswap.fraxswap_factory_v2);
@@ -476,7 +479,8 @@ module.exports = async (deployer) => {
     console.log(chalk.yellow("--------DEPLOYING FRAX CORE CONTRACTS--------"));
     FRAXStablecoin.setAsDeployed(frax_instance);
     FRAXShares.setAsDeployed(fxs_instance);
-    Timelock.setAsDeployed(timelockInstance);
+    GovernorAlpha.setAsDeployed(governance_instance);
+    Timelock.setAsDeployed(timelock_instance);
     FraxPoolV3.setAsDeployed(pool_instance_v3);
 
     console.log(chalk.yellow("--------DEPLOYING GAUGE CONTRACTS--------"));
@@ -501,10 +505,10 @@ module.exports = async (deployer) => {
 
     console.log(chalk.yellow("--------DEPLOY STAKING CONTRACTS--------"));
     FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.setAsDeployed(middlemanGauge_ARBI_Curve_VSTFRAX);
-    FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance);
-    FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_pitchFXS_instance);
-    FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.setAsDeployed(fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance);
-    FraxUnifiedFarm_PosRebase_aFRAX.setAsDeployed(fraxUnifiedFarm_PosRebase_aFRAX_instance);
+    // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance);
+    // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_pitchFXS_instance);
+    // FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.setAsDeployed(fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance);
+    // FraxUnifiedFarm_PosRebase_aFRAX.setAsDeployed(fraxUnifiedFarm_PosRebase_aFRAX_instance);
 
     console.log(chalk.yellow("--------DEPLOYING TWAMM CONTRACTS--------"));
     UniV2TWAMMFactory.setAsDeployed(fraxswap_factory_instance);

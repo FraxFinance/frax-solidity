@@ -22,6 +22,7 @@ pragma solidity ^0.8.4;
 ** - Operators do not have enough time to pause the chain after a fake proposal. Avoided by requiring a minimal amount of time between sending the proposal and executing it.
 */
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
 contract Fraxferry {
@@ -31,6 +32,7 @@ contract Fraxferry {
    uint immutable public targetChain;   
    
    address public owner;
+   address public nominatedOwner;
    address public captain;
    address public firstOfficer;
    mapping(address => bool) public crewmembers;
@@ -85,7 +87,8 @@ contract Fraxferry {
    event DisputeBatch(uint batchNo, bytes32 hash);
    event Cancelled(uint index, bool cancel);
    event Pause(bool paused);
-   event SetOwner(address newOwner);
+   event OwnerNominated(address newOwner);
+   event OwnerChanged(address previousOwner,address newOwner);
    event SetCaptain(address newCaptain);   
    event SetFirstOfficer(address newFirstOfficer);
    event SetCrewmember(address crewmember,bool set); 
@@ -121,14 +124,33 @@ contract Fraxferry {
    
    // ############## Ferry actions ##############
    
-   function embark(uint amount) public notPaused {
+   function embarkWithRecipient(uint amount, address recipient) public notPaused {
+      amount = (amount/REDUCED_DECIMALS)*REDUCED_DECIMALS; // Round amount to fit in data structure
       require (amount>FEE,"Amount too low");
       require (amount/REDUCED_DECIMALS<=type(uint64).max,"Amount too high");
-      TransferHelper.safeTransferFrom(address(token),msg.sender,address(this),amount);
-      uint amountAfterFee = amount-FEE;
-      emit Embark(msg.sender,transactions.length,amount,amountAfterFee,block.timestamp);
-      transactions.push(Transaction(msg.sender,uint64(amountAfterFee/REDUCED_DECIMALS),uint32(block.timestamp)));   
+      TransferHelper.safeTransferFrom(address(token),msg.sender,address(this),amount); 
+      uint64 amountAfterFee = uint64((amount-FEE)/REDUCED_DECIMALS);
+      emit Embark(recipient,transactions.length,amount,amountAfterFee*REDUCED_DECIMALS,block.timestamp);
+      transactions.push(Transaction(recipient,amountAfterFee,uint32(block.timestamp)));   
    }
+   
+   function embark(uint amount) public {
+      embarkWithRecipient(amount, msg.sender) ;
+   }
+
+   function embarkWithSignature(
+      uint256 _amount,
+      address recipient,
+      uint256 deadline,
+      bool approveMax,
+      uint8 v,
+      bytes32 r,
+      bytes32 s
+   ) public {
+      uint amount = approveMax ? type(uint256).max : _amount;
+      IERC20Permit(address(token)).permit(msg.sender, address(this), amount, deadline, v, r, s);
+      embarkWithRecipient(amount,recipient);
+   }   
    
    function depart(uint start, uint end, bytes32 hash) external notPaused isCaptain {
       require ((batches.length==0 && start==0) || (batches.length>0 && start==batches[batches.length-1].end+1),"Wrong start");
@@ -183,10 +205,20 @@ contract Fraxferry {
       emit Pause(_paused);
    } 
    
-   function jettison(uint index, bool cancel) external isOwner {
+   function _jettison(uint index, bool cancel) internal {
       require (index>=executeIndex,"Transaction already executed");
       cancelled[index]=cancel;
       emit Cancelled(index,cancel);
+   }
+   
+   function jettison(uint index, bool cancel) external isOwner {
+      _jettison(index,cancel);
+   }
+   
+   function jettisonGroup(uint[] calldata indexes, bool cancel) external isOwner {
+      for (uint i=0;i<indexes.length;++i) {
+         _jettison(indexes[i],cancel);
+      }
    }   
    
    // ############## Parameters management ##############
@@ -204,10 +236,16 @@ contract Fraxferry {
    
    // ############## Roles management ##############
    
-   function setOwner(address newOwner) external isOwner {
-      require (newOwner!=address(0),"Zero address not allowed");
-      owner=newOwner;
-      emit SetOwner(newOwner);
+   function nominateNewOwner(address newOwner) external isOwner {
+      nominatedOwner = newOwner;
+      emit OwnerNominated(newOwner);
+   }   
+   
+   function acceptOwnership() external {
+      require(msg.sender == nominatedOwner, "You must be nominated before you can accept ownership");
+      emit OwnerChanged(owner, nominatedOwner);
+      owner = nominatedOwner;
+      nominatedOwner = address(0);
    }
    
    function setCaptain(address newCaptain) external isOwner {
