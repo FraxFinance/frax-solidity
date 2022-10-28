@@ -204,6 +204,11 @@ contract CPITrackerOracle is Owned, ChainlinkClient {
         }
     }
 
+    // Return number of current observations
+    function cpiObservationsLength() external view returns (uint256) {
+        return cpi_observations.length;
+    }
+
     /* ========== MUTATIVE ========== */
 
     // Fetch the CPI data from the Chainlink oracle

@@ -1920,6 +1920,7 @@ export const CONTRACT_ADDRESSES = {
       FXS: "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
       FXB: "",
       vesting: "NOT_DEPLOYED_YET",
+      veFPIS: "0x1B0b9991Df27a4F2847478127d51Fb29883882f5",
       veFXS: "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0", // Old: "0xcb75A1655c84589652D0f3A4605e5dDA8431F0a6"
       veFXS_whitelist_checker: "",
       veFXS_boost: "0x59e132164Ec2e48b0714EB6abdb10225Df44dA0e",
@@ -2200,7 +2201,7 @@ export const CONTRACT_ADDRESSES = {
       vefxs_yield_distributor_v2: "0x62C4cf364078C98fA08AfDB4D3d8D87e780Ebd45",
       vefxs_yield_distributor_v3: "0xed2647Bbf875b2936AAF95a3F5bbc82819e3d3FE",
       vefxs_yield_distributor_v4: "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
-
+      vefpis_yield_distributor_v4: "0x95702e148363A6fC4Bc97ff54BdA8a2aE88b4c0F",
     },
     libraries: {
       UniswapV2OracleLibrary: "0xeB85Dd2374a44F80342AcF8010d585Bda32B77a0",

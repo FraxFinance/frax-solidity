@@ -42,6 +42,7 @@ contract Fraxferry {
    uint public MIN_WAIT_PERIOD_ADD=3600; // Minimal 1 hour waiting
    uint public MIN_WAIT_PERIOD_EXECUTE=3600; // Minimal 1 hour waiting
    uint public FEE=1*1e18; // 1 token
+   uint immutable MAX_FEE=100e18; // Max fee is 100 tokens
    uint immutable public REDUCED_DECIMALS=1e10;
    
    Transaction[] public transactions;
@@ -80,20 +81,20 @@ contract Fraxferry {
    
    // ############## Events ##############
    
-   event Embark(address sender, uint index, uint amount, uint amountAfterFee, uint timestamp);
+   event Embark(address indexed sender, uint index, uint amount, uint amountAfterFee, uint timestamp);
    event Disembark(uint start, uint end, bytes32 hash); 
    event Depart(uint batchNo,uint start,uint end,bytes32 hash); 
    event RemoveBatch(uint batchNo);
    event DisputeBatch(uint batchNo, bytes32 hash);
    event Cancelled(uint index, bool cancel);
    event Pause(bool paused);
-   event OwnerNominated(address newOwner);
-   event OwnerChanged(address previousOwner,address newOwner);
-   event SetCaptain(address newCaptain);   
-   event SetFirstOfficer(address newFirstOfficer);
-   event SetCrewmember(address crewmember,bool set); 
-   event SetFee(uint fee);
-   event SetMinWaitPeriods(uint minWaitAdd,uint minWaitExecute); 
+   event OwnerNominated(address indexed newOwner);
+   event OwnerChanged(address indexed previousOwner,address indexed newOwner);
+   event SetCaptain(address indexed previousCaptain, address indexed newCaptain);   
+   event SetFirstOfficer(address indexed previousFirstOfficer, address indexed newFirstOfficer);
+   event SetCrewmember(address indexed crewmember,bool set); 
+   event SetFee(uint previousFee, uint fee);
+   event SetMinWaitPeriods(uint previousMinWaitAdd,uint previousMinWaitExecute,uint minWaitAdd,uint minWaitExecute); 
    
    // ############## Modifiers ##############
    
@@ -154,7 +155,7 @@ contract Fraxferry {
    
    function depart(uint start, uint end, bytes32 hash) external notPaused isCaptain {
       require ((batches.length==0 && start==0) || (batches.length>0 && start==batches[batches.length-1].end+1),"Wrong start");
-      require (end>=start,"Wrong end");
+      require (end>=start && end<type(uint64).max,"Wrong end");
       batches.push(Batch(uint64(start),uint64(end),uint64(block.timestamp),0,hash));
       emit Depart(batches.length-1,start,end,hash);
    }
@@ -206,7 +207,7 @@ contract Fraxferry {
    } 
    
    function _jettison(uint index, bool cancel) internal {
-      require (index>=executeIndex,"Transaction already executed");
+      require (executeIndex==0 || index>batches[executeIndex-1].end,"Transaction already executed");
       cancelled[index]=cancel;
       emit Cancelled(index,cancel);
    }
@@ -224,14 +225,16 @@ contract Fraxferry {
    // ############## Parameters management ##############
    
    function setFee(uint _FEE) external isOwner {
+      require(FEE<MAX_FEE);
+      emit SetFee(FEE,_FEE);
       FEE=_FEE;
-      emit SetFee(_FEE);
    }
    
    function setMinWaitPeriods(uint _MIN_WAIT_PERIOD_ADD, uint _MIN_WAIT_PERIOD_EXECUTE) external isOwner {
+      require(_MIN_WAIT_PERIOD_ADD>=3600 && _MIN_WAIT_PERIOD_EXECUTE>=3600,"Period too short");
+      emit SetMinWaitPeriods(MIN_WAIT_PERIOD_ADD, MIN_WAIT_PERIOD_EXECUTE,_MIN_WAIT_PERIOD_ADD, _MIN_WAIT_PERIOD_EXECUTE);
       MIN_WAIT_PERIOD_ADD=_MIN_WAIT_PERIOD_ADD;
       MIN_WAIT_PERIOD_EXECUTE=_MIN_WAIT_PERIOD_EXECUTE;
-      emit SetMinWaitPeriods(_MIN_WAIT_PERIOD_ADD, _MIN_WAIT_PERIOD_EXECUTE);
    }
    
    // ############## Roles management ##############
@@ -249,13 +252,13 @@ contract Fraxferry {
    }
    
    function setCaptain(address newCaptain) external isOwner {
+      emit SetCaptain(captain,newCaptain);
       captain=newCaptain;
-      emit SetCaptain(newCaptain);
    }
    
    function setFirstOfficer(address newFirstOfficer) external isOwner {
+      emit SetFirstOfficer(firstOfficer,newFirstOfficer);
       firstOfficer=newFirstOfficer;
-      emit SetFirstOfficer(newFirstOfficer);
    }    
    
    function setCrewmember(address crewmember, bool set) external isOwner {
@@ -273,6 +276,7 @@ contract Fraxferry {
    
    // Generic proxy
    function execute(address _to, uint256 _value, bytes calldata _data) external isOwner returns (bool, bytes memory) {
+      require(_data.length==0 || _to.code.length>0,"Can not call a function on a EOA");
       (bool success, bytes memory result) = _to.call{value:_value}(_data);
       return (success, result);
    }   

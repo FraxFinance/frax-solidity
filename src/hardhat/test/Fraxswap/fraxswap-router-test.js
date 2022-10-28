@@ -3,6 +3,7 @@ const hre = require("hardhat");
 const { ethers, network } = hre;
 const { constants, BigNumber, utils } = require("ethers");
 const { defaultAbiCoder } = utils;
+const fse = require("fs-extra");
 const {
   bigNumberify,
   expandTo18Decimals,
@@ -15,6 +16,7 @@ const {
   getCurvePools,
   getSaddlePools,
   getFraxswapPools,
+  getFraxswapV2Pools,
   getUniswapV2Pools,
   getSushiSwapPools,
   getUniswapV3Pools,
@@ -22,6 +24,7 @@ const {
   generateEncodedCurveRouteV2,
   generateEncodedSaddleRoute,
   generateEncodedFraxswapRoute,
+  generateEncodedFraxswapV2Route,
   generateEncodedUniswapV2Route,
   generateEncodedSushiSwapRoute,
   generateEncodedUniswapV3Route,
@@ -30,6 +33,7 @@ const {
   outputSankeyJson,
   oneInchPathfinderAlgo,
   convert1InchRouteToFraxswapRoute,
+  generateEncodedWETHRoute,
 } = require("./fraxswap-router/fraxswap-router-utils");
 
 /*
@@ -45,6 +49,11 @@ FPIControllerPool: 0x309AC8840f9b4C7eEB5bAb1e89669d8dbb86c060
 CPITrackerOracle: 0x7086F2aCB5558043fF9cE3df346D8E3FB4F4f452
 
  */
+
+// FRAX Minter
+const fraxMinterOwner = "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27";
+const fraxMinter = "0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241";
+const fraxMinterAbi = require("../../manual_jsons/FRAX_MINTER_ABI.json");
 
 const ERC20Abi =
   require("../../artifacts/contracts/Fraxswap/core/FraxswapPair.sol/FraxswapPair").abi;
@@ -67,6 +76,7 @@ const usdcContractAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const fpiContractAddress = "0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E";
 
 const EMPTY_NEXT_STEP = ethers.utils.hexlify([]);
+const EMPTY_BYTE = ethers.constants.HashZero; // "0x00000";// ethers.utils.hexlify("0x00000");
 
 async function runwithImpersonation(userAddress, func) {
   const signerImpersonate = await ethers.getSigner(userAddress);
@@ -92,11 +102,44 @@ const tokenHoldersByToken = {
   [iqContractAddress]: "0xf977814e90da44bfa03b6295a0616a897441acec",
   [fpiContractAddress]: "0x2fb733c3239a1e807d380fa0845b9101ee54c693",
   [usdcContractAddress]: "0x6262998ced04146fa42253a5c0af90ca02dfd2a3",
-  [fraxContractAddress]: "0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+  [fraxContractAddress]: "0xc83a1bb26dc153c009d5baad9855fe90cf5a1529",
+  [fxsContractAddress]: "0x66df2139c24446f5b43db80a680fb94d0c1c5d8e",
 };
 
-const getERC20TokenFaucet = async (tokenAddress, toAddress, value) => {
+const getFRAXFromMinter = async (toAddress, value) => {
+  await runwithImpersonation(fraxMinterOwner, async (signerImpersonate) => {
+    console.log("minter Owner: ", signerImpersonate.address);
+    const fraxMinterContract = await getContract(
+      fraxMinter,
+      fraxMinterAbi,
+      signerImpersonate
+    );
+    console.log("output allAMOAddresses");
+    console.log(await fraxMinterContract.allAMOAddresses());
+    await fraxMinterContract.addAMO(toAddress, false, { gasLimit: 1000000 });
+    await fraxMinterContract.mintFraxForAMO(toAddress, value, {
+      gasLimit: 1000000,
+    });
+  });
+};
+
+const getERC20TokenFaucet = async (
+  tokenAddress,
+  toAddress,
+  value,
+  testEthAccount = null
+) => {
+  // holder of the token
   const holderAddr = tokenHoldersByToken[tokenAddress];
+
+  // send a little ETH to holder
+  if (testEthAccount) {
+    await testEthAccount.sendTransaction({
+      to: holderAddr,
+      value: ethers.utils.parseEther("1.0"), // Sends exactly 1.0 ether
+    });
+  }
+
   await runwithImpersonation(holderAddr, async (signerImpersonate) => {
     const tokenContract = (await getErc20Token(tokenAddress)).connect(
       signerImpersonate
@@ -156,6 +199,255 @@ describe("Router Tests", function () {
     console.log("FraxswapRouterV2 address: ", FraxswapRouterV2Deployed.address);
   });
 
+  it("Output Pools", async function () {
+    /////////////////
+    // Store Pools //
+    /////////////////
+
+    await getCurvePools("ethereum"); // query curve for pools
+    await getSaddlePools("ethereum"); // query curve for pools
+    await getFraxswapPools("ethereum"); // query fraxswap for pools
+    await getFraxswapV2Pools("ethereum"); // query fraxswap V2 for pools
+    await getUniswapV2Pools("ethereum"); // query uniswapv2 for pool
+    await getUniswapV3Pools("ethereum"); // query uniswapv3 for pool
+    await getSushiSwapPools("ethereum"); // query sushiswap for pool
+  });
+
+  it("Output Sankey", async function () {
+    /////////////
+    // Sankey  //
+    /////////////
+
+    const tokenInAddress = fraxToken.address;
+    const tokenOut = fxsToken.address;
+    const runSankey = false;
+    if (runSankey) {
+      console.log("finding routes...");
+      const routeNodes = await getAvailableRoutes(tokenInAddress, tokenOut, 3);
+      console.log(
+        `found routes, using ${routeNodes.length} tokens`,
+        routeNodes
+      );
+      await outputSankeyJson(routeNodes);
+      console.log("outputted sankey json file");
+    }
+  });
+
+  it("Output 1Inch Route", async function () {
+    // swap 1,000,000 FRAX to FXS
+    const decimals = await fraxToken.decimals();
+    const tokenIn = fraxToken;
+    const tokenInAddress = tokenIn.address;
+    const tokenInAmount = utils.parseUnits(
+      `${(1 * 1e6).toLocaleString("fullwide", { useGrouping: false })}`,
+      decimals
+    );
+    const tokenOut = fxsToken.address;
+
+    /////////////
+    //  1Inch  //
+    /////////////
+
+    const { _routes } = await oneInchPathfinderAlgo(
+      tokenInAddress,
+      tokenOut,
+      tokenInAmount,
+      decimals
+    );
+  });
+
+  it("Test 1Inch Route", async function () {
+    const oneInchRoute = require("./fraxswap-router/1inch-saved-routes/1inchOutput.json");
+
+    const forkingUrl = hre.network.config?.forking?.url;
+
+    if (!forkingUrl) {
+      throw "forking url is not provided!";
+    }
+
+    // set fork to desired block
+    const blockNumberToTest = parseInt(oneInchRoute.blockNumber);
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: forkingUrl,
+            blockNumber: blockNumberToTest,
+          },
+        },
+      ],
+    });
+
+    const decimals = parseInt(oneInchRoute.decimals);
+    const tokenInAddress = oneInchRoute.fromToken;
+    const tokenOut = oneInchRoute.toToken;
+    const tokenInAmount = utils.parseUnits(oneInchRoute.amountIn, 0);
+
+    const userSigner = signers[1];
+    const fraxswapRouterV2 = FraxswapRouterV2Deployed.connect(signers[1]);
+
+    await getERC20TokenFaucet(
+      tokenInAddress,
+      userSigner.address,
+      tokenInAmount
+    );
+
+    const routeFirstEncoded = await convert1InchRouteToFraxswapRoute(
+      oneInchRoute,
+      fraxswapRouterV2
+    );
+
+    const amountOutMinimum = bigNumberify(0);
+    const recipient = userSigner.address;
+    const deadline = (await getBlockTimestamp()) + 3600;
+
+    const populatedTx = await fraxswapRouterV2.populateTransaction.swap({
+      tokenIn: tokenInAddress,
+      amountIn: tokenInAmount,
+      tokenOut,
+      amountOutMinimum,
+      recipient,
+      deadline,
+      v: 0,
+      r: EMPTY_BYTE,
+      s: EMPTY_BYTE,
+      route: routeFirstEncoded,
+    });
+
+    const estimatedGas = await userSigner.estimateGas(populatedTx);
+
+    const tx = await userSigner.sendTransaction(populatedTx, {
+      gasLimit: estimatedGas,
+    });
+
+    const iface = fraxswapRouterV2.interface;
+
+    const txReceipt = await tx.wait();
+
+    const decodedLogs = txReceipt.logs
+      .map((log) => {
+        try {
+          return iface.parseLog(log);
+        } catch (e) {
+          return;
+        }
+      })
+      .filter((log) => log?.name == "Swapped" || log?.name == "Routed");
+
+    console.log("decodedLogs", decodedLogs);
+  });
+
+  it("Swap ETH => WETH => FRAX => FXS directly", async function () {
+    const userSigner = signers[1];
+
+    const fraxswapRouterV2 = FraxswapRouterV2Deployed.connect(signers[1]);
+
+    // amount of ETH to swap
+    const decimals = 18;
+    const tokenInAddress = ethers.constants.AddressZero;
+    const tokenInAmount = utils.parseUnits("10", decimals);
+
+    const tokenOut = fxsToken.address;
+
+    const {
+      // address: frax_fxs_fraxswap_address,
+      encodedStep: frax_fxs_fraxswap_address,
+    } = await generateEncodedFraxswapV2Route(
+      fraxToken.address,
+      fxsToken.address,
+      fraxswapRouterV2
+    );
+    const frax_fxs_routeEncoded = await fraxswapRouterV2.encodeRoute(
+      fraxToken.address,
+      10000, // 100%
+      [frax_fxs_fraxswap_address],
+      []
+    );
+
+    const {
+      // address: frax_fxs_fraxswap_address,
+      encodedStep: weth_frax_fraxswap_address,
+    } = await generateEncodedFraxswapV2Route(
+      weth9Token.address,
+      fraxToken.address,
+      fraxswapRouterV2
+    );
+    const weth_frax_routeEncoded = await fraxswapRouterV2.encodeRoute(
+      fraxToken.address,
+      10000, // 100%
+      [weth_frax_fraxswap_address],
+      [frax_fxs_routeEncoded]
+    );
+    const { encodedStep: eth_weth_swap_address } =
+      await generateEncodedWETHRoute(true, fraxswapRouterV2);
+    const eth_weth_routeEncoded = await fraxswapRouterV2.encodeRoute(
+      "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      10000, // 100%
+      [eth_weth_swap_address],
+      [weth_frax_routeEncoded]
+    );
+    routeFirstEncoded = await fraxswapRouterV2.encodeRoute(
+      ethers.constants.AddressZero,
+      10000, // 100%
+      [],
+      [eth_weth_routeEncoded]
+    );
+    const amountIn = tokenInAmount;
+    const amountOutMinimum = bigNumberify(0);
+    const recipient = userSigner.address;
+    const deadline = (await getBlockTimestamp()) + 3600;
+
+    const populatedTx = await fraxswapRouterV2.populateTransaction.swap(
+      {
+        tokenIn: tokenInAddress,
+        amountIn,
+        tokenOut,
+        amountOutMinimum,
+        recipient,
+        deadline,
+        v: 0,
+        r: EMPTY_BYTE,
+        s: EMPTY_BYTE,
+        route: routeFirstEncoded,
+      },
+      { value: amountIn }
+    );
+
+    // const estimatedGas = await userSigner.estimateGas(populatedTx);
+
+    const tx = await userSigner.sendTransaction(populatedTx, {
+      value: amountIn,
+      gasLimit: 1000000,
+    });
+
+    const iface = fraxswapRouterV2.interface;
+
+    const txReceipt = await tx.wait();
+
+    const decodedLogs = txReceipt.logs
+      .map((log) => {
+        try {
+          return iface.parseLog(log);
+        } catch (e) {
+          return;
+        }
+      })
+      .filter((log) => log?.name == "Swapped" || log?.name == "Routed");
+
+    console.log("decodedLogs", decodedLogs);
+
+    console.log("transfers", txReceipt.logs
+    .map((log) => {
+      try {
+        return iface.parseLog(log);
+      } catch (e) {
+        return;
+      }
+    })
+    .filter((log) => log?.name == "Transfer"))
+  });
+
   it("Swap Test", async function () {
     const userSigner = signers[1];
 
@@ -165,11 +457,10 @@ describe("Router Tests", function () {
     const decimals = await fraxToken.decimals();
     const tokenIn = fraxToken;
     const tokenInAddress = tokenIn.address;
-    const tokenInAmount = utils.parseUnits(
-      `${(10 * 1e6).toLocaleString("fullwide", { useGrouping: false })}`,
-      decimals
-    );
+    const tokenInAmount = utils.parseUnits("1000000", decimals);
     const tokenOut = fxsToken.address;
+
+    // await getFRAXFromMinter(userSigner.address, tokenInAmount)
 
     await getERC20TokenFaucet(
       tokenInAddress,
@@ -188,59 +479,11 @@ describe("Router Tests", function () {
       });
     console.log("approved FRAX for transfer");
 
-    /////////////////
-    // Store Pools //
-    /////////////////
-
-    // await getCurvePools(); // query curve for pools
-    // await getSaddlePools(); // query curve for pools
-    // await getFraxswapPools(); // query fraxswap for pools
-    // await getUniswapV2Pools(); // query uniswapv2 for pool
-    // await getUniswapV3Pools(); // query uniswapv3 for pool
-    // await getSushiSwapPools(); // query sushiswap for pool
-    // return;
-
-    /////////////
-    // Sankey  //
-    /////////////
-
-    const runSankey = false;
-    if (runSankey) {
-      console.log("finding routes...");
-      const routeNodes = await getAvailableRoutes(tokenInAddress, tokenOut, 3);
-      console.log(
-        `found routes, using ${routeNodes.length} tokens`,
-        routeNodes
-      );
-      await outputSankeyJson(routeNodes);
-      console.log("outputted sankey json file");
-    }
-
-    /////////////
-    //  1Inch  //
-    /////////////
-
-    const run1Inch = true;
-    if (run1Inch) {
-      const { _routes } = await oneInchPathfinderAlgo(
-        tokenInAddress,
-        tokenOut,
-        +ethers.utils.formatUnits(tokenInAmount, 0)
-      );
-    }
-
     const runHardcodedTest = true;
-    const convertOneInchRoute = true;
 
     let routeFirstEncoded;
 
-    if (convertOneInchRoute) {
-      const oneInchRoute = require("./1inchOutput.json");
-      routeFirstEncoded = await convert1InchRouteToFraxswapRoute(
-        oneInchRoute,
-        fraxswapRouterV2
-      );
-    } else if (runHardcodedTest) {
+    if (runHardcodedTest) {
       // HARDCODED ROUTE TO TEST
       // curve
       // const step_swapEncoded = await generateEncodedCurveRoute(usdcToken.address, fraxToken.address, fraxswapRouterV2, fraxswap_swapEncoded);
@@ -293,7 +536,6 @@ describe("Router Tests", function () {
 
       const frax_fxs_routeEncoded = await fraxswapRouterV2.encodeRoute(
         fxsToken.address,
-        0,
         9000, // 90%
         frax_fxs_steps,
         []
@@ -327,7 +569,6 @@ describe("Router Tests", function () {
 
       const fpi_fxs_routeEncoded = await fraxswapRouterV2.encodeRoute(
         fxsToken.address,
-        0,
         10000, // 100%
         fpi_fxs_steps,
         []
@@ -335,7 +576,6 @@ describe("Router Tests", function () {
 
       const frax_fpi_routeEncoded = await fraxswapRouterV2.encodeRoute(
         fpiToken.address,
-        0,
         1000, // 10%
         frax_fpi_steps,
         [fpi_fxs_routeEncoded]
@@ -343,7 +583,6 @@ describe("Router Tests", function () {
 
       routeFirstEncoded = await fraxswapRouterV2.encodeRoute(
         ethers.constants.AddressZero,
-        0,
         10000, // 100%
         [],
         [frax_fxs_routeEncoded, frax_fpi_routeEncoded]
@@ -398,7 +637,6 @@ describe("Router Tests", function () {
 
       const eth_fxs_routeEncoded = await fraxswapRouterV2.encodeRoute(
         fxsToken.address,
-        0,
         10000, // 100%
         [encodingObj_ETH_FXS],
         []
@@ -406,7 +644,6 @@ describe("Router Tests", function () {
 
       const usdc_eth_routeEncoded = await fraxswapRouterV2.encodeRoute(
         weth9Token.address,
-        0,
         10000, // 100%
         [encodingObj_USDC_ETH],
         [eth_fxs_routeEncoded]
@@ -414,7 +651,6 @@ describe("Router Tests", function () {
 
       const frax_usdc_routeEncoded = await fraxswapRouterV2.encodeRoute(
         usdcToken.address,
-        0,
         10000, // 100%
         [encodingObj_FRAX_USDC],
         [usdc_eth_routeEncoded]
@@ -422,7 +658,6 @@ describe("Router Tests", function () {
 
       routeFirstEncoded = await fraxswapRouterV2.encodeRoute(
         ethers.constants.AddressZero,
-        0,
         10000, // 100%
         [],
         [frax_usdc_routeEncoded]
@@ -434,14 +669,23 @@ describe("Router Tests", function () {
     const recipient = userSigner.address;
     const deadline = (await getBlockTimestamp()) + 3600;
 
-    const tx = await fraxswapRouterV2.swap({
+    const populatedTx = await fraxswapRouterV2.populateTransaction.swap({
       tokenIn: tokenInAddress,
       amountIn,
       tokenOut,
       amountOutMinimum,
       recipient,
       deadline,
+      v: 0,
+      r: EMPTY_BYTE,
+      s: EMPTY_BYTE,
       route: routeFirstEncoded,
+    });
+
+    const estimatedGas = await userSigner.estimateGas(populatedTx);
+
+    const tx = await userSigner.sendTransaction(populatedTx, {
+      gasLimit: estimatedGas,
     });
 
     const iface = fraxswapRouterV2.interface;

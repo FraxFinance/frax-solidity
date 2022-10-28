@@ -84,6 +84,11 @@ describe("Fraxferry", function () {
       await contracts.ferryBA.connect(captain).depart(0,0,hash)
       await expect(contracts.ferryBA.connect(captain).depart(0,0,hash)).to.be.revertedWith("Wrong start");
       await expect(contracts.ferryBA.connect(captain).depart(1,0,hash)).to.be.revertedWith("Wrong end");
+
+      var pow64 = BigInt(1);
+		for (var i=0;i<64;i++) pow64=pow64*BigInt(2);
+		await contracts.ferryBA.connect(captain).depart(1,10,hash)
+      await expect(contracts.ferryBA.connect(captain).depart(BigInt(11),BigInt(1)+pow64,hash)).to.be.revertedWith("Wrong end");
    });
 
    it("disembark", async function () {
@@ -196,22 +201,25 @@ describe("Fraxferry", function () {
       const [owner,user,captain,firstOfficer,crewmember] = await ethers.getSigners();
       var contracts = await setupContracts();
       var bridgeAmount = BigInt(1000*1e18);
-      await contracts.token0.connect(user).approve(contracts.ferryAB.address,bridgeAmount*BigInt(10));
+      await contracts.token0.connect(user).approve(contracts.ferryAB.address,bridgeAmount*BigInt(100));
       await contracts.ferryAB.connect(user).embark(bridgeAmount);
       await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(2));
       await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(4));
-      var batch = await contracts.ferryAB.getBatchData(0,0);
-      var hash =  await contracts.ferryAB.getTransactionsHash(0,0);
-      await contracts.ferryBA.connect(captain).depart(0,0,hash);
+      await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(8));
+      var batch = await contracts.ferryAB.getBatchData(0,2);
+      var hash =  await contracts.ferryAB.getTransactionsHash(0,2);
+      await contracts.ferryBA.connect(captain).depart(0,2,hash);
       wait(60*60);
       await contracts.ferryBA.connect(firstOfficer).disembark(batch);
       await expect(contracts.ferryBA.connect(owner).jettison(0,true)).to.be.revertedWith("Transaction already executed");
-      await expect(contracts.ferryBA.connect(user).jettison(1,true)).to.be.revertedWith("Not owner");
-      await expect(contracts.ferryBA.connect(captain).jettison(1,true)).to.be.revertedWith("Not owner");
-      await expect(contracts.ferryBA.connect(firstOfficer).jettison(1,true)).to.be.revertedWith("Not owner");
-      await expect(contracts.ferryBA.connect(crewmember).jettison(1,true)).to.be.revertedWith("Not owner");
+      await expect(contracts.ferryBA.connect(owner).jettison(1,true)).to.be.revertedWith("Transaction already executed");
+      await expect(contracts.ferryBA.connect(owner).jettison(2,true)).to.be.revertedWith("Transaction already executed");
+      await expect(contracts.ferryBA.connect(user).jettison(3,true)).to.be.revertedWith("Not owner");
+      await expect(contracts.ferryBA.connect(captain).jettison(3,true)).to.be.revertedWith("Not owner");
+      await expect(contracts.ferryBA.connect(firstOfficer).jettison(3,true)).to.be.revertedWith("Not owner");
+      await expect(contracts.ferryBA.connect(crewmember).jettison(3,true)).to.be.revertedWith("Not owner");
 
-      await contracts.ferryBA.connect(owner).jettison(1,true)
+      await contracts.ferryBA.connect(owner).jettison(3,true)
    });
 
    it("disputeBatch/removeBatches", async function () {

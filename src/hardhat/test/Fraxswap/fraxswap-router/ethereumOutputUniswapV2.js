@@ -11,6 +11,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'],
     token0Symbol: 'FRAX',
     token1Symbol: 'USDC',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -21,6 +22,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'],
     token0Symbol: 'FRAX',
     token1Symbol: 'WETH',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -31,6 +33,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0x956F47F50A910163D8BF957Cf5846D573E7f87CA'],
     token0Symbol: 'FRAX',
     token1Symbol: 'FEI',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -41,6 +44,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xD46bA6D942050d489DBd938a2C909A5d5039A161'],
     token0Symbol: 'FRAX',
     token1Symbol: 'AMPL',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -51,6 +55,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xdAC17F958D2ee523a2206206994597C13D831ec7'],
     token0Symbol: 'FRAX',
     token1Symbol: 'USDT',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -61,6 +66,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xaCd8F2523a4613Eee78904354187c81Bb05ae2b8'],
     token0Symbol: 'FRAX',
     token1Symbol: 'SAC',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -71,6 +77,18 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xfF20817765cB7f73d4bde2e66e067E58D11095C2'],
     token0Symbol: 'FRAX',
     token1Symbol: 'AMP',
+    fee: 30,
+    swapType: 1,
+  },
+  {
+    name: 'Uniswap V2 FRAX/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27',
+    symbol: 'UNI-V2',
+    address: '0xb06f7b44730bf5ab70796b5203b8958aea712e4b',
+    coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27'],
+    underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27'],
+    token0Symbol: 'FRAX',
+    token1Symbol: '0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -81,6 +99,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'FXS',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -91,6 +110,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x579CEa1889991f68aCc35Ff5c3dd0621fF29b0C9', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'IQ',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -101,16 +121,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x383518188C0C6d7730D91b2c03a03C837814a899', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'OHM',
     token1Symbol: 'FRAX',
-    swapType: 1,
-  },
-  {
-    name: 'Uniswap V2 OHM/FRAX',
-    symbol: 'UNI-V2',
-    address: '0xb612c37688861f1f90761dc7f382c2af3a50cc39',
-    coins: ['0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
-    underlying_coins: ['0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
-    token0Symbol: 'OHM',
-    token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -121,6 +132,18 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x470EBf5f030Ed85Fc1ed4C2d36B9DD02e77CF1b7', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'TEMPLE',
     token1Symbol: 'FRAX',
+    fee: 30,
+    swapType: 1,
+  },
+  {
+    name: 'Uniswap V2 OHM/FRAX',
+    symbol: 'UNI-V2',
+    address: '0xb612c37688861f1f90761dc7f382c2af3a50cc39',
+    coins: ['0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
+    underlying_coins: ['0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
+    token0Symbol: 'OHM',
+    token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -131,6 +154,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x056Fd409E1d7A124BD7017459dFEa2F387b6d5Cd', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'GUSD',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -141,6 +165,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x6B175474E89094C44Da98b954EedeAC495271d0F', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'DAI',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 1,
   },
   {
@@ -151,6 +176,7 @@ const UNISWAPV2_POOLS = [
     underlying_coins: ['0x0f2D719407FdBeFF09D87557AbB7232601FD9F29', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'SYN',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 1,
   },
 ]
