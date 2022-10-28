@@ -4,12 +4,13 @@ const prettier = require("prettier");
 const hre = require("hardhat");
 const { ethers, network } = hre;
 const { BigNumber } = require("ethers");
-const { CURVE_METAPOOLS } = require("./outputCurve");
-const { SADDLE_POOLS } = require("./outputSaddle");
-const { FRAXSWAP_POOLS } = require("./outputFraxswap");
-const { UNISWAPV2_POOLS } = require("./outputUniswapV2");
-const { SUSHISWAP_POOLS } = require("./outputSushiSwap");
-const { UNISWAPV3_POOLS } = require("./outputUniswapV3");
+const { CURVE_METAPOOLS } = require("./ethereumOutputCurve");
+const { SADDLE_POOLS } = require("./ethereumOutputSaddle");
+const { FRAXSWAP_POOLS } = require("./ethereumOutputFraxswap");
+const { FRAXSWAP_V2_POOLS } = require("./ethereumOutputFraxswapV2");
+const { UNISWAPV2_POOLS } = require("./ethereumOutputUniswapV2");
+const { SUSHISWAP_POOLS } = require("./ethereumOutputSushiSwap");
+const { UNISWAPV3_POOLS } = require("./ethereumOutputUniswapV3");
 
 const callOpts = { gasLimit: 500000 }; // hardhat fork can't estimate for some reason
 
@@ -48,7 +49,7 @@ const FPIControllerPools = [
   },
 ];
 
-const generateEncodedStep = async (
+const generateEncodedStep = async ({
   tokenFrom,
   tokenTo,
   combiSwapRouter,
@@ -57,8 +58,10 @@ const generateEncodedStep = async (
   extraParam1 = null, // curve/saddle
   extraParam2 = null, // curve/saddle
   percentOfHop = 10000, // percent of this hop
-  fee = null // uniswapV3
-) => {
+  fee = null, // uniswapV3
+  directFundNextPool = 0,
+  directFundThisPool = 0,
+}) => {
   const filteredPools = POOLS.filter(
     (p) =>
       p.underlying_coins.some(
@@ -87,7 +90,8 @@ const generateEncodedStep = async (
     address: pool.address,
     encodedStep: await combiSwapRouter.encodeStep(
       swapType,
-      0,
+      directFundNextPool,
+      directFundThisPool,
       tokenTo,
       pool.address,
       _extraParam1,
@@ -100,7 +104,7 @@ const generateEncodedStep = async (
 const outputPoolsToFile = async (pools, jsVariableName, outputFileName) => {
   const listOutputFile = path.join(
     process.cwd(),
-    `/test/Fraxswap/${outputFileName}.js`
+    `/test/Fraxswap/fraxswap-router/${outputFileName}.js`
   );
   fse.ensureFileSync(listOutputFile);
   let output = `/**
@@ -158,6 +162,29 @@ const getERC20Details = async (tokenAddress) => {
   };
 };
 
+// WETH
+
+const generateEncodedWETHRoute = async (
+  isETHIn,
+  combiSwapRouter,
+  percentOfHop = 10000
+) => {
+  const wethAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+  return {
+    address: wethAddress,
+    encodedStep: await combiSwapRouter.encodeStep(
+      10, // swapType,
+      0, // directFundNextPool = 0. this pool does not support direct funding
+      0, // directFundThisPool = 0. this pool does not support direct funding
+      isETHIn ? wethAddress : ethers.constants.AddressZero, // tokenTo,
+      wethAddress, // pool.address,
+      0, // _extraParam1,
+      0, // _extraParam2,
+      percentOfHop // percentOfHop
+    ),
+  };
+};
+
 // CURVE start
 
 const curveAddressProviderAddress =
@@ -175,12 +202,14 @@ const getFactoryPoolDetails = async (
   isMeta,
   cryptopool = false
 ) => {
-  console.log("factory ", factory.address, address);
-  const poolBalances = await factory.get_balances(address, callOpts);
-  if (poolBalances[0].eq(BigNumber.from(0))) {
-    console.log("balance 0: ", address);
-    return null; // FILTER OUT EMPTY POOLS
-  }
+  try {
+    console.log("factory ", factory.address, address);
+    const poolBalances = await factory.get_balances(address, callOpts);
+    if (poolBalances[0].lt(BigNumber.from(1))) {
+      console.log("balance 0: ", address);
+      return null; // FILTER OUT EMPTY POOLS
+    }
+  } catch {}
   const pool = await getContract(address, metaPoolAbi);
   let name;
   let symbol;
@@ -267,7 +296,7 @@ const getRegistryPoolDetails = async (
   };
 };
 
-const getCurvePools = async () => {
+const getCurvePools = async (chainName) => {
   const addressProvider = await getContract(
     curveAddressProviderAddress,
     curveAddressProviderAbi
@@ -365,7 +394,7 @@ const getCurvePools = async () => {
   }
 
   const jsVariableName = "CURVE_METAPOOLS";
-  const outputFileName = "outputCurve";
+  const outputFileName = `${chainName}OutputCurve`;
   await outputPoolsToFile(pools, jsVariableName, outputFileName);
 };
 
@@ -392,16 +421,16 @@ const generateEncodedCurveRoute = async (
         .map((addr) => addr.toLowerCase())
         .indexOf(tokenTo.toLowerCase()));
 
-  return await generateEncodedStep(
+  return await generateEncodedStep({
     tokenFrom,
     tokenTo,
     combiSwapRouter,
-    poolsOverride || CURVE_METAPOOLS,
-    step_swapType,
-    step_extraParam1,
-    step_extraParam2,
-    percentOfHop
-  );
+    POOLS: poolsOverride || CURVE_METAPOOLS,
+    swapType: step_swapType,
+    extraParam1: step_extraParam1,
+    extraParam2: step_extraParam2,
+    percentOfHop,
+  });
 };
 
 const generateEncodedCurveRouteV2 = async (
@@ -427,16 +456,16 @@ const generateEncodedCurveRouteV2 = async (
         .map((addr) => addr.toLowerCase())
         .indexOf(tokenTo.toLowerCase()));
 
-  return await generateEncodedStep(
+  return await generateEncodedStep({
     tokenFrom,
     tokenTo,
     combiSwapRouter,
-    poolsOverride || CURVE_METAPOOLS,
-    step_swapType,
-    step_extraParam1,
-    step_extraParam2,
-    percentOfHop
-  );
+    POOLS: poolsOverride || CURVE_METAPOOLS,
+    swapType: step_swapType,
+    extraParam1: step_extraParam1,
+    extraParam2: step_extraParam2,
+    percentOfHop,
+  });
 };
 
 // CURVE end
@@ -446,8 +475,9 @@ const generateEncodedCurveRouteV2 = async (
 const saddlePoolRegistryAddress = "0xFb4DE84c4375d7c8577327153dE88f58F69EeC81";
 const saddlePoolRegistryAbi = require("../../../manual_jsons/SADDLE_POOL_REGISTRY_ABI.json");
 const saddleSwapPoolAbi = require("../../../manual_jsons/SADDLE_SWAPFLASHLOAN_ABI.json");
+const { parseUnits } = require("ethers/lib/utils");
 
-const getSaddlePools = async () => {
+const getSaddlePools = async (chainName) => {
   const saddlePoolRegistry = await getContract(
     saddlePoolRegistryAddress,
     saddlePoolRegistryAbi
@@ -512,7 +542,7 @@ const getSaddlePools = async () => {
   }
 
   const jsVariableName = "SADDLE_POOLS";
-  const outputFileName = "outputSaddle";
+  const outputFileName = `${chainName}OutputSaddle`;
   await outputPoolsToFile(pools, jsVariableName, outputFileName);
 };
 
@@ -539,16 +569,16 @@ const generateEncodedSaddleRoute = async (
         .map((addr) => addr.toLowerCase())
         .indexOf(tokenTo.toLowerCase()));
 
-  return await generateEncodedStep(
+  return await generateEncodedStep({
     tokenFrom,
     tokenTo,
     combiSwapRouter,
-    poolsOverride || SADDLE_POOLS,
-    step_swapType,
-    step_extraParam1,
-    step_extraParam2,
-    percentOfHop
-  );
+    POOLS: poolsOverride || SADDLE_POOLS,
+    swapType: step_swapType,
+    extraParam1: step_extraParam1,
+    extraParam2: step_extraParam2,
+    percentOfHop,
+  });
 };
 
 // Saddle end
@@ -556,6 +586,7 @@ const generateEncodedSaddleRoute = async (
 // Fraxswap start
 
 const fraxswapFactoryAddress = "0xB076b06F669e682609fb4a8C6646D2619717Be4b";
+const fraxswapV2FactoryAddress = "0x43eC799eAdd63848443E2347C49f5f52e8Fe0F6f";
 const uniswapV2FactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
 const sushiswapFactoryAddress = "0xc0aee478e3658e2610c5f7a4a2e1777ce9e4f2ac";
 const fraxswapFactoryAbi =
@@ -701,6 +732,7 @@ const getUniswapV2PoolsGeneric = async (
   outputFileName,
   EXISTING_POOLS,
   override = false,
+  fraxswapV2 = false,
   startingPool = 0,
   endingPool = null,
   connectorTokens = null,
@@ -785,6 +817,64 @@ const getUniswapV2PoolsGeneric = async (
           // ignore
         }
       }
+      if (fraxswapV2) {
+        try {
+          const fraxswapV2 = await getContract(address, [
+            {
+              inputs: [],
+              name: "getTwammReserves",
+              outputs: [
+                {
+                  internalType: "uint112",
+                  name: "_reserve0",
+                  type: "uint112",
+                },
+                {
+                  internalType: "uint112",
+                  name: "_reserve1",
+                  type: "uint112",
+                },
+                {
+                  internalType: "uint32",
+                  name: "_blockTimestampLast",
+                  type: "uint32",
+                },
+                {
+                  internalType: "uint112",
+                  name: "_twammReserve0",
+                  type: "uint112",
+                },
+                {
+                  internalType: "uint112",
+                  name: "_twammReserve1",
+                  type: "uint112",
+                },
+                {
+                  internalType: "uint256",
+                  name: "_fee",
+                  type: "uint256",
+                },
+              ],
+              stateMutability: "view",
+              type: "function",
+            },
+          ]);
+          const [
+            _reserve0,
+            _reserve1,
+            _blockTimestampLast,
+            _twammReserve0,
+            _twammReserve1,
+            _fee,
+          ] = await fraxswapV2.getTwammReserves(callOpts);
+          fee = _fee.toNumber();
+        } catch {
+          fee = -1;
+        }
+      } else {
+        fee = 30;
+      }
+
       name += ` ${token0Symbol}/${token1Symbol}`;
       const pool = {
         name,
@@ -794,6 +884,7 @@ const getUniswapV2PoolsGeneric = async (
         underlying_coins: [token0, token1],
         token0Symbol,
         token1Symbol,
+        fee,
         swapType: jsVariableName == "UNISWAPV2_POOLS" ? 1 : 0,
       };
       pools.push(pool);
@@ -804,17 +895,28 @@ const getUniswapV2PoolsGeneric = async (
   }
 };
 
-const getFraxswapPools = async () => {
+const getFraxswapPools = async (chainName) => {
   await getUniswapV2PoolsGeneric(
     fraxswapFactoryAddress,
     "FRAXSWAP_POOLS",
-    "outputFraxswap",
+    `${chainName}OutputFraxswap`,
     FRAXSWAP_POOLS,
     true // override
   );
 };
 
-const getUniswapV2Pools = async () => {
+const getFraxswapV2Pools = async (chainName) => {
+  await getUniswapV2PoolsGeneric(
+    fraxswapV2FactoryAddress,
+    "FRAXSWAP_V2_POOLS",
+    `${chainName}OutputFraxswapV2`,
+    FRAXSWAP_V2_POOLS,
+    true, // override
+    true // fraxswap v2
+  );
+};
+
+const getUniswapV2Pools = async (chainName) => {
   // const startContinuation = UNISWAPV2_POOLS[UNISWAPV2_POOLS.length - 1].poolId;
   // console.log("startContinuation", startContinuation);
 
@@ -831,9 +933,10 @@ const getUniswapV2Pools = async () => {
   await getUniswapV2PoolsGeneric(
     uniswapV2FactoryAddress,
     "UNISWAPV2_POOLS",
-    "outputUniswapV2",
+    `${chainName}OutputUniswapV2`,
     UNISWAPV2_POOLS,
     true, // override
+    false, // fraxswap v2
     0, // start at 0
     specificPools.length, // to the length of specificPools
     null, // no connector token filter
@@ -841,7 +944,7 @@ const getUniswapV2Pools = async () => {
   );
 };
 
-const getSushiSwapPools = async () => {
+const getSushiSwapPools = async (chainName) => {
   const specificPools = (
     await Promise.all(
       relevantTokens.map(async (tAddr) => {
@@ -855,9 +958,10 @@ const getSushiSwapPools = async () => {
   await getUniswapV2PoolsGeneric(
     sushiswapFactoryAddress,
     "SUSHISWAP_POOLS",
-    "outputSushiSwap",
+    `${chainName}OutputSushiSwap`,
     SUSHISWAP_POOLS,
     true, // override
+    false, // fraxswap v2
     0, // start at 0
     specificPools.length, // to the length of specificPools
     null, // no connector token filter
@@ -870,22 +974,53 @@ const generateEncodedFraxswapRoute = async (
   tokenTo,
   combiSwapRouter,
   percentOfHop = 10000,
-  poolsOverride = null
+  poolsOverride = null,
+  directFundNextPool = 0,
+  directFundThisPool = 0
 ) => {
   const step_swapType = 0; // fraxswap swap
   const step_extraParam1 = () => 0;
   const step_extraParam2 = () => 0;
 
-  return await generateEncodedStep(
+  return await generateEncodedStep({
     tokenFrom,
     tokenTo,
     combiSwapRouter,
-    poolsOverride || FRAXSWAP_POOLS,
-    step_swapType,
-    step_extraParam1,
-    step_extraParam2,
-    percentOfHop
-  );
+    POOLS: poolsOverride || FRAXSWAP_POOLS,
+    swapType: step_swapType,
+    extraParam1: step_extraParam1,
+    extraParam2: step_extraParam2,
+    percentOfHop,
+    directFundNextPool,
+    directFundThisPool,
+  });
+};
+
+const generateEncodedFraxswapV2Route = async (
+  tokenFrom,
+  tokenTo,
+  combiSwapRouter,
+  percentOfHop = 10000,
+  poolsOverride = null,
+  directFundNextPool = 0,
+  directFundThisPool = 0
+) => {
+  const step_swapType = 0; // fraxswap V2 swap
+  const step_extraParam1 = () => 1;
+  const step_extraParam2 = () => 0;
+
+  return await generateEncodedStep({
+    tokenFrom,
+    tokenTo,
+    combiSwapRouter,
+    POOLS: poolsOverride || FRAXSWAP_V2_POOLS,
+    swapType: step_swapType,
+    extraParam1: step_extraParam1,
+    extraParam2: step_extraParam2,
+    percentOfHop,
+    directFundNextPool,
+    directFundThisPool,
+  });
 };
 
 const generateEncodedUniswapV2Route = async (
@@ -893,22 +1028,26 @@ const generateEncodedUniswapV2Route = async (
   tokenTo,
   combiSwapRouter,
   percentOfHop = 10000,
-  poolsOverride = null
+  poolsOverride = null,
+  directFundNextPool = 0,
+  directFundThisPool = 0
 ) => {
   const step_swapType = 1; // uniswap swap
   const step_extraParam1 = () => 0;
   const step_extraParam2 = () => 0;
 
-  return await generateEncodedStep(
+  return await generateEncodedStep({
     tokenFrom,
     tokenTo,
     combiSwapRouter,
-    poolsOverride || UNISWAPV2_POOLS,
-    step_swapType,
-    step_extraParam1,
-    step_extraParam2,
-    percentOfHop
-  );
+    POOLS: poolsOverride || UNISWAPV2_POOLS,
+    swapType: step_swapType,
+    extraParam1: step_extraParam1,
+    extraParam2: step_extraParam2,
+    percentOfHop,
+    directFundNextPool,
+    directFundThisPool,
+  });
 };
 
 const generateEncodedSushiSwapRoute = async (
@@ -916,22 +1055,26 @@ const generateEncodedSushiSwapRoute = async (
   tokenTo,
   combiSwapRouter,
   percentOfHop = 10000,
-  poolsOverride = null
+  poolsOverride = null,
+  directFundNextPool = 0,
+  directFundThisPool = 0
 ) => {
   const step_swapType = 1; // uniswap/sushiswap swap
   const step_extraParam1 = () => 0;
   const step_extraParam2 = () => 0;
 
-  return await generateEncodedStep(
+  return await generateEncodedStep({
     tokenFrom,
     tokenTo,
     combiSwapRouter,
-    poolsOverride || SUSHISWAP_POOLS,
-    step_swapType,
-    step_extraParam1,
-    step_extraParam2,
-    percentOfHop
-  );
+    POOLS: poolsOverride || SUSHISWAP_POOLS,
+    swapType: step_swapType,
+    extraParam1: step_extraParam1,
+    extraParam2: step_extraParam2,
+    percentOfHop,
+    directFundNextPool,
+    directFundThisPool,
+  });
 };
 // Fraxswap end
 
@@ -1002,7 +1145,7 @@ const callGraphForUniswapV3Pairs = async (address) => {
   return allPairs;
 };
 
-const getUniswapV3Pools = async () => {
+const getUniswapV3Pools = async (chainName) => {
   const specificPools = (
     await Promise.all(
       relevantTokens.map(async (tAddr) => {
@@ -1073,7 +1216,7 @@ const getUniswapV3Pools = async () => {
   }
 
   const jsVariableName = "UNISWAPV3_POOLS";
-  const outputFileName = "outputUniswapV3";
+  const outputFileName = `${chainName}OutputUniswapV3`;
   await outputPoolsToFile(pools, jsVariableName, outputFileName);
 };
 
@@ -1083,23 +1226,27 @@ const generateEncodedUniswapV3Route = async (
   combiSwapRouter,
   percentOfHop = 10000,
   fee = null,
-  poolsOverride = null
+  poolsOverride = null,
+  directFundNextPool = 0,
+  directFundThisPool = 0
 ) => {
   const step_swapType = 2; // uniswap v3 swap
   const step_extraParam1 = () => 0;
   const step_extraParam2 = () => 0;
 
-  return await generateEncodedStep(
+  return await generateEncodedStep({
     tokenFrom,
     tokenTo,
     combiSwapRouter,
-    poolsOverride || UNISWAPV3_POOLS,
-    step_swapType,
-    step_extraParam1,
-    step_extraParam2,
+    POOLS: poolsOverride || UNISWAPV3_POOLS,
+    swapType: step_swapType,
+    extraParam1: step_extraParam1,
+    extraParam2: step_extraParam2,
     percentOfHop,
-    fee
-  );
+    fee,
+    directFundNextPool,
+    directFundThisPool,
+  });
 };
 
 // Uniswap V3 end
@@ -1117,16 +1264,16 @@ const generateEncodedFPIControllerRoute = async (
   const step_extraParam1 = () => 0;
   const step_extraParam2 = () => 0;
 
-  return await generateEncodedStep(
+  return await generateEncodedStep({
     tokenFrom,
     tokenTo,
     combiSwapRouter,
-    poolsOverride || FPIControllerPools,
-    step_swapType,
-    step_extraParam1,
-    step_extraParam2,
-    percentOfHop
-  );
+    POOLS: poolsOverride || FPIControllerPools,
+    swapType: step_swapType,
+    extraParam1: step_extraParam1,
+    extraParam2: step_extraParam2,
+    percentOfHop,
+  });
 };
 
 // FPIController end
@@ -1430,8 +1577,11 @@ const outputSankeyJson = (allRelevantTokens) => {
 const oneInchPathfinderAlgo = async (
   fromTokenAddress = "0x853d955acef822db058eb8505911ed77f175b99e",
   toTokenAddress = "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
-  amount = 1000000 * 1e18
+  amountBN = parseUnits("1000000", 18),
+  decimals = 18
 ) => {
+  const amount = +ethers.utils.formatUnits(amountBN, 0);
+
   const { fetch } = require("cross-fetch");
 
   const protocolWhiteList =
@@ -1444,11 +1594,13 @@ const oneInchPathfinderAlgo = async (
     0
   );
 
+  const blockNumber = await ethers.provider.getBlockNumber();
+
   const url = `https://pathfinder.1inch.io/v1.2/chain/1/router/v4/quotes?deepLevel=2&mainRouteParts=10&parts=50&virtualParts=50&walletAddress=null&fromTokenAddress=${fromTokenAddress}&toTokenAddress=${toTokenAddress}&amount=${amount.toLocaleString(
     "fullwide",
     { useGrouping: false }
   )}&gasPrice=${gasPrice}&protocolWhiteList=${protocolWhiteList}&protocols=${protocols}&deepLevels=1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1&mainRoutePartsList=1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1&partsList=1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1&virtualPartsList=1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1`;
-  // console.log("1inch url", url);
+  console.log("1inch url", url);
 
   const res = await fetch(url, {
     headers: {
@@ -1463,13 +1615,23 @@ const oneInchPathfinderAlgo = async (
     bestResult: { gasUnitsConsumed, routes },
   } = res;
 
+  const outputJson = {
+    fromToken: fromTokenAddress,
+    toToken: toTokenAddress,
+    amountIn: amountBN.toString(),
+    decimals,
+    blockNumber,
+    gasUnitsConsumed,
+    routes,
+  };
+
   const listOutputFile = path.join(
     process.cwd(),
-    `/test/Fraxswap/1inchOutput.json`
+    `/test/Fraxswap/fraxswap-router/1inch-saved-routes/1inchOutput.json`
   );
   fse.writeFileSync(
     listOutputFile,
-    JSON.stringify({ gasUnitsConsumed, routes }, null, 4),
+    JSON.stringify(outputJson, null, 4),
     "utf8"
   );
 
@@ -1577,7 +1739,6 @@ const convert1InchRouteToFraxswapRoute = async (
       }
       prevRoute = await fraxswapRouterV2.encodeRoute(
         toToken,
-        0,
         pctRoute,
         RouteSteps,
         prevRoute ? [prevRoute] : []
@@ -1587,7 +1748,6 @@ const convert1InchRouteToFraxswapRoute = async (
   }
   routeFirstEncoded = await fraxswapRouterV2.encodeRoute(
     ethers.constants.AddressZero,
-    0,
     10000, // 100%
     [],
     allRoutes
@@ -1599,19 +1759,25 @@ module.exports = {
   // query & generate pools
   getContract,
   getCurvePools,
-  generateEncodedCurveRoute,
-  generateEncodedCurveRouteV2,
   getSaddlePools,
-  generateEncodedSaddleRoute,
   getFraxswapPools,
+  getFraxswapV2Pools,
   getUniswapV2Pools,
   getSushiSwapPools,
+  getUniswapV3Pools,
+
+  // encoded routes
+  generateEncodedWETHRoute,
+  generateEncodedCurveRoute,
+  generateEncodedCurveRouteV2,
+  generateEncodedSaddleRoute,
   generateEncodedFraxswapRoute,
+  generateEncodedFraxswapV2Route,
   generateEncodedUniswapV2Route,
   generateEncodedSushiSwapRoute,
-  getUniswapV3Pools,
   generateEncodedUniswapV3Route,
   generateEncodedFPIControllerRoute,
+
   // routing algos
   getAvailableRoutes,
   outputSankeyJson,

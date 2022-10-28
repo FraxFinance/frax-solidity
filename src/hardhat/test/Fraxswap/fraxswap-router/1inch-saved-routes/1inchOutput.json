@@ -1,0 +1,181 @@
+{
+    "fromToken": "0x853d955acef822db058eb8505911ed77f175b99e",
+    "toToken": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+    "amountIn": "1000000000000000000000000",
+    "decimals": 18,
+    "blockNumber": 15719442,
+    "gasUnitsConsumed": "1734248",
+    "routes": [
+        {
+            "amount": "57278415060667136075418",
+            "part": 3,
+            "subRoutes": [
+                [
+                    {
+                        "fromTokenAddress": "0x853d955acef822db058eb8505911ed77f175b99e",
+                        "toTokenAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "part": 50,
+                        "market": {
+                            "name": "CURVE",
+                            "id": "0xdcef968d416a41cdac0ed8702fac8128a64241a2"
+                        },
+                        "meta": {
+                            "fromTokenAddress": "0x853d955acef822db058eb8505911ed77f175b99e",
+                            "fromTokenAmount": "300000000000000000000000",
+                            "fromTokenIndex": 0,
+                            "isUnderlying": false,
+                            "toTokenAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            "toTokenAmount": "299752447470",
+                            "toTokenIndex": 1
+                        }
+                    }
+                ],
+                [
+                    {
+                        "fromTokenAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "toTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                        "part": 50,
+                        "market": {
+                            "name": "UNISWAP_V3",
+                            "id": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640"
+                        },
+                        "meta": {
+                            "a-d": true,
+                            "fromTokenAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                            "fromTokenAmount": "299752447470",
+                            "toTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            "toTokenAmount": "231204237155535178715",
+                            "zeroForOne": true
+                        }
+                    }
+                ],
+                [
+                    {
+                        "fromTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                        "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                        "part": 2,
+                        "market": {
+                            "name": "CURVE_V2_TWO_CRYPTO",
+                            "id": "0x941eb6f616114e4ecaa85377945ea306002612fe"
+                        },
+                        "meta": {
+                            "fromTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            "fromTokenAmount": "9248169486221407148",
+                            "fromTokenIndex": 0,
+                            "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                            "toTokenAmount": "2302444763449033345404",
+                            "toTokenIndex": 1
+                        }
+                    },
+                    {
+                        "fromTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                        "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                        "part": 11,
+                        "market": {
+                            "name": "SUSHI",
+                            "id": "0x61eb53ee427ab4e007d78a9134aacb3101a2dc23"
+                        },
+                        "meta": {
+                            "denominator": "1000",
+                            "fee": 3,
+                            "fromTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            "fromTokenAmount": "50864932174217739317",
+                            "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                            "toTokenAmount": "12556839367870901900005"
+                        }
+                    },
+                    {
+                        "fromTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                        "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                        "part": 11,
+                        "market": {
+                            "name": "UNISWAP_V3",
+                            "id": "0xcd8286b48936cdac20518247dbd310ab681a9fbf"
+                        },
+                        "meta": {
+                            "fromTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            "fromTokenAmount": "50864932174217739317",
+                            "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                            "toTokenAmount": "12557800813242446365534",
+                            "zeroForOne": false
+                        }
+                    },
+                    {
+                        "fromTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                        "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                        "part": 12,
+                        "market": {
+                            "name": "UNISWAP_V2",
+                            "id": "0xecba967d84fcf0405f6b32bc45f4d36bfdbb2e81"
+                        },
+                        "meta": {
+                            "denominator": "1000",
+                            "fee": 3,
+                            "fromTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            "fromTokenAmount": "55489016917328442891",
+                            "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                            "toTokenAmount": "13789432061682189678380"
+                        }
+                    },
+                    {
+                        "fromTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                        "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                        "part": 14,
+                        "market": {
+                            "name": "UNISWAP_V3",
+                            "id": "0x39c9e3128b8736e02a30b2b9b7e50ff522b935c5"
+                        },
+                        "meta": {
+                            "fromTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                            "fromTokenAmount": "64737186403549850040",
+                            "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                            "toTokenAmount": "16071898054422564786095",
+                            "zeroForOne": false
+                        }
+                    }
+                ]
+            ]
+        },
+        {
+            "amount": "134444084432965746359329",
+            "part": 7,
+            "subRoutes": [
+                [
+                    {
+                        "fromTokenAddress": "0x853d955acef822db058eb8505911ed77f175b99e",
+                        "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                        "part": 7,
+                        "market": {
+                            "name": "UNISWAP_V3",
+                            "id": "0xb64508b9f7b81407549e13db970dd5bb5c19107f"
+                        },
+                        "meta": {
+                            "fromTokenAddress": "0x853d955acef822db058eb8505911ed77f175b99e",
+                            "fromTokenAmount": "98000000000000000000000",
+                            "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                            "toTokenAmount": "18884682197278690383348",
+                            "zeroForOne": false
+                        }
+                    },
+                    {
+                        "fromTokenAddress": "0x853d955acef822db058eb8505911ed77f175b99e",
+                        "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                        "part": 43,
+                        "market": {
+                            "name": "UNISWAP_V2",
+                            "id": "0xe1573b9d29e2183b1af0e743dc2754979a40d237"
+                        },
+                        "meta": {
+                            "denominator": "1000",
+                            "fee": 3,
+                            "fromTokenAddress": "0x853d955acef822db058eb8505911ed77f175b99e",
+                            "fromTokenAmount": "602000000000000000000000",
+                            "toTokenAddress": "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+                            "toTokenAmount": "115559402235687055975981"
+                        }
+                    }
+                ]
+            ]
+        }
+    ]
+}

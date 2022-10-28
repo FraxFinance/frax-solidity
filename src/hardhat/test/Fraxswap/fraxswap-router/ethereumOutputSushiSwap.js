@@ -11,6 +11,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'],
     token0Symbol: 'FRAX',
     token1Symbol: 'WETH',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -21,6 +22,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xdAC17F958D2ee523a2206206994597C13D831ec7'],
     token0Symbol: 'FRAX',
     token1Symbol: 'USDT',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -31,6 +33,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xC57a51780f7c1aF20212BB9F8707152039F9630d'],
     token0Symbol: 'FRAX',
     token1Symbol: 'FREEDOM',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -41,6 +44,18 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xf1Dc500FdE233A4055e25e5BbF516372BC4F6871'],
     token0Symbol: 'FRAX',
     token1Symbol: 'SDL',
+    fee: 30,
+    swapType: 0,
+  },
+  {
+    name: 'SushiSwap LP Token FRAX/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27',
+    symbol: 'SLP',
+    address: '0x3b0bb288aa3c646804cacdf685a3f9bb4109a38d',
+    coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27'],
+    underlying_coins: ['0x853d955aCEf822Db058eb8505911ED77F175b99e', '0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27'],
+    token0Symbol: 'FRAX',
+    token1Symbol: '0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -51,6 +66,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x6B3595068778DD592e39A122f4f5a5cF09C90fE2', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'SUSHI',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -61,6 +77,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'FXS',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -71,6 +88,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'OHM',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -81,6 +99,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x0DC5189Ec8CDe5732a01F0F592e927B304370551', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'ASG',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -91,6 +110,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x758B4684BE769E92eeFeA93f60DDA0181eA303Ec', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'PHONON',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -101,6 +121,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x383518188C0C6d7730D91b2c03a03C837814a899', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'OHM',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -111,6 +132,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x6B175474E89094C44Da98b954EedeAC495271d0F', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'DAI',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 0,
   },
   {
@@ -121,6 +143,7 @@ const SUSHISWAP_POOLS = [
     underlying_coins: ['0x579CEa1889991f68aCc35Ff5c3dd0621fF29b0C9', '0x853d955aCEf822Db058eb8505911ED77F175b99e'],
     token0Symbol: 'IQ',
     token1Symbol: 'FRAX',
+    fee: 30,
     swapType: 0,
   },
 ]
