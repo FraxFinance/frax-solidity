@@ -25,7 +25,7 @@ import "./FraxUnifiedFarmTemplate.sol";
 // import "../Misc_AMOs/curve/I2poolToken.sol";
 
 // Fraxswap
-import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
+import "../Fraxswap/core/interfaces/IFraxswapPair.sol";
 
 // G-UNI
 // import "../Misc_AMOs/gelato/IGUniPool.sol";
@@ -48,10 +48,9 @@ import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
 // ------------------------------------------------
 
 contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
-
     /* ========== STATE VARIABLES ========== */
 
-    // -------------------- COMMON -------------------- 
+    // -------------------- COMMON --------------------
     bool internal frax_is_token0;
 
     // -------------------- VARIES --------------------
@@ -66,7 +65,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // G-UNI
     // IGUniPool public stakingToken;
-    
+
     // mStable
     // IFeederPool public stakingToken;
 
@@ -97,10 +96,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 ending_timestamp;
         uint256 lock_multiplier; // 6 decimals of precision. 1x = 1000000
     }
-    
+
     /* ========== CONSTRUCTOR ========== */
 
-    constructor (
+    constructor(
         address _owner,
         address[] memory _rewardTokens,
         address[] memory _rewardManagers,
@@ -108,37 +107,36 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         address[] memory _gaugeControllers,
         address[] memory _rewardDistributors,
         address _stakingToken
-    ) 
-    FraxUnifiedFarmTemplate(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers, _rewardDistributors)
+    )
+        FraxUnifiedFarmTemplate(
+            _owner,
+            _rewardTokens,
+            _rewardManagers,
+            _rewardRatesManual,
+            _gaugeControllers,
+            _rewardDistributors
+        )
     {
-
         // -------------------- VARIES --------------------
-
         // Fraxswap
         // stakingToken = IFraxswapPair(_stakingToken);
         // address token0 = stakingToken.token0();
         // frax_is_token0 = (token0 == frax_address);
-
         // G-UNI
         // stakingToken = IGUniPool(_stakingToken);
         // address token0 = address(stakingToken.token0());
         // frax_is_token0 = (token0 == frax_address);
-
         // mStable
         // stakingToken = IFeederPool(_stakingToken);
-
         // StakeDAO sdETH-FraxPut Vault
         // stakingToken = IOpynPerpVault(_stakingToken);
-
         // StakeDAO Vault
         // stakingToken = IStakeDaoVault(_stakingToken);
-
         // Uniswap V2
         // stakingToken = IUniswapV2Pair(_stakingToken);
         // address token0 = stakingToken.token0();
         // if (token0 == frax_address) frax_is_token0 = true;
         // else frax_is_token0 = false;
-
         // Vesper
         // stakingToken = IVPool(_stakingToken);
     }
@@ -147,7 +145,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // ------ FRAX RELATED ------
 
-    function fraxPerLPToken() public virtual view override returns (uint256) {
+    function fraxPerLPToken() public view virtual override returns (uint256) {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
@@ -156,7 +154,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // {
         //     // Half of the LP is FRAXBP
         //     // Using 0.5 * virtual price for gas savings
-        //     frax_per_lp_token = curvePool.get_virtual_price() / 2; 
+        //     frax_per_lp_token = curvePool.get_virtual_price() / 2;
         // }
 
         // Convex Stable/FRAXBP
@@ -164,7 +162,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // {
         //     // Half of the LP is FRAXBP. Half of that should be FRAX.
         //     // Using 0.25 * virtual price for gas savings
-        //     frax_per_lp_token = curvePool.get_virtual_price() / 4; 
+        //     frax_per_lp_token = curvePool.get_virtual_price() / 4;
         // }
 
         // Convex Volatile/FRAXBP
@@ -172,7 +170,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // {
         //     // Half of the LP is FRAXBP. Half of that should be FRAX.
         //     // Using 0.25 * lp price for gas savings
-        //     frax_per_lp_token = curvePool.lp_price() / 4; 
+        //     frax_per_lp_token = curvePool.lp_price() / 4;
         // }
 
         // Fraxswap
@@ -208,7 +206,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // ============================================
         // {
         //    uint256 frax3crv_held = stakingToken.totalUnderlyingControlled();
-        
+
         //    // Optimistically assume 50/50 FRAX/3CRV ratio in the metapool to save gas
         //    frax_per_lp_token = ((frax3crv_held * 1e18) / stakingToken.totalSupply()) / 2;
         // }
@@ -217,7 +215,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // ============================================
         // {
         //    uint256 frax3crv_held = stakingToken.balance();
-        
+
         //    // Optimistically assume 50/50 FRAX/3CRV ratio in the metapool to save gas
         //    frax_per_lp_token = ((frax3crv_held * 1e18) / stakingToken.totalSupply()) / 2;
         // }
@@ -242,7 +240,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // ------ LIQUIDITY AND WEIGHTS ------
 
-    function calcCurrLockMultiplier(address account, uint256 stake_idx) public view returns (uint256 midpoint_lock_multiplier) {
+    function calcCurrLockMultiplier(address account, uint256 stake_idx)
+        public
+        view
+        returns (uint256 midpoint_lock_multiplier)
+    {
         // Get the stake
         LockedStake memory thisStake = lockedStakes[account][stake_idx];
 
@@ -251,27 +253,32 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 accrue_start_time;
         if (lastRewardClaimTime[account] < thisStake.start_timestamp) {
             accrue_start_time = thisStake.start_timestamp;
-        }
-        else {
+        } else {
             accrue_start_time = lastRewardClaimTime[account];
         }
-        
+
         // If the lock is expired
         if (thisStake.ending_timestamp <= block.timestamp) {
             // If the lock expired in the time since the last claim, the weight needs to be proportionately averaged this time
-            if (lastRewardClaimTime[account] < thisStake.ending_timestamp){
-                uint256 time_before_expiry = thisStake.ending_timestamp - accrue_start_time;
-                uint256 time_after_expiry = block.timestamp - thisStake.ending_timestamp;
+            if (lastRewardClaimTime[account] < thisStake.ending_timestamp) {
+                uint256 time_before_expiry = thisStake.ending_timestamp -
+                    accrue_start_time;
+                uint256 time_after_expiry = block.timestamp -
+                    thisStake.ending_timestamp;
 
                 // Average the pre-expiry lock multiplier
-                uint256 pre_expiry_avg_multiplier = lockMultiplier(time_before_expiry / 2);
+                uint256 pre_expiry_avg_multiplier = lockMultiplier(
+                    time_before_expiry / 2
+                );
 
                 // Get the weighted-average lock_multiplier
                 // uint256 numerator = (pre_expiry_avg_multiplier * time_before_expiry) + (MULTIPLIER_PRECISION * time_after_expiry);
-                uint256 numerator = (pre_expiry_avg_multiplier * time_before_expiry) + (0 * time_after_expiry);
-                midpoint_lock_multiplier = numerator / (time_before_expiry + time_after_expiry);
-            }
-            else {
+                uint256 numerator = (pre_expiry_avg_multiplier *
+                    time_before_expiry) + (0 * time_after_expiry);
+                midpoint_lock_multiplier =
+                    numerator /
+                    (time_before_expiry + time_after_expiry);
+            } else {
                 // Otherwise, it needs to just be 1x
                 // midpoint_lock_multiplier = MULTIPLIER_PRECISION;
 
@@ -284,19 +291,25 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             // Decay the lock multiplier based on the time left
             uint256 avg_time_left;
             {
-                uint256 time_left_p1 = thisStake.ending_timestamp - accrue_start_time;
-                uint256 time_left_p2 = thisStake.ending_timestamp - block.timestamp;
+                uint256 time_left_p1 = thisStake.ending_timestamp -
+                    accrue_start_time;
+                uint256 time_left_p2 = thisStake.ending_timestamp -
+                    block.timestamp;
                 avg_time_left = (time_left_p1 + time_left_p2) / 2;
             }
             midpoint_lock_multiplier = lockMultiplier(avg_time_left);
         }
 
         // Sanity check: make sure it never goes above the initial multiplier
-        if (midpoint_lock_multiplier > thisStake.lock_multiplier) midpoint_lock_multiplier = thisStake.lock_multiplier;
+        if (midpoint_lock_multiplier > thisStake.lock_multiplier)
+            midpoint_lock_multiplier = thisStake.lock_multiplier;
     }
 
     // Calculate the combined weight for an account
-    function calcCurCombinedWeight(address account) public override view
+    function calcCurCombinedWeight(address account)
+        public
+        view
+        override
         returns (
             uint256 old_combined_weight,
             uint256 new_vefxs_multiplier,
@@ -312,16 +325,18 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         uint256 midpoint_vefxs_multiplier;
         if (
-            (_locked_liquidity[account] == 0 && _combined_weights[account] == 0) || 
+            (_locked_liquidity[account] == 0 &&
+                _combined_weights[account] == 0) ||
             (new_vefxs_multiplier >= _vefxsMultiplierStored[account])
         ) {
             // This is only called for the first stake to make sure the veFXS multiplier is not cut in half
             // Also used if the user increased or maintained their position
             midpoint_vefxs_multiplier = new_vefxs_multiplier;
-        }
-        else {
+        } else {
             // Handles natural decay with a non-increased veFXS position
-            midpoint_vefxs_multiplier = (new_vefxs_multiplier + _vefxsMultiplierStored[account]) / 2;
+            midpoint_vefxs_multiplier =
+                (new_vefxs_multiplier + _vefxsMultiplierStored[account]) /
+                2;
         }
 
         // Loop through the locked stakes, first by getting the liquidity * lock_multiplier portion
@@ -330,11 +345,17 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             LockedStake memory thisStake = lockedStakes[account][i];
 
             // Calculate the midpoint lock multiplier
-            uint256 midpoint_lock_multiplier = calcCurrLockMultiplier(account, i);
+            uint256 midpoint_lock_multiplier = calcCurrLockMultiplier(
+                account,
+                i
+            );
 
             // Calculate the combined boost
             uint256 liquidity = thisStake.liquidity;
-            uint256 combined_boosted_amount = liquidity + ((liquidity * (midpoint_lock_multiplier + midpoint_vefxs_multiplier)) / MULTIPLIER_PRECISION);
+            uint256 combined_boosted_amount = liquidity +
+                ((liquidity *
+                    (midpoint_lock_multiplier + midpoint_vefxs_multiplier)) /
+                    MULTIPLIER_PRECISION);
             new_combined_weight += combined_boosted_amount;
         }
     }
@@ -342,12 +363,20 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // ------ LOCK RELATED ------
 
     // All the locked stakes for a given account
-    function lockedStakesOf(address account) external view returns (LockedStake[] memory) {
+    function lockedStakesOf(address account)
+        external
+        view
+        returns (LockedStake[] memory)
+    {
         return lockedStakes[account];
     }
 
     // Returns the length of the locked stakes for a given account
-    function lockedStakesOfLength(address account) external view returns (uint256) {
+    function lockedStakesOfLength(address account)
+        external
+        view
+        returns (uint256)
+    {
         return lockedStakes[account].length;
     }
 
@@ -359,7 +388,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     //     uint256[] memory ending_timestamps,
     //     uint256[] memory lock_multipliers
     // ) {
-    //     for (uint256 i = 0; i < lockedStakes[account].length; i++){ 
+    //     for (uint256 i = 0; i < lockedStakes[account].length; i++){
     //         LockedStake memory thisStake = lockedStakes[account][i];
     //         kek_ids[i] = thisStake.kek_id;
     //         start_timestamps[i] = thisStake.start_timestamp;
@@ -373,22 +402,32 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // ------ STAKING ------
 
-    function _getStake(address staker_address, bytes32 kek_id) internal view returns (LockedStake memory locked_stake, uint256 arr_idx) {
-        for (uint256 i = 0; i < lockedStakes[staker_address].length; i++){ 
-            if (kek_id == lockedStakes[staker_address][i].kek_id){
+    function _getStake(address staker_address, bytes32 kek_id)
+        internal
+        view
+        returns (LockedStake memory locked_stake, uint256 arr_idx)
+    {
+        for (uint256 i = 0; i < lockedStakes[staker_address].length; i++) {
+            if (kek_id == lockedStakes[staker_address][i].kek_id) {
                 locked_stake = lockedStakes[staker_address][i];
                 arr_idx = i;
                 break;
             }
         }
         require(locked_stake.kek_id == kek_id, "Stake not found");
-        
     }
 
     // Add additional LPs to an existing locked stake
-    function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
+    function lockAdditional(bytes32 kek_id, uint256 addl_liq)
+        public
+        nonReentrant
+        updateRewardAndBalanceMdf(msg.sender, true)
+    {
         // Get the stake and its index
-        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
+        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(
+            msg.sender,
+            kek_id
+        );
 
         // Calculate the new amount
         uint256 new_amt = thisStake.liquidity + addl_liq;
@@ -397,7 +436,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         require(addl_liq >= 0, "Must be positive");
 
         // Pull the tokens from the sender
-        TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);
+        TransferHelper.safeTransferFrom(
+            address(stakingToken),
+            msg.sender,
+            address(this),
+            addl_liq
+        );
 
         // Update the stake
         lockedStakes[msg.sender][theArrayIndex] = LockedStake(
@@ -413,7 +457,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         _locked_liquidity[msg.sender] += addl_liq;
         {
             address the_proxy = getProxyFor(msg.sender);
-            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += addl_liq;
+            if (the_proxy != address(0))
+                proxy_lp_balances[the_proxy] += addl_liq;
         }
 
         // Need to call to update the combined weights
@@ -423,22 +468,34 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     }
 
     // Extends the lock of an existing stake
-    function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
+    function lockLonger(bytes32 kek_id, uint256 new_ending_ts)
+        public
+        nonReentrant
+        updateRewardAndBalanceMdf(msg.sender, true)
+    {
         // Get the stake and its index
-        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
+        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(
+            msg.sender,
+            kek_id
+        );
 
         // Check
         require(new_ending_ts > block.timestamp, "Must be in the future");
 
         // Calculate some times
-        uint256 time_left = (thisStake.ending_timestamp > block.timestamp) ? thisStake.ending_timestamp - block.timestamp : 0;
+        uint256 time_left = (thisStake.ending_timestamp > block.timestamp)
+            ? thisStake.ending_timestamp - block.timestamp
+            : 0;
         uint256 new_secs = new_ending_ts - block.timestamp;
 
         // Checks
         // require(time_left > 0, "Already expired");
         require(new_secs > time_left, "Cannot shorten lock time");
         require(new_secs >= lock_time_min, "Minimum stake time not met");
-        require(new_secs <= lock_time_for_max_multiplier, "Trying to lock for too long");
+        require(
+            new_secs <= lock_time_for_max_multiplier,
+            "Trying to lock for too long"
+        );
 
         // Update the stake
         lockedStakes[msg.sender][theArrayIndex] = LockedStake(
@@ -452,14 +509,29 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Need to call to update the combined weights
         updateRewardAndBalance(msg.sender, false);
 
-        emit LockedLonger(msg.sender, kek_id, new_secs, block.timestamp, new_ending_ts);
+        emit LockedLonger(
+            msg.sender,
+            kek_id,
+            new_secs,
+            block.timestamp,
+            new_ending_ts
+        );
     }
 
-    
-
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
-    function stakeLocked(uint256 liquidity, uint256 secs) nonReentrant external returns (bytes32) {
-        return _stakeLocked(msg.sender, msg.sender, liquidity, secs, block.timestamp);
+    function stakeLocked(uint256 liquidity, uint256 secs)
+        external
+        nonReentrant
+        returns (bytes32)
+    {
+        return
+            _stakeLocked(
+                msg.sender,
+                msg.sender,
+                liquidity,
+                secs,
+                block.timestamp
+            );
     }
 
     // If this were not internal, and source_address had an infinite approve, this could be exploitable
@@ -470,40 +542,68 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 liquidity,
         uint256 secs,
         uint256 start_timestamp
-    ) internal updateRewardAndBalanceMdf(staker_address, true) returns (bytes32) {
+    )
+        internal
+        updateRewardAndBalanceMdf(staker_address, true)
+        returns (bytes32)
+    {
         require(stakingPaused == false, "Staking paused");
         require(secs >= lock_time_min, "Minimum stake time not met");
-        require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
+        require(
+            secs <= lock_time_for_max_multiplier,
+            "Trying to lock for too long"
+        );
 
         // Pull in the required token(s)
         // Varies per farm
-        TransferHelper.safeTransferFrom(address(stakingToken), source_address, address(this), liquidity);
+        TransferHelper.safeTransferFrom(
+            address(stakingToken),
+            source_address,
+            address(this),
+            liquidity
+        );
 
         // Get the lock multiplier and kek_id
         uint256 lock_multiplier = lockMultiplier(secs);
-        bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity, _locked_liquidity[staker_address]));
-        
+        bytes32 kek_id = keccak256(
+            abi.encodePacked(
+                staker_address,
+                start_timestamp,
+                liquidity,
+                _locked_liquidity[staker_address]
+            )
+        );
+
         // Create the locked stake
-        lockedStakes[staker_address].push(LockedStake(
-            kek_id,
-            start_timestamp,
-            liquidity,
-            start_timestamp + secs,
-            lock_multiplier
-        ));
+        lockedStakes[staker_address].push(
+            LockedStake(
+                kek_id,
+                start_timestamp,
+                liquidity,
+                start_timestamp + secs,
+                lock_multiplier
+            )
+        );
 
         // Update liquidities
         _total_liquidity_locked += liquidity;
         _locked_liquidity[staker_address] += liquidity;
         {
             address the_proxy = getProxyFor(staker_address);
-            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += liquidity;
+            if (the_proxy != address(0))
+                proxy_lp_balances[the_proxy] += liquidity;
         }
-        
+
         // Need to call again to make sure everything is correct
         updateRewardAndBalance(staker_address, false);
 
-        emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
+        emit StakeLocked(
+            staker_address,
+            liquidity,
+            secs,
+            kek_id,
+            source_address
+        );
 
         return kek_id;
     }
@@ -511,7 +611,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // ------ WITHDRAWING ------
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for proxies)
-    function withdrawLocked(bytes32 kek_id, address destination_address) nonReentrant external returns (uint256) {
+    function withdrawLocked(bytes32 kek_id, address destination_address)
+        external
+        nonReentrant
+        returns (uint256)
+    {
         require(withdrawalsPaused == false, "Withdrawals paused");
         return _withdrawLocked(msg.sender, destination_address, kek_id);
     }
@@ -526,22 +630,33 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         _getReward(staker_address, destination_address, true);
 
         // Get the stake and its index
-        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(staker_address, kek_id);
-        require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true, "Stake is still locked!");
+        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(
+            staker_address,
+            kek_id
+        );
+        require(
+            block.timestamp >= thisStake.ending_timestamp ||
+                stakesUnlocked == true,
+            "Stake is still locked!"
+        );
         uint256 liquidity = thisStake.liquidity;
 
         if (liquidity > 0) {
-
             // Give the tokens to the destination_address
             // Should throw if insufficient balance
-            TransferHelper.safeTransfer(address(stakingToken), destination_address, liquidity);
+            TransferHelper.safeTransfer(
+                address(stakingToken),
+                destination_address,
+                liquidity
+            );
 
             // Update liquidities
             _total_liquidity_locked -= liquidity;
             _locked_liquidity[staker_address] -= liquidity;
             {
                 address the_proxy = getProxyFor(staker_address);
-                if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= liquidity;
+                if (the_proxy != address(0))
+                    proxy_lp_balances[the_proxy] -= liquidity;
             }
 
             // Remove the stake from the array
@@ -550,14 +665,168 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             // Need to call again to make sure everything is correct
             updateRewardAndBalance(staker_address, false);
 
-            emit WithdrawLocked(staker_address, liquidity, kek_id, destination_address);
+            emit WithdrawLocked(
+                staker_address,
+                liquidity,
+                kek_id,
+                destination_address
+            );
         }
 
         return liquidity;
     }
 
+    /// @notice Transfer a portion of a locked stake to `destination_address`
+    /// @param kek_id The kek_id of the locked stake to transfer
+    /// @param rewardee The address to send staker's rewards to
+    /// @param destination_address The address to transfer the stake to
+    /// @param transfer_amount The amount of the stake to transfer
+    /// @return sender_stake_balance_remaining Balance remaining in the sender's locked stake
+    /// @return recipient_stake_balance The balance of the recipient's locked stake
+    function transferLocked(
+        bytes32 kek_id,
+        address rewardee,
+        address destination_address,
+        uint256 transfer_amount
+    ) external nonReentrant returns (uint256, uint256) {
+        require(withdrawalsPaused == false, "Withdrawals paused");
+        return
+            _transferLocked(
+                msg.sender,
+                rewardee,
+                destination_address,
+                kek_id,
+                transfer_amount
+            );
+    }
 
-    function _getRewardExtraLogic(address rewardee, address destination_address) internal override {
+    /// @notice Transfer a portion of a locked stake to a new address
+    /// @param staker_address The address of the staker transferring assets
+    /// @param rewardee The address of the staker's reward address
+    /// @param destination_address The address to transfer the locked assets to
+    /// @param kek_id The kek_id of the locked stake
+    /// @param transfer_amount The amount of the locked stake to transfer
+    /// @return sender_stake_balance_remaining Balance remaining in the sender's locked stake
+    /// @return recipient_stake_balance The balance of the recipient's locked stake
+    function _transferLocked(
+        address staker_address,
+        address rewardee,
+        address destination_address,
+        bytes32 kek_id,
+        uint256 transfer_amount
+    ) internal returns (uint256, uint256) {
+        // Collect rewards first and then update the balances, current staker's specified address
+        _getReward(staker_address, rewardee, true);
+
+        // Get the stake and its index
+        (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(
+            staker_address,
+            kek_id
+        );
+
+        // perform checks
+        require(
+            block.timestamp < thisStake.ending_timestamp ||
+                stakesUnlocked == true,
+            "Stake not locked!"
+        );
+        require(
+            transfer_amount <= thisStake.liquidity && transfer_amount > 0,
+            "Invalid transfer amount"
+        );
+
+        // Update the liquidities
+        _locked_liquidity[staker_address] -= transfer_amount;
+        _locked_liquidity[destination_address] += transfer_amount;
+        {
+            address the_proxy = getProxyFor(staker_address);
+            if (the_proxy != address(0))
+                proxy_lp_balances[the_proxy] -= transfer_amount;
+        }
+        {
+            address the_proxy = getProxyFor(destination_address);
+            if (the_proxy != address(0))
+                proxy_lp_balances[the_proxy] += transfer_amount;
+        }
+
+        /** @dev
+         *   The original stake should be reduced by the transfer amount.
+         *   All other valaues can remain the same.
+         *   - this would make the kek_id not recoverable to the actual parameters,
+         *     but that's not a problem since the kek_id is not used for anything else
+         *   The recipient should get a new stake with the transfer amount.
+         *   The kek_id can be used, since that is where it originally came from, since that
+         */
+        // Update the existing staker's stake
+        uint256 sender_stake_balance_remaining = thisStake.liquidity -
+            transfer_amount;
+        lockedStakes[staker_address][theArrayIndex] = LockedStake(
+            kek_id,
+            thisStake.start_timestamp,
+            sender_stake_balance_remaining,
+            thisStake.ending_timestamp,
+            thisStake.lock_multiplier
+        );
+
+        /** @dev
+            If the recipient already has the same kek_id, then we can just add back the amt transferred
+                otherwise, we need to create a new stake, and we can retain the same kek_id since the address
+                doesn't already have a stake with that kek_id
+        */
+        // Check if the recipient already has a stake with the same kek_id
+        uint256 recipient_stake_balance;
+        for (uint256 i; i < lockedStakes[destination_address].length; i++) {
+            if (lockedStakes[destination_address][i].kek_id == kek_id) {
+                // Get the stake
+                (
+                    LockedStake memory thatStake,
+                    uint256 thatArrayIndex
+                ) = _getStake(destination_address, kek_id);
+
+                recipient_stake_balance = thatStake.liquidity + transfer_amount;
+
+                // Update the existing staker's stake
+                lockedStakes[destination_address][thatArrayIndex] = LockedStake(
+                    kek_id,
+                    thatStake.start_timestamp,
+                    recipient_stake_balance,
+                    thatStake.ending_timestamp,
+                    thatStake.lock_multiplier
+                );
+                break;
+            } else {
+                // Create a new stake for the recipient
+                lockedStakes[destination_address].push(
+                    LockedStake(
+                        kek_id,
+                        thisStake.start_timestamp,
+                        transfer_amount,
+                        thisStake.ending_timestamp,
+                        thisStake.lock_multiplier
+                    )
+                );
+                recipient_stake_balance = transfer_amount;
+            }
+        }
+
+        // Need to call again to make sure everything is correct
+        updateRewardAndBalance(staker_address, true);
+        updateRewardAndBalance(destination_address, true);
+
+        emit TransferLocked(
+            staker_address,
+            destination_address,
+            transfer_amount,
+            kek_id
+        );
+
+        return (sender_stake_balance_remaining, recipient_stake_balance);
+    }
+
+    function _getRewardExtraLogic(address rewardee, address destination_address)
+        internal
+        override
+    {
         // Do nothing
     }
 
@@ -566,8 +835,35 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // Inherited...
 
     /* ========== EVENTS ========== */
-    event LockedAdditional(address indexed user, bytes32 kek_id, uint256 amount);
-    event LockedLonger(address indexed user, bytes32 kek_id, uint256 new_secs, uint256 new_start_ts, uint256 new_end_ts);
-    event StakeLocked(address indexed user, uint256 amount, uint256 secs, bytes32 kek_id, address source_address);
-    event WithdrawLocked(address indexed user, uint256 liquidity, bytes32 kek_id, address destination_address);
+    event LockedAdditional(
+        address indexed user,
+        bytes32 kek_id,
+        uint256 amount
+    );
+    event LockedLonger(
+        address indexed user,
+        bytes32 kek_id,
+        uint256 new_secs,
+        uint256 new_start_ts,
+        uint256 new_end_ts
+    );
+    event StakeLocked(
+        address indexed user,
+        uint256 amount,
+        uint256 secs,
+        bytes32 kek_id,
+        address source_address
+    );
+    event WithdrawLocked(
+        address indexed user,
+        uint256 liquidity,
+        bytes32 kek_id,
+        address destination_address
+    );
+    event TransferLocked(
+        address indexed staker_address,
+        address indexed destination_address,
+        uint256 amount_transferred,
+        bytes32 kek_id
+    );
 }
