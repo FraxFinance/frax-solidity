@@ -610,76 +610,78 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         _;
     }
 
-    function _isApproved(address staker, bytes32 kek_id, uint256 amount)
-        internal
-        view
-        returns (bool)
-    {
-        return (//msg.sender == owner ||
-            kekAllowance[staker][kek_id][msg.sender] >= amount ||
-            spenderApprovalForAllLocks[staker][msg.sender]);
+    function _isApproved(address staker, bytes32 kek_id, uint256 amount) internal returns (bool) {
+        // check if spender is approved for all locks
+        if (spenderApprovalForAllLocks[staker][msg.sender]) {
+            return true;
+        } else if (kekAllowance[staker][kek_id][msg.sender] >= amount) {
+            // if not approved for all locks, check if spender is approved for this specific lock & reduce allowance if so
+            kekAllowance[staker][kek_id][msg.sender] -= amount;
+            return true;
+        } else {
+            // for any other possibility, return false
+            return false;
+        }
     }
 
     // Approve `spender` to transfer `kek_id` on behalf of `owner`
-    function setAllowance(address spender, bytes32 kek_id, uint256 amount) public {
+    function setAllowance(address spender, bytes32 kek_id, uint256 amount) external {
         kekAllowance[msg.sender][kek_id][spender] = amount;
-
         emit Approval(msg.sender, spender, kek_id, amount);
     }
 
     // Revoke approval for a single kek_id
-    function removeAllowance(address spender, bytes32 kek_id) public {
+    function removeAllowance(address spender, bytes32 kek_id) external {
         kekAllowance[msg.sender][kek_id][spender] = 0;
-
         emit Approval(msg.sender, spender, kek_id, 0);
     }
 
     // Approve or revoke `spender` to transfer any/all locks on behalf of the owner
-    function setApprovalForAll(address spender, bool approved) public {
-        // require(spender != msg.sender);
+    function setApprovalForAll(address spender, bool approved) external {
         spenderApprovalForAllLocks[msg.sender][spender] = approved; 
-
         emit ApprovalForAll(msg.sender, spender, approved);
     }
 
-    // Reduce the amount of a lock position that `spender` is approved to transfer on behalf of `owner`
-    function _checkAndReduceAllowance(address staker, bytes32 kek_id, uint256 amount) private {
-        if (kekAllowance[staker][kek_id][msg.sender] >= amount) {
-            kekAllowance[staker][kek_id][msg.sender] -= amount;
-        } else { 
-            revert InsufficientAllowance();
-        }
-    }
-
     ///// Transfer Locks
+    /// @dev called by the spender to transfer a lock position on behalf of the staker
+    /// @notice Transfer's `staker_address`'s lock with `kek_id` to `destination_address` by authorized spender
     function transferLockedFrom(
         address staker_address,
         address receiver_address,
+        address rewards_address,
         bytes32 kek_id,
         uint256 transfer_amount
     ) external isApprovedForLock(staker_address, kek_id, transfer_amount) nonReentrant {
-        // checks the spender's allowance and reduces it
-        _checkAndReduceAllowance(staker_address, kek_id, transfer_amount);
-
         // do the transfer
-        _transferLocked(msg.sender, receiver_address, kek_id, transfer_amount);
+        /// @dev the approval check is done in modifier, so to reach here caller is permitted, thus OK 
+        //       to supply both staker & receiver here (no msg.sender)
+        _transferLocked(staker_address, receiver_address, rewards_address, kek_id, transfer_amount);
     }
 
+    // called by the staker to transfer a lock position to another address
+    /// @notice Transfer's `amount` of `staker_address`'s lock with `kek_id` to `destination_address`
     function transferLocked(
         address receiver_address,
+        address rewards_address,
         bytes32 kek_id,
         uint256 amount
     ) external nonReentrant {
         // do the transfer
-        _transferLocked(msg.sender, receiver_address, kek_id, amount);
+        /// @dev approval/owner check not needed here as msg.sender is the staker
+        _transferLocked(msg.sender, receiver_address, rewards_address, kek_id, amount);
     }
 
+    // executes the transfer
     function _transferLocked(
         address staker_address,
         address receiver_address,
+        address rewards_address,
         bytes32 kek_id,
         uint256 transfer_amount
     ) internal {
+        // Collect rewards first and then update the balances
+        _getReward(staker_address, rewards_address, true);
+
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(
             staker_address,
@@ -690,12 +692,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         if (receiver_address == address(0) || receiver_address == staker_address) {
             revert InvalidReceiver();
         }
-
         if (block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true) {
             revert StakesUnlocked();
         }
-
-        if (transfer_amount > thisStake.liquidity || transfer_amount == 0) {
+        if (transfer_amount > thisStake.liquidity || transfer_amount <= 0) {
             revert InvalidAmount();
         }
 
@@ -738,8 +738,13 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             )
         );
 
+        if (transfer_amount == thisStake.liquidity) {
+            // delete the stake from the array
+            delete lockedStakes[staker_address][theArrayIndex];
+        }
+
         // Need to call again to make sure everything is correct
-        updateRewardAndBalance(staker_address, true);
+        updateRewardAndBalance(staker_address, true); 
         updateRewardAndBalance(receiver_address, true);
 
         emit TransferLocked(
