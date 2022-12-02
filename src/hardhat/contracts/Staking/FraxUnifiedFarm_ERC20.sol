@@ -381,7 +381,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
                 break;
             }
         }
-        // require(locked_stake.kek_id == kek_id, "Stake not found");
         if (locked_stake.kek_id != kek_id) revert StakerNotFound();
         
     }
@@ -395,7 +394,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 new_amt = thisStake.liquidity + addl_liq;
 
         // Checks
-        // require(addl_liq >= 0, "Must be positive");
         if (addl_liq <= 0) revert MustBePositive();
 
         // Pull the tokens from the sender
@@ -439,11 +437,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // Checks
         // require(time_left > 0, "Already expired");
-        // require(new_secs > time_left, "Cannot shorten lock time");
         if (new_secs <= time_left) revert CannotShortenLockTime();
-        // require(new_secs >= lock_time_min, "Minimum stake time not met");
         if (new_secs < lock_time_min) revert MinimumStakeTimeNotMet();
-        // require(new_secs <= lock_time_for_max_multiplier, "Trying to lock for too long");
         if (new_secs > lock_time_for_max_multiplier) revert TryingToLockForTooLong();
 
         // Update the stake
@@ -477,11 +472,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalanceMdf(staker_address, true) returns (bytes32) {
-        // require(stakingPaused == false, "Staking paused");
         if (stakingPaused) revert StakingPaused();
-        // require(secs >= lock_time_min, "Minimum stake time not met");
         if (secs < lock_time_min) revert MinimumStakeTimeNotMet();
-        // require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
         if (secs > lock_time_for_max_multiplier) revert TryingToLockForTooLong();
 
         // Pull in the required token(s)
@@ -521,7 +513,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for proxies)
     function withdrawLocked(bytes32 kek_id, address destination_address) nonReentrant external returns (uint256) {
-        // require(withdrawalsPaused == false, "Withdrawals paused");
         if (withdrawalsPaused == true) revert WithdrawalsPaused();
         return _withdrawLocked(msg.sender, destination_address, kek_id);
     }
