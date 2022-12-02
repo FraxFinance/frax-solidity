@@ -594,31 +594,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     event Approval(address indexed staker, address indexed spender, bytes32 indexed kek_id, uint256 amount);
     event ApprovalForAll(address indexed owner, address indexed spender, bool approved);
 
-    modifier isApprovedForLock(address staker, bytes32 kek_id, uint256 amount) {
-        if(!_isApproved(staker, kek_id, amount)) {
-            revert TransferLockNotAllowed(msg.sender, kek_id);
-        }
-        _;
-    }
-
-    function _isApproved(address staker, bytes32 kek_id, uint256 amount) internal returns (bool) {
-        // check if spender is approved for all locks
-        if (spenderApprovalForAllLocks[staker][msg.sender]) {
-            return true;
-        } else if (kekAllowance[staker][kek_id][msg.sender] >= amount) {
-            // if not approved for all locks, check if spender is approved for this specific lock & reduce allowance if so
-            kekAllowance[staker][kek_id][msg.sender] -= amount;
-            return true;
-        } else {
-            // for any other possibility, return false
-            return false;
-        }
-    }
-
     // Approve `spender` to transfer `kek_id` on behalf of `owner`
     function setAllowance(address spender, bytes32 kek_id, uint256 amount) external {
         kekAllowance[msg.sender][kek_id][spender] = amount;
-        emit Approval(msg.sender, spender, kek_id, amount);
+        emit Approval(msg.sender, spender, kek_id, amount);/// todo Check on the erc20 increase/decrease allowance bug
     }
 
     // Revoke approval for a single kek_id
@@ -633,6 +612,35 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         emit ApprovalForAll(msg.sender, spender, approved);
     }
 
+    // internal approval check and allowance manager
+    function _isApproved(address staker, bytes32 kek_id, uint256 amount) internal returns (bool) {
+        // check if spender is approved for all `staker` locks
+        if (spenderApprovalForAllLocks[staker][msg.sender]) {
+            return true;
+        } else if (kekAllowance[staker][kek_id][msg.sender] >= amount) {
+            // if not approved for all locks, check if spender is approved for this specific `staker`'s lock & reduce allowance if so
+            kekAllowance[staker][kek_id][msg.sender] -= amount;
+            return true;
+        } else {
+            // for any other possibility, return false
+            return false;
+        }
+    }
+
+    // getter for allowance or approval check
+    function checkApproval(address staker, bytes32 kek_id, uint256 amount) external view returns (bool) {
+        // check if spender is approved for all `staker` locks
+        if (spenderApprovalForAllLocks[staker][msg.sender]) {
+            return true;
+        } else if (kekAllowance[staker][kek_id][msg.sender] >= amount) {
+            // if not approved for all locks, check if spender is approved for this specific `staker`'s lock
+            return true;
+        } else {
+            // for any other possibility, return false
+            return false;
+        }
+    }
+
     ///// Transfer Locks
     /// @dev called by the spender to transfer a lock position on behalf of the staker
     /// @notice Transfer's `staker_address`'s lock with `kek_id` to `destination_address` by authorized spender
@@ -642,7 +650,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         address rewards_address,
         bytes32 kek_id,
         uint256 transfer_amount
-    ) external isApprovedForLock(staker_address, kek_id, transfer_amount) nonReentrant {
+    ) external nonReentrant {
+        // check approvals
+        if (!_isApproved(staker_address, kek_id, transfer_amount)) revert TransferLockNotAllowed(msg.sender, kek_id);
+        
         // do the transfer
         /// @dev the approval check is done in modifier, so to reach here caller is permitted, thus OK 
         //       to supply both staker & receiver here (no msg.sender)
@@ -705,8 +716,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         }
 
         // Update the existing staker's stake
-        uint256 sender_stake_balance_remaining = thisStake.liquidity -
-            transfer_amount;
+        uint256 sender_stake_balance_remaining = thisStake.liquidity - transfer_amount;
+        
         lockedStakes[staker_address][theArrayIndex] = LockedStake(
             kek_id,
             thisStake.start_timestamp,
@@ -723,7 +734,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             LockedStake(
                 receiver_kek_id,
                 thisStake.start_timestamp,
-                transfer_amount,
+                transfer_amount, 
                 thisStake.ending_timestamp,
                 thisStake.lock_multiplier
             )
