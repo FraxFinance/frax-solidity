@@ -657,7 +657,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // do the transfer
         /// @dev the approval check is done in modifier, so to reach here caller is permitted, thus OK 
         //       to supply both staker & receiver here (no msg.sender)
-        _transferLocked(staker_address, receiver_address, rewards_address, kek_id, transfer_amount);
+        _safeTransferLocked(staker_address, receiver_address, rewards_address, kek_id, transfer_amount);
     }
 
     // called by the staker to transfer a lock position to another address
@@ -670,11 +670,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     ) external nonReentrant {
         // do the transfer
         /// @dev approval/owner check not needed here as msg.sender is the staker
-        _transferLocked(msg.sender, receiver_address, rewards_address, kek_id, amount);
+        _safeTransferLocked(msg.sender, receiver_address, rewards_address, kek_id, amount);
     }
 
     // executes the transfer
-    function _transferLocked(
+    function _safeTransferLocked(
         address staker_address,
         address receiver_address,
         address rewards_address,
@@ -755,6 +755,30 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             transfer_amount,
             kek_id
         );
+
+        // check that the contract implements receiver interface
+        require(_checkOnLockReceived(staker_address, receiver_address, kek_id, ""));
+    }
+
+    function _checkOnLockReceived(address from, address to, bytes32 kek_id, bytes memory data)
+        internal returns (bool)
+    {
+        if (to.code.length > 0) {
+            try ILockReceiver(to).onLockReceived(msg.sender, from, kek_id, data) returns (bytes4 retval) {
+                return retval == ILockReceiver(to).onLockReceived.selector;
+            } catch (bytes memory reason) {
+                if (reason.length == 0) {
+                    revert InvalidReceiver();
+                } else {
+                    /// @solidity memory-safe-assembly
+                    assembly {
+                        revert(add(32, reason), mload(reason))
+                    }
+                }
+            }
+        } else {
+            return true;
+        }
     }
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
@@ -766,4 +790,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     event LockedLonger(address indexed user, bytes32 kek_id, uint256 new_secs, uint256 new_start_ts, uint256 new_end_ts);
     event StakeLocked(address indexed user, uint256 amount, uint256 secs, bytes32 kek_id, address source_address);
     event WithdrawLocked(address indexed user, uint256 liquidity, bytes32 kek_id, address destination_address);
+}
+
+interface ILockReceiver {
+    function onLockReceived(address operator, address from, bytes32 kek_id, bytes memory _data) external returns (bytes4);
 }
