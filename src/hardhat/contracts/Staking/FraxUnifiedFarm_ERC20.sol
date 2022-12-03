@@ -653,7 +653,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     ) external nonReentrant {
         // check approvals
         if (!_isApproved(staker_address, kek_id, transfer_amount)) revert TransferLockNotAllowed(msg.sender, kek_id);
-        
+
         // do the transfer
         /// @dev the approval check is done in modifier, so to reach here caller is permitted, thus OK 
         //       to supply both staker & receiver here (no msg.sender)
