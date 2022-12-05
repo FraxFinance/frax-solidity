@@ -35,6 +35,8 @@ import '../../core/interfaces/IFraxswapPair.sol';
 
 library FraxswapRouterLibrary {
 
+    bytes public constant INIT_CODE_HASH = hex'46dd19aa7d926c9d41df47574e3c09b978a1572918da0e3da18ad785c1621d48'; // init code / init hash
+
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
         require(tokenA != tokenB, 'FraxswapRouterLibrary: IDENTICAL_ADDRESSES');
@@ -49,7 +51,7 @@ library FraxswapRouterLibrary {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'4ce0b4ab368f39e4bd03ec712dfc405eb5a36cdb0294b3887b441cd1c743ced3' // init code / init hash
+                INIT_CODE_HASH // init code / init hash
             )))));
     }
 

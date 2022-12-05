@@ -1,14 +1,30 @@
 pragma solidity ^0.8.4;
+
+// ====================================================================
+// |     ______                   _______                             |
+// |    / _____________ __  __   / ____(_____  ____ _____  ________   |
+// |   / /_  / ___/ __ `| |/_/  / /_  / / __ \/ __ `/ __ \/ ___/ _ \  |
+// |  / __/ / /  / /_/ _>  <   / __/ / / / / / /_/ / / / / /__/  __/  |
+// | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
+// |                                                                  |
+// ====================================================================
+// ============================ Fraxferry =============================
+// ====================================================================
+// Ferry that can be used to ship tokens between chains
+
+// Frax Finance: https://github.com/FraxFinance
+
+// Primary Author(s)
+// Dennis: https://github.com/denett
+
 /*
-** Ferry that can be uses to ship tokens to another chain and receive from an other chain
-** 
 ** Modus operandi:
 ** - User sends tokens to the contract. This transaction is stored in the contract.
 ** - Captain queries the source chain for transactions to ship.
-** - Captain sends batch (start, end, hash) to start the trip
+** - Captain sends batch (start, end, hash) to start the trip,
 ** - Crewmembers check the batch and can dispute it if it is invalid.
 ** - Non disputed batches can be executed by the first officer by providing the transactions as calldata. 
-** - Hash of the transactions must be equal to the hash in the batch.
+** - Hash of the transactions must be equal to the hash in the batch. User receives their tokens on the other chain.
 ** - In case there was a fraudulent transaction (a hacker for example), the owner can cancel a single transaction, such that it will not be executed.
 ** - The owner can manually manage the tokens in the contract and must make sure it has enough funds.
 **
@@ -40,8 +56,8 @@ contract Fraxferry {
    bool public paused;
    
    uint public MIN_WAIT_PERIOD_ADD=3600; // Minimal 1 hour waiting
-   uint public MIN_WAIT_PERIOD_EXECUTE=3600; // Minimal 1 hour waiting
-   uint public FEE=1*1e18; // 1 token
+   uint public MIN_WAIT_PERIOD_EXECUTE=79200; // Minimal 22 hour waiting
+   uint public FEE=5*1e18; // 5 token fee
    uint immutable MAX_FEE=100e18; // Max fee is 100 tokens
    uint immutable public REDUCED_DECIMALS=1e10;
    

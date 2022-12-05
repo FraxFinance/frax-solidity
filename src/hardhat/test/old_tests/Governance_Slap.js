@@ -75,7 +75,7 @@ module.exports = async function(deployer, network, accounts) {
 	// ======== Set the addresses ========
 	console.log(chalk.yellow('===== SET THE ADDRESSES ====='));
 	const COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
-	const ORACLE_ADDRESS = accounts[2];
+	const ORACLE_ADMIN = accounts[2];
 	const POOL_CREATOR = accounts[3];
 	const TIMELOCK_ADMIN = accounts[4];
 	const GOVERNOR_GUARDIAN_ADDRESS = accounts[5];

@@ -37,7 +37,7 @@ interface IveFPIS {
   function increase_unlock_time ( uint256 _unlock_time ) external;
   function proxy_pbk_liq_slsh ( address _staker_addr, uint256 _payback_amt, uint256 _liquidation_amt, uint256 _liquidation_fee_amt, uint256 _slash_amt ) external;
   function withdraw (  ) external;
-  function transfer_to_proxy ( address _staker_addr, int128 _transfer_amt ) external;
+  function transfer_to_app ( address _staker_addr, int128 _transfer_amt ) external;
   function balanceOf ( address addr ) external view returns ( uint256 );
   function balanceOf ( address addr, uint256 _t ) external view returns ( uint256 );
   function balanceOfAt ( address addr, uint256 _block ) external view returns ( uint256 );
@@ -47,8 +47,8 @@ interface IveFPIS {
   function totalFPISSupply (  ) external view returns ( uint256 );
   function totalFPISSupplyAt ( uint256 _block ) external view returns ( uint256 );
   function toggleEmergencyUnlock (  ) external;
-  function toggleProxyTransferTos (  ) external;
-  function toggleProxyPaybackLiqOrSlashs (  ) external;
+  function toggleTransferToApp (  ) external;
+  function toggleProxyAdds (  ) external;
   function adminSetProxy ( address _proxy ) external;
   function adminToggleHistoricalProxy ( address _proxy ) external;
   function stakerSetProxy ( address _proxy ) external;
@@ -60,13 +60,13 @@ interface IveFPIS {
   function user_point_history ( address arg0, uint256 arg1 ) external view returns ( Point memory );
   function user_point_epoch ( address arg0 ) external view returns ( uint256 );
   function slope_changes ( uint256 arg0 ) external view returns ( int128 );
-  function proxyTransferTosEnabled (  ) external view returns ( bool );
+  function appTransferTosEnabled (  ) external view returns ( bool );
   function ProxyPaybackLiqOrSlashsEnabled (  ) external view returns ( bool );
   function emergencyUnlockActive (  ) external view returns ( bool );
-  function lending_proxy (  ) external view returns ( address );
+  function current_proxy (  ) external view returns ( address );
   function historical_proxies ( address arg0 ) external view returns ( bool );
   function staker_whitelisted_proxy ( address arg0 ) external view returns ( address );
-  function user_fpis_in_proxy ( address arg0 ) external view returns ( uint256 );
+  function user_proxy_balance ( address arg0 ) external view returns ( uint256 );
   function name (  ) external view returns ( string memory );
   function symbol (  ) external view returns ( string memory );
   function version (  ) external view returns ( string memory );

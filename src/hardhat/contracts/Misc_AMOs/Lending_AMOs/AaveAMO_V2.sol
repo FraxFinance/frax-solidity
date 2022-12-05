@@ -33,6 +33,7 @@ import "./aave/IAAVELendingPool_Partial.sol";
 import "./aave/IAAVE_aFRAX.sol";
 import "./aave/IStakedAave.sol";
 import "./aave/IAaveIncentivesControllerPartial.sol";
+import "./aave/IProtocolDataProvider.sol";
 
 contract AaveAMO_V2 is Owned {
     using SafeMath for uint256;
@@ -56,6 +57,11 @@ contract AaveAMO_V2 is Owned {
     ERC20 private AAVE = ERC20(0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9);
     IStakedAave private stkAAVE = IStakedAave(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
     IAaveIncentivesControllerPartial private AAVEIncentivesController = IAaveIncentivesControllerPartial(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5);
+    IProtocolDataProvider private AAVEProtocolDataProvider = IProtocolDataProvider(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d);
+
+    // Borrowed assets
+    address[] public aave_borrow_asset_list;
+    mapping(address => bool) public aave_borrow_asset_check; // Mapping is also used for faster verification
 
     // Settings
     uint256 private constant PRICE_PRECISION = 1e6;
@@ -104,9 +110,23 @@ contract AaveAMO_V2 is Owned {
         // All numbers given are in FRAX unless otherwise stated
         allocations[0] = FRAX.balanceOf(address(this)); // Unallocated FRAX
         allocations[1] = aaveFRAX_Token.balanceOf(address(this)); // AAVE
-
         uint256 sum_frax = allocations[0] + allocations[1];
         allocations[2] = sum_frax; // Total FRAX possessed in various forms
+    }
+
+    /// @notice Show debts of AMO by Asset
+    /// @return debts : 
+    /// debts[0] = Total debt balance
+    /// debts[1] = AMO Asset balance
+    /// debts[2] = Total Frax used for collateral 
+    function showDebtsByAsset(address asset_address) public view returns (uint256[3] memory debts) {
+        // All numbers given are in FRAX unless otherwise stated
+        require(aave_borrow_asset_check[asset_address], "Asset is not available in borrowed list.");
+        (, uint256 currentStableDebt, uint256 currentVariableDebt, ,  , , , , ) = AAVEProtocolDataProvider.getUserReserveData(asset_address, address(this));
+        debts[0] = currentStableDebt + currentVariableDebt; // Total debt balance
+        ERC20 _asset = ERC20(asset_address);
+        debts[1] = _asset.balanceOf(address(this)); // AMO Asset balance
+        debts[2] = aaveFRAX_Token.balanceOf(address(this)); // Total Frax used for collateral (this is total potential collateral for all borrows)
     }
 
     /// @notice 
@@ -169,6 +189,8 @@ contract AaveAMO_V2 is Owned {
     /// @param interestRateMode The interest rate mode at which the AMO wants to borrow: 1 for Stable, 2 for Variable
     function aaveBorrow(address asset, uint256 borrow_amount, uint256 interestRateMode) public onlyByOwnGovCust {
         aaveLending_Pool.borrow(asset, borrow_amount, interestRateMode, 0, address(this));
+        aave_borrow_asset_check[asset] = true; 
+        aave_borrow_asset_list.push(asset);
     }
 
     /// @notice Function to repay other assets to Aave pool
