@@ -10,6 +10,7 @@ interface I2pool {
     function A_precise() external view returns (uint256);
     function get_virtual_price() external view returns (uint256);
     function lp_price() external view returns (uint256);
+    function price_oracle() external view returns (uint256);
     function calc_token_amount(uint256[2] memory _amounts, bool _is_deposit) external view returns (uint256);
     function add_liquidity(uint256[2] memory _amounts, uint256 _min_mint_amount) external returns (uint256);
     function get_dy(int128 i, int128 j, uint256 _dx) external view returns (uint256);
@@ -51,3 +52,4 @@ interface I2pool {
     function allowance(address arg0, address arg1) external view returns (uint256);
     function totalSupply() external view returns (uint256);
 }
+

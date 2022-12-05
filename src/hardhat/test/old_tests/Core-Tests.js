@@ -86,7 +86,7 @@ let globalCollateralValue;
 contract('FRAX Core Tests', async (accounts) => {
 	// Constants
 	let COLLATERAL_FRAX_AND_FXS_OWNER;
-	let ORACLE_ADDRESS;
+	let ORACLE_ADMIN;
 	let POOL_CREATOR;
 	let TIMELOCK_ADMIN;
 	let GOVERNOR_GUARDIAN_ADDRESS;
@@ -181,7 +181,7 @@ contract('FRAX Core Tests', async (accounts) => {
     beforeEach(async() => {
 		// Constants
 		COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
-		ORACLE_ADDRESS = accounts[2];
+		ORACLE_ADMIN = accounts[2];
 		POOL_CREATOR = accounts[3];
 		TIMELOCK_ADMIN = accounts[4];
 		GOVERNOR_GUARDIAN_ADDRESS = accounts[5];

@@ -76,7 +76,7 @@ contract('MIM-Convex-AMO-Tests', async (accounts) => {
 	const COMPTROLLER_ADDRESS = "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27";
 	let ORIGINAL_FRAX_ONE_ADDRESS;
 	let COLLATERAL_FRAX_AND_FXS_OWNER;
-	let ORACLE_ADDRESS;
+	let ORACLE_ADMIN;
 	let POOL_CREATOR;
 	let TIMELOCK_ADMIN;
 	let GOVERNOR_GUARDIAN_ADDRESS;
@@ -190,7 +190,7 @@ contract('MIM-Convex-AMO-Tests', async (accounts) => {
 		ORIGINAL_FRAX_ONE_ADDRESS = process.env.FRAX_ONE_ADDRESS;
 		DEPLOYER_ADDRESS = accounts[0];
 		COLLATERAL_FRAX_AND_FXS_OWNER = accounts[1];
-		ORACLE_ADDRESS = accounts[2];
+		ORACLE_ADMIN = accounts[2];
 		POOL_CREATOR = accounts[3];
 		TIMELOCK_ADMIN = accounts[4];
 		GOVERNOR_GUARDIAN_ADDRESS = accounts[5];

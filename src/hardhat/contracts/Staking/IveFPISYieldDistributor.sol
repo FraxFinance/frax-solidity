@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 interface IveFPISYieldDistributor {
     function acceptOwnership() external;
     function checkpoint() external;
+    function checkpointOtherUser(address user_addr) external;
     function earned(address account) external view returns (uint256);
     function eligibleCurrentVeFPIS(address account) external view returns (uint256);
     function emittedToken() external view returns (address);

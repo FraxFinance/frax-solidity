@@ -20,6 +20,8 @@ contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Stable is FraxUnifiedFarm_ERC20 {
     ) 
     FraxUnifiedFarm_ERC20(_owner , _rewardTokens, _rewardManagers, _rewardRates, _gaugeControllers, _rewardDistributors, _stakingToken)
     {
+        // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
+
         // // Convex stkcvxBUSDBP and other metaFRAXBPs, where the token is also the pool (Convex Stable/FRAXBP)
         // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
         // curveToken = I2poolToken(stakingToken.curveToken());
@@ -28,7 +30,9 @@ contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Stable is FraxUnifiedFarm_ERC20 {
     }
 
     function fraxPerLPToken() public view override returns (uint256) {
-        // // Get the amount of FRAX 'inside' of the lp tokens
+        // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
+        
+        // Get the amount of FRAX 'inside' of the lp tokens
         // uint256 frax_per_lp_token;
 
         // // Convex Stable/FRAXBP
