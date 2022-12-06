@@ -483,18 +483,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Get the lock multiplier and kek_id
         uint256 lock_multiplier = lockMultiplier(secs);
 
-        /// note: @dev Since there's 3 instances to create a new kek, it's been put as a function to reduce contract size 
         bytes32 kek_id = _createNewKekId(staker_address, start_timestamp, liquidity, (start_timestamp + secs), lock_multiplier);
-        // bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity, _locked_liquidity[staker_address]));
-        
-        // // Create the locked stake
-        // lockedStakes[staker_address].push(LockedStake(
-        //     kek_id,
-        //     start_timestamp,
-        //     liquidity,
-        //     start_timestamp + secs,
-        //     lock_multiplier
-        // ));
 
         // Update liquidities
         _total_liquidity_locked += liquidity;
@@ -600,7 +589,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // Approve `spender` to transfer `kek_id` on behalf of `owner`
     function setAllowance(address spender, bytes32 kek_id, uint256 amount) external {
         kekAllowance[msg.sender][kek_id][spender] = amount;
-        emit Approval(msg.sender, spender, kek_id, amount); /// todo Check on the erc20 increase/decrease allowance bug
+        emit Approval(msg.sender, spender, kek_id, amount);
     }
 
     // Revoke approval for a single kek_id
@@ -616,13 +605,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     }
 
     // internal approval check and allowance manager
-    function _isApproved(address staker, bytes32 kek_id, uint256 amount) internal returns (bool) {
+    function isApproved(address staker, bytes32 kek_id, uint256 amount) public view returns (bool) {
         // check if spender is approved for all `staker` locks
         if (spenderApprovalForAllLocks[staker][msg.sender]) {
             return true;
         } else if (kekAllowance[staker][kek_id][msg.sender] >= amount) {
-            // if not approved for all locks, check if spender is approved for this specific `staker`'s lock & reduce allowance if so
-            kekAllowance[staker][kek_id][msg.sender] -= amount;
             return true;
         } else {
             // for any other possibility, return false
@@ -630,18 +617,19 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         }
     }
 
-    // getter for allowance or approval check
-    function checkApproval(address staker, bytes32 kek_id, uint256 amount) external view returns (bool) {
-        // check if spender is approved for all `staker` locks
-        if (spenderApprovalForAllLocks[staker][msg.sender]) {
-            return true;
-        } else if (kekAllowance[staker][kek_id][msg.sender] >= amount) {
-            // if not approved for all locks, check if spender is approved for this specific `staker`'s lock
-            return true;
-        } else {
-            // for any other possibility, return false
-            return false;
-        }
+    function _spendAllowance(address staker, bytes32 kek_id, uint256 amount) internal {//returns (uint256 spendable_amount) {
+            if (kekAllowance[staker][kek_id][msg.sender] == amount) {
+                kekAllowance[staker][kek_id][msg.sender] = 0;
+                //return amount;
+            } else if (kekAllowance[staker][kek_id][msg.sender] > amount) {
+                kekAllowance[staker][kek_id][msg.sender] -= amount;
+                //return amount;
+            // } else if (kekAllowance[staker][kek_id][msg.sender] < amount && kekAllowance[staker][kek_id][msg.sender] > 0) {
+            //     spendable_amount = kekAllowance[staker][kek_id][msg.sender];
+            //     kekAllowance[staker][kek_id][msg.sender] = 0;
+            } else {
+                revert InsufficientAllowance();
+            }
     }
 
     ///// Transfer Locks
@@ -653,9 +641,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         bytes32 source_kek_id,
         uint256 transfer_amount,
         bytes32 destination_kek_id
-    ) external nonReentrant {
+    ) external nonReentrant returns (bytes32) {
         // check approvals
-        if (!_isApproved(staker_address, source_kek_id, transfer_amount)) revert TransferLockNotAllowed(msg.sender, source_kek_id);
+        if (!isApproved(staker_address, source_kek_id, transfer_amount)) revert TransferLockNotAllowed(msg.sender, source_kek_id);
+
+        // adjust the allowance down
+        _spendAllowance(staker_address, source_kek_id, transfer_amount);
 
         // do the transfer
         /// @dev the approval check is done in modifier, so to reach here caller is permitted, thus OK 
@@ -670,10 +661,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         bytes32 source_kek_id,
         uint256 transfer_amount,
         bytes32 destination_kek_id
-    ) external nonReentrant {
+    ) external nonReentrant returns (bytes32) {
         // do the transfer
         /// @dev approval/owner check not needed here as msg.sender is the staker
-        _safeTransferLocked(msg.sender, receiver_address, source_kek_id, transfer_amount, destination_kek_id); 
+        _safeTransferLocked(msg.sender, receiver_address, source_kek_id, transfer_amount, destination_kek_id);
     }
 
     // executes the transfer
@@ -683,13 +674,15 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         bytes32 source_kek_id,
         uint256 transfer_amount,
         bytes32 destination_kek_id
-    ) internal updateRewardAndBalanceMdf(staker_address, true) updateRewardAndBalanceMdf(receiver_address, true) { // TODO should this also update receiver? updateRewardAndBalanceMdf(receiver_address, true)
+    ) internal updateRewardAndBalanceMdf(staker_address, true) updateRewardAndBalanceMdf(receiver_address, true) returns (bytes32, bytes32) { // TODO should this also update receiver? updateRewardAndBalanceMdf(receiver_address, true)
         // on transfer, call staker_address to verify sending is ok
-        require(
-            ILockTransfers(staker_address).beforeLockTransfer(staker_address, receiver_address, source_kek_id, "") 
-            == 
-            ILockTransfers(staker_address).beforeLockTransfer.selector // 0x4fb07105
-        );
+        if (staker_address.code.length > 0) {
+            require(
+                ILockTransfers(staker_address).beforeLockTransfer(staker_address, receiver_address, source_kek_id, "") 
+                == 
+                ILockTransfers(staker_address).beforeLockTransfer.selector // 0x4fb07105
+            );
+        }
 
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(
@@ -732,7 +725,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // if destination kek is 0, create a new kek_id, otherwise update the balances & ending timestamp (longer of the two)
         if (destination_kek_id == bytes32(0)) {
             // create the new kek_id
-            _createNewKekId(staker_address, thisStake.start_timestamp, transfer_amount, thisStake.ending_timestamp, thisStake.lock_multiplier);
+            destination_kek_id = _createNewKekId(staker_address, thisStake.start_timestamp, transfer_amount, thisStake.ending_timestamp, thisStake.lock_multiplier);
             
         } else {
             // get the target 
@@ -742,8 +735,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             );
 
             // verify that this checks that the user has a locked stake here, if not, create a new one anyways
-            if (lockedStakes[receiver_address][theArrayIndex2].liquidity > 0) {
-                _createNewKekId(staker_address, thisStake.start_timestamp, transfer_amount, thisStake.ending_timestamp, thisStake.lock_multiplier);
+            /// TODO the check for whether a user stake exists is in the _getStake function, so this step might not be necessary?
+            if (lockedStakes[receiver_address][theArrayIndex2].liquidity == 0) {
+                destination_kek_id = _createNewKekId(staker_address, thisStake.start_timestamp, transfer_amount, thisStake.ending_timestamp, thisStake.lock_multiplier);
 
             } else {
                 // Otherwise, it exists & has liquidity, so we can use that to keep stakes consolidated 
@@ -769,8 +763,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             destination_kek_id
         );
 
-        // check that the contract implements receiver interface
+        // call the receiver with the destination kek_id to verify receiving is ok
         require(_checkOnLockReceived(staker_address, receiver_address, destination_kek_id, ""));
+
+        return (source_kek_id, destination_kek_id);
     }
 
     function _createNewKekId(
