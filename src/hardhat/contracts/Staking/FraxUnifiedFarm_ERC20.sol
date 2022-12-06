@@ -667,6 +667,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         _safeTransferLocked(msg.sender, receiver_address, source_kek_id, transfer_amount, destination_kek_id);
     }
 
+    /**
+    TODO
+    @dev double check whether calling the updateRewardAndBalanceMdf would cause a transaction to revert if 
+        the receiver address doesn't previously have any lockedStakes.
+     */
     // executes the transfer
     function _safeTransferLocked(
         address staker_address,
@@ -733,22 +738,28 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
                 receiver_address,
                 destination_kek_id
             );
+            /**
+            TODO
+            _getStake reverts if it doesn't find a stake of that kek_id, so checking if liquidity is 0 on it is unnecessary
+            When a user withdraws their entire stake, the kek_id is deleted, so it's not possible to have a kek_id with 0 liquidity
+            @dev double check me on this logic - commented out check below
+             */
+            // if (lockedStakes[receiver_address][theArrayIndex2].liquidity == 0) {
+            //     destination_kek_id = _createNewKekId(staker_address, thisStake.start_timestamp, transfer_amount, thisStake.ending_timestamp, thisStake.lock_multiplier);
 
-            // verify that this checks that the user has a locked stake here, if not, create a new one anyways
-            /// TODO the check for whether a user stake exists is in the _getStake function, so this step might not be necessary?
-            if (lockedStakes[receiver_address][theArrayIndex2].liquidity == 0) {
-                destination_kek_id = _createNewKekId(staker_address, thisStake.start_timestamp, transfer_amount, thisStake.ending_timestamp, thisStake.lock_multiplier);
+            // } else {
+            // Otherwise, it exists & has liquidity, so we can use that to keep stakes consolidated 
+            // Update the existing staker's stake
+            lockedStakes[receiver_address][theArrayIndex2].liquidity += transfer_amount;
 
-            } else {
-                // Otherwise, it exists & has liquidity, so we can use that to keep stakes consolidated 
-                // Update the existing staker's stake
-                lockedStakes[receiver_address][theArrayIndex2].liquidity += transfer_amount;
-
-                // check & update ending timestamp to whichever is farthest out
-                if (thisStake2.ending_timestamp < thisStake.ending_timestamp) {
-                    lockedStakes[receiver_address][theArrayIndex2].ending_timestamp = thisStake.ending_timestamp;
-                }
+            // check & update ending timestamp to whichever is farthest out
+            if (thisStake2.ending_timestamp < thisStake.ending_timestamp) {
+                // update the lock expiration to the later timestamp
+                lockedStakes[receiver_address][theArrayIndex2].ending_timestamp = thisStake.ending_timestamp;
+                // update the lock multiplier since we are effectively extending the lock
+                lockedStakes[receiver_address][theArrayIndex2].lock_multiplier = lockMultiplier(thisStake.ending_timestamp - block.timestamp);
             }
+            //}
         }
 
         // Need to call again to make sure everything is correct
