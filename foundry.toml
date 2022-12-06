@@ -1,0 +1,10 @@
+[profile.default]
+src = 'src'
+out = 'out'
+libs = ['lib']
+remappings [
+    '@mocks/=src/hardhat/contracts/mocks/',
+    '@staking/=src/hardhat/contracts/Staking/'
+]
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config

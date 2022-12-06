@@ -482,16 +482,19 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // Get the lock multiplier and kek_id
         uint256 lock_multiplier = lockMultiplier(secs);
-        bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity, _locked_liquidity[staker_address]));
+
+        /// note: @dev Since there's 3 instances to create a new kek, it's been put as a function to reduce contract size 
+        bytes32 kek_id = _createNewKekId(staker_address, start_timestamp, liquidity, (start_timestamp + secs), lock_multiplier);
+        // bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity, _locked_liquidity[staker_address]));
         
-        // Create the locked stake
-        lockedStakes[staker_address].push(LockedStake(
-            kek_id,
-            start_timestamp,
-            liquidity,
-            start_timestamp + secs,
-            lock_multiplier
-        ));
+        // // Create the locked stake
+        // lockedStakes[staker_address].push(LockedStake(
+        //     kek_id,
+        //     start_timestamp,
+        //     liquidity,
+        //     start_timestamp + secs,
+        //     lock_multiplier
+        // ));
 
         // Update liquidities
         _total_liquidity_locked += liquidity;
@@ -727,34 +730,30 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         }
 
         // if destination kek is 0, create a new kek_id, otherwise update the balances & ending timestamp (longer of the two)
-        if (destination_kek_id == 0) {
+        if (destination_kek_id == bytes32(0)) {
             // create the new kek_id
-            destination_kek_id = keccak256(abi.encodePacked(staker_address, thisStake.start_timestamp, transfer_amount, _locked_liquidity[staker_address]));
+            _createNewKekId(staker_address, thisStake.start_timestamp, transfer_amount, thisStake.ending_timestamp, thisStake.lock_multiplier);
             
-            // Create a new stake for the recipient
-            lockedStakes[receiver_address].push(
-                LockedStake(
-                    destination_kek_id,
-                    thisStake.start_timestamp,
-                    transfer_amount, 
-                    thisStake.ending_timestamp,
-                    thisStake.lock_multiplier
-                )
-            );
         } else {
-            // Get the stake and its index
-            // todo verify that this checks that the user has a locked stake here 
+            // get the target 
             (LockedStake memory thisStake2, uint256 theArrayIndex2) = _getStake(
                 receiver_address,
                 destination_kek_id
             );
 
-            // Update the existing staker's stake
-            lockedStakes[receiver_address][theArrayIndex2].liquidity += transfer_amount;
+            // verify that this checks that the user has a locked stake here, if not, create a new one anyways
+            if (lockedStakes[receiver_address][theArrayIndex2].liquidity > 0) {
+                _createNewKekId(staker_address, thisStake.start_timestamp, transfer_amount, thisStake.ending_timestamp, thisStake.lock_multiplier);
 
-            // check & update ending timestamp to whichever is farthest out
-            if (thisStake2.ending_timestamp < thisStake.ending_timestamp) {
-                lockedStakes[receiver_address][theArrayIndex2].ending_timestamp = thisStake.ending_timestamp;
+            } else {
+                // Otherwise, it exists & has liquidity, so we can use that to keep stakes consolidated 
+                // Update the existing staker's stake
+                lockedStakes[receiver_address][theArrayIndex2].liquidity += transfer_amount;
+
+                // check & update ending timestamp to whichever is farthest out
+                if (thisStake2.ending_timestamp < thisStake.ending_timestamp) {
+                    lockedStakes[receiver_address][theArrayIndex2].ending_timestamp = thisStake.ending_timestamp;
+                }
             }
         }
 
@@ -772,6 +771,25 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // check that the contract implements receiver interface
         require(_checkOnLockReceived(staker_address, receiver_address, destination_kek_id, ""));
+    }
+
+    function _createNewKekId(
+        address staker_address,
+        uint256 start_timestamp,
+        uint256 liquidity,
+        uint256 ending_timestamp,
+        uint256 lock_multiplier
+    ) internal returns (bytes32 kek_id) {
+        kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity, _locked_liquidity[staker_address]));
+        
+        // Create the locked stake
+        lockedStakes[staker_address].push(LockedStake(
+            kek_id,
+            start_timestamp,
+            liquidity,
+            ending_timestamp,
+            lock_multiplier
+        ));
     }
 
     function _checkOnLockReceived(address from, address to, bytes32 kek_id, bytes memory data)
