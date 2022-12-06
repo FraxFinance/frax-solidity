@@ -710,14 +710,14 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         _locked_liquidity[staker_address] -= transfer_amount;
         _locked_liquidity[receiver_address] += transfer_amount;
         {
-            address the_proxy = getProxyFor(staker_address);
-            if (the_proxy != address(0))
-                proxy_lp_balances[the_proxy] -= transfer_amount;
+            //address the_proxy = getProxyFor(staker_address);
+            if (getProxyFor(staker_address) != address(0))
+                proxy_lp_balances[getProxyFor(staker_address)] -= transfer_amount;
         }
         {
-            address the_proxy = getProxyFor(receiver_address);
-            if (the_proxy != address(0))
-                proxy_lp_balances[the_proxy] += transfer_amount;
+            //address the_proxy = getProxyFor(receiver_address);
+            if (getProxyFor(receiver_address) != address(0))
+                proxy_lp_balances[getProxyFor(receiver_address)] += transfer_amount;
         }
 
         // if sent amount was all the liquidity, delete the stake, otherwise decrease the balance

@@ -2,9 +2,37 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
-remappings [
+remappings = [
     '@mocks/=src/hardhat/contracts/mocks/',
     '@staking/=src/hardhat/contracts/Staking/'
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
+
+solc_version = "0.8.17"
+gas_reports = ["*"]
+
+# settings for coverage reports
+via_ir = true
+optimizer = true #testing this out was false
+optimizer_runs = 100_000 #testing this out
+
+
+[profile.default.optimizer_details]
+jumpdestRemover = true #testing this out
+orderLiterals = true # testing this out
+deduplicate = true #testing this out
+
+yul = true
+constantOptimizer = true
+stackAllocation = true
+
+# Have cse = true commented out for faster testing compilation, but un-comment it for deployment!
+cse = true
+
+
+[profile.default.optimizer_details.yulDetails]
+stackAllocation = true
+
+# Have optimizerSteps = "" uncommented for faster testing compilation, but comment it out for deployment!
+# optimizerSteps = ""
