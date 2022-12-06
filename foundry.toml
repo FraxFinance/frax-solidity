@@ -14,7 +14,7 @@ gas_reports = ["*"]
 
 # settings for coverage reports
 via_ir = true
-optimizer = true #testing this out was false
+optimizer = true #testing this out - was false
 optimizer_runs = 100_000 #testing this out
 
 
