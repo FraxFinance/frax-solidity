@@ -68,7 +68,7 @@ module.exports = {
 			},
 			chainId: 42161,
 			gas: "auto",
-			gasPrice: 500000000, // 0.5 Gwei
+			gasPrice: 300000000, // 0.3 Gwei
 			gasMultiplier: 1.2
 		},
 		aurora: {
@@ -88,7 +88,7 @@ module.exports = {
 			},
 			chainId: 43114,
 			gas: "auto",
-			gasPrice: 225000000000, // 225 Gwei
+			gasPrice: 75000000000, // 75 Gwei
 			gasMultiplier: 1.2
 		},
 		boba: {
@@ -118,7 +118,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 50000000000, // 50 Gwei
+			gasPrice: 18000000000, // 18 Gwei
 			gasMultiplier: 1.2,
 		},
 		evmos: {

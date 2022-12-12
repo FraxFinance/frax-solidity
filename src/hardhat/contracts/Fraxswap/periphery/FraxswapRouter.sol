@@ -59,6 +59,10 @@ contract FraxswapRouter is IUniswapV2Router02V5 {
         assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
     }
 
+    function INIT_CODE_HASH() public pure returns (bytes memory hash) {
+        return FraxswapRouterLibrary.INIT_CODE_HASH;
+    }
+
     // **** ADD LIQUIDITY ****
     function _addLiquidity(
         address tokenA,

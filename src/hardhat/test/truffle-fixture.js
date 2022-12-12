@@ -41,6 +41,7 @@ const UniV3TWAPOracle = artifacts.require("Oracle/UniV3TWAPOracle");
 // const FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ");
 // const FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS");
 // const FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE");
+const FraxFarmRageQuitter_Temple = artifacts.require("Staking/FraxFarmRageQuitter_Temple");
 const FraxMiddlemanGauge_ARBI_Curve_VSTFRAX = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_ARBI_Curve_VSTFRAX");
 const FraxUnifiedFarm_PosRebase_aFRAX = artifacts.require("Staking/Variants/FraxUnifiedFarm_PosRebase_aFRAX");
 
@@ -108,6 +109,7 @@ module.exports = async (deployer) => {
     let fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance;
     let middlemanGauge_ARBI_Curve_VSTFRAX;
     let fraxUnifiedFarm_PosRebase_aFRAX_instance;
+    let frax_farm_ragequitter_temple_instance;
 
     // TWAMM
     let fraxswap_factory_instance;
@@ -403,6 +405,9 @@ module.exports = async (deployer) => {
             CONTRACT_ADDRESSES.ethereum.misc.vefxs_yield_distributor_v4
         ]
     );
+
+    console.log(chalk.yellow("========== FraxFarmRageQuitter_Temple =========="));
+    frax_farm_ragequitter_temple_instance = await FraxFarmRageQuitter_Temple.new();
     
     // console.log(chalk.yellow('========== FraxLiquidityBridger_AUR_Rainbow =========='));
     // // FraxLiquidityBridger_AUR_Rainbow
@@ -504,6 +509,7 @@ module.exports = async (deployer) => {
     IUniswapV3PositionsNFT.setAsDeployed(uniswapV3PositionsNFTInstance);
 
     console.log(chalk.yellow("--------DEPLOY STAKING CONTRACTS--------"));
+    FraxFarmRageQuitter_Temple.setAsDeployed(frax_farm_ragequitter_temple_instance);
     FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.setAsDeployed(middlemanGauge_ARBI_Curve_VSTFRAX);
     // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance);
     // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_pitchFXS_instance);

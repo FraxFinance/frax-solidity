@@ -10,9 +10,9 @@ pragma abicoder v2;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================== FraxswapRouter V2 =========================
+// ===================== Fraxswap Router Multihop =====================
 // ====================================================================
-// Fraxswap Router V2
+// Fraxswap Router Multihop
 
 // Frax Finance: https://github.com/FraxFinance
 
@@ -37,9 +37,9 @@ import "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.so
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 
-/// @title Fraxswap Router V2
+/// @title Fraxswap Router Multihop
 /// @dev Router for swapping across the majority of the FRAX liquidity
-contract FraxswapRouterV2 is ReentrancyGuard, Ownable {
+contract FraxswapRouterMultihop is ReentrancyGuard, Ownable {
     using SafeCast for uint256;
     using SafeCast for int256;
 
@@ -82,10 +82,13 @@ contract FraxswapRouterV2 is ReentrancyGuard, Ownable {
         } else {
             if (params.v != 0) {
                 // use permit instead of approval
+                uint256 amount = params.approveMax
+                    ? type(uint256).max
+                    : params.amountIn;
                 IERC20Permit(params.tokenIn).permit(
                     msg.sender,
                     address(this),
-                    params.amountIn,
+                    amount,
                     params.deadline,
                     params.v,
                     params.r,
@@ -311,7 +314,7 @@ contract FraxswapRouterV2 is ReentrancyGuard, Ownable {
             );
         } else if (step.swapType == 9) {
             // FrxETHMinter
-            if (prevRoute.tokenOut == address(WETH9)) {
+            if (step.extraParam1 == 0 && prevRoute.tokenOut == address(WETH9)) {
                 // Unwrap WETH
                 WETH9.withdraw(amountIn);
             }
@@ -526,6 +529,7 @@ contract FraxswapRouterV2 is ReentrancyGuard, Ownable {
         uint256 amountOutMinimum;
         address recipient;
         uint256 deadline;
+        bool approveMax;
         uint8 v;
         bytes32 r;
         bytes32 s;
