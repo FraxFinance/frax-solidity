@@ -268,7 +268,7 @@ contract CrossChainCanonical is ERC20Permit, Owned, ReentrancyGuard {
     // Remove a minter 
     function removeMinter(address minter_address) external onlyByOwnGov {
         require(minter_address != address(0), "Zero address detected");
-        require(minters[minter_address] == true, "Address nonexistant");
+        require(minters[minter_address] == true, "Address nonexistent");
         
         // Delete from the mapping
         delete minters[minter_address];

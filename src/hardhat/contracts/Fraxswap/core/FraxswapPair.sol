@@ -166,11 +166,11 @@ contract FraxswapPair is IUniswapV2PairPartialV5, FraxswapERC20 {
         unlocked = 1;
     }
 
-    function getOrderIDsForUser(address user) external view returns (uint256[] memory) {
+    function getOrderIDsForUser(address user) external view override returns (uint256[] memory) {
         return orderIDsForUser[user];
     }
 
-    function getOrderIDsForUserLength(address user) external view returns (uint256) {
+    function getOrderIDsForUserLength(address user) external view override returns (uint256) {
         return orderIDsForUser[user].length;
     }
 

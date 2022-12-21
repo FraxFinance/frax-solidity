@@ -116,7 +116,7 @@ contract FraxBond is ERC20Custom, AccessControl {
 
     // Removes an issuer 
     function removeIssuer(address issuer_address) external onlyByOwnerControllerOrGovernance {
-        require(bond_issuers[issuer_address] == true, "Address nonexistant");
+        require(bond_issuers[issuer_address] == true, "Address nonexistent");
         
         // Delete from the mapping
         delete bond_issuers[issuer_address];

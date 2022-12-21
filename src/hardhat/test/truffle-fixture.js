@@ -34,6 +34,7 @@ const FraxLiquidityBridger_AUR_Rainbow = artifacts.require("Bridges/Aurora/FraxL
 const TWAMM_AMO = artifacts.require("Misc_AMOs/TWAMM_AMO");
 
 // Oracles
+const ComboOracle_KyberSwapElastic = artifacts.require("Oracle/ComboOracle_KyberSwapElastic"); 
 const CPITrackerOracle = artifacts.require("Oracle/CPITrackerOracle");
 const UniV3TWAPOracle = artifacts.require("Oracle/UniV3TWAPOracle"); 
 
@@ -43,6 +44,7 @@ const UniV3TWAPOracle = artifacts.require("Oracle/UniV3TWAPOracle");
 // const FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE = artifacts.require("Staking/Variants/FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE");
 const FraxFarmRageQuitter_Temple = artifacts.require("Staking/FraxFarmRageQuitter_Temple");
 const FraxMiddlemanGauge_ARBI_Curve_VSTFRAX = artifacts.require("Curve/Middleman_Gauges/FraxMiddlemanGauge_ARBI_Curve_VSTFRAX");
+const FraxUnifiedFarm_KyberSwapElastic = artifacts.require("Staking/Variants/FraxUnifiedFarm_KyberSwapElastic");
 const FraxUnifiedFarm_PosRebase_aFRAX = artifacts.require("Staking/Variants/FraxUnifiedFarm_PosRebase_aFRAX");
 
 // TWAMM
@@ -100,6 +102,7 @@ module.exports = async (deployer) => {
     let twamm_amo_instance;
 
     // Oracles
+    let combo_oracle_kyberswap_elastic_instance;
     let cpi_tracker_oracle_instance;
     let univ3_twap_oracle_instance;
 
@@ -109,6 +112,7 @@ module.exports = async (deployer) => {
     let fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance;
     let middlemanGauge_ARBI_Curve_VSTFRAX;
     let fraxUnifiedFarm_PosRebase_aFRAX_instance;
+    let fraxUnifiedFarm_KyberSwapElastic_instance;
     let frax_farm_ragequitter_temple_instance;
 
     // TWAMM
@@ -158,10 +162,11 @@ module.exports = async (deployer) => {
 
     // Misc
     usdc_instance = await ERC20.at(CONTRACT_ADDRESSES.ethereum.collaterals.USDC);
+    frax_farm_ragequitter_temple_instance = await FraxFarmRageQuitter_Temple.at(CONTRACT_ADDRESSES.ethereum.misc.ragequitter_temple);
 
     // Misc AMOS
     frax_amo_minter_instance = await FraxAMOMinter.at(CONTRACT_ADDRESSES.ethereum.misc.amo_minter);
-    // twamm_amo_instance = await TWAMM_AMO.at(CONTRACT_ADDRESSES.ethereum.misc.twamm_amo);
+    twamm_amo_instance = await TWAMM_AMO.at(CONTRACT_ADDRESSES.ethereum.misc.twamm_amo);
 
     // Oracles
     cpi_tracker_oracle_instance = await CPITrackerOracle.at(CONTRACT_ADDRESSES.ethereum.oracles_other.cpi_tracker_oracle); 
@@ -199,6 +204,21 @@ module.exports = async (deployer) => {
     //     fxs_instance.address,
     //     veFXS_instance.address
     // );
+
+    console.log(chalk.yellow('========== ComboOracle_KyberSwapElastic =========='));
+    // ComboOracle_KyberSwapElastic
+    combo_oracle_kyberswap_elastic_instance = await ComboOracle_KyberSwapElastic.new(
+        THE_ACCOUNTS[1], 
+        [
+            CONTRACT_ADDRESSES.ethereum.oracles_other.combo_oracle,
+            CONTRACT_ADDRESSES.ethereum.uniswap_v3.kyberswap_elastic_factory,
+            CONTRACT_ADDRESSES.ethereum.uniswap_v3.kyberswap_elastic_pos_mgr,
+            CONTRACT_ADDRESSES.ethereum.uniswap_v3.kyberswap_elastic_router,
+            CONTRACT_ADDRESSES.ethereum.uniswap_v3.kyberswap_elastic_tick_fees_reader
+        ]
+    );
+
+
     // // Add in a gauge type
     // await frax_gauge_controller.add_type("Ethereum Mainnet", "1000000000000000000", { from: THE_ACCOUNTS[0] });
 
@@ -317,21 +337,21 @@ module.exports = async (deployer) => {
     //     CONTRACT_ADDRESSES.ethereum.pair_tokens['Temple FRAX/TEMPLE'],
     // );
 
-    console.log(chalk.yellow("========== FraxUnifiedFarm_PosRebase_aFRAX =========="));
-    // FraxUnifiedFarm_PosRebase_aFRAX 
-    fraxUnifiedFarm_PosRebase_aFRAX_instance = await FraxUnifiedFarm_PosRebase_aFRAX.new(
+    console.log(chalk.yellow("========== FraxUnifiedFarm_KyberSwapElastic =========="));
+    // FraxUnifiedFarm_KyberSwapElastic 
+    fraxUnifiedFarm_KyberSwapElastic_instance = await FraxUnifiedFarm_KyberSwapElastic.new(
         THE_ACCOUNTS[6], 
         [
             "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
-            "0x4da27a545c0c5B758a6BA100e3a049001de870f5" // stkAAVE
+            "0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202" // KNC
         ], 
         [
             "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
-            "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27" // Frax Msig (stkAAVE is auto-claimed and the rate is set once per week)
+            "0x5891BE896ed4a79ed928C55B17FbbEcDb46f8A00" // Kyber Network Msig for external projects
         ],
         [
             11574074074074, // 1 FXS per day. Connect the gauge later
-            11574074074 // 0.001 stkAAVE per day. Connect the gauge later
+            11574074074 // 0.001 KNC per day. Connect the gauge later
         ],
         [
             "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
@@ -341,8 +361,39 @@ module.exports = async (deployer) => {
             "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
             "0x0000000000000000000000000000000000000000"
         ],
-        CONTRACT_ADDRESSES.ethereum.bearer_tokens.aFRAX,
+        [
+            CONTRACT_ADDRESSES.ethereum.uniswap_v3.kyberswap_elastic_pos_mgr,
+            combo_oracle_kyberswap_elastic_instance.address
+        ],
+        301 // Template NFT to use for values
     );
+
+    // console.log(chalk.yellow("========== FraxUnifiedFarm_PosRebase_aFRAX =========="));
+    // // FraxUnifiedFarm_PosRebase_aFRAX 
+    // fraxUnifiedFarm_PosRebase_aFRAX_instance = await FraxUnifiedFarm_PosRebase_aFRAX.new(
+    //     THE_ACCOUNTS[6], 
+    //     [
+    //         "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS
+    //         "0x4da27a545c0c5B758a6BA100e3a049001de870f5" // stkAAVE
+    //     ], 
+    //     [
+    //         "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27", // Frax Msig
+    //         "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27" // Frax Msig (stkAAVE is auto-claimed and the rate is set once per week)
+    //     ],
+    //     [
+    //         11574074074074, // 1 FXS per day. Connect the gauge later
+    //         11574074074 // 0.001 stkAAVE per day. Connect the gauge later
+    //     ],
+    //     [
+    //         "0x0000000000000000000000000000000000000000", // Deploy the gauge controller address empty
+    //         "0x0000000000000000000000000000000000000000"
+    //     ],
+    //     [
+    //         "0x278dC748edA1d8eFEf1aDFB518542612b49Fcd34", // FXS reward distributor
+    //         "0x0000000000000000000000000000000000000000"
+    //     ],
+    //     CONTRACT_ADDRESSES.ethereum.bearer_tokens.aFRAX,
+    // );
 
     // console.log(chalk.yellow('========== FPI =========='));
     // // FPI
@@ -390,24 +441,22 @@ module.exports = async (deployer) => {
     //     ]
     // );
 
-    console.log(chalk.yellow("========== TWAMM_AMO =========="));
-    twamm_amo_instance = await TWAMM_AMO.new( 
-        THE_ACCOUNTS[1], 
-        CONTRACT_ADDRESSES.ethereum.misc.timelock,
-        [
-            frax_instance.address,
-            fxs_instance.address,
-            CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap V2 FRAX/FXS"],
-            "0xB9E1E3A9feFf48998E45Fa90847ed4D467E8BcfD", // Ethereum CHAINLINK FRAX
-            "0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f", // Ethereum CHAINLINK FXS
-            CONTRACT_ADDRESSES.ethereum.multisigs.Comptrollers,
-            CONTRACT_ADDRESSES.ethereum.misc.amo_minter,
-            CONTRACT_ADDRESSES.ethereum.misc.vefxs_yield_distributor_v4
-        ]
-    );
+    // console.log(chalk.yellow("========== TWAMM_AMO =========="));
+    // twamm_amo_instance = await TWAMM_AMO.new( 
+    //     THE_ACCOUNTS[1], 
+    //     CONTRACT_ADDRESSES.ethereum.misc.timelock,
+    //     [
+    //         frax_instance.address,
+    //         fxs_instance.address,
+    //         CONTRACT_ADDRESSES.ethereum.pair_tokens["Fraxswap V2 FRAX/FXS"],
+    //         "0xB9E1E3A9feFf48998E45Fa90847ed4D467E8BcfD", // Ethereum CHAINLINK FRAX
+    //         "0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f", // Ethereum CHAINLINK FXS
+    //         CONTRACT_ADDRESSES.ethereum.multisigs.Comptrollers,
+    //         CONTRACT_ADDRESSES.ethereum.misc.amo_minter,
+    //         CONTRACT_ADDRESSES.ethereum.misc.vefxs_yield_distributor_v4
+    //     ]
+    // );
 
-    console.log(chalk.yellow("========== FraxFarmRageQuitter_Temple =========="));
-    frax_farm_ragequitter_temple_instance = await FraxFarmRageQuitter_Temple.new();
     
     // console.log(chalk.yellow('========== FraxLiquidityBridger_AUR_Rainbow =========='));
     // // FraxLiquidityBridger_AUR_Rainbow
@@ -493,6 +542,9 @@ module.exports = async (deployer) => {
     FraxGaugeController.setAsDeployed(frax_gauge_controller);
     FraxGaugeControllerV2.setAsDeployed(frax_gauge_controller_v2);
     FraxGaugeFXSRewardsDistributor.setAsDeployed(gauge_rewards_distributor_instance);
+    
+    console.log(chalk.yellow("--------DEPLOYING KYBERSWAP CONTRACTS--------"));
+    IUniswapV3PositionsNFT.setAsDeployed(uniswapV3PositionsNFTInstance);
 
     console.log(chalk.yellow("--------DEPLOY MISC AMO CONTRACTS--------"));
     FraxAMOMinter.setAsDeployed(frax_amo_minter_instance);
@@ -501,6 +553,7 @@ module.exports = async (deployer) => {
 
     console.log(chalk.yellow("--------DEPLOY ORACLE CONTRACTS--------"));
     CPITrackerOracle.setAsDeployed(cpi_tracker_oracle_instance);
+    ComboOracle_KyberSwapElastic.setAsDeployed(combo_oracle_kyberswap_elastic_instance);
     UniV3TWAPOracle.setAsDeployed(univ3_twap_oracle_instance);
 
     console.log(chalk.yellow("--------DEPLOYING UNISWAP CONTRACTS--------"));
@@ -514,6 +567,7 @@ module.exports = async (deployer) => {
     // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_IQ.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_IQ_instance);
     // FraxUnifiedFarm_ERC20_Fraxswap_FRAX_pitchFXS.setAsDeployed(fraxUnifiedFarm_Fraxswap_FRAX_pitchFXS_instance);
     // FraxUnifiedFarm_ERC20_Temple_FRAX_TEMPLE.setAsDeployed(fraxUnifiedFarm_Temple_FRAX_TEMPLE_instance);
+    FraxUnifiedFarm_KyberSwapElastic.setAsDeployed(fraxUnifiedFarm_KyberSwapElastic_instance);
     // FraxUnifiedFarm_PosRebase_aFRAX.setAsDeployed(fraxUnifiedFarm_PosRebase_aFRAX_instance);
 
     console.log(chalk.yellow("--------DEPLOYING TWAMM CONTRACTS--------"));

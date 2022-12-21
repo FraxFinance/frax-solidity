@@ -19,11 +19,14 @@ import "./FraxUnifiedFarmTemplate.sol";
 // -------------------- VARIES --------------------
 
 // Convex wrappers
-import "../Curve/ICurvefrxETHETHPool.sol";
+// import "../Curve/ICurvefrxETHETHPool.sol";
 import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
 import "../Misc_AMOs/convex/IDepositToken.sol";
 import "../Misc_AMOs/curve/I2pool.sol";
 import "../Misc_AMOs/curve/I2poolToken.sol";
+
+// Fraxlend
+// import '../Fraxlend/IFraxlendPair.sol';
 
 // Fraxswap
 // import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
@@ -65,6 +68,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // Fraxswap
     // IFraxswapPair public stakingToken;
+
+    // Fraxlend
+    // IFraxlendPair public stakingToken;
 
     // G-UNI
     // IGUniPool public stakingToken;
@@ -116,10 +122,14 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // -------------------- VARIES (USE CHILD FOR LOGIC) --------------------
 
+        // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
+        // USE CHILD
+
+        // Fraxlend
+        // USE CHILD
+
         // Fraxswap
-        // stakingToken = IFraxswapPair(_stakingToken);
-        // address token0 = stakingToken.token0();
-        // frax_is_token0 = (token0 == frax_address);
+        // USE CHILD
 
         // G-UNI
         // stakingToken = IGUniPool(_stakingToken);
@@ -155,38 +165,23 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // Convex stkcvxFPIFRAX and stkcvxFRAXBP only
         // ============================================
-        // {
-        //     // Half of the LP is FRAXBP
-        //     // Using 0.5 * virtual price for gas savings
-        //     frax_per_lp_token = curvePool.get_virtual_price() / 2; 
-        // }
+        // USE CHILD
 
         // Convex Stable/FRAXBP
         // ============================================
-        // {
-        //     // Half of the LP is FRAXBP. Half of that should be FRAX.
-        //     // Using 0.25 * virtual price for gas savings
-        //     frax_per_lp_token = curvePool.get_virtual_price() / 4; 
-        // }
+        // USE CHILD
 
         // Convex Volatile/FRAXBP
         // ============================================
-        // {
-        //     // Half of the LP is FRAXBP. Half of that should be FRAX.
-        //     // Using 0.25 * lp price for gas savings
-        //     frax_per_lp_token = curvePool.lp_price() / 4; 
-        // }
+        // USE CHILD
+
+        // Fraxlend
+        // ============================================
+        // USE CHILD
 
         // Fraxswap
         // ============================================
-        // {
-        //     uint256 total_frax_reserves;
-        //     (uint256 _reserve0, uint256 _reserve1, , ,) = (stakingToken.getReserveAfterTwamm(block.timestamp));
-        //     if (frax_is_token0) total_frax_reserves = _reserve0;
-        //     else total_frax_reserves = _reserve1;
-
-        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
-        // }
+        // USE CHILD
 
         // G-UNI
         // ============================================
@@ -243,7 +238,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     }
 
     // ------ LIQUIDITY AND WEIGHTS ------
-
     function calcCurrLockMultiplier(address account, uint256 stake_idx) public view returns (uint256 midpoint_lock_multiplier) {
         // Get the stake
         LockedStake memory thisStake = lockedStakes[account][stake_idx];
@@ -375,6 +369,31 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // ------ STAKING ------
 
+    function _updateLiqAmts(address staker_address, uint256 amt, bool is_add) internal {
+        // Get the proxy address
+        address the_proxy = staker_designated_proxies[staker_address];
+
+        if (is_add) {
+            // Update total liquidities
+            _total_liquidity_locked += amt;
+            _locked_liquidity[staker_address] += amt;
+
+            // Update the proxy
+            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += amt;
+        }
+        else {
+            // Update total liquidities
+            _total_liquidity_locked -= amt;
+            _locked_liquidity[staker_address] -= amt;
+
+            // Update the proxy
+            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= amt;
+        }
+
+        // Need to call to update the combined weights
+        updateRewardAndBalance(staker_address, false);
+    }
+
     function _getStake(address staker_address, bytes32 kek_id) internal view returns (LockedStake memory locked_stake, uint256 arr_idx) {
         for (uint256 i = 0; i < lockedStakes[staker_address].length; i++){ 
             if (kek_id == lockedStakes[staker_address][i].kek_id){
@@ -411,15 +430,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         );
 
         // Update liquidities
-        _total_liquidity_locked += addl_liq;
-        _locked_liquidity[msg.sender] += addl_liq;
-        {
-            address the_proxy = getProxyFor(msg.sender);
-            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += addl_liq;
-        }
-
-        // Need to call to update the combined weights
-        updateRewardAndBalance(msg.sender, false);
+        _updateLiqAmts(msg.sender, addl_liq, true);
 
         emit LockedAdditional(msg.sender, kek_id, addl_liq);
     }
@@ -495,15 +506,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         ));
 
         // Update liquidities
-        _total_liquidity_locked += liquidity;
-        _locked_liquidity[staker_address] += liquidity;
-        {
-            address the_proxy = getProxyFor(staker_address);
-            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] += liquidity;
-        }
-        
-        // Need to call again to make sure everything is correct
-        updateRewardAndBalance(staker_address, false);
+        _updateLiqAmts(staker_address, liquidity, true);
 
         emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
 
@@ -538,19 +541,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             // Should throw if insufficient balance
             TransferHelper.safeTransfer(address(stakingToken), destination_address, liquidity);
 
-            // Update liquidities
-            _total_liquidity_locked -= liquidity;
-            _locked_liquidity[staker_address] -= liquidity;
-            {
-                address the_proxy = getProxyFor(staker_address);
-                if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= liquidity;
-            }
-
             // Remove the stake from the array
             delete lockedStakes[staker_address][theArrayIndex];
 
-            // Need to call again to make sure everything is correct
-            updateRewardAndBalance(staker_address, false);
+            // Update liquidities
+            _updateLiqAmts(staker_address, liquidity, false);
 
             emit WithdrawLocked(staker_address, liquidity, kek_id, destination_address);
         }
