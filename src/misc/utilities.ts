@@ -166,7 +166,7 @@ export const cleanLockedStake = (locked_stake_info: any) => {
 export const getLockedNFTInfoFromArr = (locked_nfts: any[], token_id: number) => {
     for (let i = 0; i < locked_nfts.length; i++) {
         const the_nft = locked_nfts[i];
-        console.log("the_nft.token_id: ", the_nft.token_id)
+        // console.log("the_nft.token_id: ", the_nft.token_id);
         if (the_nft.token_id == token_id){
             return cleanLockedNFT(the_nft);
         }
@@ -211,6 +211,33 @@ export const printCollateralInfo = async (pool_multicollateral_contract: any, co
     console.log("Collateral Info: ", collateral_info);
 }
 
+export const printNFTExtendedInfo = async (contract: any, nft_id: any) => {
+    const pack_basic = await contract.getNFTBasicInfo(nft_id);
+    const pack_value = await contract.getNFTValueInfo(nft_id);
+    // console.log("pack_basic: ", pack_basic);
+    // console.log("pack_value: ", pack_value);
+    const basic_pack_cleaned = {
+        token0: pack_basic[0],
+        token1: pack_basic[1],
+        fee: parseInt(pack_basic[2]),
+        tickLower: parseInt(pack_basic[3]),
+        tickUpper: parseInt(pack_basic[4]),
+        liquidity: parseInt(pack_basic[5]),
+        tkn0_dec: parseInt(pack_basic[6]),
+        tkn1_dec: parseInt(pack_basic[7]),
+        lowest_dec: parseInt(pack_basic[8]),
+    }
+    console.log(`NFT Basic Info [#${nft_id}]: `, basic_pack_cleaned);
+    const value_pack_cleaned = {
+        token0_value: (new BigNumber(pack_value[0])).div(BIG18).toNumber(),
+        token1_value: (new BigNumber(pack_value[1])).div(BIG18).toNumber(),
+        total_value: (new BigNumber(pack_value[2])).div(BIG18).toNumber(),
+        token0_symbol: pack_value[3],
+        token1_symbol: pack_value[4],
+        liquidity_price: pack_value[5],
+    }
+    console.log(`NFT Value Info [#${nft_id}]: `, value_pack_cleaned);
+}
 
 export const printCalcCurCombinedWeight = async (contract: any, addr: any) => {
     const pack = await contract.calcCurCombinedWeight(addr);

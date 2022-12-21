@@ -562,7 +562,7 @@ contract StakingRewardsDualV4 is Owned, ReentrancyGuard {
 
     // Remove a migrator address
     function removeMigrator(address migrator_address) external onlyByOwnGov {
-        require(valid_migrators[migrator_address] == true, "Address nonexistant");
+        require(valid_migrators[migrator_address] == true, "Address nonexistent");
         
         // Delete from the mapping
         delete valid_migrators[migrator_address];

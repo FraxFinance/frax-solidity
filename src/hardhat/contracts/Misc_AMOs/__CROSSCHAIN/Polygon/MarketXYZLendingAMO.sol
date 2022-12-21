@@ -238,7 +238,7 @@ contract MarketXYZLendingAMO is Owned {
     // Remove a fuse pool
     function removeFusePool(address pool_address) public onlyByOwnGov {
         require(pool_address != address(0), "Zero address detected");
-        require(fuse_pools[pool_address] == true, "Address nonexistant");
+        require(fuse_pools[pool_address] == true, "Address nonexistent");
         
         // Delete from the mapping
         delete fuse_pools[pool_address];

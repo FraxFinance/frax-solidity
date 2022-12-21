@@ -70,15 +70,12 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
     ) 
     FraxUnifiedFarmTemplate(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers, _rewardDistributors)
     {
-
-
         frax_is_token0 = true;
 
         // -------------------- VARIES --------------------
   
         // Aave V2
         stakingToken = IAToken(_stakingToken);
-    
     }
 
     /* ============= VIEWS ============= */

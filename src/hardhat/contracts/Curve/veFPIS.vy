@@ -92,6 +92,7 @@ TRANSFER_FROM_APP: constant(int128) = 4
 TRANSFER_TO_APP: constant(int128) = 5
 PROXY_ADD: constant(int128) = 6
 PROXY_SLASH: constant(int128) = 7
+CHECKPOINT_ONLY: constant(int128) = 8
 
 event CommitOwnership:
     admin: address
@@ -146,6 +147,9 @@ event SmartWalletCheckerApplied:
 event EmergencyUnlockToggled:
     emergencyUnlockActive: bool
 
+event AppIncreaseAmountForsToggled:
+    appIncreaseAmountForsEnabled: bool
+
 event ProxyTransferFromsToggled:
     appTransferFromsEnabled: bool
 
@@ -192,6 +196,7 @@ user_point_epoch: public(HashMap[address, uint256]) # user -> last week epoch th
 slope_changes: public(HashMap[uint256, int128])  
                                                  
 # Misc
+appIncreaseAmountForsEnabled: public(bool) # Whether the proxy can directly deposit FPIS and increase a particular user's stake 
 appTransferFromsEnabled: public(bool) # Whether FPIS can be received from apps or not
 appTransferTosEnabled: public(bool) # Whether FPIS can be sent to apps or not
 proxyAddsEnabled: public(bool) # Whether the proxy can add to the user's position
@@ -548,12 +553,16 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
 
             # Subtract the bias if you are slashing after expiry
             if ((flag == PROXY_SLASH) and (new_locked.end < block.timestamp)):
+                # Net change is the delta
+                last_point.bias += new_locked.amount
                 last_point.bias -= old_locked.amount
 
             # Remove the offset
             # Corner case to fix issue because emergency unlock allows withdrawal before expiry and disrupts the math
             if (new_locked.amount == 0):
                 if (not (self.emergencyUnlockActive)):
+                    # Net change is the delta
+                    # last_point.bias += new_locked.amount WILL BE ZERO
                     last_point.bias -= old_locked.amount
 
         # ==============================================================================
@@ -598,6 +607,14 @@ def _checkpoint(addr: address, old_locked: LockedBalance, new_locked: LockedBala
         usr_new_pt.ts = block.timestamp
         usr_new_pt.blk = block.number
         usr_new_pt.fpis_amt = convert(self.locked[addr].amount, uint256)
+
+        # Final check
+        # At the end of the day, if the user is expired, their bias should be self.locked[addr].amount (fpis_amt)
+        # And their slope, 0
+        if new_locked.end < block.timestamp:
+            usr_new_pt.bias = self.locked[addr].amount
+            usr_new_pt.slope = 0
+
         self.user_point_history[addr][user_epoch] = usr_new_pt
 
 
@@ -668,7 +685,27 @@ def create_lock(_value: uint256, _unlock_time: uint256):
 
     self._deposit_for(msg.sender, msg.sender, _value, unlock_time, _locked, CREATE_LOCK_TYPE)
 
+@internal
+def _increase_amount(_staker_addr: address, _payer_addr: address, _value: uint256):
+    """
+    @notice Deposit `_value` additional tokens for `_staker_addr`
+            without modifying the unlock time or creating a new stake
+    @param _staker_addr The user that the tokens should be credited to
+    @param _staker_addr Payer of the FPIS
+    @param _value Amount of tokens to deposit and add to the lock
+    """
+    if ((_payer_addr != self.current_proxy) and (not self.historical_proxies[_payer_addr])):
+        self.assert_not_contract(_payer_addr) # Payer should either be a proxy, EOA, or authorized contract
 
+    self.assert_not_contract(_staker_addr) # The staker should not be unauthorized
+    
+    _locked: LockedBalance = self.locked[_staker_addr]
+    
+    assert _value > 0, "Value must be > 0"  # dev: need non-zero value
+    assert _locked.amount > 0, "No existing lock found"
+    assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
+
+    self._deposit_for(_staker_addr, _payer_addr, _value, 0, _locked, INCREASE_LOCK_AMOUNT)
 
 @external
 @nonreentrant('lock')
@@ -678,14 +715,36 @@ def increase_amount(_value: uint256):
             without modifying the unlock time
     @param _value Amount of tokens to deposit and add to the lock
     """
-    self.assert_not_contract(msg.sender)
-    _locked: LockedBalance = self.locked[msg.sender]
+    self._increase_amount(msg.sender, msg.sender, _value)
 
-    assert _value > 0, "Value must be > 0"  # dev: need non-zero value
+@external
+@nonreentrant('lock')
+def increase_amount_for(_staker_addr: address, _value: uint256):
+    """
+    @notice Deposit `_value` additional tokens for `_staker_addr`
+            without modifying the unlock time or creating a new stake.
+            msg.sender is payer.
+    @param _staker_addr The user that the tokens should be credited to
+    @param _value Amount of tokens to deposit and add to the lock
+    """
+    assert (self.appIncreaseAmountForsEnabled), "Currently disabled"
+
+    # Sender is payer. Make sure to have it approve to veFPIS first
+    self._increase_amount(_staker_addr, msg.sender, _value)
+
+@external
+@nonreentrant('lock')
+def checkpoint_user(_staker_addr: address):
+    """
+    @notice Simply updates the slope, bias, etc for a user.
+    @param _staker_addr The user to update
+    """
+    _locked: LockedBalance = self.locked[_staker_addr]
+    
     assert _locked.amount > 0, "No existing lock found"
-    assert _locked.end > block.timestamp, "Cannot add to expired lock. Withdraw"
+    # assert _locked.end > block.timestamp, "Expired lock"
 
-    self._deposit_for(msg.sender, msg.sender, _value, 0, _locked, INCREASE_LOCK_AMOUNT)
+    self._deposit_for(_staker_addr, _staker_addr, 0, 0, _locked, CHECKPOINT_ONLY)
 
 
 @external
@@ -914,7 +973,7 @@ def transfer_to_app(_staker_addr: address, _app_addr: address, _transfer_amt: in
     self.user_proxy_balance[_staker_addr] += _value
 
     # Make sure total user transfers do not surpass user locked balance
-    assert (_value + self.user_proxy_balance[_staker_addr] <= _locked_amt), "Amount exceeds locked balance"
+    assert (self.user_proxy_balance[_staker_addr] <= _locked_amt), "Amount exceeds locked balance"
 
     # Allow the transfer to the app.
     # This will not reduce the user's veFPIS balance
@@ -1166,6 +1225,17 @@ def toggleEmergencyUnlock():
     log EmergencyUnlockToggled(self.emergencyUnlockActive)
 
 @external
+def toggleAppIncreaseAmountFors():
+    """
+    @dev Toggles the ability for the proxy to directly deposit FPIS for a user, increasing their existing stake only
+    """
+    assert msg.sender == self.admin  # dev: admin only
+    self.appIncreaseAmountForsEnabled = not (self.appIncreaseAmountForsEnabled)
+    self._checkpoint(empty(address), empty(LockedBalance), empty(LockedBalance), 0)
+
+    log AppIncreaseAmountForsToggled(self.appIncreaseAmountForsEnabled)
+
+@external
 def toggleTransferFromApp():
     """
     @dev Toggles the ability to receive FPIS from apps
@@ -1197,6 +1267,7 @@ def toggleProxyAdds():
     self._checkpoint(empty(address), empty(LockedBalance), empty(LockedBalance), 0)
 
     log ProxyAddsToggled(self.proxyAddsEnabled)
+
 
 @external
 def toggleProxySlashes():

@@ -181,6 +181,58 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
     }
 
     // ------ LIQUIDITY AND WEIGHTS ------
+    function calcCurrLockMultiplier(address account, uint256 nft_id) public view returns (uint256 midpoint_lock_multiplier) {
+        // Get the stake
+        LockedNFT memory thisNFT = lockedNFTs[account][nft_id];
+
+        // Handles corner case where user never claims for a new stake
+        // Don't want the multiplier going above the max
+        uint256 accrue_start_time;
+        if (lastRewardClaimTime[account] < thisNFT.start_timestamp) {
+            accrue_start_time = thisNFT.start_timestamp;
+        }
+        else {
+            accrue_start_time = lastRewardClaimTime[account];
+        }
+        
+        // If the lock is expired
+        if (thisNFT.ending_timestamp <= block.timestamp) {
+            // If the lock expired in the time since the last claim, the weight needs to be proportionately averaged this time
+            if (lastRewardClaimTime[account] < thisNFT.ending_timestamp){
+                uint256 time_before_expiry = thisNFT.ending_timestamp - accrue_start_time;
+                uint256 time_after_expiry = block.timestamp - thisNFT.ending_timestamp;
+
+                // Average the pre-expiry lock multiplier
+                uint256 pre_expiry_avg_multiplier = lockMultiplier(time_before_expiry / 2);
+
+                // Get the weighted-average lock_multiplier
+                // uint256 numerator = (pre_expiry_avg_multiplier * time_before_expiry) + (MULTIPLIER_PRECISION * time_after_expiry);
+                uint256 numerator = (pre_expiry_avg_multiplier * time_before_expiry) + (0 * time_after_expiry);
+                midpoint_lock_multiplier = numerator / (time_before_expiry + time_after_expiry);
+            }
+            else {
+                // Otherwise, it needs to just be 1x
+                // midpoint_lock_multiplier = MULTIPLIER_PRECISION;
+
+                // Otherwise, it needs to just be 0x
+                midpoint_lock_multiplier = 0;
+            }
+        }
+        // If the lock is not expired
+        else {
+            // Decay the lock multiplier based on the time left
+            uint256 avg_time_left;
+            {
+                uint256 time_left_p1 = thisNFT.ending_timestamp - accrue_start_time;
+                uint256 time_left_p2 = thisNFT.ending_timestamp - block.timestamp;
+                avg_time_left = (time_left_p1 + time_left_p2) / 2;
+            }
+            midpoint_lock_multiplier = lockMultiplier(avg_time_left);
+        }
+
+        // Sanity check: make sure it never goes above the initial multiplier
+        if (midpoint_lock_multiplier > thisNFT.lock_multiplier) midpoint_lock_multiplier = thisNFT.lock_multiplier;
+    }
 
     // Calculate the combined weight for an account
     function calcCurCombinedWeight(address account) public override view
@@ -198,11 +250,16 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         new_vefxs_multiplier = veFXSMultiplier(account);
 
         uint256 midpoint_vefxs_multiplier;
-        if (_locked_liquidity[account] == 0 && _combined_weights[account] == 0) {
+        if (
+            (_locked_liquidity[account] == 0 && _combined_weights[account] == 0) || 
+            (new_vefxs_multiplier >= _vefxsMultiplierStored[account])
+        ) {
             // This is only called for the first stake to make sure the veFXS multiplier is not cut in half
+            // Also used if the user increased or maintained their position
             midpoint_vefxs_multiplier = new_vefxs_multiplier;
         }
         else {
+            // Handles natural decay with a non-increased veFXS position
             midpoint_vefxs_multiplier = (new_vefxs_multiplier + _vefxsMultiplierStored[account]) / 2;
         }
 
@@ -210,28 +267,14 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         new_combined_weight = 0;
         for (uint256 i = 0; i < lockedNFTs[account].length; i++) {
             LockedNFT memory thisNFT = lockedNFTs[account][i];
-            uint256 lock_multiplier = thisNFT.lock_multiplier;
 
-            // If the lock is expired
-            if (thisNFT.ending_timestamp <= block.timestamp) {
-                // If the lock expired in the time since the last claim, the weight needs to be proportionately averaged this time
-                if (lastRewardClaimTime[account] < thisNFT.ending_timestamp){
-                    uint256 time_before_expiry = thisNFT.ending_timestamp - lastRewardClaimTime[account];
-                    uint256 time_after_expiry = block.timestamp - thisNFT.ending_timestamp;
+            // Calculate the midpoint lock multiplier
+            uint256 midpoint_lock_multiplier = calcCurrLockMultiplier(account, i);
 
-                    // Get the weighted-average lock_multiplier
-                    uint256 numerator = (lock_multiplier * time_before_expiry) + (MULTIPLIER_PRECISION * time_after_expiry);
-                    lock_multiplier = numerator / (time_before_expiry + time_after_expiry);
-                }
-                // Otherwise, it needs to just be 1x
-                else {
-                    lock_multiplier = MULTIPLIER_PRECISION;
-                }
-            }
-
+            // Calculate the combined boost
             uint256 liquidity = thisNFT.liquidity;
-            uint256 combined_boosted_amount = (liquidity * (lock_multiplier + midpoint_vefxs_multiplier)) / MULTIPLIER_PRECISION;
-            new_combined_weight = new_combined_weight + combined_boosted_amount;
+            uint256 combined_boosted_amount = liquidity + ((liquidity * (midpoint_lock_multiplier + midpoint_vefxs_multiplier)) / MULTIPLIER_PRECISION);
+            new_combined_weight += combined_boosted_amount;
         }
     }
 

@@ -166,7 +166,7 @@ contract FraxBondIssuerOld is AccessControl {
 
     // // Needed for the Frax contract to function without bricking
     // function collatDollarBalance() external view returns (uint256 dummy_dollar_balance) {
-    //     dummy_dollar_balance =  uint256(1e18); // 1 nonexistant USDC
+    //     dummy_dollar_balance =  uint256(1e18); // 1 nonexistent USDC
     // }
 
     // // Checks if the bond is in a maturity epoch
