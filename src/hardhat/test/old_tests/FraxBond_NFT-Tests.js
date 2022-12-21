@@ -243,7 +243,7 @@ contract('FraxBond_NFT-Tests', async (accounts) => {
 		console.log("---------TRY TO REDEEM SOMEBODY ELSE'S BOND---------");
 		await expectRevert.unspecified(bondInstance_FXBA10000M3.redeemBond(0, { from: ORACLE_ADDRESS }));
 
-		console.log("---------TRY TO REDEEM A NONEXISTANT BOND---------");
+		console.log("---------TRY TO REDEEM A NONEXISTENT BOND---------");
 		await expectRevert.unspecified(bondInstance_FXBA10000M3.redeemBond(69, { from: ORACLE_ADDRESS }));
 
 		console.log("---------TRY TO BURN A BOND---------");

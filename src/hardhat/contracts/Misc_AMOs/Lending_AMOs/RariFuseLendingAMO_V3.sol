@@ -293,7 +293,7 @@ contract RariFuseLendingAMO_V3 is Owned {
     // Remove a fuse pool
     function removeFusePool(address pool_address) public onlyByOwnGov {
         require(pool_address != address(0), "Zero address detected");
-        require(fuse_pools[pool_address] == true, "Address nonexistant");
+        require(fuse_pools[pool_address] == true, "Address nonexistent");
         
         // Delete from the mapping
         delete fuse_pools[pool_address];
@@ -323,7 +323,7 @@ contract RariFuseLendingAMO_V3 is Owned {
     // Remove a borrow fuse pool 
     function removeBorrowFusePool(address pool_address) public onlyByOwnGov {
         require(pool_address != address(0), "Zero address detected");
-        require(fuse_borrow_pools[pool_address] == true, "Address nonexistant");
+        require(fuse_borrow_pools[pool_address] == true, "Address nonexistent");
         
         // Delete from the mapping
         delete fuse_borrow_pools[pool_address];

@@ -203,7 +203,7 @@ contract ReserveTracker is Owned {
 
     // Remove a pool 
     function removeFXSPair(address pair_address) public onlyByOwnGov {
-        require(fxs_pairs[pair_address] == true, "Address nonexistant");
+        require(fxs_pairs[pair_address] == true, "Address nonexistent");
         
         // Delete from the mapping
         delete fxs_pairs[pair_address];

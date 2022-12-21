@@ -474,7 +474,7 @@ contract CrossChainBridgeBacker is Owned {
     // Removes an AMO
     function removeAMO(address amo_address) external onlyByOwnGov {
         require(amo_address != address(0), "Zero address detected");
-        require(amos[amo_address] == true, "Address nonexistant");
+        require(amos[amo_address] == true, "Address nonexistent");
         
         // Delete from the mapping
         delete amos[amo_address];
