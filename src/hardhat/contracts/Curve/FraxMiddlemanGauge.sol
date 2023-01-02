@@ -29,9 +29,9 @@ import "../Math/SafeMath.sol";
 import "../ERC20/ERC20.sol";
 import "../ERC20/SafeERC20.sol";
 import "./IFraxGaugeFXSRewardsDistributor.sol";
-import "../Misc_AMOs/harmony/IERC20EthManager.sol";
+// import "../Misc_AMOs/harmony/IERC20EthManager.sol";
 import "../Misc_AMOs/polygon/IRootChainManager.sol";
-import "../Misc_AMOs/solana/IWormhole.sol";
+// import "../Misc_AMOs/solana/IWormhole.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../Staking/Owned.sol";
 import "../Utils/ReentrancyGuard.sol";
@@ -161,16 +161,16 @@ contract FraxMiddlemanGauge is Owned, ReentrancyGuard {
             //     false
             // );
         }
-        else if (bridge_type == 5) {
-            // Harmony
-            // Bridge is at 0x2dccdb493827e15a5dc8f8b72147e6c4a5620857
+        // else if (bridge_type == 5) {
+        //     // Harmony
+        //     // Bridge is at 0x2dccdb493827e15a5dc8f8b72147e6c4a5620857
 
-            // Approve
-            ERC20(reward_token_address).approve(bridge_address, reward_amount);
+        //     // Approve
+        //     ERC20(reward_token_address).approve(bridge_address, reward_amount);
 
-            // lockToken
-            IERC20EthManager(bridge_address).lockToken(reward_token_address, reward_amount, address_to_send_to);
-        }
+        //     // lockToken
+        //     IERC20EthManager(bridge_address).lockToken(reward_token_address, reward_amount, address_to_send_to);
+        // }
         else if (bridge_type == 6) {
             // Arbitrum [Multichain / Anyswap]
             // Bridge is 0x183D0dC5867c01bFB1dbBc41d6a9d3dE6e044626

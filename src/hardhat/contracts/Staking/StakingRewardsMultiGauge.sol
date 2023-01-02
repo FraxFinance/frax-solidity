@@ -45,7 +45,7 @@ import '../Uniswap/TransferHelper.sol';
 // -------------------- VARIES --------------------
 
 // G-UNI
-import "../Misc_AMOs/gelato/IGUniPool.sol";
+// import "../Misc_AMOs/gelato/IGUniPool.sol";
 
 // mStable
 // import '../Misc_AMOs/mstable/IFeederPool.sol';
