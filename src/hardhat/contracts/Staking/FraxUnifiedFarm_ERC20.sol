@@ -58,7 +58,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // use custom errors to reduce contract size
     error TransferLockNotAllowed(address spender, bytes32 kek_id);
-    error StakesUnlocked();
+    error StakesStillLocked();
     error InvalidReceiver();
     error InvalidAmount();
     error InsufficientAllowance();
@@ -555,11 +555,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(staker_address, kek_id);
-        // require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true, "Stake is still locked!");
-        // the stake must still be locked to transfer
-        if (block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true) {
-            revert StakesUnlocked();
-        }
+        if (!(thisStake.ending_timestamp >= block.timestamp || stakesUnlocked == true)) revert StakesStillLocked();
         uint256 liquidity = thisStake.liquidity;
 
         if (liquidity > 0) {
@@ -696,9 +692,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         if (receiver_address == address(0) || receiver_address == sender_address) {
             revert InvalidReceiver();
         }
-        if (block.timestamp >= senderStake.ending_timestamp || stakesUnlocked == true) {
-            revert StakesUnlocked();
-        }
+        if (!(senderStake.ending_timestamp >= block.timestamp || stakesUnlocked == true)) revert StakesStillLocked();
         if (transfer_amount > senderStake.liquidity || transfer_amount <= 0) {
             revert InvalidAmount();
         }
@@ -808,5 +802,5 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     event TransferLocked(address indexed sender_address, address indexed destination_address, uint256 amount_transferred, bytes32 source_kek_id, bytes32 destination_kek_id);
     event Approval(address indexed staker, address indexed spender, bytes32 indexed kek_id, uint256 amount);
     event ApprovalForAll(address indexed owner, address indexed spender, bool approved);
-
 }
+
