@@ -1,0 +1,11 @@
+{
+    "solidity.compileUsingRemoteVersion": "v0.8.17+commit.8df45f5f",
+    "solidity.packageDefaultDependenciesContractsDirectory": "src/hardhat/contracts",
+    "solidity.packageDefaultDependenciesDirectory": "lib",
+    "solidity.remappings": [
+        "forge-std/=lib/forge-std/src/", 
+        "@openzeppelin/=lib/openzeppelin-contracts/",
+        "@mocks/=src/hardhat/contracts/mocks/",
+        "@staking/=src/hardhat/contracts/Staking/"
+    ]
+}

@@ -38,13 +38,15 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
     function getLatestETHPriceE8() public view returns (int) {
         // Returns in E8
         (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
-        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+        // require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+        if (price < 0 || updatedAt == 0 || answeredInRound < roundID) revert InvalidChainlinkPrice();
         
         return price;
     }
 
     function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
-        require(_eth_usd_oracle_address != address(0), "Zero address detected");
+        // require(_eth_usd_oracle_address != address(0), "Zero address detected");
+        if (_eth_usd_oracle_address == address(0)) revert CannotBeZero();
 
         priceFeedETHUSD = AggregatorV3Interface(_eth_usd_oracle_address);
     }
