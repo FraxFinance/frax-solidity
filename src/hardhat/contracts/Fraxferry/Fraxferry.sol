@@ -85,11 +85,11 @@ contract Fraxferry {
       Transaction[] transactions;
    }
 
-   constructor(IERC20 _token, uint _chainid, IERC20 _targetToken, uint _targetChain) {
+   constructor(address _token, uint _chainid, address _targetToken, uint _targetChain) {
       //require (block.chainid==_chainid,"Wrong chain");
       chainid=_chainid;
-      token = _token;
-      targetToken = _targetToken;
+      token = IERC20(_token);
+      targetToken = IERC20(_targetToken);
       owner = msg.sender;
       targetChain = _targetChain;
    }

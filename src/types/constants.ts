@@ -2245,7 +2245,9 @@ export const CONTRACT_ADDRESSES = {
       ferry_to_arbitrum: "0x85c5f05Ae4CB68190C695a22b292C3bA90696128", 
       ferry_to_aurora: "0x6ac96F65156281a9383455D704b58A74ea9C9eC4", 
       ferry_to_avalanche: "0xA381d58e96eC3818c825E1fb264099448945CF8b", 
+      ferry_to_boba: "0x3eF1d856EA62A2292B8690855042095a7aC48B4b", 
       ferry_to_bsc: "0xDAe210BfB0cF8c81EDB4b459e2e0bA14D553e2D9", 
+      ferry_to_evmos: "0x2d2261f970F605C813f160E8BAEd455E9004A842", 
       ferry_to_fantom: "0xfB788F9E20ef426a32A67986654750172A6c1788", 
       ferry_to_moonbeam: "0xF1E1deA8F1053FD9C5F47f72F1f03977E17aF242",
       ferry_to_moonriver: "0x15ADa72A3B52A88E25DdD2CC2bA1120234e34bb0",  
@@ -2340,6 +2342,7 @@ export const CONTRACT_ADDRESSES = {
       cvx: "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
       cvxCRV: "0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7",
       ens: "0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72",
+      eth2: "0x00000000219ab540356cBB839Cbe05303d7705Fa", // Beacon deposit contract
       flx: "0x6243d8CEA23066d098a15582d81a598b4e8391F4",
       fnx: "0xeF9Cd7882c067686691B6fF49e650b43AFBBCC6B",
       fxs: "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
@@ -3106,6 +3109,13 @@ export const CONTRACT_ADDRESSES = {
     bridge_backers: {
       bobaGateway: "0x4828D4496Ff8dA2f5c1E7217Dc282b5C69B83263",
     },
+    fraxferry: {
+      dummy_tkn: "", // for testing
+      ferry_to_ethereum: "0x5Cba95F0C97cf281C37CA7a24d68578eA60D0DD0", 
+      captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
+      first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
+      crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
+    },
     oracles: {
       single_assets: {
         FRAX: "0xa6e4F91618012427f4C86F0EC7e38C7cB617eb81",
@@ -3276,6 +3286,13 @@ export const CONTRACT_ADDRESSES = {
     },
     bridge_backers: {
       nomad: "0xFbD5ED7244842696a60424e347109F8E42be46E0",
+    },
+    fraxferry: {
+      dummy_tkn: "", // for testing
+      ferry_to_ethereum: "0xa47F0E10D832c9c35b9E733dedaAc2316fF47192", 
+      captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
+      first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
+      crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
     },
     oracles: {
       single_assets: {
