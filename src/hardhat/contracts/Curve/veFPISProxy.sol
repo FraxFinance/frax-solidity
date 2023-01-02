@@ -193,8 +193,8 @@ contract veFPISProxy is Owned {
         // Initialize variable
         uint256 surplus_amt;
 
-        // If the user is above app max usage limit (e.g. due to profits), you need to push the surplus back to veFPIS.vy
-        if (app.userFPISUsed[userAddr] + amountFPIS >= max_usage_to_use) {
+        // If the user above app max usage limit (e.g. due to profits), you need to push the surplus back to veFPIS.vy
+        if (app.userFPISUsed[userAddr] + amountFPIS > max_usage_to_use) {
             // User is over the app usage limit
             // ==========================
 

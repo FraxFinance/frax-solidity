@@ -80,8 +80,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     uint256 public lastUpdateTime;
 
     // Lock time and multiplier settings
-    uint256 public lock_max_multiplier = 2e18; //uint256(2e18); // E18. 1x = e18
-    uint256 public lock_time_for_max_multiplier = 1 * 365 * 86400; // 1 year
+    uint256 public lock_max_multiplier = 2e18; // E18. 1x = e18
+    uint256 public lock_time_for_max_multiplier = 1 * 1095 * 86400; // 3 years
     // uint256 public lock_time_for_max_multiplier = 2 * 86400; // 2 days
     uint256 public lock_time_min = 594000; // 6.875 * 86400 (~7 day)
 
