@@ -3,7 +3,7 @@
 	"settings": {
 		"optimizer": {
 			"enabled": true,
-			"runs": 100000,
+			"runs": 200000,
 			 "details": {
         		"orderLiterals": true,
         		"deduplicate": true,
@@ -21,6 +21,7 @@
 			"": ["ast"],
 			"*": ["abi", "metadata", "devdoc", "userdoc", "storageLayout", "evm.legacyAssembly", "evm.bytecode", "evm.deployedBytecode", "evm.methodIdentifiers", "evm.gasEstimates", "evm.assembly"]
 			}
-		}
+		},
+		"evmVersion": "byzantium"
 	}
 }
