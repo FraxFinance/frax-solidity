@@ -21,7 +21,7 @@ const FraxPoolV3 = artifacts.require("Frax/Pools/FraxPoolV3");
 
 // Gauge
 const LiquidityGaugeV2 = artifacts.require("Curve/ILiquidityGaugeV2");
-const FraxGaugeController = artifacts.require("Curve/FraxGaugeController");
+// const FraxGaugeController = artifacts.require("Curve/FraxGaugeController");
 const FraxGaugeControllerV2 = artifacts.require("Curve/FraxGaugeControllerV2");
 const FraxGaugeFXSRewardsDistributor = artifacts.require("Curve/IFraxGaugeFXSRewardsDistributor");
 
@@ -30,7 +30,7 @@ const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 
 // Misc AMOs
 const FraxAMOMinter = artifacts.require("Frax/FraxAMOMinter");
-const FraxLiquidityBridger_AUR_Rainbow = artifacts.require("Bridges/Aurora/FraxLiquidityBridger_AUR_Rainbow");
+// const FraxLiquidityBridger_AUR_Rainbow = artifacts.require("Bridges/Aurora/FraxLiquidityBridger_AUR_Rainbow");
 const TWAMM_AMO = artifacts.require("Misc_AMOs/TWAMM_AMO");
 
 // Oracles
@@ -156,7 +156,7 @@ module.exports = async (deployer) => {
     // Gauge
     liquidity_gauge_v2_instance = await LiquidityGaugeV2.at(CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_v2);
     veFXSYieldDistributorV4_instance = await veFXSYieldDistributorV4.at(CONTRACT_ADDRESSES.ethereum.misc.vefxs_yield_distributor_v4);   
-    frax_gauge_controller = await FraxGaugeController.at(CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_controller);
+    // frax_gauge_controller = await FraxGaugeController.at(CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_controller);
     frax_gauge_controller_v2 = await FraxGaugeControllerV2.at(CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_controller_v2);
     gauge_rewards_distributor_instance = await FraxGaugeFXSRewardsDistributor.at(CONTRACT_ADDRESSES.ethereum.misc.frax_gauge_rewards_distributor);
 
@@ -539,7 +539,7 @@ module.exports = async (deployer) => {
 
     console.log(chalk.yellow("--------DEPLOYING GAUGE CONTRACTS--------"));
     LiquidityGaugeV2.setAsDeployed(liquidity_gauge_v2_instance);
-    FraxGaugeController.setAsDeployed(frax_gauge_controller);
+    // FraxGaugeController.setAsDeployed(frax_gauge_controller);
     FraxGaugeControllerV2.setAsDeployed(frax_gauge_controller_v2);
     FraxGaugeFXSRewardsDistributor.setAsDeployed(gauge_rewards_distributor_instance);
     
