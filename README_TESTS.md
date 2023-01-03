@@ -1,5 +1,6 @@
+
 ## Hardhat
-**---Testing---**
+**------Testing------**
 cd ./src/hardhat
 npx hardhat compile
 
@@ -44,6 +45,7 @@ npx hardhat test ./test/FraxPoolV3-Tests.js
 npx hardhat test ./test/FraxUniV3Farm_Stable_FRAX_DAI-Tests.js
 npx hardhat test ./test/FraxUniV3Farm_Stable_FRAX_USDC-Tests.js
 npx hardhat test ./test/FraxUnifiedFarm_ERC20-Tests.js
+npx hardhat test ./test/FraxUnifiedFarm_KyberSwapElastic-Tests.js
 npx hardhat test ./test/FraxUnifiedFarm_PosRebase-Tests.js
 npx hardhat test ./test/FraxUnifiedFarm_UniV3-Tests.js
 npx hardhat test ./test/Fraxswap/fraxswap-twamm-test.js
@@ -88,4 +90,3 @@ npx hardhat test ./test/__OPTIMISM/CrossChainBridgeBacker_OPTI_Celer-Tests.js
 POLYGON
 npx hardhat test ./test/__POLYGON/CrossChainBridgeBacker_POLY_MaticBridge-Tests.js
 npx hardhat test ./test/__POLYGON/SushiSwapLiquidityAMO_POLY-Tests.js
-
