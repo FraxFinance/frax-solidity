@@ -1,0 +1,48 @@
+// These compiler settings allow the ERC20FraxFarm with Transfers to compile (avoids stack too deep error)
+// 200k runs & the contract's runtime bytecode size increases by ~10%
+{
+	"language": "Solidity",
+	"settings": {
+		"optimizer": {
+			"enabled": true,
+			"runs": 200000
+		},
+		"viaIR": true,
+		"outputSelection": {
+			"*": {
+			"": ["ast"],
+			"*": ["abi", "metadata", "devdoc", "userdoc", "storageLayout", "evm.legacyAssembly", "evm.bytecode", "evm.deployedBytecode", "evm.methodIdentifiers", "evm.gasEstimates", "evm.assembly"]
+			}
+		},
+		"evmVersion": "byzantium"
+	}
+}
+
+// The following settings should offer substantial gas optimization for users:
+{
+	"language": "Solidity",
+	"settings": {
+		"optimizer": {
+			"enabled": true,
+			"runs": 200000,
+			 "details": {
+        		"orderLiterals": true,
+        		"deduplicate": true,
+				"cse": true,
+        		"constantOptimizer": true,
+        		"yul": true,
+        		"yulDetails": {
+          			"stackAllocation": true
+				}
+			}
+		},
+		"viaIR": true,
+		"outputSelection": {
+			"*": {
+			"": ["ast"],
+			"*": ["abi", "metadata", "devdoc", "userdoc", "storageLayout", "evm.legacyAssembly", "evm.bytecode", "evm.deployedBytecode", "evm.methodIdentifiers", "evm.gasEstimates", "evm.assembly"]
+			}
+		},
+		"evmVersion": "byzantium"
+	}
+}

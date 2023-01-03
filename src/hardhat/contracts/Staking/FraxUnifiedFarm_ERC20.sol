@@ -501,8 +501,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         emit LockedLonger(msg.sender, kek_id, new_secs, block.timestamp, new_ending_ts);
     }
 
-    
-
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
     function stakeLocked(uint256 liquidity, uint256 secs) nonReentrant external returns (bytes32) {
         return _stakeLocked(msg.sender, msg.sender, liquidity, secs, block.timestamp);
@@ -577,7 +575,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         return liquidity;
     }
-
 
     function _getRewardExtraLogic(address rewardee, address destination_address) internal override {
         // Do nothing
@@ -805,5 +802,5 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     event TransferLocked(address indexed sender_address, address indexed destination_address, uint256 amount_transferred, bytes32 source_kek_id, bytes32 destination_kek_id);
     event Approval(address indexed staker, address indexed spender, bytes32 indexed kek_id, uint256 amount);
     event ApprovalForAll(address indexed owner, address indexed spender, bool approved);
-
 }
+
