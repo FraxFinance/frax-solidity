@@ -98,7 +98,7 @@ module.exports = {
 			},
 			chainId: 288,
 			gas: "auto",
-			gasPrice: 12500000000, // 12.5 Gwei
+			gasPrice: 80000000000, // 80 Gwei
 			gasMultiplier: 1.2
 		},
 		bsc: {
@@ -118,7 +118,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 18000000000, // 18 Gwei
+			gasPrice: 30000000000, // 30 Gwei
 			gasMultiplier: 1.2,
 		},
 		evmos: {
@@ -250,7 +250,7 @@ module.exports = {
 					optimizer: {
 						enabled: true,
 						runs: 100000
-					}
+					},
 				  }
 			},
 			{
@@ -355,12 +355,23 @@ module.exports = {
 			{
 				version: "0.8.17",
 				settings: {
+					viaIR: true,
 					optimizer: {
 						enabled: true,
-						runs: 100000
+						runs: 200000,
+						details: {
+							orderLiterals: true,
+							deduplicate: true,
+							cse: true,
+							constantOptimizer: true,
+							yul: true,
+							yulDetails: {
+								stackAllocation: true
+							}
+						},
 					}
-				  }
-			}
+				}
+			},
 		],
 	},
     paths: {
