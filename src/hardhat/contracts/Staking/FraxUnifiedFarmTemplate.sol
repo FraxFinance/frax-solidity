@@ -61,6 +61,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     error MustBeGEOne();
     error NotOwnerOrTimelock();
     error NotOwnerOrTknMgr();
+    error NotEnoughRewardTokensAvailable(address);
 
     /* ========== STATE VARIABLES ========== */
 
@@ -291,11 +292,11 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     // Calculated the combined weight for an account
-    function calcCurCombinedWeight(address account) public virtual view 
+    function calcCurCombinedWeight(address) public virtual view 
         returns (
-            uint256 old_combined_weight,
-            uint256 new_vefxs_multiplier,
-            uint256 new_combined_weight
+            uint256,
+            uint256,
+            uint256
         )
     {
         revert NeedsCCCWLogic();
@@ -504,12 +505,12 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         return _getRewardExtraLogic(msg.sender, destination_address);
     }
 
-    function _getRewardExtraLogic(address rewardee, address destination_address) internal virtual {
+    function _getRewardExtraLogic(address, address) internal virtual {
         revert NeedsGRELLogic();
     }
 
     /// @notice A function that can be overridden to add extra logic to the pre-transfer process to process curve LP rewards
-    function preTransferProcess(address from, address to) public virtual {
+    function preTransferProcess(address, address) public virtual {
         revert NeedsPreTransferProcessLogic();
     }
 
@@ -571,7 +572,10 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         
         // Make sure there are enough tokens to renew the reward period
         for (uint256 i; i < rewardTokens.length; i++){ 
-            require((rewardRates(i) * rewardsDuration * (num_periods_elapsed + 1)) <= IERC20(rewardTokens[i]).balanceOf(address(this)), string(abi.encodePacked("Not enough reward tokens available: ", rewardTokens[i])) );
+
+            /// @dev TODO check that this won't break tests or UI displays
+            //require((rewardRates(i) * rewardsDuration * (num_periods_elapsed + 1)) <= IERC20(rewardTokens[i]).balanceOf(address(this)), string(abi.encodePacked("Not enough reward tokens available: ", rewardTokens[i])) );
+            if((rewardRates(i) * rewardsDuration * (num_periods_elapsed + 1)) > IERC20(rewardTokens[i]).balanceOf(address(this))) revert NotEnoughRewardTokensAvailable(rewardTokens[i]);
         }
         
         // uint256 old_lastUpdateTime = lastUpdateTime;
