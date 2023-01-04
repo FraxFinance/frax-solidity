@@ -48,13 +48,27 @@ import "../Misc_AMOs/convex/IConvexBaseRewardPool.sol";
 
 contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
+    error NeedsPreTransferProcessLogic();
+    error NeedsCCCWLogic();
+    error NeedsFPLPTLogic();
+    error InvalidProxy();
+    error ProxyHasNotApprovedYou();
+    error RewardsCollectionPaused();
+    error NeedsGRELLogic();
+    error NoValidTokensToRecover();
+    error MustBeGEMulPrec();
+    error MustBeGEZero();
+    error MustBeGEOne();
+    error NotOwnerOrTimelock();
+    error NotOwnerOrTknMgr();
+
     /* ========== STATE VARIABLES ========== */
 
     // Instances
-    IveFXS private immutable veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
+    IveFXS private constant veFXS = IveFXS(0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0);
     
     // Frax related
-    address internal immutable frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
+    address internal constant frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
     uint256 public fraxPerLPStored;
 
     // Constant for various precisions
@@ -123,12 +137,14 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnGov() {
-        require(msg.sender == owner || msg.sender == 0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA, "Not owner or timelock");
+        // require(msg.sender == owner || msg.sender == 0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA, "Not owner or timelock");
+        if(msg.sender != owner && msg.sender != 0x8412ebf45bAC1B340BbE8F318b928C466c4E39CA) revert NotOwnerOrTimelock();
         _;
     }
 
     modifier onlyTknMgrs(address reward_token_address) {
-        require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "Not owner or tkn mgr");
+        // require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "Not owner or tkn mgr");
+        if(msg.sender != owner && !isTokenManagerFor(msg.sender, reward_token_address)) revert NotOwnerOrTknMgr();
         _;
     }
 
@@ -154,7 +170,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         rewardDistributors = _rewardDistributors;
         rewardRatesManual = _rewardRatesManual;
 
-        for (uint256 i = 0; i < _rewardTokens.length; i++){ 
+        for (uint256 i; i < _rewardTokens.length; i++){ 
             // For fast token address -> token ID lookups later
             rewardTokenAddrToIdx[_rewardTokens[i]] = i;
 
@@ -172,7 +188,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         }
 
         // Other booleans
-        stakesUnlocked = false;
+        // stakesUnlocked = false;
 
         // Initialization
         lastUpdateTime = block.timestamp;
@@ -201,9 +217,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     function rewardRates(uint256 token_idx) public view returns (uint256 rwd_rate) {
-        address gauge_controller_address = gaugeControllers[token_idx];
-        if (gauge_controller_address != address(0)) {
-            rwd_rate = (IFraxGaugeController(gauge_controller_address).global_emission_rate() * last_gauge_relative_weights[token_idx]) / 1e18;
+        // address gauge_controller_address = gaugeControllers[token_idx];
+        if (gaugeControllers[token_idx] != address(0)) {
+            rwd_rate = (IFraxGaugeController(gaugeControllers[token_idx]).global_emission_rate() * last_gauge_relative_weights[token_idx]) / 1e18;
         }
         else {
             rwd_rate = rewardRatesManual[token_idx];
@@ -217,7 +233,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         }
         else {
             newRewardsPerTokenStored = new uint256[](rewardTokens.length);
-            for (uint256 i = 0; i < rewardsPerTokenStored.length; i++){ 
+            for (uint256 i; i < rewardsPerTokenStored.length; i++){ 
                 newRewardsPerTokenStored[i] = rewardsPerTokenStored[i] + (
                     ((lastTimeRewardApplicable() - lastUpdateTime) * rewardRates(i) * 1e18) / _total_combined_weight
                 );
@@ -234,7 +250,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         new_earned = new uint256[](rewardTokens.length);
 
         if (_combined_weights[account] > 0){
-            for (uint256 i = 0; i < rewardTokens.length; i++){ 
+            for (uint256 i; i < rewardTokens.length; i++){ 
                 new_earned[i] = ((_combined_weights[account] * (reward_arr[i] - userRewardsPerTokenPaid[account][i])) / 1e18)
                                 + rewards[account][i];
             }
@@ -245,7 +261,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     function getRewardForDuration() external view returns (uint256[] memory rewards_per_duration_arr) {
         rewards_per_duration_arr = new uint256[](rewardRatesManual.length);
 
-        for (uint256 i = 0; i < rewardRatesManual.length; i++){ 
+        for (uint256 i; i < rewardRatesManual.length; i++){ 
             rewards_per_duration_arr[i] = rewardRates(i) * rewardsDuration;
         }
     }
@@ -282,9 +298,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
             uint256 new_combined_weight
         )
     {
-        revert("Need cCCW logic");
+        revert NeedsCCCWLogic();
     }
-
     // ------ LOCK RELATED ------
 
     // Multiplier amount, given the length of the lock
@@ -318,7 +333,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // Meant to be overridden
     function fraxPerLPToken() public virtual view returns (uint256) {
-        revert("Need fPLPT logic");
+        revert NeedsFPLPTLogic();
     }
 
     // ------ veFXS RELATED ------
@@ -345,9 +360,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     function veFXSMultiplier(address account) public view returns (uint256 vefxs_multiplier) {
         // Use either the user's or their proxy's veFXS balance
-        uint256 vefxs_bal_to_use = 0;
+        //  uint256 vefxs_bal_to_use = 0;
         address the_proxy = getProxyFor(account);
-        vefxs_bal_to_use = (the_proxy == address(0)) ? veFXS.balanceOf(account) : veFXS.balanceOf(the_proxy);
+        uint256 vefxs_bal_to_use = (the_proxy == address(0)) ? veFXS.balanceOf(account) : veFXS.balanceOf(the_proxy);
 
         // First option based on fraction of total veFXS supply, with an added scale factor
         uint256 mult_optn_1 = (vefxs_bal_to_use * vefxs_max_multiplier * vefxs_boost_scale_factor) 
@@ -356,17 +371,18 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // Second based on old method, where the amount of FRAX staked comes into play
         uint256 mult_optn_2;
         {
-            uint256 veFXS_needed_for_max_boost;
+            //uint256 veFXS_needed_for_max_boost;
 
             // Need to use proxy-wide FRAX balance if applicable, to prevent exploiting
-            veFXS_needed_for_max_boost = (the_proxy == address(0)) ? minVeFXSForMaxBoost(account) : minVeFXSForMaxBoostProxy(the_proxy);
+            uint256 veFXS_needed_for_max_boost = (the_proxy == address(0)) ? minVeFXSForMaxBoost(account) : minVeFXSForMaxBoostProxy(the_proxy);
 
             if (veFXS_needed_for_max_boost > 0){ 
                 uint256 user_vefxs_fraction = (vefxs_bal_to_use * MULTIPLIER_PRECISION) / veFXS_needed_for_max_boost;
                 
                 mult_optn_2 = (user_vefxs_fraction * vefxs_max_multiplier) / MULTIPLIER_PRECISION;
             }
-            else mult_optn_2 = 0; // This will happen with the first stake, when user_staked_frax is 0
+            /// TODO is initialized to zero, so no need to set it to zero again
+            // else mult_optn_2 = 0; // This will happen with the first stake, when user_staked_frax is 0
         }
 
         // Select the higher of the two
@@ -383,7 +399,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // Must come before stakerSetVeFXSProxy
     // CALLED BY PROXY
     function proxyToggleStaker(address staker_address) external {
-        require(valid_vefxs_proxies[msg.sender], "Invalid proxy");
+        if(!valid_vefxs_proxies[msg.sender]) revert InvalidProxy();
+
         proxy_allowed_stakers[msg.sender][staker_address] = !proxy_allowed_stakers[msg.sender][staker_address]; 
 
         // Disable the staker's set proxy if it was the toggler and is currently on
@@ -398,14 +415,14 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // Staker can allow a veFXS proxy (the proxy will have to toggle them first)
     // CALLED BY STAKER
     function stakerSetVeFXSProxy(address proxy_address) external {
-        require(valid_vefxs_proxies[proxy_address], "Invalid proxy");
-        require(proxy_allowed_stakers[proxy_address][msg.sender], "Proxy has not allowed you yet");
+        if(!valid_vefxs_proxies[msg.sender]) revert InvalidProxy();
+        if(!proxy_allowed_stakers[proxy_address][msg.sender]) revert ProxyHasNotApprovedYou();
         
         // Corner case sanity check to make sure LP isn't double counted
-        address old_proxy_addr = staker_designated_proxies[msg.sender];
-        if (old_proxy_addr != address(0)) {
+        // address old_proxy_addr = staker_designated_proxies[msg.sender];
+        if (staker_designated_proxies[msg.sender] != address(0)) {
             // Remove the LP count from the old proxy
-            proxy_lp_balances[old_proxy_addr] -= _locked_liquidity[msg.sender];
+            proxy_lp_balances[staker_designated_proxies[msg.sender]] -= _locked_liquidity[msg.sender];
         }
 
         // Set the new proxy
@@ -466,14 +483,15 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
             uint256[] memory earned_arr = earned(account);
 
             // Update the rewards array
-            for (uint256 i = 0; i < earned_arr.length; i++){ 
+            for (uint256 i; i < earned_arr.length; i++){ 
                 rewards[account][i] = earned_arr[i];
+                userRewardsPerTokenPaid[account][i] = rewardsPerTokenStored[i];
             }
 
             // Update the rewards paid array
-            for (uint256 i = 0; i < earned_arr.length; i++){ 
-                userRewardsPerTokenPaid[account][i] = rewardsPerTokenStored[i];
-            }
+            // for (uint256 i; i < earned_arr.length; i++){ 
+            //     userRewardsPerTokenPaid[account][i] = rewardsPerTokenStored[i];
+            // }
         }
     }
 
@@ -481,12 +499,18 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // ------ REWARDS CLAIMING ------
 
     function getRewardExtraLogic(address destination_address) public nonReentrant {
-        require(rewardsCollectionPaused == false, "Rewards collection paused");
+        if(rewardsCollectionPaused == true) revert RewardsCollectionPaused();
+
         return _getRewardExtraLogic(msg.sender, destination_address);
     }
 
     function _getRewardExtraLogic(address rewardee, address destination_address) internal virtual {
-        revert("Need gREL logic");
+        revert NeedsGRELLogic();
+    }
+
+    /// @notice A function that can be overridden to add extra logic to the pre-transfer process to process curve LP rewards
+    function preTransferProcess(address from, address to) public virtual {
+        revert NeedsPreTransferProcessLogic();
     }
 
     // Two different getReward functions are needed because of delegateCall and msg.sender issues
@@ -505,12 +529,12 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         lastRewardClaimTime[rewardee] = block.timestamp;
         
         // Make sure rewards collection isn't paused
-        require(rewardsCollectionPaused == false, "Rewards collection paused");
+        if(rewardsCollectionPaused == true) revert RewardsCollectionPaused();
         
         // Update the rewards array and distribute rewards
         rewards_before = new uint256[](rewardTokens.length);
 
-        for (uint256 i = 0; i < rewardTokens.length; i++){ 
+        for (uint256 i; i < rewardTokens.length; i++){ 
             rewards_before[i] = rewards[rewardee][i];
             rewards[rewardee][i] = 0;
             if (rewards_before[i] > 0) {
@@ -532,7 +556,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // If the period expired, renew it
     function retroCatchUp() internal {
         // Pull in rewards from the rewards distributor, if applicable
-        for (uint256 i = 0; i < rewardDistributors.length; i++){ 
+        for (uint256 i; i < rewardDistributors.length; i++){ 
             address reward_distributor_address = rewardDistributors[i];
             if (reward_distributor_address != address(0)) {
                 IFraxGaugeFXSRewardsDistributor(reward_distributor_address).distributeReward(address(this));
@@ -546,7 +570,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         uint256 num_periods_elapsed = uint256(block.timestamp - periodFinish) / rewardsDuration; // Floor division to the nearest period
         
         // Make sure there are enough tokens to renew the reward period
-        for (uint256 i = 0; i < rewardTokens.length; i++){ 
+        for (uint256 i; i < rewardTokens.length; i++){ 
             require((rewardRates(i) * rewardsDuration * (num_periods_elapsed + 1)) <= IERC20(rewardTokens[i]).balanceOf(address(this)), string(abi.encodePacked("Not enough reward tokens available: ", rewardTokens[i])) );
         }
         
@@ -588,7 +612,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         uint256[] memory rewards_per_token = rewardsPerToken();
 
         // Update the rewardsPerTokenStored
-        for (uint256 i = 0; i < rewardsPerTokenStored.length; i++){ 
+        for (uint256 i; i < rewardsPerTokenStored.length; i++){ 
             rewardsPerTokenStored[i] = rewards_per_token[i];
         }
 
@@ -598,13 +622,13 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     function sync_gauge_weights(bool force_update) public {
         // Loop through the gauge controllers
-        for (uint256 i = 0; i < gaugeControllers.length; i++){ 
-            address gauge_controller_address = gaugeControllers[i];
-            if (gauge_controller_address != address(0)) {
+        for (uint256 i; i < gaugeControllers.length; i++){ 
+            // address gauge_controller_address = gaugeControllers[i];
+            if (gaugeControllers[i] != address(0)) {
                 if (force_update || (block.timestamp > last_gauge_time_totals[i])){
                     // Update the gauge_relative_weight
-                    last_gauge_relative_weights[i] = IFraxGaugeController(gauge_controller_address).gauge_relative_weight_write(address(this), block.timestamp);
-                    last_gauge_time_totals[i] = IFraxGaugeController(gauge_controller_address).time_total();
+                    last_gauge_relative_weights[i] = IFraxGaugeController(gaugeControllers[i]).gauge_relative_weight_write(address(this), block.timestamp);
+                    last_gauge_time_totals[i] = IFraxGaugeController(gaugeControllers[i]).time_total();
                 }
             }
         }
@@ -656,8 +680,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTknMgrs(tokenAddress) {
         // Check if the desired token is a reward token
-        bool isRewardToken = false;
-        for (uint256 i = 0; i < rewardTokens.length; i++){ 
+        bool isRewardToken;
+        for (uint256 i; i < rewardTokens.length; i++){ 
             if (rewardTokens[i] == tokenAddress) {
                 isRewardToken = true;
                 break;
@@ -675,7 +699,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         }
         // If none of the above conditions are true
         else {
-            revert("No valid tokens to recover");
+            revert NoValidTokensToRecover();
         }
     }
 
@@ -688,9 +712,13 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // [4] uint256 _lock_time_for_max_multiplier,
         // [5] uint256 _lock_time_min
     ) external onlyByOwnGov {
-        require(_misc_vars[0] >= MULTIPLIER_PRECISION, "Must be >= MUL PREC");
-        require((_misc_vars[1] >= 0) && (_misc_vars[2] >= 0) && (_misc_vars[3] >= 0), "Must be >= 0");
-        require((_misc_vars[4] >= 1) && (_misc_vars[5] >= 1), "Must be >= 1");
+        // require(_misc_vars[0] >= MULTIPLIER_PRECISION, "Must be >= MUL PREC");
+        // require((_misc_vars[1] >= 0) && (_misc_vars[2] >= 0) && (_misc_vars[3] >= 0), "Must be >= 0");
+        // require((_misc_vars[4] >= 1) && (_misc_vars[5] >= 1), "Must be >= 1");
+        /// TODO check this
+        if(_misc_vars[4] < _misc_vars[5]) revert MustBeGEMulPrec();
+        if((_misc_vars[1] < 0) || (_misc_vars[2] < 0) || (_misc_vars[3] < 0)) revert MustBeGEZero();
+        if((_misc_vars[4] < 1) || (_misc_vars[5] < 1)) revert MustBeGEOne();
 
         lock_max_multiplier = _misc_vars[0];
         vefxs_max_multiplier = _misc_vars[1];
