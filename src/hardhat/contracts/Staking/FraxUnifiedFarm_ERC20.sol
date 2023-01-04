@@ -54,7 +54,7 @@ import "../Misc_AMOs/curve/I2poolToken.sol";
 contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // use custom errors to reduce contract size
-    error TransferLockNotAllowed(address spender, bytes32 kek_id);
+    error TransferLockNotAllowed(address spender, uint256 locked_stake_index);
     error StakesUnlocked();
     error InvalidReceiver();
     error InvalidAmount();
@@ -109,8 +109,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // Stake tracking
     mapping(address => LockedStake[]) public lockedStakes;
-0x69 -> [lockedStake1, lockedStake2, ...];
-lockedStake2 array index = 1;
     /* ========== STRUCTS ========== */
 
     // Struct for the stake
@@ -125,7 +123,8 @@ lockedStake2 array index = 1;
 
     /* ========== APPROVALS & ALLOWANCE FOR LOCK TRANSFERS ========== */
     // staker => kek_id => spender => uint256 (amount of lock that spender is approved for)
-    mapping(address => mapping(bytes32 => mapping(address => uint256))) public kekAllowance;
+    // mapping(address => mapping(bytes32 => mapping(address => uint256))) public kekAllowance;
+    mapping(address => mapping(uint256 => mapping(address => uint256))) public spenderAllowance;
     // staker => spender => bool (true if approved)
     mapping(address => mapping(address => bool)) public spenderApprovalForAllLocks;
 
@@ -593,22 +592,22 @@ lockedStake2 array index = 1;
     /* ========== LOCK TRANSFER & AUTHORIZATIONS - Approvals, Functions, Errors, & Events ========== */
 
     // Approve `spender` to transfer `kek_id` on behalf of `owner`
-    function setAllowance(address spender, bytes32 kek_id, uint256 amount) external {
-        if (kekAllowance[msg.sender][kek_id][spender] >= 0) revert CannotBeZero();
-        kekAllowance[msg.sender][kek_id][spender] = amount;
-        emit Approval(msg.sender, spender, kek_id, amount);
+    function setAllowance(address spender, uint256 lockedStakeIndex, uint256 amount) external {
+        if(spenderAllowance[msg.sender][lockedStakeIndex][spender] >= 0) revert CannotBeZero();
+        spenderAllowance[msg.sender][lockedStakeIndex][spender] = amount;
+        emit Approval(msg.sender, spender, lockedStakeIndex, amount);
     }
 
-    function increaseAllowance(address spender, bytes32 kek_id, uint256 amount) external {
-        if (kekAllowance[msg.sender][kek_id][spender] <= 0) revert AllowanceIsZero();
-        kekAllowance[msg.sender][kek_id][spender] += amount;
-        emit Approval(msg.sender, spender, kek_id, kekAllowance[msg.sender][kek_id][spender]);
+    function increaseAllowance(address spender, uint256 lockedStakeIndex, uint256 amount) external {
+        if (spenderAllowance[msg.sender][lockedStakeIndex][spender] == 0) revert AllowanceIsZero();
+        spenderAllowance[msg.sender][lockedStakeIndex][spender] += amount;
+        emit Approval(msg.sender, spender, lockedStakeIndex, spenderAllowance[msg.sender][lockedStakeIndex][spender]);
     }
 
     // Revoke approval for a single kek_id
-    function removeAllowance(address spender, bytes32 kek_id) external {
-        kekAllowance[msg.sender][kek_id][spender] = 0;
-        emit Approval(msg.sender, spender, kek_id, 0);
+    function removeAllowance(address spender, uint256 lockedStakeIndex) external {
+        spenderAllowance[msg.sender][lockedStakeIndex][spender] = 0;
+        emit Approval(msg.sender, spender, lockedStakeIndex, 0);
     }
 
     // Approve or revoke `spender` to transfer any/all locks on behalf of the owner
@@ -618,11 +617,11 @@ lockedStake2 array index = 1;
     }
 
     // internal approval check and allowance manager
-    function isApproved(address staker, bytes32 kek_id, uint256 amount) public view returns (bool) {
+    function isApproved(address staker, uint256 lockedStakeIndex, uint256 amount) public view returns (bool) {
         // check if spender is approved for all `staker` locks
         if (spenderApprovalForAllLocks[staker][msg.sender]) {
             return true;
-        } else if (kekAllowance[staker][kek_id][msg.sender] >= amount) {
+        } else if (spenderAllowance[staker][lockedStakeIndex][msg.sender] >= amount) {
             return true;
         } else {
             // for any other possibility, return false
@@ -630,11 +629,11 @@ lockedStake2 array index = 1;
         }
     }
 
-    function _spendAllowance(address staker, bytes32 kek_id, uint256 amount) internal {
-            if (kekAllowance[staker][kek_id][msg.sender] == amount) {
-                kekAllowance[staker][kek_id][msg.sender] = 0;
-            } else if (kekAllowance[staker][kek_id][msg.sender] > amount) {
-                kekAllowance[staker][kek_id][msg.sender] -= amount;
+    function _spendAllowance(address staker, uint256 lockedStakeIndex, uint256 amount) internal {
+            if (spenderAllowance[staker][lockedStakeIndex][msg.sender] == amount) {
+                spenderAllowance[staker][lockedStakeIndex][msg.sender] = 0;
+            } else if (spenderAllowance[staker][lockedStakeIndex][msg.sender] > amount) {
+                spenderAllowance[staker][lockedStakeIndex][msg.sender] -= amount;
             } else {
                 revert InsufficientAllowance();
             }
@@ -643,39 +642,59 @@ lockedStake2 array index = 1;
     ///// Transfer Locks
     /// @dev called by the spender to transfer a lock position on behalf of the staker
     /// @notice Transfer's `sender_address`'s lock with `kek_id` to `destination_address` by authorized spender
-    function transferLockedFrom(
+    // function transferLockedFrom(
+    //     address sender_address,
+    //     address receiver_address,
+    //     bytes32 source_kek_id,
+    //     uint256 transfer_amount,
+    //     bytes32 destination_kek_id
+    // ) external nonReentrant returns (bytes32, bytes32) {
+    //     // check approvals
+    //     if (!isApproved(sender_address, source_kek_id, transfer_amount)) revert TransferLockNotAllowed(msg.sender, source_kek_id);
+
+    //     // adjust the allowance down
+    //     _spendAllowance(sender_address, source_kek_id, transfer_amount);
+
+    //     // do the transfer
+    //     /// @dev the approval check is done in modifier, so to reach here caller is permitted, thus OK 
+    //     //       to supply both staker & receiver here (no msg.sender)
+    //     return(_safeTransferLocked(sender_address, receiver_address, source_kek_id, transfer_amount, destination_kek_id));
+    // }
+
+    // // called by the staker to transfer a lock position to another address
+    // /// @notice Transfer's `amount` of `sender_address`'s lock with `kek_id` to `destination_address`
+    // function transferLocked(
+    //     address receiver_address,
+    //     bytes32 source_kek_id,
+    //     uint256 transfer_amount,
+    //     bytes32 destination_kek_id
+    // ) external nonReentrant returns (bytes32, bytes32) {
+    //     // do the transfer
+    //     /// @dev approval/owner check not needed here as msg.sender is the staker
+    //     return(_safeTransferLocked(msg.sender, receiver_address, source_kek_id, transfer_amount, destination_kek_id));
+    // }
+
+    function transferLockedFromByIndex(
         address sender_address,
         address receiver_address,
-        bytes32 source_kek_id,
+        uint256 source_kek_index,
         uint256 transfer_amount,
-        bytes32 destination_kek_id
-    ) external nonReentrant returns (bytes32, bytes32) {
+        bool use_destination_kek_index,
+        uint256 destination_kek_index
+    ) external nonReentrant returns (uint256,uint256) {
         // check approvals
-        if (!isApproved(sender_address, source_kek_id, transfer_amount)) revert TransferLockNotAllowed(msg.sender, source_kek_id);
+        if (!isApproved(sender_address, source_kek_index, transfer_amount)) revert TransferLockNotAllowed(msg.sender, source_kek_index);
 
         // adjust the allowance down
-        _spendAllowance(sender_address, source_kek_id, transfer_amount);
+        _spendAllowance(sender_address, source_kek_index, transfer_amount);
 
         // do the transfer
         /// @dev the approval check is done in modifier, so to reach here caller is permitted, thus OK 
         //       to supply both staker & receiver here (no msg.sender)
-        return(_safeTransferLocked(sender_address, receiver_address, source_kek_id, transfer_amount, destination_kek_id));
+        return(_safeTransferLockedByKekIndex(sender_address, receiver_address, source_kek_index, transfer_amount, use_destination_kek_index, destination_kek_index));
     }
 
-    // called by the staker to transfer a lock position to another address
-    /// @notice Transfer's `amount` of `sender_address`'s lock with `kek_id` to `destination_address`
-    function transferLocked(
-        address receiver_address,
-        bytes32 source_kek_id,
-        uint256 transfer_amount,
-        bytes32 destination_kek_id
-    ) external nonReentrant returns (bytes32, bytes32) {
-        // do the transfer
-        /// @dev approval/owner check not needed here as msg.sender is the staker
-        return(_safeTransferLocked(msg.sender, receiver_address, source_kek_id, transfer_amount, destination_kek_id));
-    }
-
-    function transferLockedByKekIndex(
+    function transferLockedByIndex(
         address receiver_address,
         uint256 sender_kek_index,
         uint256 transfer_amount,
@@ -754,7 +773,11 @@ lockedStake2 array index = 1;
         // if use target receive locked stake is false, create a new kek_id, otherwise update the balances & ending timestamp (longer of the two)
         if (!use_destination_kek_index) {
             // create the new kek_id
-            destination_kek_id = _createNewKekId(receiver_address, senderStake.start_timestamp, transfer_amount, senderStake.ending_timestamp, senderStake.lock_multiplier);          
+            bytes32 destination_kek_id = _createNewKekId(receiver_address, senderStake.start_timestamp, transfer_amount, senderStake.ending_timestamp, senderStake.lock_multiplier);          
+            
+            /// TODO this will be removed once the rest of the contract is updated to NOT use kek_id
+            destination_kek_index = lockedStakes[receiver_address].length + 1;
+
         } else {
             /// Update the existing lock
 
@@ -765,14 +788,14 @@ lockedStake2 array index = 1;
             // );
 
             // Update the existing staker's stake
-            lockedStakes[receiver_address][receiverArrayIndex].liquidity += transfer_amount;
+            lockedStakes[receiver_address][destination_kek_index].liquidity += transfer_amount;
 
             // check & update ending timestamp to whichever is farthest out
             if (receiverStake.ending_timestamp < senderStake.ending_timestamp) {
                 // update the lock expiration to the later timestamp
-                lockedStakes[receiver_address][receiverArrayIndex].ending_timestamp = senderStake.ending_timestamp;
+                lockedStakes[receiver_address][destination_kek_index].ending_timestamp = senderStake.ending_timestamp;
                 // update the lock multiplier since we are effectively extending the lock
-                lockedStakes[receiver_address][receiverArrayIndex].lock_multiplier = lockMultiplier(senderStake.ending_timestamp - block.timestamp);
+                lockedStakes[receiver_address][destination_kek_index].lock_multiplier = lockMultiplier(senderStake.ending_timestamp - block.timestamp);
             }
         }
 
@@ -784,7 +807,7 @@ lockedStake2 array index = 1;
             sender_address,
             receiver_address,
             transfer_amount,
-            source_kek_index,
+            sender_kek_index,
             destination_kek_index
         );
 
@@ -792,116 +815,116 @@ lockedStake2 array index = 1;
         if (ILockReceiver(receiver_address).onLockReceived(
             sender_address, 
             receiver_address, 
-            destination_kek_id, 
+            receiverStake.kek_id, 
             ""
         ) != ILockReceiver.onLockReceived.selector) revert InvalidReceiver(); //0xc42d8b95) revert InvalidReceiver();
 
-        return (source_kek_id, destination_kek_id);
+        return (sender_kek_index, destination_kek_index);
 
     }
 
-    // executes the transfer
-    function _safeTransferLocked(
-        address sender_address,
-        address receiver_address,
-        bytes32 source_kek_id,
-        uint256 transfer_amount,
-        bytes32 destination_kek_id
-    ) internal updateRewardAndBalanceMdf(sender_address, true) updateRewardAndBalanceMdf(receiver_address, true) returns (bytes32, bytes32) { // TODO should this also update receiver? updateRewardAndBalanceMdf(receiver_address, true)
-        // on transfer, call sender_address to verify sending is ok
-        if (sender_address.code.length > 0) {
-            require(
-                ILockReceiver(sender_address).beforeLockTransfer(sender_address, receiver_address, source_kek_id, "") 
-                == 
-                ILockReceiver.beforeLockTransfer.selector // 00x4fb07105 <--> bytes4(keccak256("beforeLockTransfer(address,address,bytes32,bytes)"))
-            );
-        }
+    // // executes the transfer
+    // function _safeTransferLocked(
+    //     address sender_address,
+    //     address receiver_address,
+    //     bytes32 source_kek_id,
+    //     uint256 transfer_amount,
+    //     bytes32 destination_kek_id
+    // ) internal updateRewardAndBalanceMdf(sender_address, true) updateRewardAndBalanceMdf(receiver_address, true) returns (bytes32, bytes32) { // TODO should this also update receiver? updateRewardAndBalanceMdf(receiver_address, true)
+    //     // on transfer, call sender_address to verify sending is ok
+    //     if (sender_address.code.length > 0) {
+    //         require(
+    //             ILockReceiver(sender_address).beforeLockTransfer(sender_address, receiver_address, source_kek_id, "") 
+    //             == 
+    //             ILockReceiver.beforeLockTransfer.selector // 00x4fb07105 <--> bytes4(keccak256("beforeLockTransfer(address,address,bytes32,bytes)"))
+    //         );
+    //     }
 
-        // Get the stake and its index
-        (LockedStake memory senderStake, uint256 senderArrayIndex) = _getStake(
-            sender_address,
-            source_kek_id
-        );
+    //     // Get the stake and its index
+    //     (LockedStake memory senderStake, uint256 senderArrayIndex) = _getStake(
+    //         sender_address,
+    //         source_kek_id
+    //     );
 
-        // perform checks
-        if (receiver_address == address(0) || receiver_address == sender_address) {
-            revert InvalidReceiver();
-        }
-        if (block.timestamp >= senderStake.ending_timestamp || stakesUnlocked == true) {
-            revert StakesUnlocked();
-        }
-        if (transfer_amount > senderStake.liquidity || transfer_amount <= 0) {
-            revert InvalidAmount();
-        }
+    //     // perform checks
+    //     if (receiver_address == address(0) || receiver_address == sender_address) {
+    //         revert InvalidReceiver();
+    //     }
+    //     if (block.timestamp >= senderStake.ending_timestamp || stakesUnlocked == true) {
+    //         revert StakesUnlocked();
+    //     }
+    //     if (transfer_amount > senderStake.liquidity || transfer_amount <= 0) {
+    //         revert InvalidAmount();
+    //     }
 
-        // Update the liquidities
-        _locked_liquidity[sender_address] -= transfer_amount;
-        _locked_liquidity[receiver_address] += transfer_amount;
+    //     // Update the liquidities
+    //     _locked_liquidity[sender_address] -= transfer_amount;
+    //     _locked_liquidity[receiver_address] += transfer_amount;
         
-            //address the_proxy = getProxyFor(sender_address);
-        if (getProxyFor(sender_address) != address(0)) {
-                proxy_lp_balances[getProxyFor(sender_address)] -= transfer_amount;
-        }
+    //         //address the_proxy = getProxyFor(sender_address);
+    //     if (getProxyFor(sender_address) != address(0)) {
+    //             proxy_lp_balances[getProxyFor(sender_address)] -= transfer_amount;
+    //     }
         
-            //address the_proxy = getProxyFor(receiver_address);
-        if (getProxyFor(receiver_address) != address(0)) {
-                proxy_lp_balances[getProxyFor(receiver_address)] += transfer_amount;
-        }
+    //         //address the_proxy = getProxyFor(receiver_address);
+    //     if (getProxyFor(receiver_address) != address(0)) {
+    //             proxy_lp_balances[getProxyFor(receiver_address)] += transfer_amount;
+    //     }
 
-        // if sent amount was all the liquidity, delete the stake, otherwise decrease the balance
-        if (transfer_amount == senderStake.liquidity) {
-            delete lockedStakes[sender_address][senderArrayIndex];
-        } else {
-            lockedStakes[sender_address][senderArrayIndex].liquidity -= transfer_amount;
-        }
+    //     // if sent amount was all the liquidity, delete the stake, otherwise decrease the balance
+    //     if (transfer_amount == senderStake.liquidity) {
+    //         delete lockedStakes[sender_address][senderArrayIndex];
+    //     } else {
+    //         lockedStakes[sender_address][senderArrayIndex].liquidity -= transfer_amount;
+    //     }
 
-        // if destination kek is 0, create a new kek_id, otherwise update the balances & ending timestamp (longer of the two)
-        if (destination_kek_id == bytes32(0)) {
-            // create the new kek_id
-            destination_kek_id = _createNewKekId(receiver_address, senderStake.start_timestamp, transfer_amount, senderStake.ending_timestamp, senderStake.lock_multiplier);          
-        } else {
-            /// Update the existing lock
+    //     // if destination kek is 0, create a new kek_id, otherwise update the balances & ending timestamp (longer of the two)
+    //     if (destination_kek_id == bytes32(0)) {
+    //         // create the new kek_id
+    //         destination_kek_id = _createNewKekId(receiver_address, senderStake.start_timestamp, transfer_amount, senderStake.ending_timestamp, senderStake.lock_multiplier);          
+    //     } else {
+    //         /// Update the existing lock
 
-            // get the target (checks that it actually exists for the receiver)
-            (LockedStake memory receiverStake, uint256 receiverArrayIndex) = _getStake(
-                receiver_address,
-                destination_kek_id
-            );
+    //         // get the target (checks that it actually exists for the receiver)
+    //         (LockedStake memory receiverStake, uint256 receiverArrayIndex) = _getStake(
+    //             receiver_address,
+    //             destination_kek_id
+    //         );
 
-            // Update the existing staker's stake
-            lockedStakes[receiver_address][receiverArrayIndex].liquidity += transfer_amount;
+    //         // Update the existing staker's stake
+    //         lockedStakes[receiver_address][receiverArrayIndex].liquidity += transfer_amount;
 
-            // check & update ending timestamp to whichever is farthest out
-            if (receiverStake.ending_timestamp < senderStake.ending_timestamp) {
-                // update the lock expiration to the later timestamp
-                lockedStakes[receiver_address][receiverArrayIndex].ending_timestamp = senderStake.ending_timestamp;
-                // update the lock multiplier since we are effectively extending the lock
-                lockedStakes[receiver_address][receiverArrayIndex].lock_multiplier = lockMultiplier(senderStake.ending_timestamp - block.timestamp);
-            }
-        }
+    //         // check & update ending timestamp to whichever is farthest out
+    //         if (receiverStake.ending_timestamp < senderStake.ending_timestamp) {
+    //             // update the lock expiration to the later timestamp
+    //             lockedStakes[receiver_address][receiverArrayIndex].ending_timestamp = senderStake.ending_timestamp;
+    //             // update the lock multiplier since we are effectively extending the lock
+    //             lockedStakes[receiver_address][receiverArrayIndex].lock_multiplier = lockMultiplier(senderStake.ending_timestamp - block.timestamp);
+    //         }
+    //     }
 
-        // Need to call again to make sure everything is correct
-        updateRewardAndBalance(sender_address, true); 
-        updateRewardAndBalance(receiver_address, true);
+    //     // Need to call again to make sure everything is correct
+    //     updateRewardAndBalance(sender_address, true); 
+    //     updateRewardAndBalance(receiver_address, true);
 
-        emit TransferLocked(
-            sender_address,
-            receiver_address,
-            transfer_amount,
-            source_kek_id,
-            destination_kek_id
-        );
+    //     emit TransferLocked(
+    //         sender_address,
+    //         receiver_address,
+    //         transfer_amount,
+    //         source_kek_id,
+    //         destination_kek_id
+    //     );
 
-        // call the receiver with the destination kek_id to verify receiving is ok
-        if (ILockReceiver(receiver_address).onLockReceived(
-            sender_address, 
-            receiver_address, 
-            destination_kek_id, 
-            ""
-        ) != ILockReceiver.onLockReceived.selector) revert InvalidReceiver(); //0xc42d8b95) revert InvalidReceiver();
+    //     // call the receiver with the destination kek_id to verify receiving is ok
+    //     if (ILockReceiver(receiver_address).onLockReceived(
+    //         sender_address, 
+    //         receiver_address, 
+    //         destination_kek_id, 
+    //         ""
+    //     ) != ILockReceiver.onLockReceived.selector) revert InvalidReceiver(); //0xc42d8b95) revert InvalidReceiver();
 
-        return (source_kek_id, destination_kek_id);
-    }
+    //     return (source_kek_id, destination_kek_id);
+    // }
 
     function _createNewKekId(
         address staker_address,
@@ -936,7 +959,8 @@ lockedStake2 array index = 1;
     event LockedLonger(address indexed user, bytes32 kek_id, uint256 new_secs, uint256 new_start_ts, uint256 new_end_ts);
     event StakeLocked(address indexed user, uint256 amount, uint256 secs, bytes32 kek_id, address source_address);
     event WithdrawLocked(address indexed user, uint256 liquidity, bytes32 kek_id, address destination_address);
-    event Approval(address indexed staker, address indexed spender, bytes32 indexed kek_id, uint256 amount);
+    
+    event Approval(address indexed staker, address indexed spender, uint256 locked_stakes_index, uint256 amount);
     event ApprovalForAll(address indexed owner, address indexed spender, bool approved);
     
     event TransferLocked(address indexed sender_address, address indexed destination_address, uint256 amount_transferred, bytes32 source_kek_id, bytes32 destination_kek_id);
