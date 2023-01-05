@@ -702,7 +702,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         } else {
             lockedStakes[sender_address][sender_lock_index].liquidity -= transfer_amount;
         }
- 
+
+        // Get the stake and its index
+        LockedStake memory receiverStake = getLockedStake(receiver_address, receiver_lock_index);
+
         /** if use_receiver_lock_index is true &
         *       & the index is valid 
         *       & has liquidity 
@@ -716,9 +719,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
                 receiverStake.ending_timestamp > block.timestamp
             ) {
             /// Update the existing lockedStake
-            // Get the stake and its index
-            LockedStake memory receiverStake = getLockedStake(receiver_address, receiver_lock_index);
-   
+
             // Update the existing staker's stake
             lockedStakes[receiver_address][receiver_lock_index].liquidity += transfer_amount;
 
