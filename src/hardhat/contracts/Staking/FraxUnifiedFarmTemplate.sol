@@ -382,8 +382,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
                 
                 mult_optn_2 = (user_vefxs_fraction * vefxs_max_multiplier) / MULTIPLIER_PRECISION;
             }
-            /// TODO is initialized to zero, so no need to set it to zero again
-            // else mult_optn_2 = 0; // This will happen with the first stake, when user_staked_frax is 0
+            /// mult_optn_2 is initialized to zero, so no need to set it to zero again
         }
 
         // Select the higher of the two
@@ -465,14 +464,23 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
             _vefxsMultiplierStored[account] = new_vefxs_multiplier;
 
             // Update the user's and the global combined weights
+            // if (new_combined_weight >= old_combined_weight) {
+            //     uint256 weight_diff = new_combined_weight - old_combined_weight;
+            //     _total_combined_weight = _total_combined_weight + weight_diff;
+            //     _combined_weights[account] = old_combined_weight + weight_diff;
+            // } else {
+            //     uint256 weight_diff = old_combined_weight - new_combined_weight;
+            //     _total_combined_weight = _total_combined_weight - weight_diff;
+            //     _combined_weights[account] = old_combined_weight - weight_diff;
+            // }            
             if (new_combined_weight >= old_combined_weight) {
-                uint256 weight_diff = new_combined_weight - old_combined_weight;
-                _total_combined_weight = _total_combined_weight + weight_diff;
-                _combined_weights[account] = old_combined_weight + weight_diff;
+                // uint256 weight_diff = new_combined_weight - old_combined_weight;
+                _total_combined_weight += (new_combined_weight - old_combined_weight);
+                _combined_weights[account] = old_combined_weight + (new_combined_weight - old_combined_weight);
             } else {
-                uint256 weight_diff = old_combined_weight - new_combined_weight;
-                _total_combined_weight = _total_combined_weight - weight_diff;
-                _combined_weights[account] = old_combined_weight - weight_diff;
+                // uint256 weight_diff = old_combined_weight - new_combined_weight;
+                _total_combined_weight -= (old_combined_weight - new_combined_weight);
+                _combined_weights[account] = old_combined_weight - (old_combined_weight - new_combined_weight);
             }
 
         }
@@ -696,10 +704,11 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // Also, other tokens, like the staking token, airdrops, or accidental deposits, can be withdrawn by the owner
         if (
                 (isRewardToken && rewardManagers[tokenAddress] == msg.sender)
-                || (!isRewardToken && (msg.sender == owner))
+                || 
+                (!isRewardToken && (msg.sender == owner))
             ) {
-            TransferHelper.safeTransfer(tokenAddress, msg.sender, tokenAmount);
-            return;
+                TransferHelper.safeTransfer(tokenAddress, msg.sender, tokenAmount);
+                return;
         }
         // If none of the above conditions are true
         else {
@@ -719,7 +728,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // require(_misc_vars[0] >= MULTIPLIER_PRECISION, "Must be >= MUL PREC");
         // require((_misc_vars[1] >= 0) && (_misc_vars[2] >= 0) && (_misc_vars[3] >= 0), "Must be >= 0");
         // require((_misc_vars[4] >= 1) && (_misc_vars[5] >= 1), "Must be >= 1");
-        /// TODO check this
+        /// TODO check this rewrite
         if(_misc_vars[4] < _misc_vars[5]) revert MustBeGEMulPrec();
         if((_misc_vars[1] < 0) || (_misc_vars[2] < 0) || (_misc_vars[3] < 0)) revert MustBeGEZero();
         if((_misc_vars[4] < 1) || (_misc_vars[5] < 1)) revert MustBeGEOne();
