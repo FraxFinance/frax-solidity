@@ -81,8 +81,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
     IConvexStakingWrapperFrax public stakingToken;
     I2poolToken public curveToken;
-    I2pool public curvePool;
-    // ICurvefrxETHETHPool public curvePool;
+    // I2pool public curvePool;
+    ICurvefrxETHETHPool public curvePool;
 
     // Fraxswap
     // IFraxswapPair public stakingToken;

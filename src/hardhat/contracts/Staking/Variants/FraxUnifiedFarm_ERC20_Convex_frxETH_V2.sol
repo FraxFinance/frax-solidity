@@ -15,7 +15,7 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
     AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
 
     /// Added this as an override to the I2Pool version in FraxFarmERC20 to fix compiler warnings
-    ICurvefrxETHETHPool public immutable override curvePool;
+    // ICurvefrxETHETHPool public immutable curvePool;
 
     constructor (
         address _owner,
@@ -34,7 +34,7 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
         stakingToken = IConvexStakingWrapperFrax(_stakingToken);
         curveToken = I2poolToken(stakingToken.curveToken());
         curvePool = ICurvefrxETHETHPool(curveToken.minter());
-        address token0 = curvePool.coins(0);
+        // address token0 = curvePool.coins(0);
         // frax_is_token0 = false; // Doesn't matter for frxETH
     }
 
