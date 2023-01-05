@@ -34,11 +34,11 @@ pragma solidity >=0.8.0;
 // (Locked, veFXS, and UniV3 portions are new)
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 
-import "../Math/Math.sol";
+import "../Math/MathV2.sol";
 import "../Curve/IveFXS.sol";
 import "../Curve/IFraxGaugeController.sol";
 import "../Curve/IFraxGaugeFXSRewardsDistributor.sol";
-import "../ERC20/IERC20.sol";
+import "../ERC20/IERC20V2.sol";
 import '../Uniswap/TransferHelperV2.sol';
 import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
