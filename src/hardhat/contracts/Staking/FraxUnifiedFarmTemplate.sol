@@ -39,7 +39,7 @@ import "../Curve/IveFXS.sol";
 import "../Curve/IFraxGaugeController.sol";
 import "../Curve/IFraxGaugeFXSRewardsDistributor.sol";
 import "../ERC20/IERC20.sol";
-import '../Uniswap/TransferHelper.sol';
+import '../Uniswap/TransferHelperV2.sol';
 import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
 
