@@ -15,6 +15,12 @@ pragma solidity >=0.6.11;
  * class of bugs, so it's recommended to use it always.
  */
 library SafeMath {
+    error SafeMathAdditionOverflow();
+    error SafeMathSubtractionOverflow();
+    error SafeMathMultiplicationOverflow();
+    error SafeMathDivisionByZero();
+    error SafeMathModuloByZero();
+
     /**
      * @dev Returns the addition of two unsigned integers, reverting on
      * overflow.
@@ -26,7 +32,8 @@ library SafeMath {
      */
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
+        // require(c >= a, "SafeMath: addition overflow");
+        if(c < a) revert SafeMathAdditionOverflow();
 
         return c;
     }
@@ -41,7 +48,9 @@ library SafeMath {
      * - Subtraction cannot overflow.
      */
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        
         return sub(a, b, "SafeMath: subtraction overflow");
+        
     }
 
     /**
