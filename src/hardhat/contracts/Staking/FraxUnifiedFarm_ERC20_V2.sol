@@ -316,20 +316,20 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // If the lock is not expired
         else {
             // Decay the lock multiplier based on the time left
-            // uint256 avg_time_left;
-            // {
-            //     uint256 time_left_p1 = thisStake.ending_timestamp - accrue_start_time;
-            //     uint256 time_left_p2 = thisStake.ending_timestamp - block.timestamp;
-            //     avg_time_left = (time_left_p1 + time_left_p2) / 2;
-            // }
-            // midpoint_lock_multiplier = lockMultiplier(avg_time_left);
+            uint256 avg_time_left;
+            {
+                uint256 time_left_p1 = thisStake.ending_timestamp - accrue_start_time;
+                uint256 time_left_p2 = thisStake.ending_timestamp - block.timestamp;
+                avg_time_left = (time_left_p1 + time_left_p2) / 2;
+            }
+            midpoint_lock_multiplier = lockMultiplier(avg_time_left);
   
-            midpoint_lock_multiplier = lockMultiplier(
-                (
-                    (thisStake.ending_timestamp - accrue_start_time) + 
-                    (thisStake.ending_timestamp - block.timestamp)
-                ) / 2
-            );
+            // midpoint_lock_multiplier = lockMultiplier(
+            //     (
+            //         (thisStake.ending_timestamp - accrue_start_time) + 
+            //         (thisStake.ending_timestamp - block.timestamp)
+            //     ) / 2
+            // );
         }
 
         // Sanity check: make sure it never goes above the initial multiplier
@@ -409,6 +409,15 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     /* =============== MUTATIVE FUNCTIONS =============== */
 
     // ------ STAKING ------
+// ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4","0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"]
+
+    function _updateStake(address staker, uint256 index, uint256 start_timestamp, uint256 liquidity, uint256 ending_timestamp, uint256 lock_multiplier) internal {
+        lockedStakes[staker][index] = LockedStake(start_timestamp, liquidity, ending_timestamp, lock_multiplier);
+    }
+
+    function _createNewStake(address staker, uint256 start_timestamp, uint256 liquidity, uint256 ending_timestamp, uint256 lock_multiplier) internal {
+        lockedStakes[staker].push(LockedStake(start_timestamp, liquidity, ending_timestamp, lock_multiplier));
+    }
 
     function _updateLiqAmts(address staker_address, uint256 amt, bool is_add) internal {
         // Get the proxy address
@@ -513,13 +522,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         emit LockedLonger(msg.sender, theArrayIndex, new_secs, block.timestamp, new_ending_ts);
     }
-    function _updateStake(address staker, uint256 index, uint256 start_timestamp, uint256 liquidity, uint256 ending_timestamp, uint256 lock_multiplier) internal {
-        lockedStakes[staker][index] = LockedStake(start_timestamp, liquidity, ending_timestamp, lock_multiplier);
-    }
 
-    function _createNewStake(address staker, uint256 start_timestamp, uint256 liquidity, uint256 ending_timestamp, uint256 lock_multiplier) internal {
-        lockedStakes[staker].push(LockedStake(start_timestamp, liquidity, ending_timestamp, lock_multiplier));
-    }
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
     function stakeLocked(uint256 liquidity, uint256 secs) nonReentrant external returns (uint256) {
         return _stakeLocked(msg.sender, msg.sender, liquidity, secs, block.timestamp);
