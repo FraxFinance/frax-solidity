@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.11;
+pragma solidity ^0.8.4;
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
@@ -18,6 +18,7 @@ pragma solidity >=0.6.11;
  * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
  */
 abstract contract ReentrancyGuard {
+    error ReentrancyGuardFailure();
     // Booleans are more expensive than uint256 or any type that takes up a full
     // word because each write operation emits an extra SLOAD to first read the
     // slot's contents, replace the bits taken up by the boolean, and then write
@@ -34,7 +35,7 @@ abstract contract ReentrancyGuard {
 
     uint256 private _status;
 
-    constructor () internal {
+    constructor () {
         _status = _NOT_ENTERED;
     }
 
@@ -47,8 +48,8 @@ abstract contract ReentrancyGuard {
      */
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
-
+        // require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        if(_status == _ENTERED) revert ReentrancyGuardFailure();
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;
 
