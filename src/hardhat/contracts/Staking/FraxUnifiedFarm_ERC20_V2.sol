@@ -67,7 +67,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     error CannotShortenLockTime();
     error MustBeInTheFuture();
     error MustBePositive();
-    // error StakerNotFound();
+    error StakerNotFound();
     error CannotBeZero();
     error AllowanceIsZero();
 
@@ -748,7 +748,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         // do the transfer
         /// @dev the approval check is done in modifier, so to reach here caller is permitted, thus OK 
         //       to supply both staker & receiver here (no msg.sender)
-        return(_safeTransferLockedByLockIndex(sender_address, receiver_address, sender_lock_index, transfer_amount, use_receiver_lock_index, receiver_lock_index));
+        return(_safeTransferLockedByLockIndex([sender_address, receiver_address], sender_lock_index, transfer_amount, use_receiver_lock_index, receiver_lock_index));
     }
 
     function transferLocked(
@@ -760,125 +760,129 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     ) external nonReentrant returns (uint256,uint256) {
         // do the transfer
         /// @dev approval/owner check not needed here as msg.sender is the staker
-        return(_safeTransferLockedByLockIndex(msg.sender, receiver_address, sender_lock_index, transfer_amount, use_receiver_lock_index, receiver_lock_index));
+        return(_safeTransferLockedByLockIndex([msg.sender, receiver_address], sender_lock_index, transfer_amount, use_receiver_lock_index, receiver_lock_index));
     }
 
     function _safeTransferLockedByLockIndex(
-        address sender_address,
-        address receiver_address,
+        address[2] memory addrs, // [0]: sender_address, [1]: receiver_address. Reduces stack size
         uint256 sender_lock_index,
         uint256 transfer_amount,
         bool use_receiver_lock_index,
         uint256 receiver_lock_index
-    ) internal updateRewardAndBalanceMdf(sender_address, true) updateRewardAndBalanceMdf(receiver_address, true) returns (uint256,uint256) {
+    ) internal updateRewardAndBalanceMdf(addrs[0], true) updateRewardAndBalanceMdf(addrs[1], true) returns (uint256,uint256) {
 
-        // on transfer, call sender_address to verify sending is ok
-        if (sender_address.code.length > 0) {
+        // on transfer, call addrs[0] to verify sending is ok
+        if (addrs[0].code.length > 0) {
             require(
-                ILockReceiverV2(sender_address).beforeLockTransfer(sender_address, receiver_address, sender_lock_index, "") 
+                ILockReceiverV2(addrs[0]).beforeLockTransfer(addrs[0], addrs[1], sender_lock_index, "") 
                 == 
                 ILockReceiverV2.beforeLockTransfer.selector // 00x4fb07105 <--> bytes4(keccak256("beforeLockTransfer(address,address,bytes32,bytes)"))
             );
         }
         
         // Get the stake and its index
-        LockedStake memory senderStake = getLockedStake(sender_address, sender_lock_index);
+        LockedStake memory senderStake = getLockedStake(addrs[0], sender_lock_index);
 
         // perform checks
-        if (receiver_address == address(0) || receiver_address == sender_address) {
-            revert InvalidReceiver();
-        }
-        if (block.timestamp >= senderStake.ending_timestamp || stakesUnlocked == true) {
-            revert StakesUnlocked();
-        }
-        if (transfer_amount > senderStake.liquidity || transfer_amount <= 0) {
-            revert InvalidAmount();
+        {
+            if (addrs[1] == address(0) || addrs[1] == addrs[0]) {
+                revert InvalidReceiver();
+            }
+            if (block.timestamp >= senderStake.ending_timestamp || stakesUnlocked == true) {
+                revert StakesUnlocked();
+            }
+            if (transfer_amount > senderStake.liquidity || transfer_amount <= 0) {
+                revert InvalidAmount();
+            }
         }
 
         // Update the liquidities
-        _locked_liquidity[sender_address] -= transfer_amount;
-        _locked_liquidity[receiver_address] += transfer_amount;
+        _locked_liquidity[addrs[0]] -= transfer_amount;
+        _locked_liquidity[addrs[1]] += transfer_amount;
         
-        if (getProxyFor(sender_address) != address(0)) {
-                proxy_lp_balances[getProxyFor(sender_address)] -= transfer_amount;
+        if (getProxyFor(addrs[0]) != address(0)) {
+            proxy_lp_balances[getProxyFor(addrs[0])] -= transfer_amount;
         }
         
-        if (getProxyFor(receiver_address) != address(0)) {
-                proxy_lp_balances[getProxyFor(receiver_address)] += transfer_amount;
+        if (getProxyFor(addrs[1]) != address(0)) {
+            proxy_lp_balances[getProxyFor(addrs[1])] += transfer_amount;
         }
 
         // if sent amount was all the liquidity, delete the stake, otherwise decrease the balance
         if (transfer_amount == senderStake.liquidity) {
-            delete lockedStakes[sender_address][sender_lock_index];
+            delete lockedStakes[addrs[0]][sender_lock_index];
         } else {
-            lockedStakes[sender_address][sender_lock_index].liquidity -= transfer_amount;
+            lockedStakes[addrs[0]][sender_lock_index].liquidity -= transfer_amount;
         }
 
         // Get the stake and its index
-        LockedStake memory receiverStake = getLockedStake(receiver_address, receiver_lock_index);
+        {
+            // Scope here due to stack-too-deep
+            LockedStake memory receiverStake = getLockedStake(addrs[1], receiver_lock_index);
 
-        /** if use_receiver_lock_index is true &
-        *       & the index is valid 
-        *       & has liquidity 
-        *       & is still locked, update the stake & ending timestamp (longer of the two)
-        *   else, create a new lockedStake
-        * note using nested if checks to reduce gas costs slightly
-        */
-        if (use_receiver_lock_index == true) {
-            if (receiver_lock_index < lockedStakes[receiver_address].length ) {
-                if (receiverStake.liquidity > 0) {
-                    if (receiverStake.ending_timestamp > block.timestamp) {
-                        // Update the existing staker's stake liquidity
-                        lockedStakes[receiver_address][receiver_lock_index].liquidity += transfer_amount;
-                        // check & update ending timestamp to whichever is farthest out
-                        if (receiverStake.ending_timestamp < senderStake.ending_timestamp) {
-                            // update the lock expiration to the later timestamp
-                            lockedStakes[receiver_address][receiver_lock_index].ending_timestamp = senderStake.ending_timestamp;
-                            // update the lock multiplier since we are effectively extending the lock
-                            lockedStakes[receiver_address][receiver_lock_index].lock_multiplier = lockMultiplier(
-                                senderStake.ending_timestamp - block.timestamp
-                            );
+            /** if use_receiver_lock_index is true &
+            *       & the index is valid 
+            *       & has liquidity 
+            *       & is still locked, update the stake & ending timestamp (longer of the two)
+            *   else, create a new lockedStake
+            * note using nested if checks to reduce gas costs slightly
+            */
+            if (use_receiver_lock_index == true) {
+                if (receiver_lock_index < lockedStakes[addrs[1]].length ) {
+                    if (receiverStake.liquidity > 0) {
+                        if (receiverStake.ending_timestamp > block.timestamp) {
+                            // Update the existing staker's stake liquidity
+                            lockedStakes[addrs[1]][receiver_lock_index].liquidity += transfer_amount;
+                            // check & update ending timestamp to whichever is farthest out
+                            if (receiverStake.ending_timestamp < senderStake.ending_timestamp) {
+                                // update the lock expiration to the later timestamp
+                                lockedStakes[addrs[1]][receiver_lock_index].ending_timestamp = senderStake.ending_timestamp;
+                                // update the lock multiplier since we are effectively extending the lock
+                                lockedStakes[addrs[1]][receiver_lock_index].lock_multiplier = lockMultiplier(
+                                    senderStake.ending_timestamp - block.timestamp
+                                );
+                            }
                         }
                     }
                 }
+            } else {
+                // create the new lockedStake
+                // lockedStakes[addrs[1]].push(LockedStake(
+                //     senderStake.start_timestamp,
+                //     transfer_amount,
+                //     senderStake.ending_timestamp,
+                //     senderStake.lock_multiplier
+                // ));
+                _createNewStake(
+                    addrs[1], 
+                    senderStake.start_timestamp, 
+                    transfer_amount,
+                    senderStake.ending_timestamp, 
+                    senderStake.lock_multiplier
+                );
+                
+                // update the return value of the locked index 
+                /// todo could also just use the length of the array in all 3 situations below - which is more gas efficient?
+                receiver_lock_index = lockedStakes[addrs[1]].length;
             }
-        } else {
-            // create the new lockedStake
-            // lockedStakes[receiver_address].push(LockedStake(
-            //     senderStake.start_timestamp,
-            //     transfer_amount,
-            //     senderStake.ending_timestamp,
-            //     senderStake.lock_multiplier
-            // ));
-            _createNewStake(
-                receiver_address, 
-                senderStake.start_timestamp, 
-                transfer_amount,
-                senderStake.ending_timestamp, 
-                senderStake.lock_multiplier
-            );
-            
-            // update the return value of the locked index 
-            /// todo could also just use the length of the array in all 3 situations below - which is more gas efficient?
-            receiver_lock_index = lockedStakes[receiver_address].length;
         }
 
         // Need to call again to make sure everything is correct
-        updateRewardAndBalance(sender_address, true); 
-        updateRewardAndBalance(receiver_address, true);
+        updateRewardAndBalance(addrs[0], true); 
+        updateRewardAndBalance(addrs[1], true);
 
         emit TransferLockedByIndex(
-            sender_address,
-            receiver_address,
+            addrs[0],
+            addrs[1],
             transfer_amount,
             sender_lock_index,
             receiver_lock_index
         );
 
         // call the receiver with the destination lockedStake to verify receiving is ok
-        if (ILockReceiverV2(receiver_address).onLockReceived(
-            sender_address, 
-            receiver_address, 
+        if (ILockReceiverV2(addrs[1]).onLockReceived(
+            addrs[0], 
+            addrs[1], 
             receiver_lock_index, 
             ""
         ) != ILockReceiverV2.onLockReceived.selector) revert InvalidReceiver(); //0xc42d8b95) revert InvalidReceiver();
