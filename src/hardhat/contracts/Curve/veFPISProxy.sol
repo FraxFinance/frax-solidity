@@ -16,15 +16,7 @@ pragma solidity >=0.8.0;
 
 // Primary Author(s)
 // Jack Corddry: https://github.com/corddry
-
-// Reviewer(s) / Contributor(s)
 // Travis Moore: https://github.com/FortisFortuna
-
-//TODO: governance topology & Owned import
-
-//TODO: Decide if adds should always transfer the entire add (makes approving weird)
-//TODO: Slash all and exit -- how to handle -- allow toggle user slash
-//TODO: Should you be able to AppAdd after setting max to 0 -- sure why not, explore 
 
 import "../Staking/Owned.sol";
 import "./IveFPIS.sol";
@@ -47,7 +39,6 @@ contract veFPISProxy is Owned {
     /* ========== STRUCTS ========== */
 
     struct App {
-        // address app_address;
         bool allowUserSlashes;
         uint256 maxUsageAllowedPct; // What percent of a user's locked FPIS an app is able to control at max, 1e6 precision
         mapping (address => uint256) userMaxFPISAppCanUse; // Set by user as a cap. In FPIS #, not %
