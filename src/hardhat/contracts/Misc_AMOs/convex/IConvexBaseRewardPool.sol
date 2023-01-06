@@ -1,5 +1,7 @@
+
+
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity >=0.6.11;
 
 interface IConvexBaseRewardPool {
   function addExtraReward(address _reward) external returns (bool);
