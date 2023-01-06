@@ -40,8 +40,8 @@ interface IConvexStakingWrapperFrax {
   function transfer(address recipient, uint256 amount) external returns (bool);
   function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
   function transferOwnership(address newOwner) external;
-  function user_checkpoint(address[2] memory _accounts) external returns (bool);
   function user_checkpoint(address _account) external returns (bool);
+  function user_checkpoint(address[2] memory _accounts) external returns (bool);
   function withdraw(uint256 _amount) external;
   function withdrawAndUnwrap(uint256 _amount) external;
 }

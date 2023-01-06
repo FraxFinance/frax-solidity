@@ -10,9 +10,7 @@ import "../FraxUnifiedFarm_ERC20_V2.sol";
 import "../../Oracle/AggregatorV3Interface.sol";
 // import "../../ERC20/IERC20.sol";
 
-contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
-    error InvalidChainlinkPrice();
-
+contract FraxUnifiedFarm_ERC20_Convex_frxETH_V2 is FraxUnifiedFarm_ERC20_V2 {
     AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
 
     /// Added this as an override to the I2Pool version in FraxFarmERC20 to fix compiler warnings
@@ -27,7 +25,7 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
         address[] memory _rewardDistributors,
         address _stakingToken 
     ) 
-    FraxUnifiedFarm_ERC20(_owner , _rewardTokens, _rewardManagers, _rewardRates, _gaugeControllers, _rewardDistributors, _stakingToken)
+    FraxUnifiedFarm_ERC20_V2(_owner , _rewardTokens, _rewardManagers, _rewardRates, _gaugeControllers, _rewardDistributors, _stakingToken)
     {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
