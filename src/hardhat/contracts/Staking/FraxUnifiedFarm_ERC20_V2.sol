@@ -412,7 +412,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     /* =============== MUTATIVE FUNCTIONS =============== */
 
     // ------ STAKING ------
-// ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4","0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"]
 
     function _updateStake(address staker, uint256 index, uint256 start_timestamp, uint256 liquidity, uint256 ending_timestamp, uint256 lock_multiplier) internal {
         lockedStakes[staker][index] = LockedStake(start_timestamp, liquidity, ending_timestamp, lock_multiplier);
