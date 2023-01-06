@@ -67,7 +67,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     error CannotShortenLockTime();
     error MustBeInTheFuture();
     error MustBePositive();
-    error StakerNotFound();
+    // error StakerNotFound();
     error CannotBeZero();
     error AllowanceIsZero();
 
