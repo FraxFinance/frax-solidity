@@ -16,8 +16,8 @@ pragma solidity ^0.8.17;
 
 /// @dev Testing for Lock Transferring performed in isolated repository: https://github.com/ZrowGz/frax-transfers.git
 
-import "./FraxUnifiedFarmTemplate.sol";
-import "./ILockReceiver.sol";
+import "./FraxUnifiedFarmTemplate_V2.sol";
+import "./ILockReceiverV2.sol";
 
 // -------------------- VARIES --------------------
 
@@ -51,14 +51,15 @@ import "../Misc_AMOs/curve/I2poolToken.sol";
 
 // ------------------------------------------------
 
-contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
+contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
-    // use custom errors to reduce contract sizw
+    // use custom errors to reduce contract size
     error TransferLockNotAllowed(address,uint256); // spender, locked_stake_index
     error StakesUnlocked();
     error InvalidReceiver();
     error InvalidAmount();
     error InsufficientAllowance();
+    error InvalidChainlinkPrice();
     error WithdrawalsPaused();
     error StakingPaused();
     error MinimumStakeTimeNotMet();
@@ -138,7 +139,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         address[] memory _rewardDistributors,
         address _stakingToken
     ) 
-    FraxUnifiedFarmTemplate(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers, _rewardDistributors)
+    FraxUnifiedFarmTemplate_V2(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers, _rewardDistributors)
     {
 
         // -------------------- VARIES (USE CHILD FOR LOGIC) --------------------
@@ -502,7 +503,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         if (addl_liq <= 0) revert MustBePositive();
 
         // Pull the tokens from the sender
-        TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);
+        TransferHelperV2.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);
 
         // Update the stake
         // lockedStakes[msg.sender][theArrayIndex] = LockedStake(
@@ -589,7 +590,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // Pull in the required token(s)
         // Varies per farm
-        TransferHelper.safeTransferFrom(address(stakingToken), source_address, address(this), liquidity);
+        TransferHelperV2.safeTransferFrom(address(stakingToken), source_address, address(this), liquidity);
 
         // Get the lock multiplier and create the new lockedStake
         // uint256 lock_multiplier = lockMultiplier(secs);
@@ -649,7 +650,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
             // Give the tokens to the destination_address
             // Should throw if insufficient balance
-            TransferHelper.safeTransfer(address(stakingToken), destination_address, thisStake.liquidity);
+            TransferHelperV2.safeTransfer(address(stakingToken), destination_address, thisStake.liquidity);
 
             // // Update liquidities
             // _total_liquidity_locked -= thisStake.liquidity;
@@ -774,9 +775,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // on transfer, call sender_address to verify sending is ok
         if (sender_address.code.length > 0) {
             require(
-                ILockReceiver(sender_address).beforeLockTransfer(sender_address, receiver_address, sender_lock_index, "") 
+                ILockReceiverV2(sender_address).beforeLockTransfer(sender_address, receiver_address, sender_lock_index, "") 
                 == 
-                ILockReceiver.beforeLockTransfer.selector // 00x4fb07105 <--> bytes4(keccak256("beforeLockTransfer(address,address,bytes32,bytes)"))
+                ILockReceiverV2.beforeLockTransfer.selector // 00x4fb07105 <--> bytes4(keccak256("beforeLockTransfer(address,address,bytes32,bytes)"))
             );
         }
         
@@ -875,12 +876,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         );
 
         // call the receiver with the destination lockedStake to verify receiving is ok
-        if (ILockReceiver(receiver_address).onLockReceived(
+        if (ILockReceiverV2(receiver_address).onLockReceived(
             sender_address, 
             receiver_address, 
             receiver_lock_index, 
             ""
-        ) != ILockReceiver.onLockReceived.selector) revert InvalidReceiver(); //0xc42d8b95) revert InvalidReceiver();
+        ) != ILockReceiverV2.onLockReceived.selector) revert InvalidReceiver(); //0xc42d8b95) revert InvalidReceiver();
 
         return (sender_lock_index, receiver_lock_index);
 
