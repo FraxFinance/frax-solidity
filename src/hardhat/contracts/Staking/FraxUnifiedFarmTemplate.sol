@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.8.0;
+pragma solidity >=0.8.4;
 
 // ====================================================================
 // |     ______                   _______                             |
@@ -34,12 +34,12 @@ pragma solidity >=0.8.0;
 // (Locked, veFXS, and UniV3 portions are new)
 // https://raw.githubusercontent.com/Synthetixio/synthetix/develop/contracts/StakingRewards.sol
 
-import "../Math/Math.sol";
+import "../Math/MathV2.sol";
 import "../Curve/IveFXS.sol";
 import "../Curve/IFraxGaugeController.sol";
 import "../Curve/IFraxGaugeFXSRewardsDistributor.sol";
-import "../ERC20/IERC20.sol";
-import '../Uniswap/TransferHelper.sol';
+import "../ERC20/IERC20V2.sol";
+import '../Uniswap/TransferHelperV2.sol';
 import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
 
@@ -70,7 +70,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     
     // Frax related
     address internal constant frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
-    uint256 public fraxPerLPStored;
+    uint256 public fraxPerLPStored; // fraxPerLPToken is a public view function, although doesn't show the stored value
 
     // Constant for various precisions
     uint256 internal constant MULTIPLIER_PRECISION = 1e18;
@@ -80,15 +80,17 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     uint256 public lastUpdateTime;
 
     // Lock time and multiplier settings
-    uint256 public lock_max_multiplier = uint256(2e18); // E18. 1x = e18
+    uint256 public lock_max_multiplier = 2e18; //uint256(2e18); // E18. 1x = e18
     uint256 public lock_time_for_max_multiplier = 1 * 365 * 86400; // 1 year
     // uint256 public lock_time_for_max_multiplier = 2 * 86400; // 2 days
     uint256 public lock_time_min = 594000; // 6.875 * 86400 (~7 day)
 
+
     // veFXS related
-    uint256 public vefxs_boost_scale_factor = uint256(4e18); // E18. 4x = 4e18; 100 / scale_factor = % vefxs supply needed for max boost
-    uint256 public vefxs_max_multiplier = uint256(2e18); // E18. 1x = 1e18
-    uint256 public vefxs_per_frax_for_max_boost = uint256(4e18); // E18. 2e18 means 2 veFXS must be held by the staker per 1 FRAX
+    uint256 public vefxs_boost_scale_factor = 4e18;//uint256(4e18); // E18. 4x = 4e18; 100 / scale_factor = % vefxs supply needed for max boost
+    uint256 public vefxs_max_multiplier = 2e18;//uint256(2e18); // E18. 1x = 1e18
+    uint256 public vefxs_per_frax_for_max_boost = 4e18;//uint256(4e18); // E18. 2e18 means 2 veFXS must be held by the staker per 1 FRAX
+
     mapping(address => uint256) internal _vefxsMultiplierStored;
     mapping(address => bool) internal valid_vefxs_proxies;
     mapping(address => mapping(address => bool)) internal proxy_allowed_stakers;
@@ -220,7 +222,10 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     function rewardRates(uint256 token_idx) public view returns (uint256 rwd_rate) {
         // address gauge_controller_address = gaugeControllers[token_idx];
         if (gaugeControllers[token_idx] != address(0)) {
-            rwd_rate = (IFraxGaugeController(gaugeControllers[token_idx]).global_emission_rate() * last_gauge_relative_weights[token_idx]) / 1e18;
+            rwd_rate = (
+                IFraxGaugeController(gaugeControllers[token_idx]).global_emission_rate() * 
+                last_gauge_relative_weights[token_idx]
+            ) / MULTIPLIER_PRECISION;
         }
         else {
             rwd_rate = rewardRatesManual[token_idx];
@@ -236,7 +241,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
             newRewardsPerTokenStored = new uint256[](rewardTokens.length);
             for (uint256 i; i < rewardsPerTokenStored.length; i++){ 
                 newRewardsPerTokenStored[i] = rewardsPerTokenStored[i] + (
-                    ((lastTimeRewardApplicable() - lastUpdateTime) * rewardRates(i) * 1e18) / _total_combined_weight
+                    ((lastTimeRewardApplicable() - lastUpdateTime) * rewardRates(i) * MULTIPLIER_PRECISION) / _total_combined_weight
                 );
             }
             return newRewardsPerTokenStored;
@@ -252,8 +257,11 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
         if (_combined_weights[account] > 0){
             for (uint256 i; i < rewardTokens.length; i++){ 
-                new_earned[i] = ((_combined_weights[account] * (reward_arr[i] - userRewardsPerTokenPaid[account][i])) / 1e18)
-                                + rewards[account][i];
+                new_earned[i] = (
+                    (_combined_weights[account] * 
+                        (reward_arr[i] - userRewardsPerTokenPaid[account][i])
+                    ) / MULTIPLIER_PRECISION
+                ) + rewards[account][i];
             }
         }
     }
@@ -375,15 +383,16 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
             //uint256 veFXS_needed_for_max_boost;
 
             // Need to use proxy-wide FRAX balance if applicable, to prevent exploiting
-            uint256 veFXS_needed_for_max_boost = (the_proxy == address(0)) ? minVeFXSForMaxBoost(account) : minVeFXSForMaxBoostProxy(the_proxy);
+            uint256 veFXS_needed_for_max_boost = (
+                the_proxy == address(0)) ? minVeFXSForMaxBoost(account) : minVeFXSForMaxBoostProxy(the_proxy
+            );
 
             if (veFXS_needed_for_max_boost > 0){ 
                 uint256 user_vefxs_fraction = (vefxs_bal_to_use * MULTIPLIER_PRECISION) / veFXS_needed_for_max_boost;
                 
                 mult_optn_2 = (user_vefxs_fraction * vefxs_max_multiplier) / MULTIPLIER_PRECISION;
             }
-            /// TODO is initialized to zero, so no need to set it to zero again
-            // else mult_optn_2 = 0; // This will happen with the first stake, when user_staked_frax is 0
+            /// mult_optn_2 is initialized to zero, so no need to set it to zero again
         }
 
         // Select the higher of the two
@@ -474,6 +483,15 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
                 _total_combined_weight = _total_combined_weight - weight_diff;
                 _combined_weights[account] = old_combined_weight - weight_diff;
             }
+            // if (new_combined_weight >= old_combined_weight) {
+            //     // uint256 weight_diff = new_combined_weight - old_combined_weight;
+            //     _total_combined_weight += (new_combined_weight - old_combined_weight);
+            //     _combined_weights[account] = old_combined_weight + (new_combined_weight - old_combined_weight);
+            // } else {
+            //     // uint256 weight_diff = old_combined_weight - new_combined_weight;
+            //     _total_combined_weight -= (old_combined_weight - new_combined_weight);
+            //     _combined_weights[account] = old_combined_weight - (old_combined_weight - new_combined_weight);
+            // }
 
         }
     }
@@ -525,7 +543,11 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable
-    function _getReward(address rewardee, address destination_address, bool do_extra_logic) internal updateRewardAndBalanceMdf(rewardee, true) returns (uint256[] memory rewards_before) {
+    function _getReward(
+        address rewardee, 
+        address destination_address, 
+        bool do_extra_logic
+    ) internal updateRewardAndBalanceMdf(rewardee, true) returns (uint256[] memory rewards_before) {
         // Update the last reward claim time first, as an extra reentrancy safeguard
         lastRewardClaimTime[rewardee] = block.timestamp;
         
@@ -575,7 +597,11 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
             /// @dev TODO check that this won't break tests or UI displays
             //require((rewardRates(i) * rewardsDuration * (num_periods_elapsed + 1)) <= IERC20(rewardTokens[i]).balanceOf(address(this)), string(abi.encodePacked("Not enough reward tokens available: ", rewardTokens[i])) );
-            if((rewardRates(i) * rewardsDuration * (num_periods_elapsed + 1)) > IERC20(rewardTokens[i]).balanceOf(address(this))) revert NotEnoughRewardTokensAvailable(rewardTokens[i]);
+            if(
+                (rewardRates(i) * rewardsDuration * (num_periods_elapsed + 1)) 
+                > 
+                IERC20(rewardTokens[i]).balanceOf(address(this))
+            ) revert NotEnoughRewardTokensAvailable(rewardTokens[i]);
         }
         
         // uint256 old_lastUpdateTime = lastUpdateTime;
@@ -631,7 +657,10 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
             if (gaugeControllers[i] != address(0)) {
                 if (force_update || (block.timestamp > last_gauge_time_totals[i])){
                     // Update the gauge_relative_weight
-                    last_gauge_relative_weights[i] = IFraxGaugeController(gaugeControllers[i]).gauge_relative_weight_write(address(this), block.timestamp);
+                    last_gauge_relative_weights[i] = IFraxGaugeController(
+                        gaugeControllers[i]).gauge_relative_weight_write(
+                            address(this), block.timestamp
+                        );
                     last_gauge_time_totals[i] = IFraxGaugeController(gaugeControllers[i]).time_total();
                 }
             }
@@ -696,10 +725,11 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // Also, other tokens, like the staking token, airdrops, or accidental deposits, can be withdrawn by the owner
         if (
                 (isRewardToken && rewardManagers[tokenAddress] == msg.sender)
-                || (!isRewardToken && (msg.sender == owner))
+                || 
+                (!isRewardToken && (msg.sender == owner))
             ) {
-            TransferHelper.safeTransfer(tokenAddress, msg.sender, tokenAmount);
-            return;
+                TransferHelper.safeTransfer(tokenAddress, msg.sender, tokenAmount);
+                return;
         }
         // If none of the above conditions are true
         else {
@@ -719,7 +749,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // require(_misc_vars[0] >= MULTIPLIER_PRECISION, "Must be >= MUL PREC");
         // require((_misc_vars[1] >= 0) && (_misc_vars[2] >= 0) && (_misc_vars[3] >= 0), "Must be >= 0");
         // require((_misc_vars[4] >= 1) && (_misc_vars[5] >= 1), "Must be >= 1");
-        /// TODO check this
+        /// TODO check this rewrite
         if(_misc_vars[4] < _misc_vars[5]) revert MustBeGEMulPrec();
         if((_misc_vars[1] < 0) || (_misc_vars[2] < 0) || (_misc_vars[3] < 0)) revert MustBeGEZero();
         if((_misc_vars[4] < 1) || (_misc_vars[5] < 1)) revert MustBeGEOne();
@@ -733,7 +763,12 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     // The owner or the reward token managers can set reward rates 
-    function setRewardVars(address reward_token_address, uint256 _new_rate, address _gauge_controller_address, address _rewards_distributor_address) external onlyTknMgrs(reward_token_address) {
+    function setRewardVars(
+        address reward_token_address, 
+        uint256 _new_rate, 
+        address _gauge_controller_address, 
+        address _rewards_distributor_address
+    ) external onlyTknMgrs(reward_token_address) {
         rewardRatesManual[rewardTokenAddrToIdx[reward_token_address]] = _new_rate;
         gaugeControllers[rewardTokenAddrToIdx[reward_token_address]] = _gauge_controller_address;
         rewardDistributors[rewardTokenAddrToIdx[reward_token_address]] = _rewards_distributor_address;
