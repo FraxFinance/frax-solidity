@@ -1,0 +1,43 @@
+filterBlacklist: false
+filterFunctions: [
+    # "EchidnaTest.approve(address,uint256)",
+    # "EchidnaTest.burn(address)",
+    "EchidnaTest.cancelLongTermSwap(uint256)",
+    "EchidnaTest.changeFee(uint256)",
+    "EchidnaTest.disableFee()",
+    "EchidnaTest.enableFee()",
+    "EchidnaTest.executeVirtualOrders(uint256)",
+    "EchidnaTest.getTwammOrderProceeds(uint256)",
+    # "EchidnaTest.initialize(address,address,uint256)",
+    "EchidnaTest.initialize(uint112,uint112,uint112,uint112)",
+    "EchidnaTest.longTermSwapFrom0To1(uint256,uint256)",
+    "EchidnaTest.longTermSwapFrom1To0(uint256,uint256)",
+    # "EchidnaTest.mint(address)",
+    # "EchidnaTest.permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+    "EchidnaTest.setFee(uint256)",
+    "EchidnaTest.skim(address)",
+    "EchidnaTest.swap(uint256,uint256,address,bytes)",
+    "EchidnaTest.swapNoCallback(uint256,uint256,address,bytes)",
+    "EchidnaTest.sync()",
+    "EchidnaTest.testAddLiquidity(uint112,uint112)",
+    "EchidnaTest.testBurn(uint112,address)",
+    "EchidnaTest.testCancelLongTermSwap(uint8)",
+    "EchidnaTest.testLiquidity()",
+    "EchidnaTest.testLongTermSwapFrom0To1(uint256,uint128)",
+    "EchidnaTest.testLongTermSwapFrom1To0(uint256,uint128)",
+    "EchidnaTest.testMint(uint112,uint112,address)",
+    "EchidnaTest.testSkim(address)",
+    "EchidnaTest.testSync()",
+    "EchidnaTest.testUnsoldPurchasedAmount(uint8)",
+    "EchidnaTest.testWithdrawProceedsFromLongTermSwap(uint8)",
+    "EchidnaTest.togglePauseNewSwaps()",
+    "EchidnaTest.transfer(address,uint256)",
+    "EchidnaTest.transferFrom(address,address,uint256)",
+    "EchidnaTest.transferLiquidityToPair(uint256)",
+    "EchidnaTest.transferTokensToPair(uint112,uint112)",
+    "EchidnaTest.withdrawProceedsFromLongTermSwap(uint256)"
+]
+  #Object.values(data["sources"])[0]['AST']['nodes'].filter(n=>['FraxswapPair','ERC20','EchidnaTest'].indexOf(n.canonicalName)>=0)
+  #temp1.filter(f=>f.kind=='function'&&(f.visibility=='external' || f.visibility=='public')&&f.stateMutability!="view").map(f=>`${f.name}(${f.parameters.parameters.map(p=>p.typeName.name)})`)
+  #Object.values(data["sources"])[0]['AST']['nodes'].filter(n=>['FraxswapPair','ERC20','EchidnaTest'].indexOf(n.canonicalName)>=0).map(cnt=>cnt.nodes.filter(f=>f.kind=='function'&&(f.visibility=='external' || f.visibility=='public')&&f.stateMutability!="view").map(f=>`${f.name}(${f.parameters.parameters.map(p=>p.typeName.name)})`)).reduce((r,arr)=>[...r,...arr],[])
+  #data2.filter(d=>d.type=="function"&&d.stateMutability!="view").map(t=>`${t.name}(${t.inputs.map(i=>i.type).join(',')})`)

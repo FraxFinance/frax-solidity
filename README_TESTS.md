@@ -1,3 +1,22 @@
+## FORGE
+**------Testing------**
+Do first
+```tsc```
+
+Build (may take some time and appear to hang)
+```forge build --via-ir```
+
+Most cases
+```source .env.forge && forge test -vv```
+
+If you need to fork mainnet
+```source .env.forge && forge test --fork-url $MAINNET_RPC_URL -vv```
+
+If you need to fork mainnet, single test contract
+```source .env.forge && forge test --fork-url $MAINNET_RPC_URL -vv --match-path ./src/foundry/test/veFPISProxy.t.sol```
+
+Verbosely test a single contract while forking mainnet
+or ```source .env.forge && forge test --fork-url $MAINNET_RPC_URL -m veFPISProxy.t.sol -vvvvv``` for single test verbosity level 5
 
 ## Hardhat
 **------Testing------**
