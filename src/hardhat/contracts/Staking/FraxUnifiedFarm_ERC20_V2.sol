@@ -69,7 +69,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     error StakerNotFound();
     error CannotBeZero();
     error AllowanceIsZero();
-    // error InvalidChainlinkPrice();
 
     /* ========== STATE VARIABLES ========== */
 

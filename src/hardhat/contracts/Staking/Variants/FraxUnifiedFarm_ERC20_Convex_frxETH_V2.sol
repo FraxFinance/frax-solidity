@@ -11,6 +11,7 @@ import "../../Oracle/AggregatorV3Interface.sol";
 // import "../../ERC20/IERC20.sol";
 
 contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
+    error InvalidChainlinkPrice();
 
     AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
 
