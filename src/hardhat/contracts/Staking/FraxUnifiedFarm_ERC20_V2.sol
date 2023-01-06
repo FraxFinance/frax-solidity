@@ -450,13 +450,20 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);
 
         // Update the stake
-        lockedStakes[msg.sender][theArrayIndex] = LockedStake(
-            thisStake.start_timestamp,
-            (thisStake.liquidity + addl_liq),
-            thisStake.ending_timestamp,
+        // lockedStakes[msg.sender][theArrayIndex] = LockedStake(
+        //     thisStake.start_timestamp,
+        //     (thisStake.liquidity + addl_liq),
+        //     thisStake.ending_timestamp,
+        //     thisStake.lock_multiplier
+        // );
+        _updateStake(
+            msg.sender, 
+            theArrayIndex, 
+            thisStake.start_timestamp, 
+            (thisStake.liquidity + addl_liq), 
+            thisStake.ending_timestamp, 
             thisStake.lock_multiplier
         );
-
         // Update liquidities
         _updateLiqAmts(msg.sender, addl_liq, true);
 
@@ -486,10 +493,18 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         if (new_secs > lock_time_for_max_multiplier) revert TryingToLockForTooLong();
 
         // Update the stake
-        lockedStakes[msg.sender][theArrayIndex] = LockedStake(
-            block.timestamp,
-            thisStake.liquidity,
-            new_ending_ts,
+        // lockedStakes[msg.sender][theArrayIndex] = LockedStake(
+        //     block.timestamp,
+        //     thisStake.liquidity,
+        //     new_ending_ts,
+        //     lockMultiplier(new_secs)
+        // );
+        _updateStake(
+            msg.sender, 
+            theArrayIndex, 
+            block.timestamp, 
+            thisStake.liquidity, 
+            new_ending_ts, 
             lockMultiplier(new_secs)
         );
 
@@ -498,7 +513,13 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         emit LockedLonger(msg.sender, theArrayIndex, new_secs, block.timestamp, new_ending_ts);
     }
+    function _updateStake(address staker, uint256 index, uint256 start_timestamp, uint256 liquidity, uint256 ending_timestamp, uint256 lock_multiplier) internal {
+        lockedStakes[staker][index] = LockedStake(start_timestamp, liquidity, ending_timestamp, lock_multiplier);
+    }
 
+    function _createNewStake(address staker, uint256 start_timestamp, uint256 liquidity, uint256 ending_timestamp, uint256 lock_multiplier) internal {
+        lockedStakes[staker].push(LockedStake(start_timestamp, liquidity, ending_timestamp, lock_multiplier));
+    }
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
     function stakeLocked(uint256 liquidity, uint256 secs) nonReentrant external returns (uint256) {
         return _stakeLocked(msg.sender, msg.sender, liquidity, secs, block.timestamp);
@@ -525,12 +546,19 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // uint256 lock_multiplier = lockMultiplier(secs);
 
         // Create the locked stake
-        lockedStakes[staker_address].push(LockedStake(
-            start_timestamp,
-            liquidity,
-            block.timestamp + secs,
+        // lockedStakes[staker_address].push(LockedStake(
+        //     start_timestamp,
+        //     liquidity,
+        //     block.timestamp + secs,
+        //     lockMultiplier(secs)
+        // ));
+        _createNewStake(
+            staker_address, 
+            start_timestamp, 
+            liquidity, 
+            block.timestamp + secs, 
             lockMultiplier(secs)
-        ));
+        );
 
         // Update liquidities
         _updateLiqAmts(staker_address, liquidity, true);
@@ -574,19 +602,22 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             // Should throw if insufficient balance
             TransferHelper.safeTransfer(address(stakingToken), destination_address, thisStake.liquidity);
 
-            // Update liquidities
-            _total_liquidity_locked -= thisStake.liquidity;
-            _locked_liquidity[staker_address] -= thisStake.liquidity;
-            {
-                address the_proxy = getProxyFor(staker_address);
-                if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= thisStake.liquidity;
-            }
+            // // Update liquidities
+            // _total_liquidity_locked -= thisStake.liquidity;
+            // _locked_liquidity[staker_address] -= thisStake.liquidity;
+            // {
+            //     address the_proxy = getProxyFor(staker_address);
+            //     if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= thisStake.liquidity;
+            // }
 
             // Remove the stake from the array
             delete lockedStakes[staker_address][theArrayIndex];
 
-            // Need to call again to make sure everything is correct
-            updateRewardAndBalance(staker_address, false);
+            // // Need to call again to make sure everything is correct
+            // updateRewardAndBalance(staker_address, false);
+
+            // Update liquidities
+            _updateLiqAmts(staker_address, thisStake.liquidity, false);
 
             emit WithdrawLocked(staker_address, thisStake.liquidity, theArrayIndex, destination_address);
         }
@@ -690,9 +721,6 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         bool use_receiver_lock_index,
         uint256 receiver_lock_index
     ) internal updateRewardAndBalanceMdf(sender_address, true) updateRewardAndBalanceMdf(receiver_address, true) returns (uint256,uint256) {
-        
-        // Get the stake and its index
-        LockedStake memory senderStake = getLockedStake(sender_address, sender_lock_index);
 
         // on transfer, call sender_address to verify sending is ok
         if (sender_address.code.length > 0) {
@@ -702,6 +730,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
                 ILockReceiver.beforeLockTransfer.selector // 00x4fb07105 <--> bytes4(keccak256("beforeLockTransfer(address,address,bytes32,bytes)"))
             );
         }
+        
+        // Get the stake and its index
+        LockedStake memory senderStake = getLockedStake(sender_address, sender_lock_index);
 
         // perform checks
         if (receiver_address == address(0) || receiver_address == sender_address) {
@@ -762,12 +793,19 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             }
         } else {
             // create the new lockedStake
-            lockedStakes[receiver_address].push(LockedStake(
-                senderStake.start_timestamp,
+            // lockedStakes[receiver_address].push(LockedStake(
+            //     senderStake.start_timestamp,
+            //     transfer_amount,
+            //     senderStake.ending_timestamp,
+            //     senderStake.lock_multiplier
+            // ));
+            _createNewStake(
+                receiver_address, 
+                senderStake.start_timestamp, 
                 transfer_amount,
-                senderStake.ending_timestamp,
+                senderStake.ending_timestamp, 
                 senderStake.lock_multiplier
-            ));
+            );
             
             // update the return value of the locked index 
             /// todo could also just use the length of the array in all 3 situations below - which is more gas efficient?
