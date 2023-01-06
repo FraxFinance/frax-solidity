@@ -79,11 +79,14 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // -------------------- VARIES --------------------
 
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
-    IConvexStakingWrapperFrax public stakingToken;
-    I2poolToken public curveToken;
+    IConvexStakingWrapperFrax internal stakingToken;
+    I2poolToken internal curveToken;
     // I2pool public curvePool;
-    ICurvefrxETHETHPool public curvePool;
+    ICurvefrxETHETHPool internal curvePool;
 
+    function getTokenAddresses() public view returns (address, address, address) {
+        return (address(stakingToken), address(curveToken), address(curvePool));
+    }
     // Fraxswap
     // IFraxswapPair public stakingToken;
 
