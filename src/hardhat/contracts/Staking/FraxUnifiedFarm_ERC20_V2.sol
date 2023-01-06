@@ -69,7 +69,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     error StakerNotFound();
     error CannotBeZero();
     error AllowanceIsZero();
-    error InvalidChainlinkPrice();
+    // error InvalidChainlinkPrice();
 
     /* ========== STATE VARIABLES ========== */
 
@@ -79,14 +79,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // -------------------- VARIES --------------------
 
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
-    IConvexStakingWrapperFrax internal stakingToken;
-    I2poolToken internal curveToken;
+    IConvexStakingWrapperFrax public stakingToken;
+    I2poolToken public curveToken;
     // I2pool public curvePool;
-    ICurvefrxETHETHPool internal curvePool;
+    /// @dev uncomment this one for convex frxEth, use the I2pool version for others
+    ICurvefrxETHETHPool public curvePool;
 
-    function getTokenAddresses() public view returns (address, address, address) {
-        return (address(stakingToken), address(curveToken), address(curvePool));
-    }
     // Fraxswap
     // IFraxswapPair public stakingToken;
 
@@ -296,25 +294,27 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
                 uint256 time_after_expiry = block.timestamp - thisStake.ending_timestamp;
 
                 // Average the pre-expiry lock multiplier
-                // uint256 pre_expiry_avg_multiplier = lockMultiplier(time_before_expiry / 2);
+                uint256 pre_expiry_avg_multiplier = lockMultiplier(time_before_expiry / 2);
 
                 // Get the weighted-average lock_multiplier
                 // uint256 numerator = (pre_expiry_avg_multiplier * time_before_expiry) + (MULTIPLIER_PRECISION * time_after_expiry);
-                //uint256 numerator = (pre_expiry_avg_multiplier * time_before_expiry) + (0 * time_after_expiry);
-                midpoint_lock_multiplier = (
-                    (
-                        (lockMultiplier(time_before_expiry / 2) * time_before_expiry) + 
-                        (0 * time_after_expiry)
-                    ) / (time_before_expiry + time_after_expiry)
-                );
+                uint256 numerator = (pre_expiry_avg_multiplier * time_before_expiry) + (0 * time_after_expiry);
+                midpoint_lock_multiplier = numerator / (time_before_expiry + time_after_expiry);
+                // midpoint_lock_multiplier = (
+                //     (
+                //         (lockMultiplier(time_before_expiry / 2) * time_before_expiry) + 
+                //         (0 * time_after_expiry)
+                //     ) / (time_before_expiry + time_after_expiry)
+                // );
             }
-            else {
-                // Otherwise, it needs to just be 1x
-                // midpoint_lock_multiplier = MULTIPLIER_PRECISION;
+            /// already initialized to zero
+            // else {
+            //     // Otherwise, it needs to just be 1x
+            //     // midpoint_lock_multiplier = MULTIPLIER_PRECISION;
 
-                // Otherwise, it needs to just be 0x
-                midpoint_lock_multiplier = 0;
-            }
+            //     // Otherwise, it needs to just be 0x
+            //     midpoint_lock_multiplier = 0;
+            // }
         }
         // If the lock is not expired
         else {
@@ -339,6 +339,55 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         if (midpoint_lock_multiplier > thisStake.lock_multiplier) midpoint_lock_multiplier = thisStake.lock_multiplier;
     }
 
+    // // Calculate the combined weight for an account
+    // function calcCurCombinedWeight(address account) public override view
+    //     returns (
+    //         uint256 old_combined_weight,
+    //         uint256 new_vefxs_multiplier,
+    //         uint256 new_combined_weight
+    //     )
+    // {
+    //     // Get the old combined weight
+    //     old_combined_weight = _combined_weights[account];
+
+    //     // Get the veFXS multipliers
+    //     // For the calculations, use the midpoint (analogous to midpoint Riemann sum)
+    //     new_vefxs_multiplier = veFXSMultiplier(account);
+
+    //     uint256 midpoint_vefxs_multiplier;
+    //     if (
+    //         (_locked_liquidity[account] == 0 && _combined_weights[account] == 0) || 
+    //         (new_vefxs_multiplier >= _vefxsMultiplierStored[account])
+    //     ) {
+    //         // This is only called for the first stake to make sure the veFXS multiplier is not cut in half
+    //         // Also used if the user increased or maintained their position
+    //         midpoint_vefxs_multiplier = new_vefxs_multiplier;
+    //     }
+    //     else {
+    //         // Handles natural decay with a non-increased veFXS position
+    //         midpoint_vefxs_multiplier = (new_vefxs_multiplier + _vefxsMultiplierStored[account]) / 2;
+    //     }
+
+    //     // Loop through the locked stakes, first by getting the liquidity * lock_multiplier portion
+    //     new_combined_weight = 0;
+    //     for (uint256 i; i < lockedStakes[account].length; i++) {
+    //         LockedStake memory thisStake = lockedStakes[account][i];
+
+    //         // Calculate the midpoint lock multiplier
+    //         // uint256 midpoint_lock_multiplier = calcCurrLockMultiplier(account, i);
+
+    //         // Calculate the combined boost
+    //         // uint256 liquidity = thisStake.liquidity;
+    //         // uint256 combined_boosted_amount = thisStake.liquidity + ((thisStake.liquidity * (midpoint_lock_multiplier + midpoint_vefxs_multiplier)) / MULTIPLIER_PRECISION);
+    //         new_combined_weight += (
+    //             thisStake.liquidity + (
+    //                 (
+    //                     thisStake.liquidity * (calcCurrLockMultiplier(account, i) + midpoint_vefxs_multiplier)
+    //                 ) / MULTIPLIER_PRECISION
+    //             )
+    //         );
+    //     }
+    // }
     // Calculate the combined weight for an account
     function calcCurCombinedWeight(address account) public override view
         returns (
@@ -369,23 +418,17 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         }
 
         // Loop through the locked stakes, first by getting the liquidity * lock_multiplier portion
-        new_combined_weight = 0;
+        // new_combined_weight = 0;
         for (uint256 i; i < lockedStakes[account].length; i++) {
             LockedStake memory thisStake = lockedStakes[account][i];
 
             // Calculate the midpoint lock multiplier
-            // uint256 midpoint_lock_multiplier = calcCurrLockMultiplier(account, i);
+            uint256 midpoint_lock_multiplier = calcCurrLockMultiplier(account, i);
 
             // Calculate the combined boost
-            // uint256 liquidity = thisStake.liquidity;
-            // uint256 combined_boosted_amount = thisStake.liquidity + ((thisStake.liquidity * (midpoint_lock_multiplier + midpoint_vefxs_multiplier)) / MULTIPLIER_PRECISION);
-            new_combined_weight += (
-                thisStake.liquidity + (
-                    (
-                        thisStake.liquidity * (calcCurrLockMultiplier(account, i) + midpoint_vefxs_multiplier)
-                    ) / MULTIPLIER_PRECISION
-                )
-            );
+            uint256 liquidity = thisStake.liquidity;
+            uint256 combined_boosted_amount = liquidity + ((liquidity * (midpoint_lock_multiplier + midpoint_vefxs_multiplier)) / MULTIPLIER_PRECISION);
+            new_combined_weight += combined_boosted_amount;
         }
     }
 
@@ -423,7 +466,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     function _updateLiqAmts(address staker_address, uint256 amt, bool is_add) internal {
         // Get the proxy address
-        // address the_proxy = staker_designated_proxies[staker_address];
+        address the_proxy = staker_designated_proxies[staker_address];
 
         if (is_add) {
             // Update total liquidities
@@ -431,7 +474,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             _locked_liquidity[staker_address] += amt;
 
             // Update the proxy
-            if (staker_designated_proxies[staker_address] != address(0)) proxy_lp_balances[staker_designated_proxies[staker_address]] += amt;
+            if (staker_designated_proxies[staker_address] != address(0)) {
+                proxy_lp_balances[the_proxy] += amt;
+            }
         }
         else {
             // Update total liquidities
@@ -439,7 +484,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             _locked_liquidity[staker_address] -= amt;
 
             // Update the proxy
-            if (staker_designated_proxies[staker_address] != address(0)) proxy_lp_balances[staker_designated_proxies[staker_address]] -= amt;
+            if (the_proxy != address(0)) proxy_lp_balances[the_proxy] -= amt;
         }
 
         // Need to call to update the combined weights
@@ -777,24 +822,25 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         *       & has liquidity 
         *       & is still locked, update the stake & ending timestamp (longer of the two)
         *   else, create a new lockedStake
+        * note using nested if checks to reduce gas costs slightly
         */
-        if (
-                use_receiver_lock_index == true && 
-                receiver_lock_index < lockedStakes[receiver_address].length &&
-                receiverStake.liquidity > 0 &&
-                receiverStake.ending_timestamp > block.timestamp
-            ) {
-            /// Update the existing lockedStake
-
-            // Update the existing staker's stake
-            lockedStakes[receiver_address][receiver_lock_index].liquidity += transfer_amount;
-
-            // check & update ending timestamp to whichever is farthest out
-            if (receiverStake.ending_timestamp < senderStake.ending_timestamp) {
-                // update the lock expiration to the later timestamp
-                lockedStakes[receiver_address][receiver_lock_index].ending_timestamp = senderStake.ending_timestamp;
-                // update the lock multiplier since we are effectively extending the lock
-                lockedStakes[receiver_address][receiver_lock_index].lock_multiplier = lockMultiplier(senderStake.ending_timestamp - block.timestamp);
+        if (use_receiver_lock_index == true) {
+            if (receiver_lock_index < lockedStakes[receiver_address].length ) {
+                if (receiverStake.liquidity > 0) {
+                    if (receiverStake.ending_timestamp > block.timestamp) {
+                        // Update the existing staker's stake liquidity
+                        lockedStakes[receiver_address][receiver_lock_index].liquidity += transfer_amount;
+                        // check & update ending timestamp to whichever is farthest out
+                        if (receiverStake.ending_timestamp < senderStake.ending_timestamp) {
+                            // update the lock expiration to the later timestamp
+                            lockedStakes[receiver_address][receiver_lock_index].ending_timestamp = senderStake.ending_timestamp;
+                            // update the lock multiplier since we are effectively extending the lock
+                            lockedStakes[receiver_address][receiver_lock_index].lock_multiplier = lockMultiplier(
+                                senderStake.ending_timestamp - block.timestamp
+                            );
+                        }
+                    }
+                }
             }
         } else {
             // create the new lockedStake
@@ -814,7 +860,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             
             // update the return value of the locked index 
             /// todo could also just use the length of the array in all 3 situations below - which is more gas efficient?
-            // receiver_lock_index = lockedStakes[receiver_address].length;
+            receiver_lock_index = lockedStakes[receiver_address].length;
         }
 
         // Need to call again to make sure everything is correct
@@ -825,19 +871,19 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
             sender_address,
             receiver_address,
             transfer_amount,
-            lockedStakes[receiver_address].length,
-            lockedStakes[receiver_address].length
+            sender_lock_index,
+            receiver_lock_index
         );
 
         // call the receiver with the destination lockedStake to verify receiving is ok
         if (ILockReceiver(receiver_address).onLockReceived(
             sender_address, 
             receiver_address, 
-            lockedStakes[receiver_address].length, 
+            receiver_lock_index, 
             ""
         ) != ILockReceiver.onLockReceived.selector) revert InvalidReceiver(); //0xc42d8b95) revert InvalidReceiver();
 
-        return (lockedStakes[sender_address].length, lockedStakes[receiver_address].length);
+        return (sender_lock_index, receiver_lock_index);
 
     }
 

@@ -70,7 +70,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     
     // Frax related
     address internal constant frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
-    uint256 internal fraxPerLPStored; // fraxPerLPToken is a public view function, although doesn't show the stored value
+    uint256 public fraxPerLPStored; // fraxPerLPToken is a public view function, although doesn't show the stored value
 
     // Constant for various precisions
     uint256 internal constant MULTIPLIER_PRECISION = 1e18;
@@ -80,21 +80,17 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     uint256 public lastUpdateTime;
 
     // Lock time and multiplier settings
-    uint256 internal lock_max_multiplier = 2e18; //uint256(2e18); // E18. 1x = e18
-    uint256 internal lock_time_for_max_multiplier = 1 * 365 * 86400; // 1 year
+    uint256 public lock_max_multiplier = 2e18; //uint256(2e18); // E18. 1x = e18
+    uint256 public lock_time_for_max_multiplier = 1 * 365 * 86400; // 1 year
     // uint256 public lock_time_for_max_multiplier = 2 * 86400; // 2 days
-    uint256 internal lock_time_min = 594000; // 6.875 * 86400 (~7 day)
-    function getLockTimeValues() external view returns (uint256, uint256, uint256) {
-        return (lock_max_multiplier, lock_time_for_max_multiplier, lock_time_min);
-    }
+    uint256 public lock_time_min = 594000; // 6.875 * 86400 (~7 day)
+
 
     // veFXS related
-    uint256 internal vefxs_boost_scale_factor = 4e18;//uint256(4e18); // E18. 4x = 4e18; 100 / scale_factor = % vefxs supply needed for max boost
-    uint256 internal vefxs_max_multiplier = 2e18;//uint256(2e18); // E18. 1x = 1e18
-    uint256 internal vefxs_per_frax_for_max_boost = 4e18;//uint256(4e18); // E18. 2e18 means 2 veFXS must be held by the staker per 1 FRAX
-    function getVeFXSBoostValues() external view returns (uint256, uint256, uint256) {
-        return (vefxs_boost_scale_factor, vefxs_max_multiplier, vefxs_per_frax_for_max_boost);
-    }
+    uint256 public vefxs_boost_scale_factor = 4e18;//uint256(4e18); // E18. 4x = 4e18; 100 / scale_factor = % vefxs supply needed for max boost
+    uint256 public vefxs_max_multiplier = 2e18;//uint256(2e18); // E18. 1x = 1e18
+    uint256 public vefxs_per_frax_for_max_boost = 4e18;//uint256(4e18); // E18. 2e18 means 2 veFXS must be held by the staker per 1 FRAX
+
     mapping(address => uint256) internal _vefxsMultiplierStored;
     mapping(address => bool) internal valid_vefxs_proxies;
     mapping(address => mapping(address => bool)) internal proxy_allowed_stakers;
@@ -487,7 +483,6 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
                 _total_combined_weight = _total_combined_weight - weight_diff;
                 _combined_weights[account] = old_combined_weight - weight_diff;
             }
-            /// @dev transaction-oriented gas optimization version: (increases bytecode size though)
             // if (new_combined_weight >= old_combined_weight) {
             //     // uint256 weight_diff = new_combined_weight - old_combined_weight;
             //     _total_combined_weight += (new_combined_weight - old_combined_weight);
