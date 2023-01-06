@@ -472,24 +472,24 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
             _vefxsMultiplierStored[account] = new_vefxs_multiplier;
 
             // Update the user's and the global combined weights
-            // if (new_combined_weight >= old_combined_weight) {
-            //     uint256 weight_diff = new_combined_weight - old_combined_weight;
-            //     _total_combined_weight = _total_combined_weight + weight_diff;
-            //     _combined_weights[account] = old_combined_weight + weight_diff;
-            // } else {
-            //     uint256 weight_diff = old_combined_weight - new_combined_weight;
-            //     _total_combined_weight = _total_combined_weight - weight_diff;
-            //     _combined_weights[account] = old_combined_weight - weight_diff;
-            // }            
             if (new_combined_weight >= old_combined_weight) {
-                // uint256 weight_diff = new_combined_weight - old_combined_weight;
-                _total_combined_weight += (new_combined_weight - old_combined_weight);
-                _combined_weights[account] = old_combined_weight + (new_combined_weight - old_combined_weight);
+                uint256 weight_diff = new_combined_weight - old_combined_weight;
+                _total_combined_weight = _total_combined_weight + weight_diff;
+                _combined_weights[account] = old_combined_weight + weight_diff;
             } else {
-                // uint256 weight_diff = old_combined_weight - new_combined_weight;
-                _total_combined_weight -= (old_combined_weight - new_combined_weight);
-                _combined_weights[account] = old_combined_weight - (old_combined_weight - new_combined_weight);
-            }
+                uint256 weight_diff = old_combined_weight - new_combined_weight;
+                _total_combined_weight = _total_combined_weight - weight_diff;
+                _combined_weights[account] = old_combined_weight - weight_diff;
+            }            
+            // if (new_combined_weight >= old_combined_weight) {
+            //     // uint256 weight_diff = new_combined_weight - old_combined_weight;
+            //     _total_combined_weight += (new_combined_weight - old_combined_weight);
+            //     _combined_weights[account] = old_combined_weight + (new_combined_weight - old_combined_weight);
+            // } else {
+            //     // uint256 weight_diff = old_combined_weight - new_combined_weight;
+            //     _total_combined_weight -= (old_combined_weight - new_combined_weight);
+            //     _combined_weights[account] = old_combined_weight - (old_combined_weight - new_combined_weight);
+            // }
 
         }
     }
