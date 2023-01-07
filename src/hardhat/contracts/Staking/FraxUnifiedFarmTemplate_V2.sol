@@ -36,17 +36,17 @@ pragma solidity >=0.8.4;
 
 import "../Math/MathV2.sol";
 import "../Curve/IveFXS.sol";
-import "../Curve/IFraxGaugeController.sol";
+import "../Curve/IFraxGaugeControllerV2.sol";
 import "../Curve/IFraxGaugeFXSRewardsDistributor.sol";
 import "../ERC20/IERC20V2.sol";
 import '../Uniswap/TransferHelperV2.sol';
-import "../Utils/ReentrancyGuard.sol";
+import "../Utils/ReentrancyGuardV2.sol";
 import "./OwnedV2.sol";
 
 // Extra rewards
 import "../Misc_AMOs/convex/IConvexBaseRewardPool.sol";
 
-contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuard {
+contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     error NeedsPreTransferProcessLogic();
     error NeedsCCCWLogic();
