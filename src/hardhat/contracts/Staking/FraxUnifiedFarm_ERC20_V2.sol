@@ -587,36 +587,45 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     /* ========== LOCK TRANSFER & AUTHORIZATIONS - Approvals, Functions, Errors, & Events ========== */
 
     // Approve `spender` to transfer `lockedStake` on behalf of `owner`
+    /// @notice Used to increase allowance when it is at zero
+    /// @dev separating this from the `increaseAllowance` function to avoid the allowance exploit
     function setAllowance(address spender, uint256 lockedStakeIndex, uint256 amount) external {
         if(spenderAllowance[msg.sender][lockedStakeIndex][spender] > 0) revert CannotBeZero();
         spenderAllowance[msg.sender][lockedStakeIndex][spender] = amount;
         emit Approval(msg.sender, spender, lockedStakeIndex, amount);
     }
 
+    /// @notice Used to increase allowance when it is not at zero
+    /// @dev separating this from the `setAllowance` function to avoid the allowance exploit
     function increaseAllowance(address spender, uint256 lockedStakeIndex, uint256 amount) external {
         if (spenderAllowance[msg.sender][lockedStakeIndex][spender] == 0) revert AllowanceIsZero();
         spenderAllowance[msg.sender][lockedStakeIndex][spender] += amount;
         emit Approval(msg.sender, spender, lockedStakeIndex, spenderAllowance[msg.sender][lockedStakeIndex][spender]);
     }
 
-    // Revoke approval for a single lockedStake
+    /// @notice Revoke approval for a single lockedStake
     function removeAllowance(address spender, uint256 lockedStakeIndex) external {
         spenderAllowance[msg.sender][lockedStakeIndex][spender] = 0;
         emit Approval(msg.sender, spender, lockedStakeIndex, 0);
     }
 
     // Approve or revoke `spender` to transfer any/all locks on behalf of the owner
+    /// @notice Set's `spender` approval for all locks: true=approve, false=remove approval
     function setApprovalForAll(address spender, bool approved) external {
         spenderApprovalForAllLocks[msg.sender][spender] = approved; 
         emit ApprovalForAll(msg.sender, spender, approved);
     }
 
-    // internal approval check and allowance manager
-    function isApproved(address staker, uint256 lockedStakeIndex, uint256 amount) external view returns (bool) {
+    /// @notice External getter function to check if a spender is approved for `amount` of a lockedStake
+    /// @param staker The address of the sender
+    /// @param spender The address of the spender
+    /// @param lockedStakeIndex The index of the locked stake
+    /// @param amount The amount to spend
+    function isApproved(address staker, address spender, uint256 lockedStakeIndex, uint256 amount) external view returns (bool) {
         // check if spender is approved for all `staker` locks
-        if (spenderApprovalForAllLocks[staker][msg.sender]) {
+        if (spenderApprovalForAllLocks[staker][spender]) {
             return true;
-        } else if (spenderAllowance[staker][lockedStakeIndex][msg.sender] >= amount) {
+        } else if (spenderAllowance[staker][lockedStakeIndex][spender] >= amount) {
             return true;
         } else {
             // for any other possibility, return false
