@@ -625,6 +625,9 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     }
 
     function _spendAllowance(address staker, uint256 lockedStakeIndex, uint256 amount) internal {
+            if (spenderApprovalForAllLocks[staker][msg.sender]) {
+                return;
+            } 
             if (spenderAllowance[staker][lockedStakeIndex][msg.sender] == amount) {
                 spenderAllowance[staker][lockedStakeIndex][msg.sender] = 0;
             } else if (spenderAllowance[staker][lockedStakeIndex][msg.sender] > amount) {
@@ -644,10 +647,10 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         bool use_receiver_lock_index,
         uint256 receiver_lock_index
     ) external nonReentrant returns (uint256,uint256) {
-        // check approvals
-        if (!isApproved(sender_address, sender_lock_index, transfer_amount)) revert TransferLockNotAllowed(msg.sender, sender_lock_index);
+        // check approvals NOTE not needed as _spendAllowance does this also
+        // if (!isApproved(sender_address, sender_lock_index, transfer_amount)) revert TransferLockNotAllowed(msg.sender, sender_lock_index);
 
-        // adjust the allowance down
+        // adjust the allowance down & perform checks
         _spendAllowance(sender_address, sender_lock_index, transfer_amount);
 
         // do the transfer
