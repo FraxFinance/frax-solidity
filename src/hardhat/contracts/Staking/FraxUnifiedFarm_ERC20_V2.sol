@@ -15,6 +15,7 @@ pragma solidity ^0.8.17;
 // Uses FraxUnifiedFarmTemplate.sol
 
 /// @dev Testing for Lock Transferring performed in isolated repository: https://github.com/ZrowGz/frax-transfers.git
+/// Locked Stake Transfer & Custom Error logic created by ZrowGz with the Pitch Foundation
 
 import "./FraxUnifiedFarmTemplate_V2.sol";
 import "./ILockReceiverV2.sol";
