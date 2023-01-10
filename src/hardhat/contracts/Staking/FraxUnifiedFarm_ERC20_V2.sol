@@ -588,7 +588,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
     // Approve `spender` to transfer `lockedStake` on behalf of `owner`
     function setAllowance(address spender, uint256 lockedStakeIndex, uint256 amount) external {
-        if(spenderAllowance[msg.sender][lockedStakeIndex][spender] >= 0) revert CannotBeZero();
+        if(spenderAllowance[msg.sender][lockedStakeIndex][spender] > 0) revert CannotBeZero();
         spenderAllowance[msg.sender][lockedStakeIndex][spender] = amount;
         emit Approval(msg.sender, spender, lockedStakeIndex, amount);
     }
