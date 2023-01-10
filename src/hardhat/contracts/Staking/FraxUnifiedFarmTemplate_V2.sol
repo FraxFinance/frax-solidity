@@ -425,7 +425,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuard {
     // Staker can allow a veFXS proxy (the proxy will have to toggle them first)
     // CALLED BY STAKER
     function stakerSetVeFXSProxy(address proxy_address) external {
-        if(!valid_vefxs_proxies[msg.sender]) revert InvalidProxy();
+        if(!valid_vefxs_proxies[proxy_address]) revert InvalidProxy();
         if(!proxy_allowed_stakers[proxy_address][msg.sender]) revert ProxyHasNotApprovedYou();
         
         // Corner case sanity check to make sure LP isn't double counted

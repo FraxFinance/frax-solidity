@@ -615,7 +615,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
         emit StakeLocked(staker_address, liquidity, secs, lockedStakes[staker_address].length, source_address);
 
-        return lockedStakes[staker_address].length;
+        return lockedStakes[staker_address].length - 1;
     }
 
     // ------ WITHDRAWING ------
@@ -860,7 +860,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             
             // update the return value of the locked index 
             /// todo could also just use the length of the array in all 3 situations below - which is more gas efficient?
-            receiver_lock_index = lockedStakes[receiver_address].length;
+            receiver_lock_index = lockedStakes[receiver_address].length - 1;
         }
 
         // Need to call again to make sure everything is correct
