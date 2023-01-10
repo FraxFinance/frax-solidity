@@ -612,7 +612,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     }
 
     // internal approval check and allowance manager
-    function isApproved(address staker, uint256 lockedStakeIndex, uint256 amount) public view returns (bool) {
+    function isApproved(address staker, uint256 lockedStakeIndex, uint256 amount) external view returns (bool) {
         // check if spender is approved for all `staker` locks
         if (spenderApprovalForAllLocks[staker][msg.sender]) {
             return true;
@@ -624,10 +624,14 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         }
     }
 
+    /// @notice Checks for sufficient allowance & spends it
+    /// @param staker The address of the sender
+    /// @param lockedStakeIndex The index of the locked stake
+    /// @param amount The amount to spend
     function _spendAllowance(address staker, uint256 lockedStakeIndex, uint256 amount) internal {
-            if (spenderApprovalForAllLocks[staker][msg.sender]) {
-                return;
-            } 
+            // if (spenderApprovalForAllLocks[staker][msg.sender]) {
+            //     return;
+            // } 
             if (spenderAllowance[staker][lockedStakeIndex][msg.sender] == amount) {
                 spenderAllowance[staker][lockedStakeIndex][msg.sender] = 0;
             } else if (spenderAllowance[staker][lockedStakeIndex][msg.sender] > amount) {
@@ -639,6 +643,13 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
     // ------ TRANSFERRING LOCKED STAKES ------
 
+    /// @notice Allows an approved spender to transfer assets in sender's lockedStake to another user
+    /// @param sender_address The address of the sender
+    /// @param receiver_address The address of the receiver
+    /// @param sender_lock_index The index of the sender's lockedStake
+    /// @param transfer_amount The amount to transfer
+    /// @param use_receiver_lock_index If true, the receiver wants the assets sent to an existing, valid lockedStake they control
+    /// @param receiver_lock_index The index of the receiver's lockedStake to add these assets to
     function transferLockedFrom(
         address sender_address,
         address receiver_address,
@@ -650,8 +661,11 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         // check approvals NOTE not needed as _spendAllowance does this also
         // if (!isApproved(sender_address, sender_lock_index, transfer_amount)) revert TransferLockNotAllowed(msg.sender, sender_lock_index);
 
-        // adjust the allowance down & perform checks
-        _spendAllowance(sender_address, sender_lock_index, transfer_amount);
+        /// if spender is not approved for all, spend allowance, otherwise, carry on
+        if(!spenderApprovalForAllLocks[sender_address][msg.sender]) {
+            // adjust the allowance down & performs checks
+            _spendAllowance(sender_address, sender_lock_index, transfer_amount);
+        }
 
         // do the transfer
         /// @dev the approval check is done in modifier, so to reach here caller is permitted, thus OK 
@@ -659,6 +673,12 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         return(_safeTransferLockedByLockIndex(sender_address, receiver_address, sender_lock_index, transfer_amount, use_receiver_lock_index, receiver_lock_index));
     }
 
+    /// @notice Allows a staker to transfer assets in their lockedStake to another user
+    /// @param receiver_address The address of the receiver
+    /// @param sender_lock_index The index of the sender's lockedStake (previously used kek_id to look up this value)
+    /// @param transfer_amount The amount to transfer
+    /// @param use_receiver_lock_index If true, the receiver wants the assets sent to an existing, valid lockedStake they control
+    /// @param receiver_lock_index The index of the receiver's lockedStake to add these assets to
     function transferLocked(
         address receiver_address,
         uint256 sender_lock_index,
@@ -671,6 +691,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         return(_safeTransferLockedByLockIndex(msg.sender, receiver_address, sender_lock_index, transfer_amount, use_receiver_lock_index, receiver_lock_index));
     }
 
+    /// @notice The transfer logic that executes the transfer, utilizes beforeLockTransfer & onLockReceived to ensure that the receiver is able to prevent asset loss
     function _safeTransferLockedByLockIndex(
         address sender_address,
         address receiver_address,
