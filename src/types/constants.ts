@@ -710,6 +710,26 @@ export const StakeChoices: StakeChoices = {
 		reward_token_coingecko_slugs: ["frax-share"],
 		version: 104
 	},
+  "Convex stkcvxSDTFRAXBP": {
+    lp_logo: "convex",
+		slug: "Convex_stkcvxSDTFRAXBP",
+		label: "Convex stkcvxSDTFRAXBP",
+		chain: "ethereum",
+		info_link: "https://www.convexfinance.com/stake",
+		add_liq_link: "https://www.convexfinance.com/stake",
+		trade_link: "https://www.convexfinance.com/stake",
+		farming_link: "https://app.frax.finance/staking#Convex_stkcvxSDTFRAXBP",
+    starting_block: 16373225,
+		staking_enabled: true,
+		vefxs_enabled: true,
+		external_contract: false,
+		is_gauged: true,
+		pool_tokens: ["FRAX"],
+		reward_tokens: ["FXS"],
+    reward_token_decimals: [18],
+		reward_token_coingecko_slugs: ["frax-share"],
+		version: 104
+	},
   "Convex stkcvxsUSDFRAXBP": {
     lp_logo: "convex",
 		slug: "Convex_stkcvxsUSDFRAXBP",
@@ -2032,6 +2052,8 @@ export const CONTRACT_ADDRESSES = {
       FXS: "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
       FPI: "0x5Ca135cB8527d76e932f34B5145575F9d8cbE08E",
       FPIS: "0xc2544A32872A91F4A553b404C6950e89De901fdb",
+      frxETH: '0x5E8422345238F34275888049021821E8E08CAa1f',
+      sfrxETH: '0xac3E018457B222d93114458476f3E3416Abbe38F',
     },
     oracles: {
       // SDT_WETH: "0xfbe43821dd397afF3341d90211B71C60149DC6D9", 
@@ -2242,17 +2264,27 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "", // for testing
-      ferry_to_arbitrum: "0x85c5f05Ae4CB68190C695a22b292C3bA90696128", 
-      ferry_to_aurora: "0x6ac96F65156281a9383455D704b58A74ea9C9eC4", 
-      ferry_to_avalanche: "0xA381d58e96eC3818c825E1fb264099448945CF8b", 
-      ferry_to_boba: "0x3eF1d856EA62A2292B8690855042095a7aC48B4b", 
-      ferry_to_bsc: "0xDAe210BfB0cF8c81EDB4b459e2e0bA14D553e2D9", 
-      ferry_to_evmos: "0x2d2261f970F605C813f160E8BAEd455E9004A842", 
-      ferry_to_fantom: "0xfB788F9E20ef426a32A67986654750172A6c1788", 
-      ferry_to_moonbeam: "0xF1E1deA8F1053FD9C5F47f72F1f03977E17aF242",
-      ferry_to_moonriver: "0x15ADa72A3B52A88E25DdD2CC2bA1120234e34bb0",  
-      ferry_to_optimism: "0x06Fa869caa1160754C6a0B744Da6454c5EA325d4", 
-      ferry_to_polygon: "0x43959A388603DCb6B02Ca084A55d4c7f3b442c57", 
+      fraxferry_v1__ethereum_arbitrum__FRAX__ETH_SIDE: "0x85c5f05Ae4CB68190C695a22b292C3bA90696128",
+      fraxferry_v1__ethereum_arbitrum__frxETH__ETH_SIDE: "0x505603e2440b44C1602b44D0Eb8385399b3F7bab", 
+      fraxferry_v1__ethereum_arbitrum__sfrxETH__ETH_SIDE: "0x8afd5082E0C24dEcEA39A9eFb14e4ACF4373D7D6",  
+      fraxferry_v1__ethereum_aurora__FRAX__ETH_SIDE: "0x6ac96F65156281a9383455D704b58A74ea9C9eC4", 
+      fraxferry_v1__ethereum_avalanche__FRAX__ETH_SIDE: "0xA381d58e96eC3818c825E1fb264099448945CF8b", 
+      fraxferry_v1__ethereum_boba__FRAX__ETH_SIDE: "0x3eF1d856EA62A2292B8690855042095a7aC48B4b", 
+      fraxferry_v1__ethereum_bsc__FRAX__ETH_SIDE: "0xDAe210BfB0cF8c81EDB4b459e2e0bA14D553e2D9", 
+      fraxferry_v1__ethereum_bsc__frxETH__ETH_SIDE: "0xce4DbAF3fa72C962Ee1F371694109fc2a80B03f5", 
+      fraxferry_v1__ethereum_bsc__sfrxETH__ETH_SIDE: "0x621D0e62f26314387f338A2509aFA3Ae3414661A",  
+      fraxferry_v1__ethereum_evmos__FRAX__ETH_SIDE: "0x2d2261f970F605C813f160E8BAEd455E9004A842", 
+      fraxferry_v1__ethereum_fantom__FRAX__ETH_SIDE: "0xfB788F9E20ef426a32A67986654750172A6c1788", 
+      fraxferry_v1__ethereum_moonbeam__FRAX__ETH_SIDE: "0xF1E1deA8F1053FD9C5F47f72F1f03977E17aF242",
+      fraxferry_v1__ethereum_moonbeam__frxETH__ETH_SIDE: "0x228567c10b7533C88057c10dDeA6349360F122c5", 
+      fraxferry_v1__ethereum_moonbeam__sfrxETH__ETH_SIDE: "0xbc3A2bF4FA20bE2056DCE5BFB168970BA657F187",  
+      fraxferry_v1__ethereum_moonriver__FRAX__ETH_SIDE: "0x15ADa72A3B52A88E25DdD2CC2bA1120234e34bb0",  
+      fraxferry_v1__ethereum_optimism__FRAX__ETH_SIDE: "0x06Fa869caa1160754C6a0B744Da6454c5EA325d4", 
+      fraxferry_v1__ethereum_optimism__frxETH__ETH_SIDE: "0x2F08F4645d2fA1fB12D2db8531c0c2EA0268BdE2", 
+      fraxferry_v1__ethereum_optimism__sfrxETH__ETH_SIDE: "0x04ba20D2Cc47C63bce1166C2864F0241e4D0a0CC",  
+      fraxferry_v1__ethereum_polygon__FRAX__ETH_SIDE: "0x43959A388603DCb6B02Ca084A55d4c7f3b442c57",
+      fraxferry_v1__ethereum_polygon__frxETH__ETH_SIDE: "0x98f5E4b7D9eDF57A6ED41b334bD40B2eAa6B6e26", 
+      fraxferry_v1__ethereum_polygon__sfrxETH__ETH_SIDE: "0x91Ff54EffF7564BA3884A91d0E293502D8E6fF90",   
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -2285,8 +2317,6 @@ export const CONTRACT_ADDRESSES = {
       frax_gauge_noop_rewards_distributor: "0x48D9A9e67e9deCfD493efE2B3D3B5291fc802e5F",
       frax_gauge_v2: "0x72e158d38dbd50a483501c24f792bdaaa3e7d55c",
       fraxlend_amo: "0x0Ed8fA7FC63A8eb5487E7F87CAF1aB3914eA4eCa",
-      frxeth: '0x5E8422345238F34275888049021821E8E08CAa1f',
-      sfrxeth: '0xac3E018457B222d93114458476f3E3416Abbe38F',
       frxeth_minter: '0xbAFA44EFE7901E04E39Dad13167D089C559c1138',
       fxs_1559_amo: "0x9C6a04871D11b33645ab592f68C41bb2B41F51EE", // Old1: "0xaf02be5968D8Fe9536e24E4c7e888C59A58Bc077"
       fxs_1559_amo_v2: "0xC80C48862E4254F37047235298eDb6AA35717C24", // Proxy
@@ -2436,6 +2466,8 @@ export const CONTRACT_ADDRESSES = {
       cvxpUSDFRAXBP: "0xB17255D92892F1322d023befddaB85f172E36f67",
       cvxRSRFRAXBP: "0x022600684e9492dA82f0da11Bf039c11109d0935",
       cvxRSRFRAXBP_Rewarder: "0x28441fb9b8b026487A6174Ff39Be015810611C0F",
+      cvxSDTFRAXBP: "0x95B051E97957f1D48C622Bf73225E3d4c2B189fb",
+      cvxSDTFRAXBP_Rewarder: "0xc3df9cC2B8FFdB801E8e6E8FF9C1245E2dEcdA98",
       cvxsUSDFRAXBP_Rewarder: "0x3fABBDfe05487De1720a9420fE2e16d2c3e79A9D",
       cvxsUSDFRAXBP: "0x8E2A6e9390CbD4C3895D07E4Cb171C0527990dF6",
       cvxTUSDFRAXBP_Rewarder: "0x4a744870fD705971c8c00aC510eAc2206C93d5bb",
@@ -2465,6 +2497,8 @@ export const CONTRACT_ADDRESSES = {
       pUSDFRAXBP: "0xC47EBd6c0f68fD5963005D28D0ba533750E5C11B",
       RSRFRAXBP_Pool: "0x6a6283aB6e31C2AeC3fA08697A8F806b740660b2",
       RSRFRAXBP: "0x3F436954afb722F5D14D868762a23faB6b0DAbF0",
+      SDTFRAXBP_Pool: "0x3e3C6c7db23cdDEF80B694679aaF1bCd9517D0Ae",
+      SDTFRAXBP: "0x893DA8A02b487FEF2F7e3F35DF49d7625aE549a3",
       saddleD4_Pool: "0xC69DDcd4DFeF25D8a793241834d4cc4b3668EAD6",
       saddleD4: "0xd48cF4D7FB0824CC8bAe055dF3092584d0a1726A",
       sdl_alUSDFRAXBP_Gauge: "0x953693DCB2E9DDC0c1398C1b540b81b63ceA5e16",
@@ -2496,6 +2530,7 @@ export const CONTRACT_ADDRESSES = {
       stkcvxMAIFRAXBP: "0x787eB52b94c4610ABE2C9C5eE95c3a4a16533344",
       stkcvxpUSDFRAXBP: "0x7AEF5bDC573dCbfb40EC68b0BAAB03abB846C9c6",
       stkcvxRSRFRAXBP: "0xF37007f2b9DE656115e1B977Bb1fd38A99B8a2a6",
+      stkcvxSDTFRAXBP: "0xE6Aa75F98e6c105b821a2dba9Fbbd886b421F06b",
       stkcvxsUSDFRAXBP: "0x9f0C2673a33b7087e367253f196A7E823fBc2341",
       stkcvxTUSDFRAXBP: "0x32fA492Ac1F729E0eE9eDdfCBacc3ef72B234e27",
       stkcvxUSDDFRAXBP: "0x507e41A64eB7AE47ee303e3B16237ab757F6C06c",
@@ -2582,6 +2617,7 @@ export const CONTRACT_ADDRESSES = {
       'Convex stkcvxMAIFRAXBP': '0x787eB52b94c4610ABE2C9C5eE95c3a4a16533344',
       'Convex stkcvxpUSDFRAXBP': '0x7AEF5bDC573dCbfb40EC68b0BAAB03abB846C9c6',
       'Convex stkcvxRSRFRAXBP': '0xF37007f2b9DE656115e1B977Bb1fd38A99B8a2a6',
+      'Convex stkcvxSDTFRAXBP': '0xE6Aa75F98e6c105b821a2dba9Fbbd886b421F06b',
       'Convex stkcvxsUSDFRAXBP': '0x9f0C2673a33b7087e367253f196A7E823fBc2341',
       'Convex stkcvxTUSDFRAXBP': '0x32fA492Ac1F729E0eE9eDdfCBacc3ef72B234e27',
       'Convex stkcvxUSDDFRAXBP': '0x507e41A64eB7AE47ee303e3B16237ab757F6C06c',
@@ -2664,6 +2700,7 @@ export const CONTRACT_ADDRESSES = {
       "Convex stkcvxMAIFRAXBP": "0xdE5684F85a78F6CcCFFB4b9301ad0944eb5CE3eE",
       "Convex stkcvxpUSDFRAXBP": "0x40b42E4ab3c044e67CBFb0bD99C9E975dcB83668",
       'Convex stkcvxRSRFRAXBP': '0xF22D3C85e41Ef4b5Ac8Cb8B89a14718e290a0561',
+      'Convex stkcvxSDTFRAXBP': '0x9C8d9667d5726aEcA4d24171958BeE9F46861bed',
       "Convex stkcvxTUSDFRAXBP": "0xb324b2BD8a3Dc55b04111E84d5cce0c3771F8889",
       "Convex stkcvxUSDDFRAXBP": "0xF7242A1cE383174802818febB36B6eebb56d5BFb",
       "Convex stkcvxalUSDFRAXBP": "0x711d650Cd10dF656C2c28D375649689f137005fA",
@@ -2789,6 +2826,8 @@ export const CONTRACT_ADDRESSES = {
     canonicals: {
       FRAX: "0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F",
       FXS: "0x9d2F299715D94d8A7E6F5eaa8E654E8c74a988A7",
+      frxETH: '0x178412e79c25968a32e89b11f63B33F733770c2A',
+      sfrxETH: '0x95aB45875cFFdba1E5f451B950bC2E42c0053f39',
     },
     bridge_tokens: {
       anyFRAX: "0x667fd83e24ca1d935d36717d305d54fa0cac991c",
@@ -2813,7 +2852,9 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "0x57F0806Ad6E0264B3368413e8f3F1FbC5d1f9ff8", // for testing
-      ferry_to_ethereum: "0x5a9BEf8CEa603aAc78a523fb245C1A9264D50706", 
+      fraxferry_v1__ethereum_arbitrum__FRAX__ARBI_SIDE: "0x5a9BEf8CEa603aAc78a523fb245C1A9264D50706", 
+      fraxferry_v1__ethereum_arbitrum__frxETH__ARBI_SIDE: "0x6c5Ae8dCaD1E101FB108a89954D7dC0B8991445b", 
+      fraxferry_v1__ethereum_arbitrum__sfrxETH__ARBI_SIDE: "0xf1C16E1c01e62716884ef947063e9C7D44eC287F", 
       ferry_to_polygon: "0xe57314D4405289FfC91306E4574C28b7394c4822", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -2914,7 +2955,7 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "", // for testing
-      ferry_to_ethereum: "0x4f2c918b4630Da7ee3D8BFb690f348afd43A165c", 
+      fraxferry_v1__ethereum_aurora__FRAX__AUR_SIDE: "0xc11a4894fb95A9e87446b7773C34eaa4522372d8", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -2994,7 +3035,7 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "", // for testing
-      ferry_to_ethereum: "0x5dfF474Cea8A1FA929AC9A3cE2550376aF11d2A8", 
+      fraxferry_v1__ethereum_avalanche__FRAX__AVAX_SIDE: "0x5dfF474Cea8A1FA929AC9A3cE2550376aF11d2A8", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3111,7 +3152,7 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "", // for testing
-      ferry_to_ethereum: "0x5Cba95F0C97cf281C37CA7a24d68578eA60D0DD0", 
+      fraxferry_v1__ethereum_boba__FRAX__BOBA_SIDE: "0x5Cba95F0C97cf281C37CA7a24d68578eA60D0DD0", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3165,6 +3206,8 @@ export const CONTRACT_ADDRESSES = {
     canonicals: {
       FRAX: "0x90C97F71E18723b0Cf0dfa30ee176Ab653E89F40",
       FXS: "0xe48A3d7d0Bc88d552f730B62c006bC925eadB9eE",
+      frxETH: '0x64048A7eEcF3a2F1BA9e144aAc3D7dB6e58F555e',
+      sfrxETH: '0x3Cd55356433C89E50DC51aB07EE0fa0A95623D53',
     },
     bridge_tokens: {
       anyFRAX_V5: "0xdd03dbed9abdb125f1bdd465caadbefdff4f7524", // Router anyFRAX
@@ -3193,7 +3236,9 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "", // for testing
-      ferry_to_ethereum: "0x10Ef54F944639764d2d5Efa272262f06cfaF09AE", 
+      fraxferry_v1__ethereum_bsc__FRAX__BSC_SIDE: "0x10Ef54F944639764d2d5Efa272262f06cfaF09AE", 
+      fraxferry_v1__ethereum_bsc__frxETH__BSC_SIDE: "0xB7C974530e59017DF7FA06b1EBD9e8a1E9aceC29", 
+      fraxferry_v1__ethereum_bsc__sfrxETH__BSC_SIDE: "0x612015939f70C87E2041cc5daD909101c1A2383F", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3289,7 +3334,7 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "", // for testing
-      ferry_to_ethereum: "0xa47F0E10D832c9c35b9E733dedaAc2316fF47192", 
+      fraxferry_v1__ethereum_evmos__FRAX__EVMOS_SIDE: "0xa47F0E10D832c9c35b9E733dedaAc2316fF47192", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3369,7 +3414,7 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "", // for testing
-      ferry_to_ethereum: "0x088Be716eCA24b143fCC9ed06C6ae9977A469CCE", 
+      fraxferry_v1__ethereum_fantom__FRAX__FTM_SIDE: "0x088Be716eCA24b143fCC9ed06C6ae9977A469CCE", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3605,6 +3650,8 @@ export const CONTRACT_ADDRESSES = {
     canonicals: {
       FRAX: "0x322E86852e492a7Ee17f28a78c663da38FB33bfb",
       FXS: "0x2CC0A9D8047A5011dEfe85328a6f26968C8aaA1C",
+      frxETH: '0x82bbd1b6f6De2B7bb63D3e1546e6b1553508BE99',
+      sfrxETH: '0xecf91116348aF1cfFe335e9807f0051332BE128D',
     },
     bridge_tokens: {
       anyFRAX: "0x1CcCA1cE62c62F7Be95d4A67722a8fDbed6EEcb4",
@@ -3629,7 +3676,9 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "", // for testing
-      ferry_to_ethereum: "0xd545Fd6080db07eDdcC1F57dC28a53D930837A8d", 
+      fraxferry_v1__ethereum_moonbeam__FRAX__MNBM_SIDE: "0xd545Fd6080db07eDdcC1F57dC28a53D930837A8d",
+      fraxferry_v1__ethereum_moonbeam__frxETH__MNBM_SIDE: "0x7c7Fd7412F5E79f4917163F78d5Ece5E2e923504", 
+      fraxferry_v1__ethereum_moonbeam__sfrxETH__MNBM_SIDE: "0x78348E58582d0D1789da1621B79Fc62012485CAe",  
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3718,7 +3767,7 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "", // for testing
-      ferry_to_ethereum: "0x81dbcc69937DAd14e358B1a16Ba7ea047703c404", 
+      fraxferry_v1__ethereum_moonriver__FRAX__MOVR_SIDE: "0x81dbcc69937DAd14e358B1a16Ba7ea047703c404", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3786,6 +3835,8 @@ export const CONTRACT_ADDRESSES = {
     canonicals: {
       FRAX: "0x2E3D870790dC77A83DD1d18184Acc7439A53f475",
       FXS: "0x67CCEA5bb16181E7b4109c9c2143c24a1c2205Be",
+      frxETH: '0x6806411765Af15Bddd26f8f544A34cC40cb9838B',
+      sfrxETH: '0x484c2D6e3cDd945a8B2DF735e079178C1036578c',
     },
     bridge_tokens: {
       celrFRAX: "0xea129aE043C4cB73DcB241AAA074F9E667641BA0",
@@ -3806,7 +3857,9 @@ export const CONTRACT_ADDRESSES = {
     },
     fraxferry: {
       dummy_tkn: "", // for testing
-      ferry_to_ethereum: "0xb781FCaC4B8eF06891F9baD7dB9C178B1cE67967", 
+      fraxferry_v1__ethereum_optimism__FRAX__OPTI_SIDE: "0xb781FCaC4B8eF06891F9baD7dB9C178B1cE67967", 
+      fraxferry_v1__ethereum_optimism__frxETH__OPTI_SIDE: "0xA4EFC2d768C9b9b0f97DD91a1555B345f69b39C0", 
+      fraxferry_v1__ethereum_optimism__sfrxETH__OPTI_SIDE: "0x59b99CF08C01a6ADa0e0D819520719CA41B35c7C",  
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3877,6 +3930,8 @@ export const CONTRACT_ADDRESSES = {
       FXS: "0x1a3acf6D19267E2d3e7f898f42803e90C9219062",
       FPI: "0x411C9cDd0fBBa243488988f2A3005D6fFf126661", // FOR TESTING
       FPIS: "0x84F6FCeb8E4A3EB87768C4a111273C17b54D4411", // FOR TESTING
+      frxETH: '0xEe327F889d5947c1dc1934Bb208a1E792F953E96',
+      sfrxETH: '0x6d1FdBB266fCc09A16a22016369210A15bb95761',
     },
     bridge_tokens: {
       anyFRAX: "0xfE952465773bE3802eAc343C89aD351C77c00ab1", // Router anyFRAX
@@ -3906,7 +3961,9 @@ export const CONTRACT_ADDRESSES = {
     fraxferry: {
       dummy_tkn: "0xC6525aC8fc37814Fd68216F1ea690b3dC2249e89", // for testing
       ferry_to_arbitrum: "0xA621dC655fFBD0dB9cb2564529324E5750f2A4F0", 
-      ferry_to_ethereum: "0x6f7F18C15B97dC9Fac48Ae7F986989F97D25dbc7", 
+      fraxferry_v1__ethereum_polygon__FRAX__POLY_SIDE: "0x6f7F18C15B97dC9Fac48Ae7F986989F97D25dbc7", 
+      fraxferry_v1__ethereum_polygon__frxETH__POLY_SIDE: "0x2760a93993BaA3BC4d7C209db000d4685bdAD6B1", 
+      fraxferry_v1__ethereum_polygon__sfrxETH__POLY_SIDE: "0x6728b24B4a4C42cabEe14a2BdFDc51271aa3Ae63",  
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
