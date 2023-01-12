@@ -39,6 +39,7 @@ pragma solidity ^0.8.4;
 */
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
 contract Fraxferry {
@@ -57,9 +58,15 @@ contract Fraxferry {
    
    uint public MIN_WAIT_PERIOD_ADD=3600; // Minimal 1 hour waiting
    uint public MIN_WAIT_PERIOD_EXECUTE=79200; // Minimal 22 hour waiting
-   uint public FEE=5*1e18; // 5 token fee
-   uint immutable MAX_FEE=100e18; // Max fee is 100 tokens
-   uint immutable public REDUCED_DECIMALS=1e10;
+   uint public FEE_RATE=10;      // 0.1% fee
+   uint public FEE_MIN=5*1e18;   // 5 token min fee
+   uint public FEE_MAX=100*1e18; // 100 token max fee
+   
+   uint constant MAX_FEE_RATE=100; // Max fee rate is 1%
+   uint constant MAX_FEE_MIN=100e18; // Max minimum fee is 100 tokens
+   uint constant MAX_FEE_MAX=1000e18; // Max fee is 1000 tokens
+   
+   uint constant public REDUCED_DECIMALS=1e10;
    
    Transaction[] public transactions;
    mapping(uint => bool) public cancelled;
@@ -109,7 +116,7 @@ contract Fraxferry {
    event SetCaptain(address indexed previousCaptain, address indexed newCaptain);   
    event SetFirstOfficer(address indexed previousFirstOfficer, address indexed newFirstOfficer);
    event SetCrewmember(address indexed crewmember,bool set); 
-   event SetFee(uint previousFee, uint fee);
+   event SetFee(uint previousFeeRate, uint feeRate,uint previousFeeMin, uint feeMin,uint previousFeeMax, uint feeMax);
    event SetMinWaitPeriods(uint previousMinWaitAdd,uint previousMinWaitExecute,uint minWaitAdd,uint minWaitExecute); 
    
    // ############## Modifiers ##############
@@ -143,10 +150,11 @@ contract Fraxferry {
    
    function embarkWithRecipient(uint amount, address recipient) public notPaused {
       amount = (amount/REDUCED_DECIMALS)*REDUCED_DECIMALS; // Round amount to fit in data structure
-      require (amount>FEE,"Amount too low");
+      uint fee = Math.min(Math.max(FEE_MIN,amount*FEE_RATE/10000),FEE_MAX);
+      require (amount>fee,"Amount too low");
       require (amount/REDUCED_DECIMALS<=type(uint64).max,"Amount too high");
       TransferHelper.safeTransferFrom(address(token),msg.sender,address(this),amount); 
-      uint64 amountAfterFee = uint64((amount-FEE)/REDUCED_DECIMALS);
+      uint64 amountAfterFee = uint64((amount-fee)/REDUCED_DECIMALS);
       emit Embark(recipient,transactions.length,amount,amountAfterFee*REDUCED_DECIMALS,block.timestamp);
       transactions.push(Transaction(recipient,amountAfterFee,uint32(block.timestamp)));   
    }
@@ -240,10 +248,14 @@ contract Fraxferry {
    
    // ############## Parameters management ##############
    
-   function setFee(uint _FEE) external isOwner {
-      require(FEE<MAX_FEE);
-      emit SetFee(FEE,_FEE);
-      FEE=_FEE;
+   function setFee(uint _FEE_RATE, uint _FEE_MIN, uint _FEE_MAX) external isOwner {
+      require(_FEE_RATE<MAX_FEE_RATE);
+      require(_FEE_MIN<MAX_FEE_MIN);
+      require(_FEE_MAX<MAX_FEE_MAX);
+      emit SetFee(FEE_RATE,_FEE_RATE,FEE_MIN,_FEE_MIN,FEE_MAX,_FEE_MAX);
+      FEE_RATE=_FEE_RATE;
+      FEE_MIN=_FEE_MIN;
+      FEE_MAX=_FEE_MAX;
    }
    
    function setMinWaitPeriods(uint _MIN_WAIT_PERIOD_ADD, uint _MIN_WAIT_PERIOD_EXECUTE) external isOwner {

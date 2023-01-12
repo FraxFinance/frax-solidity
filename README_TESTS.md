@@ -1,3 +1,9 @@
+# PREP
+1) Using SAMPLE.env and SAMPLE.env.forge, make local versions of .env and .env.forge
+2) npm install
+3) tsc
+4) forge b
+
 ## FORGE
 **------Testing------**
 Do first
