@@ -387,7 +387,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     }
 
     /// @notice Returns the liquidity and ending timestamp of a locked stake
-    function getLiquidityAndEnding(address staker, uint256 locked_stake_index) external view returns (uint256,uint256) {
+    function getStakeLiquidityAndEnding(address staker, uint256 locked_stake_index) external view returns (uint256,uint256) {
         return(
             lockedStakes[staker][locked_stake_index].liquidity,
             lockedStakes[staker][locked_stake_index].ending_timestamp
