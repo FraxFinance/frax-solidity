@@ -46,7 +46,7 @@ import "./OwnedV2.sol";
 // Extra rewards
 import "../Misc_AMOs/convex/IConvexBaseRewardPool.sol";
 
-contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuard {
+contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     error NeedsPreTransferProcessLogic();
     error NeedsCCCWLogic();
