@@ -757,11 +757,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             lockedStakes[addrs[0]][sender_lock_index].liquidity -= transfer_amount;
         }
 
-        // Get the stake and its index
         {
-            // Scope here due to stack-too-deep
-            LockedStake memory receiverStake = getLockedStake(addrs[1], receiver_lock_index);
-
             /** if use_receiver_lock_index is true &
             *       & the index is valid 
             *       & has liquidity 
@@ -770,6 +766,9 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             * note using nested if checks to reduce gas costs slightly
             */
             if (use_receiver_lock_index == true) {
+                // Get the stake and its index
+                LockedStake memory receiverStake = getLockedStake(addrs[1], receiver_lock_index);
+
                 if (receiver_lock_index < lockedStakes[addrs[1]].length) {
                     if (receiverStake.liquidity > 0) {
                         if (receiverStake.ending_timestamp > block.timestamp) {
