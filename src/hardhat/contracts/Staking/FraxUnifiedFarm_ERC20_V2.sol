@@ -770,7 +770,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             * note using nested if checks to reduce gas costs slightly
             */
             if (use_receiver_lock_index == true) {
-                if (receiver_lock_index < lockedStakes[addrs[1]].length ) {
+                if (receiver_lock_index < lockedStakes[addrs[1]].length - 1) {
                     if (receiverStake.liquidity > 0) {
                         if (receiverStake.ending_timestamp > block.timestamp) {
                             // Update the existing staker's stake liquidity
@@ -805,7 +805,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
                 
                 // update the return value of the locked index 
                 /// todo could also just use the length of the array in all 3 situations below - which is more gas efficient?
-                receiver_lock_index = lockedStakes[addrs[1]].length;
+                receiver_lock_index = lockedStakes[addrs[1]].length - 1;
             }
         }
 
