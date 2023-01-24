@@ -386,8 +386,13 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         return(lockedStakes[staker][locked_stake_index]);
     }
 
-    function getLockedStakeLiquidity(address staker, uint256 locked_stake_index) external view returns (uint256) {
-        return(lockedStakes[staker][locked_stake_index].liquidity);
+
+    /// @notice Returns the liquidity and ending timestamp of a locked stake
+    function getStakeLiquidityAndEnding(address staker, uint256 locked_stake_index) external view returns (uint256,uint256) {
+        return(
+            lockedStakes[staker][locked_stake_index].liquidity,
+            lockedStakes[staker][locked_stake_index].ending_timestamp
+        );
     }
 
     /* =============== MUTATIVE FUNCTIONS =============== */
@@ -751,35 +756,36 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             lockedStakes[addrs[0]][sender_lock_index].liquidity -= transfer_amount;
         }
 
-        /** if use_receiver_lock_index is true &
-        *       & the index is valid 
-        *       & has liquidity 
-        *       & is still locked, update the stake & ending timestamp (longer of the two)
-        *   else, create a new lockedStake
-        * note using nested if checks to reduce gas costs slightly
-        */
-        if (use_receiver_lock_index == true) {
-            // Get the stake and its index
-            LockedStake memory receiverStake = getLockedStake(addrs[1], receiver_lock_index);
+{
+            /** if use_receiver_lock_index is true &
+            *       & the index is valid 
+            *       & has liquidity 
+            *       & is still locked, update the stake & ending timestamp (longer of the two)
+            *   else, create a new lockedStake
+            * note using nested if checks to reduce gas costs slightly
+            */
+            if (use_receiver_lock_index == true) {
+                // Get the stake and its index
+                LockedStake memory receiverStake = getLockedStake(addrs[1], receiver_lock_index);
 
-            if (receiver_lock_index < lockedStakes[addrs[1]].length ) {
-                if (receiverStake.liquidity > 0) {
-                    if (receiverStake.ending_timestamp > block.timestamp) {
-                        // Update the existing staker's stake liquidity
-                        lockedStakes[addrs[1]][receiver_lock_index].liquidity += transfer_amount;
-                        // check & update ending timestamp to whichever is farthest out
-                        if (receiverStake.ending_timestamp < senderStake.ending_timestamp) {
-                            // update the lock expiration to the later timestamp
-                            lockedStakes[addrs[1]][receiver_lock_index].ending_timestamp = senderStake.ending_timestamp;
-                            // update the lock multiplier since we are effectively extending the lock
-                            lockedStakes[addrs[1]][receiver_lock_index].lock_multiplier = lockMultiplier(
-                                senderStake.ending_timestamp - block.timestamp
-                            );
+                if (receiver_lock_index < lockedStakes[addrs[1]].length) {
+                    if (receiverStake.liquidity > 0) {
+                        if (receiverStake.ending_timestamp > block.timestamp) {
+                            // Update the existing staker's stake liquidity
+                            lockedStakes[addrs[1]][receiver_lock_index].liquidity += transfer_amount;
+                            // check & update ending timestamp to whichever is farthest out
+                            if (receiverStake.ending_timestamp < senderStake.ending_timestamp) {
+                                // update the lock expiration to the later timestamp
+                                lockedStakes[addrs[1]][receiver_lock_index].ending_timestamp = senderStake.ending_timestamp;
+                                // update the lock multiplier since we are effectively extending the lock
+                                lockedStakes[addrs[1]][receiver_lock_index].lock_multiplier = lockMultiplier(
+                                    senderStake.ending_timestamp - block.timestamp
+                                );
+                            }
                         }
                     }
                 }
-            }
-        } else {
+            } else {
             // create the new lockedStake
             _createNewStake(
                 addrs[1], 
@@ -814,7 +820,6 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         ) != ILockReceiverV2.onLockReceived.selector) revert InvalidReceiver(); //0xc42d8b95) revert InvalidReceiver();
 
         return (sender_lock_index, receiver_lock_index);
-
     }
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
