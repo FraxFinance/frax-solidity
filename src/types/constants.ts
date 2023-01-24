@@ -2265,26 +2265,35 @@ export const CONTRACT_ADDRESSES = {
     fraxferry: {
       dummy_tkn: "", // for testing
       fraxferry_v1__ethereum_arbitrum__FRAX__ETH_SIDE: "0x85c5f05Ae4CB68190C695a22b292C3bA90696128",
-      fraxferry_v1__ethereum_arbitrum__frxETH__ETH_SIDE: "0x505603e2440b44C1602b44D0Eb8385399b3F7bab", 
-      fraxferry_v1__ethereum_arbitrum__sfrxETH__ETH_SIDE: "0x8afd5082E0C24dEcEA39A9eFb14e4ACF4373D7D6",  
+      fraxferry_v2__ethereum_arbitrum__FXS__ETH_SIDE: "0x4b8792aF00eaE944484bF572bc33029B2184a50C",  
+      fraxferry_v2__ethereum_arbitrum__frxETH__ETH_SIDE: "0x505603e2440b44C1602b44D0Eb8385399b3F7bab", 
+      fraxferry_v2__ethereum_arbitrum__sfrxETH__ETH_SIDE: "0x8afd5082E0C24dEcEA39A9eFb14e4ACF4373D7D6",  
       fraxferry_v1__ethereum_aurora__FRAX__ETH_SIDE: "0x6ac96F65156281a9383455D704b58A74ea9C9eC4", 
       fraxferry_v1__ethereum_avalanche__FRAX__ETH_SIDE: "0xA381d58e96eC3818c825E1fb264099448945CF8b", 
+      fraxferry_v2__ethereum_avalanche__FXS__ETH_SIDE: "0x9Ab224996D25bfDCB91d838F7f1902698Ac0a742", 
       fraxferry_v1__ethereum_boba__FRAX__ETH_SIDE: "0x3eF1d856EA62A2292B8690855042095a7aC48B4b", 
       fraxferry_v1__ethereum_bsc__FRAX__ETH_SIDE: "0xDAe210BfB0cF8c81EDB4b459e2e0bA14D553e2D9", 
-      fraxferry_v1__ethereum_bsc__frxETH__ETH_SIDE: "0xce4DbAF3fa72C962Ee1F371694109fc2a80B03f5", 
-      fraxferry_v1__ethereum_bsc__sfrxETH__ETH_SIDE: "0x621D0e62f26314387f338A2509aFA3Ae3414661A",  
+      fraxferry_v2__ethereum_bsc__FXS__ETH_SIDE: "0x9B62402Eb9A755677dEbdaE3639CB531c0Af0E5d", 
+      fraxferry_v2__ethereum_bsc__frxETH__ETH_SIDE: "0xce4DbAF3fa72C962Ee1F371694109fc2a80B03f5", 
+      fraxferry_v2__ethereum_bsc__sfrxETH__ETH_SIDE: "0x621D0e62f26314387f338A2509aFA3Ae3414661A",  
       fraxferry_v1__ethereum_evmos__FRAX__ETH_SIDE: "0x2d2261f970F605C813f160E8BAEd455E9004A842", 
       fraxferry_v1__ethereum_fantom__FRAX__ETH_SIDE: "0xfB788F9E20ef426a32A67986654750172A6c1788", 
+      fraxferry_v2__ethereum_fantom__FXS__ETH_SIDE: "0x1313d143BE1ac25aCACEFF39Bf31877bccDb9622", 
+      fraxferry_v2__ethereum_fantom__frxETH__ETH_SIDE: "0xaF4305d05e9B08b1D17894ce1ACE8235528f7EdE", 
+      fraxferry_v2__ethereum_fantom__sfrxETH__ETH_SIDE: "0xB6b0290A39E2F896bBd8fC19cf17FE393e993dE4", 
       fraxferry_v1__ethereum_moonbeam__FRAX__ETH_SIDE: "0xF1E1deA8F1053FD9C5F47f72F1f03977E17aF242",
-      fraxferry_v1__ethereum_moonbeam__frxETH__ETH_SIDE: "0x228567c10b7533C88057c10dDeA6349360F122c5", 
-      fraxferry_v1__ethereum_moonbeam__sfrxETH__ETH_SIDE: "0xbc3A2bF4FA20bE2056DCE5BFB168970BA657F187",  
+      fraxferry_v2__ethereum_moonbeam__FXS__ETH_SIDE: "0x2De1354c98880889643c4cA8B06FA2Fb8Fc1Fd7A",
+      fraxferry_v2__ethereum_moonbeam__frxETH__ETH_SIDE: "0x228567c10b7533C88057c10dDeA6349360F122c5", 
+      fraxferry_v2__ethereum_moonbeam__sfrxETH__ETH_SIDE: "0xbc3A2bF4FA20bE2056DCE5BFB168970BA657F187",  
       fraxferry_v1__ethereum_moonriver__FRAX__ETH_SIDE: "0x15ADa72A3B52A88E25DdD2CC2bA1120234e34bb0",  
       fraxferry_v1__ethereum_optimism__FRAX__ETH_SIDE: "0x06Fa869caa1160754C6a0B744Da6454c5EA325d4", 
-      fraxferry_v1__ethereum_optimism__frxETH__ETH_SIDE: "0x2F08F4645d2fA1fB12D2db8531c0c2EA0268BdE2", 
-      fraxferry_v1__ethereum_optimism__sfrxETH__ETH_SIDE: "0x04ba20D2Cc47C63bce1166C2864F0241e4D0a0CC",  
+      fraxferry_v2__ethereum_optimism__FXS__ETH_SIDE: "0x6650D5183C4Cd294a81B1F724c365b0c42f8270a",       
+      fraxferry_v2__ethereum_optimism__frxETH__ETH_SIDE: "0x2F08F4645d2fA1fB12D2db8531c0c2EA0268BdE2", 
+      fraxferry_v2__ethereum_optimism__sfrxETH__ETH_SIDE: "0x04ba20D2Cc47C63bce1166C2864F0241e4D0a0CC",  
       fraxferry_v1__ethereum_polygon__FRAX__ETH_SIDE: "0x43959A388603DCb6B02Ca084A55d4c7f3b442c57",
-      fraxferry_v1__ethereum_polygon__frxETH__ETH_SIDE: "0x98f5E4b7D9eDF57A6ED41b334bD40B2eAa6B6e26", 
-      fraxferry_v1__ethereum_polygon__sfrxETH__ETH_SIDE: "0x91Ff54EffF7564BA3884A91d0E293502D8E6fF90",   
+      fraxferry_v2__ethereum_polygon__FXS__ETH_SIDE: "0xCa026e80F1E9e44da7ce3eD6aC2E9630260B9276",
+      fraxferry_v2__ethereum_polygon__frxETH__ETH_SIDE: "0x98f5E4b7D9eDF57A6ED41b334bD40B2eAa6B6e26", 
+      fraxferry_v2__ethereum_polygon__sfrxETH__ETH_SIDE: "0x91Ff54EffF7564BA3884A91d0E293502D8E6fF90",   
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -2853,8 +2862,9 @@ export const CONTRACT_ADDRESSES = {
     fraxferry: {
       dummy_tkn: "0x57F0806Ad6E0264B3368413e8f3F1FbC5d1f9ff8", // for testing
       fraxferry_v1__ethereum_arbitrum__FRAX__ARBI_SIDE: "0x5a9BEf8CEa603aAc78a523fb245C1A9264D50706", 
-      fraxferry_v1__ethereum_arbitrum__frxETH__ARBI_SIDE: "0x6c5Ae8dCaD1E101FB108a89954D7dC0B8991445b", 
-      fraxferry_v1__ethereum_arbitrum__sfrxETH__ARBI_SIDE: "0xf1C16E1c01e62716884ef947063e9C7D44eC287F", 
+      fraxferry_v2__ethereum_arbitrum__FXS__ARBI_SIDE: "0x078Dd77De4e0f480D7442495d55707cE071B4B09", 
+      fraxferry_v2__ethereum_arbitrum__frxETH__ARBI_SIDE: "0x6c5Ae8dCaD1E101FB108a89954D7dC0B8991445b", 
+      fraxferry_v2__ethereum_arbitrum__sfrxETH__ARBI_SIDE: "0xf1C16E1c01e62716884ef947063e9C7D44eC287F", 
       ferry_to_polygon: "0xe57314D4405289FfC91306E4574C28b7394c4822", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3036,6 +3046,7 @@ export const CONTRACT_ADDRESSES = {
     fraxferry: {
       dummy_tkn: "", // for testing
       fraxferry_v1__ethereum_avalanche__FRAX__AVAX_SIDE: "0x5dfF474Cea8A1FA929AC9A3cE2550376aF11d2A8", 
+      fraxferry_v2__ethereum_avalanche__FXS__AVAX_SIDE: "0xC311b600bc926a3a8aC39945471427DFd9196930", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3237,8 +3248,9 @@ export const CONTRACT_ADDRESSES = {
     fraxferry: {
       dummy_tkn: "", // for testing
       fraxferry_v1__ethereum_bsc__FRAX__BSC_SIDE: "0x10Ef54F944639764d2d5Efa272262f06cfaF09AE", 
-      fraxferry_v1__ethereum_bsc__frxETH__BSC_SIDE: "0xB7C974530e59017DF7FA06b1EBD9e8a1E9aceC29", 
-      fraxferry_v1__ethereum_bsc__sfrxETH__BSC_SIDE: "0x612015939f70C87E2041cc5daD909101c1A2383F", 
+      fraxferry_v2__ethereum_bsc__FXS__BSC_SIDE: "0x5CD3d6465cd21b645F15175840f4659228C6195c", 
+      fraxferry_v2__ethereum_bsc__frxETH__BSC_SIDE: "0xB7C974530e59017DF7FA06b1EBD9e8a1E9aceC29", 
+      fraxferry_v2__ethereum_bsc__sfrxETH__BSC_SIDE: "0x612015939f70C87E2041cc5daD909101c1A2383F", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3387,6 +3399,8 @@ export const CONTRACT_ADDRESSES = {
       FXS: "0x7d016eec9c25232b01F23EF992D98ca97fc2AF5a",
       FPI: "0xAb069E73f1AA50c37A7171D16dCc3614c705101B", // FOR TESTING
       FPIS: "0x3bb6B72dC07D7bFDa981F70C631482e9517CF6EE", // FOR TESTING
+      frxETH: "0x9E73F99EE061C8807F69f9c6CCc44ea3d8c373ee",
+      sfrxETH: "0xb90CCD563918fF900928dc529aA01046795ccb4A"
     },
     bridge_tokens: {
       anyFRAX_V5: "0xBDba76fA2659c33ffCc2B0bc134c3A2c8a3Aa94d", // Router anyFRAX
@@ -3415,6 +3429,9 @@ export const CONTRACT_ADDRESSES = {
     fraxferry: {
       dummy_tkn: "", // for testing
       fraxferry_v1__ethereum_fantom__FRAX__FTM_SIDE: "0x088Be716eCA24b143fCC9ed06C6ae9977A469CCE", 
+      fraxferry_v2__ethereum_fantom__FXS__FTM_SIDE: "0x9b75031D46CdEe779B36F7F2f1857fd987C6C98c", 
+      fraxferry_v2__ethereum_fantom__frxETH__FTM_SIDE: "0x12b6a8178C67B2835E280E1Ed709F64446cddb08", 
+      fraxferry_v2__ethereum_fantom__sfrxETH__FTM_SIDE: "0x71e1FEeAA17b6557c5FaD60101ca12F81d03838C", 
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3677,8 +3694,9 @@ export const CONTRACT_ADDRESSES = {
     fraxferry: {
       dummy_tkn: "", // for testing
       fraxferry_v1__ethereum_moonbeam__FRAX__MNBM_SIDE: "0xd545Fd6080db07eDdcC1F57dC28a53D930837A8d",
-      fraxferry_v1__ethereum_moonbeam__frxETH__MNBM_SIDE: "0x7c7Fd7412F5E79f4917163F78d5Ece5E2e923504", 
-      fraxferry_v1__ethereum_moonbeam__sfrxETH__MNBM_SIDE: "0x78348E58582d0D1789da1621B79Fc62012485CAe",  
+      fraxferry_v2__ethereum_moonbeam__FXS__MNBM_SIDE: "0x1E87990678f640BFfe5A118c331fEc296DDC8d89",
+      fraxferry_v2__ethereum_moonbeam__frxETH__MNBM_SIDE: "0x7c7Fd7412F5E79f4917163F78d5Ece5E2e923504", 
+      fraxferry_v2__ethereum_moonbeam__sfrxETH__MNBM_SIDE: "0x78348E58582d0D1789da1621B79Fc62012485CAe",  
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3858,8 +3876,9 @@ export const CONTRACT_ADDRESSES = {
     fraxferry: {
       dummy_tkn: "", // for testing
       fraxferry_v1__ethereum_optimism__FRAX__OPTI_SIDE: "0xb781FCaC4B8eF06891F9baD7dB9C178B1cE67967", 
-      fraxferry_v1__ethereum_optimism__frxETH__OPTI_SIDE: "0xA4EFC2d768C9b9b0f97DD91a1555B345f69b39C0", 
-      fraxferry_v1__ethereum_optimism__sfrxETH__OPTI_SIDE: "0x59b99CF08C01a6ADa0e0D819520719CA41B35c7C",  
+      fraxferry_v2__ethereum_optimism__FXS__OPTI_SIDE: "0xdF6B3b56B1668dA507Db58C64b7153756cfE8e67", 
+      fraxferry_v2__ethereum_optimism__frxETH__OPTI_SIDE: "0xA4EFC2d768C9b9b0f97DD91a1555B345f69b39C0", 
+      fraxferry_v2__ethereum_optimism__sfrxETH__OPTI_SIDE: "0x59b99CF08C01a6ADa0e0D819520719CA41B35c7C",  
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
@@ -3962,8 +3981,9 @@ export const CONTRACT_ADDRESSES = {
       dummy_tkn: "0xC6525aC8fc37814Fd68216F1ea690b3dC2249e89", // for testing
       ferry_to_arbitrum: "0xA621dC655fFBD0dB9cb2564529324E5750f2A4F0", 
       fraxferry_v1__ethereum_polygon__FRAX__POLY_SIDE: "0x6f7F18C15B97dC9Fac48Ae7F986989F97D25dbc7", 
-      fraxferry_v1__ethereum_polygon__frxETH__POLY_SIDE: "0x2760a93993BaA3BC4d7C209db000d4685bdAD6B1", 
-      fraxferry_v1__ethereum_polygon__sfrxETH__POLY_SIDE: "0x6728b24B4a4C42cabEe14a2BdFDc51271aa3Ae63",  
+      fraxferry_v2__ethereum_polygon__FXS__POLY_SIDE: "0x6f71Ea0e9679389854010eE48a7D237cB430DBA4", 
+      fraxferry_v2__ethereum_polygon__frxETH__POLY_SIDE: "0x2760a93993BaA3BC4d7C209db000d4685bdAD6B1", 
+      fraxferry_v2__ethereum_polygon__sfrxETH__POLY_SIDE: "0x6728b24B4a4C42cabEe14a2BdFDc51271aa3Ae63",  
       captain: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       first_officer: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",
       crewmember: "0xBB437059584e30598b3AF0154472E47E6e2a45B9",

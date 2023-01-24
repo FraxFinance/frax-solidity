@@ -22,7 +22,10 @@ describe("Fraxferry", function () {
       expect(contractBalanceAfter-contractBalanceBefore).to.equal(bridgeAmount);
       expect(BigInt(await contracts.ferryAB.noTransactions())).to.equal(BigInt(1));
       var transaction = await contracts.ferryAB.transactions(0);
-      var fee = BigInt(await contracts.ferryAB.FEE());
+      var fee_rate = BigInt(await contracts.ferryAB.FEE_RATE());
+      var fee_min = BigInt(await contracts.ferryAB.FEE_MIN());
+      var fee_max = BigInt(await contracts.ferryAB.FEE_MAX());
+      var fee = bigIntMin(bigIntMax(bridgeAmount*fee_rate/BigInt(10000),fee_min),fee_max);
       var reducedDecimals = BigInt(await contracts.ferryAB.REDUCED_DECIMALS());
       expect(transaction.user).to.equal(user.address);
       expect(BigInt(transaction.amount)*reducedDecimals).to.equal(bridgeAmount-fee);
@@ -45,11 +48,14 @@ describe("Fraxferry", function () {
 		var bridgeAmount = BigInt(1000*1e18);
 		await contracts.token0.connect(user).approve(contracts.ferryAB.address,bridgeAmount);
 		await contracts.ferryAB.connect(user).embarkWithRecipient(bridgeAmount,user2.address);
-		wait(100*60);
+		wait(3601);
 		var nextBatch = await contracts.ferryAB.getNextBatch(0,10);
 		await contracts.ferryBA.connect(captain).depart(nextBatch.start,nextBatch.end,nextBatch.hash);
-		wait(100*60);
-		var fee = BigInt(await contracts.ferryAB.FEE());
+		wait(79201);
+		var fee_rate = BigInt(await contracts.ferryAB.FEE_RATE());
+		var fee_min = BigInt(await contracts.ferryAB.FEE_MIN());
+		var fee_max = BigInt(await contracts.ferryAB.FEE_MAX());
+      var fee = bigIntMin(bigIntMax(bridgeAmount*fee_rate/BigInt(10000),fee_min),fee_max);
 		var batch = await contracts.ferryAB.getBatchData(nextBatch.start,nextBatch.end);
 		var userBalanceBefore = BigInt(await contracts.token1.balanceOf(user2.address));
       await contracts.ferryBA.connect(firstOfficer).disembark(batch);
@@ -97,11 +103,15 @@ describe("Fraxferry", function () {
       var bridgeAmount = BigInt(1000*1e18);
       await contracts.token0.connect(user).approve(contracts.ferryAB.address,bridgeAmount);
       await contracts.ferryAB.connect(user).embark(bridgeAmount);
+      wait(3601);
       var hash =  await contracts.ferryAB.getTransactionsHash(0,0);
       var batch = await contracts.ferryAB.getBatchData(0,0);
       await contracts.ferryBA.connect(captain).depart(0,0,hash);
-      wait(60*60);
-      var fee = BigInt(await contracts.ferryAB.FEE());
+      wait(79201);
+      var fee_rate = BigInt(await contracts.ferryAB.FEE_RATE());
+		var fee_min = BigInt(await contracts.ferryAB.FEE_MIN());
+		var fee_max = BigInt(await contracts.ferryAB.FEE_MAX());
+      var fee = bigIntMin(bigIntMax(bridgeAmount*fee_rate/BigInt(10000),fee_min),fee_max);
       var userBalanceBefore = BigInt(await contracts.token1.balanceOf(user.address));
       var contractBalanceBefore = BigInt(await contracts.token1.balanceOf(contracts.ferryBA.address));
       await contracts.ferryBA.connect(firstOfficer).disembark(batch);
@@ -120,6 +130,7 @@ describe("Fraxferry", function () {
       await contracts.ferryAB.connect(user).embark(bridgeAmount);
       await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(2));
       await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(4));
+      wait(3601);
       var batch1 = await contracts.ferryAB.getBatchData(0,0);
       var batch2 = await contracts.ferryAB.getBatchData(0,2);
       var batch3 = await contracts.ferryAB.getBatchData(1,1);
@@ -128,7 +139,7 @@ describe("Fraxferry", function () {
       await contracts.ferryBA.connect(captain).depart(0,0,hash1);
       await contracts.ferryBA.connect(captain).depart(1,1,hash3);
       await expect(contracts.ferryBA.connect(firstOfficer).disembark(batch1)).to.be.revertedWith("Too soon");
-      wait(60*60);
+      wait(79201);
       await expect(contracts.ferryBA.connect(firstOfficer).disembark(batch2)).to.be.revertedWith("Wrong size");
       await expect(contracts.ferryBA.connect(firstOfficer).disembark(batch3)).to.be.revertedWith("Wrong start");
       var batch4=[0,batch3[1],batch3[2],batch3[3]];
@@ -153,18 +164,42 @@ describe("Fraxferry", function () {
 			await contracts.ferryAB.connect(user).embark(bridgeAmount);
 			await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(2));
 			await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(4));
-			wait(100*60);
+			wait(3601);
 			var nextBatch = await contracts.ferryAB.getNextBatch(pos,10);
 			if (pos!=0) await expect(contracts.ferryBA.connect(captain).depart(BigInt(nextBatch.start)-BigInt(1),BigInt(nextBatch.end)-BigInt(1),nextBatch.hash)).to.be.revertedWith("Wrong start");
 			await expect(contracts.ferryBA.connect(captain).depart(BigInt(nextBatch.start)+BigInt(1),BigInt(nextBatch.end)+BigInt(1),nextBatch.hash)).to.be.revertedWith("Wrong start");
 			await contracts.ferryBA.connect(captain).depart(nextBatch.start,nextBatch.end,nextBatch.hash);
-			wait(60*60);
+			wait(79201);
 			var transactionsHash = await contracts.ferryAB.getTransactionsHash(nextBatch.start,nextBatch.end);
 			await expect(transactionsHash).to.equal(nextBatch.hash);
       	var batch = await contracts.ferryAB.getBatchData(nextBatch.start,nextBatch.end);
          await contracts.ferryBA.connect(firstOfficer).disembark(batch);
          pos=BigInt(nextBatch.end)+BigInt(1);
 		}
+   });
+
+	it("fees", async function () {
+		const [owner,user,captain,firstOfficer,crewmember] = await ethers.getSigners();
+		var contracts = await setupContracts();
+		var bridgeAmount = BigInt(10*1e18);
+		var fee_rate = BigInt(await contracts.ferryAB.FEE_RATE());
+		var fee_min = BigInt(await contracts.ferryAB.FEE_MIN());
+		var fee_max = BigInt(await contracts.ferryAB.FEE_MAX());
+		for (var i=0;i<32;i++) {
+			await contracts.token0.mint(user.address,bridgeAmount);
+			await contracts.token0.connect(user).approve(contracts.ferryAB.address,bridgeAmount);
+			await contracts.ferryAB.connect(user).embarkWithRecipient(bridgeAmount,user.address);
+			bridgeAmount=bridgeAmount*BigInt(2);
+	   }
+		wait(3601);
+		bridgeAmount = BigInt(10*1e18);
+		for (var i=0;i<32;i++) {
+			var batchAmount = BigInt(await contracts.ferryAB.getBatchAmount(i,i));
+			var actualFee = bridgeAmount-batchAmount;
+			var fee = bigIntMin(bigIntMax(bridgeAmount*fee_rate/BigInt(10000),fee_min),fee_max);
+			expect(actualFee).to.equals(fee);
+			bridgeAmount=bridgeAmount*BigInt(2);
+	   }
    });
 
    it("jettison", async function () {
@@ -175,10 +210,11 @@ describe("Fraxferry", function () {
       await contracts.ferryAB.connect(user).embark(bridgeAmount);
       await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(2));
       await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(4));
+      wait(3601);
       var batch = await contracts.ferryAB.getBatchData(0,2);
       var hash =  await contracts.ferryAB.getTransactionsHash(0,2);
       await contracts.ferryBA.connect(captain).depart(0,2,hash);
-      wait(60*60);
+      wait(79201);
       expect(await contracts.ferryBA.cancelled(1)).to.equal(false);
       await contracts.ferryBA.connect(owner).jettison(1,true);
       expect(await contracts.ferryBA.cancelled(1)).to.equal(true);
@@ -191,8 +227,13 @@ describe("Fraxferry", function () {
       await contracts.ferryBA.connect(firstOfficer).disembark(batch);
       var userBalanceAfter = BigInt(await contracts.token1.balanceOf(user.address));
       var contractBalanceAfter = BigInt(await contracts.token1.balanceOf(contracts.ferryBA.address));
-      var fee = BigInt(await contracts.ferryAB.FEE());
-      var expectedTransfered = bridgeAmount*BigInt(5)-fee*BigInt(2);
+      var fee_rate = BigInt(await contracts.ferryAB.FEE_RATE());
+		var fee_min = BigInt(await contracts.ferryAB.FEE_MIN());
+		var fee_max = BigInt(await contracts.ferryAB.FEE_MAX());
+      var fee1 = bigIntMin(bigIntMax(bridgeAmount*fee_rate/BigInt(10000),fee_min),fee_max);
+      var fee2 = bigIntMin(bigIntMax(bridgeAmount*BigInt(2)*fee_rate/BigInt(10000),fee_min),fee_max);
+      var fee3 = bigIntMin(bigIntMax(bridgeAmount*BigInt(4)*fee_rate/BigInt(10000),fee_min),fee_max);
+      var expectedTransfered = bridgeAmount*BigInt(5)-fee1-fee3;
       expect(userBalanceAfter-userBalanceBefore).to.equal(expectedTransfered);
       expect(contractBalanceBefore-contractBalanceAfter).to.equal(expectedTransfered);
    });
@@ -206,10 +247,11 @@ describe("Fraxferry", function () {
       await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(2));
       await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(4));
       await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(8));
+      wait(3601);
       var batch = await contracts.ferryAB.getBatchData(0,2);
       var hash =  await contracts.ferryAB.getTransactionsHash(0,2);
       await contracts.ferryBA.connect(captain).depart(0,2,hash);
-      wait(60*60);
+      wait(79201);
       await contracts.ferryBA.connect(firstOfficer).disembark(batch);
       await expect(contracts.ferryBA.connect(owner).jettison(0,true)).to.be.revertedWith("Transaction already executed");
       await expect(contracts.ferryBA.connect(owner).jettison(1,true)).to.be.revertedWith("Transaction already executed");
@@ -230,6 +272,7 @@ describe("Fraxferry", function () {
       await contracts.ferryAB.connect(user).embark(bridgeAmount);
       var hash =  await contracts.ferryAB.getTransactionsHash(0,0);
       await contracts.ferryAB.connect(user).embark(bridgeAmount*BigInt(2));
+      wait(3601);
       var badHash = "0x1111111111111111111111111111111111111111111111111111111111111111";
       var hash1 =  await contracts.ferryAB.getTransactionsHash(0,0);
       var hash2 =  await contracts.ferryAB.getTransactionsHash(1,1);
@@ -243,7 +286,7 @@ describe("Fraxferry", function () {
       await expect(contracts.ferryBA.connect(user).disputeBatch(0,hash1)).to.be.revertedWith("Not crewmember");
       await contracts.ferryBA.connect(crewmember).disputeBatch(0,badHash);
       await expect(contracts.ferryBA.connect(crewmember).disputeBatch(0,badHash)).to.be.revertedWith("Batch already disputed");
-      wait(60*60);
+      wait(79201);
       await expect(contracts.ferryBA.connect(firstOfficer).disembark(batch1)).to.be.revertedWith("Paused");
       await contracts.ferryBA.connect(owner).unPause();
       await expect(contracts.ferryBA.connect(firstOfficer).disembark(batch1)).to.be.revertedWith("Batch disputed");
@@ -257,7 +300,7 @@ describe("Fraxferry", function () {
       expect(BigInt(await contracts.ferryBA.noBatches())).to.equal(BigInt(0));
 
       await contracts.ferryBA.connect(captain).depart(0,0,hash1);
-      wait(60*60);
+      wait(79201);
       await contracts.ferryBA.connect(firstOfficer).disembark(batch1);
    });
 
@@ -289,6 +332,7 @@ describe("Fraxferry", function () {
       await contracts.ferryAB.connect(owner).unPause();
 
       await contracts.ferryAB.connect(user).embark(bridgeAmount);
+      wait(3601);
       var hash = await contracts.ferryAB.getTransactionsHash(0,0);
 
 
@@ -297,7 +341,7 @@ describe("Fraxferry", function () {
       await contracts.ferryBA.connect(owner).unPause();
       await contracts.ferryBA.connect(captain).depart(0,0,hash);
 
-      wait(60*60);
+      wait(79201);
 
       await contracts.ferryBA.connect(owner).pause();
       var batch = await contracts.ferryAB.getBatchData(0,0);
@@ -311,25 +355,30 @@ describe("Fraxferry", function () {
       const [owner,user,captain,firstOfficer,crewmember,user2] = await ethers.getSigners();
       var contracts = await setupContracts();
       var bridgeAmount = BigInt(1000*1e18);
-      var fee = BigInt(await contracts.ferryAB.FEE());
+      var fee_rate = BigInt(await contracts.ferryAB.FEE_RATE());
+		var fee_min = BigInt(await contracts.ferryAB.FEE_MIN());
+		var fee_max = BigInt(await contracts.ferryAB.FEE_MAX());
+      var fee1 = bigIntMin(bigIntMax(bridgeAmount*fee_rate/BigInt(10000),fee_min),fee_max);
+      var fee2 = bigIntMin(bigIntMax(bridgeAmount*BigInt(2)*fee_rate/BigInt(10000),fee_min),fee_max);
       var reducedDecimals = BigInt(await contracts.ferryAB.REDUCED_DECIMALS());
       await contracts.token0.connect(user).approve(contracts.ferryAB.address,bridgeAmount);
       var blockNumber1 = (await contracts.ferryAB.connect(user).embark(bridgeAmount)).blockNumber;
       var confirmedTime1 = (await ethers.provider.getBlock(blockNumber1)).timestamp;
-      wait(60);
+      wait(3601);
       await contracts.token0.connect(user2).approve(contracts.ferryAB.address,bridgeAmount*BigInt(2));
       var blockNumber2 = (await contracts.ferryAB.connect(user2).embark(bridgeAmount*BigInt(2))).blockNumber;
       var confirmedTime2 = (await ethers.provider.getBlock(blockNumber2)).timestamp;
+      wait(3601);
       var batch = await contracts.ferryAB.getBatchData(0,1);
       expect(batch.startTransactionNo).to.be.equal(0);
       expect(batch.transactions.length).to.be.equal(2);
       expect(batch.transactions[0].user).to.be.equal(user.address);
-      expect(BigInt(batch.transactions[0].amount)*reducedDecimals).to.be.equal(bridgeAmount-fee);
+      expect(BigInt(batch.transactions[0].amount)*reducedDecimals).to.be.equal(bridgeAmount-fee1);
       expect(batch.transactions[0].timestamp).to.be.equal(confirmedTime1);
       expect(batch.transactions[1].user).to.be.equal(user2.address);
-      expect(BigInt(batch.transactions[1].amount)*reducedDecimals).to.be.equal(bridgeAmount*BigInt(2)-fee);
+      expect(BigInt(batch.transactions[1].amount)*reducedDecimals).to.be.equal(bridgeAmount*BigInt(2)-fee2);
       expect(batch.transactions[1].timestamp).to.be.equal(confirmedTime2);
-      expect(await contracts.ferryAB.getBatchAmount(0,1)).to.be.equals(bridgeAmount*BigInt(3)-fee*BigInt(2));
+      expect(await contracts.ferryAB.getBatchAmount(0,1)).to.be.equals(bridgeAmount*BigInt(3)-fee1-fee2);
    });
 
    it("getNextBatch", async function () {
@@ -366,8 +415,11 @@ describe("Fraxferry", function () {
    it("getTransactionsHash", async function () {
       const [owner,user,captain,firstOfficer,crewmember,user2] = await ethers.getSigners();
       var contracts = await setupContracts();
-      var fee = BigInt(await contracts.ferryAB.FEE());
-      var bridgeAmount = BigInt(5*1e10)+fee;
+
+      var fee_rate = BigInt(await contracts.ferryAB.FEE_RATE());
+		var fee_min = BigInt(await contracts.ferryAB.FEE_MIN());
+		var fee_max = BigInt(await contracts.ferryAB.FEE_MAX());
+      var bridgeAmount = BigInt(5*1e10)+fee_min;
       await contracts.token0.connect(user).approve(contracts.ferryAB.address,bridgeAmount);
       await contracts.ferryAB.connect(user).embark(bridgeAmount);
       await contracts.token0.connect(user2).approve(contracts.ferryAB.address,bridgeAmount*BigInt(2));
@@ -445,15 +497,21 @@ describe("Fraxferry", function () {
       var contracts = await setupContracts();
 
       // setFee
-      var newFee = BigInt(2e18);
-      await expect(contracts.ferryAB.connect(user).setFee(newFee)).to.be.revertedWith("Not owner");
-      await expect(contracts.ferryAB.connect(captain).setFee(newFee)).to.be.revertedWith("Not owner");
-      await expect(contracts.ferryAB.connect(firstOfficer).setFee(newFee)).to.be.revertedWith("Not owner");
-      await expect(contracts.ferryAB.connect(crewmember).setFee(newFee)).to.be.revertedWith("Not owner");
+      var new_fee_rate = BigInt(50);
+      var new_fee_min = BigInt(2e18);
+      var new_fee_max = BigInt(10e18);
+      await expect(contracts.ferryAB.connect(user).setFee(new_fee_rate,new_fee_min,new_fee_max)).to.be.revertedWith("Not owner");
+      await expect(contracts.ferryAB.connect(captain).setFee(new_fee_rate,new_fee_min,new_fee_max)).to.be.revertedWith("Not owner");
+      await expect(contracts.ferryAB.connect(firstOfficer).setFee(new_fee_rate,new_fee_min,new_fee_max)).to.be.revertedWith("Not owner");
+      await expect(contracts.ferryAB.connect(crewmember).setFee(new_fee_rate,new_fee_min,new_fee_max)).to.be.revertedWith("Not owner");
 
-      expect(await contracts.ferryAB.FEE()).to.not.equals(newFee);
-      await contracts.ferryAB.connect(owner).setFee(newFee);
-      expect(await contracts.ferryAB.FEE()).to.equals(newFee);
+      expect(await contracts.ferryAB.FEE_RATE()).to.not.equals(new_fee_rate);
+      expect(await contracts.ferryAB.FEE_MIN()).to.not.equals(new_fee_min);
+      expect(await contracts.ferryAB.FEE_MAX()).to.not.equals(new_fee_max);
+      await contracts.ferryAB.connect(owner).setFee(new_fee_rate,new_fee_min,new_fee_max);
+      expect(await contracts.ferryAB.FEE_RATE()).to.equals(new_fee_rate);
+		expect(await contracts.ferryAB.FEE_MIN()).to.equals(new_fee_min);
+      expect(await contracts.ferryAB.FEE_MAX()).to.equals(new_fee_max);
 
       //setMinWaitPeriods
       var newWaitPeriodsAdd = BigInt(120*60);
@@ -504,10 +562,11 @@ describe("Fraxferry", function () {
         });
 
       for (var i=0;i<transactions.length;i++) await contracts.ferryAB.embark(bridgeAmount);
+      wait(3601);
       var hash = await contracts.ferryAB.getTransactionsHash(0,transactions.length-1);
       console.log("estimateGas depart:"+(await contracts.ferryBA.connect(captain).estimateGas.depart(0,transactions.length-1,hash)));
       await contracts.ferryBA.connect(captain).depart(0,transactions.length-1,hash)
-      wait(60*60);
+      wait(79201);
       var batch = await contracts.ferryAB.getBatchData(0,transactions.length-1);
       console.log("estimateGas disembark:"+(await contracts.ferryBA.connect(firstOfficer).estimateGas.disembark(batch)));
    });
@@ -530,10 +589,11 @@ describe("Fraxferry", function () {
          await contracts.token0.connect(addresses[i]).approve(contracts.ferryAB.address,bridgeAmount);
          await contracts.ferryAB.connect(addresses[i]).embark(bridgeAmount);
       }
+      wait(3601);
       var hash = await contracts.ferryAB.getTransactionsHash(0,transactions.length-1);
       console.log("estimateGas depart 10x:"+(await contracts.ferryBA.connect(captain).estimateGas.depart(0,transactions.length-1,hash)));
       await contracts.ferryBA.connect(captain).depart(0,transactions.length-1,hash)
-      wait(60*60);
+      wait(79201);
       var batch = await contracts.ferryAB.getBatchData(0,transactions.length-1);
       console.log("estimateGas disembark 10x:"+(await contracts.ferryBA.connect(firstOfficer).estimateGas.disembark(batch)));
    }).timeout(10000000);
@@ -558,10 +618,11 @@ describe("Fraxferry", function () {
          await contracts.token0.connect(addresses[i]).approve(contracts.ferryAB.address,bridgeAmount);
          await contracts.ferryAB.connect(addresses[i]).embark(bridgeAmount);
       }
+      wait(3601);
       var hash = await contracts.ferryAB.getTransactionsHash(0,transactions.length-1);
       console.log("estimateGas depart 20x:"+(await contracts.ferryBA.connect(captain).estimateGas.depart(0,transactions.length-1,hash)));
       await contracts.ferryBA.connect(captain).depart(0,transactions.length-1,hash)
-      wait(60*60);
+      wait(79201);
       var batch = await contracts.ferryAB.getBatchData(0,transactions.length-1);
       console.log("estimateGas disembark 20x:"+(await contracts.ferryBA.connect(firstOfficer).estimateGas.disembark(batch)));
    }).timeout(10000000);
@@ -581,6 +642,15 @@ async function wait(waitPeriod) {
       ethers.provider.send("evm_increaseTime", [waitPeriod]); // wait waitPeriod
       ethers.provider.send("evm_mine"); // mine the next block
    }
+}
+
+function bigIntMin(a, b) {
+	if (a<b)return a;
+	else return b
+}
+function bigIntMax(a, b) {
+	if (a>b)return a;
+	else return b
 }
 
 async function setupContracts() {
