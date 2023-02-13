@@ -798,7 +798,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
         // call the receiver with the destination lockedStake to verify receiving is ok
         if (addrs[1].code.length > 0) {
-            require(ILockReceiver(addrs[1]).beforeLockTransfer(addrs[0], addrs[1], receiver_lock_index, "") 
+            require(ILockReceiver(addrs[1]).onLockReceived(addrs[0], addrs[1], receiver_lock_index, "") 
                 == 
                 ILockReceiver.beforeLockTransfer.selector
             );
