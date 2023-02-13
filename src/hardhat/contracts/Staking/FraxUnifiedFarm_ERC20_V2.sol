@@ -18,7 +18,7 @@ pragma solidity ^0.8.17;
 /// Locked Stake Transfer & Custom Error logic created by ZrowGz with the Pitch Foundation
 
 import "./FraxUnifiedFarmTemplate_V2.sol";
-import "./ILockReceiverV2.sol";
+import "./ILockReceiver.sol";
 
 // -------------------- VARIES --------------------
 
@@ -715,9 +715,9 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         // on transfer, call addrs[0] to verify sending is ok
         if (addrs[0].code.length > 0) {
             require(
-                ILockReceiverV2(addrs[0]).beforeLockTransfer(addrs[0], addrs[1], sender_lock_index, "") 
+                ILockReceiver(addrs[0]).beforeLockTransfer(addrs[0], addrs[1], sender_lock_index, "") 
                 == 
-                ILockReceiverV2.beforeLockTransfer.selector
+                ILockReceiver.beforeLockTransfer.selector
             );
         }
         
@@ -798,9 +798,9 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
         // call the receiver with the destination lockedStake to verify receiving is ok
         if (addrs[1].code.length > 0) {
-            require(ILockReceiverV2(addrs[1]).beforeLockTransfer(addrs[0], addrs[1], receiver_lock_index, "") 
+            require(ILockReceiver(addrs[1]).beforeLockTransfer(addrs[0], addrs[1], receiver_lock_index, "") 
                 == 
-                ILockReceiverV2.beforeLockTransfer.selector
+                ILockReceiver.beforeLockTransfer.selector
             );
         }
         
