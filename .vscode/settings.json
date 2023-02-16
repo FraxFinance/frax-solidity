@@ -6,6 +6,7 @@
         "forge-std/=lib/forge-std/src/", 
         "@openzeppelin/=lib/openzeppelin-contracts/",
         "@mocks/=src/hardhat/contracts/mocks/",
-        "@staking/=src/hardhat/contracts/Staking/"
+        "@staking/=src/hardhat/contracts/Staking/",
+        "@openzeppelin/=node_modules/@openzeppelin/"
     ]
 }

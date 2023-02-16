@@ -112,6 +112,8 @@ interface IFraxFarm {
         returns (uint256 midpoint_lock_multiplier);
 
     function staker_designated_proxies(address staker_address) external view returns (address);
+
+    function sync_gauge_weights(bool andForce) external;
 }
 
 interface IFraxFarmTransfers {
