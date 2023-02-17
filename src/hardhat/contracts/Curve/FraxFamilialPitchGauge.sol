@@ -51,7 +51,7 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     // using SafeMath for uint256;
     // using SafeERC20 for ERC20;
 
-    error LatestPeriodNotFinished(uint256,uint256);
+    // error LatestPeriodNotFinished(uint256,uint256);
 
     /* ========== STATE VARIABLES ========== */
 
@@ -68,16 +68,16 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     ///// Familial Gauge Storage /////
     /// @notice Array of all child gauges
     address[] public gauges;
-    /// @notice Whether a child gauge is active or not, 0 = false, 1 = true
-    mapping(address => uint256) public gauge_active;
+    /// @notice Whether a child gauge is active or not
+    mapping(address => bool) public gauge_active;
     /// @notice Address of the gauge controller
     address public gauge_controller_address;
     /// @notice Address of the FXS Rewards Distributor
     address public distributor;
     /// @notice Global reward emission rate from Controller
-    uint256 public global_emission_rate;
+    uint256 internal global_emission_rate_stored;
     /// @notice Time of the last vote from Controller
-    uint256 public time_total;
+    uint256 internal time_total_stored;
 
     /// @notice Total vote weight from gauge controller vote
     uint256 public total_familial_relative_weight;
@@ -119,7 +119,7 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
         address _timelock_address,
         address _rewards_distributor_address,
         string memory _name,
-        address[] memory _gauges,
+        // address[] memory _gauges,
         address _gauge_controller_address,
         address _distributor
     ) Owned(_owner) {
@@ -131,7 +131,6 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
 
         gauge_controller_address = _gauge_controller_address;
         distributor = _distributor;
-
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -145,18 +144,18 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     //       - this results in numerous for loops being used
     function gauge_relative_weight_write(address child_gauge, uint256 timestamp) external returns (uint256) {
         // check that the child gauge is active
-        require(gauge_active[child_gauge] == 1, "Gauge not active");
+        require(gauge_active[child_gauge], "Gauge not active");
 
         // If now is after the last time everything was updated, obtain all values for all gauges & recalculate new rebalanced weights
-        if (block.timestamp > time_total) {
+        if (block.timestamp > time_total_stored) {
             //// First, update all the state variables applicable to all child gauges
             // store the most recent time_total for the farms to use & prevent this logic from being executed until epoch
-            time_total = IFraxGaugeController(gauge_controller_address).time_total();//latest_time_total;
+            time_total_stored = IFraxGaugeController(gauge_controller_address).time_total();//latest_time_total;
 
             // get & set the gauge controller's last global emission rate
             // note this should be the same for all gauges, but if there were to be multiple controllers,
             // we would need to have the emission rate for each of them.
-            global_emission_rate = IFraxGaugeController(gauge_controller_address).global_emission_rate();//gauge_to_controller[gauges[i]]).global_emission_rate();
+            global_emission_rate_stored = IFraxGaugeController(gauge_controller_address).global_emission_rate();//gauge_to_controller[gauges[i]]).global_emission_rate();
 
             // to prevent re-calling the first gauge
             address _gauge_calling;
@@ -181,19 +180,19 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
             // update all the gauge weights
             for (uint256 i; i < gauges.length; i++) {
                 // it shouldn't be zero, unless we don't use `delete` to remove a gauge
-                // if (gauges[i] != address(0)) {  /// TODO not needed due to using `gauge_active` mapping
+                if (gauge_active[gauges[i]]) { 
                     /// update the child gauges' total combined weights
                     gauge_to_total_combined_weight[gauges[i]] = IFraxFarm(gauges[i]).totalCombinedWeight();
                     familial_total_combined_weight += gauge_to_total_combined_weight[gauges[i]];
-                // }
+                }
             }
 
             // divvy up the relative weights based on each gauges `total combined weight` 
             for (uint256 i; i < gauges.length; i++) {
-                // if (gauges[i] != address(0)) {  /// TODO not needed due to using `gauge_active` mapping 
+                if (gauge_active[gauges[i]]) { 
                     gauge_to_last_relative_weight[gauges[i]] = 
                         gauge_to_total_combined_weight[gauges[i]] * total_familial_relative_weight / familial_total_combined_weight;
-                // }
+                }
             }
 
             // pull in the reward tokens allocated to the fam
@@ -203,14 +202,14 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
             // divide the reward_tally amount by the gauge's allocation
             // note this will be used when the farm calls `distributeReward`
             for (uint256 i; i < gauges.length; i++) {
-                // if (gauges[i] != address(0)) {  /// TODO not needed due to using `gauge_active` mapping
+                if (gauge_active[gauges[i]]) { 
                     gauge_to_reward_tally[gauges[i]] = reward_tally * gauge_to_total_combined_weight[gauges[i]] / familial_total_combined_weight;
-                // }
+                }
             }
 
             // call `sync_gauge_weights` on the other gauges
             for (uint256 i; i < gauges.length; i++) {
-                if (gauges[i] != _gauge_calling) {  /// TODO not needed now gauges[i] != address(0) && 
+                if (gauges[i] != _gauge_calling && gauge_active[gauges[i]]) {
                     IFraxFarm(gauges[i]).sync_gauge_weights(true);
                 }
             }
@@ -227,7 +226,7 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     /// Needs to be reentered to allow all farms to execute in one call, so is only callable by a gauge
     function distributeReward(address child_gauge) public returns (uint256, uint256) {
         // check that the child gauge is active
-        require(gauge_active[child_gauge] == 1, "Gauge not active");
+        require(gauge_active[child_gauge], "Gauge not active");
 
         if (block.timestamp >= periodFinish) {
             // Ensure the provided reward amount is not more than the balance in the contract.
@@ -255,7 +254,7 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
 
             // now that this logic won't be ran on the next call & all gauges are within periodFinish, call each farm's `sync`
             for (uint256 i; i < gauges.length; i++) {
-                if (gauges[i] != _gauge_calling) {  /// TODO not needed now gauges[i] != address(0) &&
+                if (gauges[i] != _gauge_calling && gauge_active[gauges[i]]) {
                     IFraxFarm(gauges[i]).sync();
                 }
             }
@@ -273,6 +272,14 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
         emit ChildGaugeRewardDistributed(child_gauge, gauge_to_reward_tally[child_gauge]);
         
         return (weeks_elapsed, claimingGaugeRewardTally);
+    }
+
+    function global_emission_rate() external view returns (uint256) {
+        return global_emission_rate_stored;
+    }
+
+    function time_total() external view returns (uint256) {
+        return time_total_stored;
     }
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
@@ -303,7 +310,7 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
         // set the latest period finish for the child gauges
         for (uint256 i; i < gauges.length; i++) {
             // set gauge to active
-            gauge_active[_gauges[i]] = 1;
+            gauge_active[_gauges[i]] = true;
 
             emit ChildGaugeAdded(_gauges[i], gauges.length - 1);
 
@@ -322,7 +329,7 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
 
     function deactivateChildGauge(uint256 _gaugeIndex) external onlyByOwnGov {
         emit ChildGaugeDeactivated(gauges[_gaugeIndex], _gaugeIndex);
-        gauge_active[gauges[_gaugeIndex]] = 0;
+        gauge_active[gauges[_gaugeIndex]] = false;
     }
 
     function getNumberOfGauges() external view returns (uint256) {
@@ -347,5 +354,4 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     event FamilialRewardClaimed(address familial_gauge, uint256 reward_amount, uint256 weeks_elapsed);
     event ChildGaugeRewardDistributed(address gauge, uint256 reward_amount);
     event RecoveredERC20(address token, uint256 amount);
-    // event BridgeInfoChanged(address bridge_address, uint256 bridge_type, address destination_address_override, string non_evm_destination_address);
 }
