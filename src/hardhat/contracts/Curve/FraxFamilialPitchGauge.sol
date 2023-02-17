@@ -102,7 +102,8 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     uint256 public periodFinish;
     /// @notice The number of seconds in a week
     uint256 internal constant rewardsDuration = 604800; // 7 * 86400  (7 days)
-
+    /// @notice For the first time children are added, pull in the reward period finish for each.
+    bool internal isFirstTimeAddingGauges;
 
     /* ========== MODIFIERS ========== */
 
@@ -128,17 +129,9 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
 
         name = _name;
 
-        gauges = _gauges;
         gauge_controller_address = _gauge_controller_address;
         distributor = _distributor;
 
-        // set the latest period finish for the child gauges
-        for (uint256 i; i < gauges.length; i++) {
-            uint256 childGaugePeriodFinish = IFraxFarm(gauges[i]).periodFinish();
-            if (childGaugePeriodFinish > periodFinish) {
-                periodFinish = childGaugePeriodFinish;
-            }
-        }
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -305,11 +298,26 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
         timelock_address = _new_timelock;
     }
 
-    function addChildGauge(address _gauge, address _controller) external onlyByOwnGov {
-        gauges.push(_gauge);
-        // set gauge to active
-        gauge_active[_gauge] = 1;
-        emit ChildGaugeAdded(_gauge, _controller, gauges.length - 1);
+    function addChildGauge(address[] calldata _gauges) external onlyByOwnGov {
+        gauges = _gauges;
+        // set the latest period finish for the child gauges
+        for (uint256 i; i < gauges.length; i++) {
+            // set gauge to active
+            gauge_active[_gauges[i]] = 1;
+
+            emit ChildGaugeAdded(_gauges[i], gauges.length - 1);
+
+            if (isFirstTimeAddingGauges) {
+                uint256 childGaugePeriodFinish = IFraxFarm(gauges[i]).periodFinish();
+                if (childGaugePeriodFinish > periodFinish) {
+                    periodFinish = childGaugePeriodFinish;
+                }
+            }
+        }
+        // don't need to re-run that lookup to sync in the future
+        if (isFirstTimeAddingGauges) {
+            isFirstTimeAddingGauges = false;
+        }
     }
 
     function deactivateChildGauge(uint256 _gaugeIndex) external onlyByOwnGov {
@@ -332,7 +340,7 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     }
 
     /* ========== EVENTS ========== */
-    event ChildGaugeAdded(address gauge, address controller, uint256 gauge_index);
+    event ChildGaugeAdded(address gauge, uint256 gauge_index);
     event ChildGaugeDeactivated(address gauge, uint256 gauge_index);
     event GaugeControllerChanged(address old_controller, address new_controller);
     event RewardsDistributorChanged(address old_distributor, address new_distributor);
