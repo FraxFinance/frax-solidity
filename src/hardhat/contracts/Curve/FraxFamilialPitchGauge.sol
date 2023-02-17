@@ -54,40 +54,40 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     // error LatestPeriodNotFinished(uint256,uint256);
 
     /* ========== STATE VARIABLES ========== */
-
-    // Instances and addresses
-    address public reward_token_address = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0; // FXS
-    address public rewards_distributor_address;
+    /// Note: variables made internal for execution gas savings, available through getters below
 
     // Informational
     string public name;
 
-    // Admin addresses
-    address public timelock_address;
+    ///// State Address Storage /////
+    /// @notice Address of the timelock
+    address internal timelock_address;
+    /// @notice Address of the gauge controller
+    address internal immutable gauge_controller;
+    /// @notice Address of the FXS Rewards Distributor
+    address internal immutable rewards_distributor;
+    /// @notice Address of the rewardToken
+    address internal immutable reward_token;// = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0; // FXS
 
     ///// Familial Gauge Storage /////
     /// @notice Array of all child gauges
-    address[] public gauges;
+    address[] internal gauges;
     /// @notice Whether a child gauge is active or not
-    mapping(address => bool) public gauge_active;
-    /// @notice Address of the gauge controller
-    address public gauge_controller_address;
-    /// @notice Address of the FXS Rewards Distributor
-    address public distributor;
+    mapping(address => bool) internal gauge_active;
     /// @notice Global reward emission rate from Controller
     uint256 internal global_emission_rate_stored;
     /// @notice Time of the last vote from Controller
     uint256 internal time_total_stored;
 
     /// @notice Total vote weight from gauge controller vote
-    uint256 public total_familial_relative_weight;
+    uint256 internal total_familial_relative_weight;
     /// @notice Redistributed relative gauge weights by gauge combined weight
-    mapping(address => uint256) public gauge_to_last_relative_weight;
+    mapping(address => uint256) internal gauge_to_last_relative_weight;
 
     /// @notice Sum of all child gauge `total_combined_weight`
-    uint256 public familial_total_combined_weight;
-    /// @notice Each gauge's combined weight for this reward epoch
-    mapping(address => uint256) public gauge_to_total_combined_weight;
+    uint256 internal familial_total_combined_weight;
+    /// @notice Each gauge's combined weight for this reward epoch, available at the farm
+    mapping(address => uint256) internal gauge_to_total_combined_weight;
     
     // Distributor provided 
     /// @notice The timestamp of the vote period
@@ -95,11 +95,11 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     /// @notice The amount of FXS awarded to the family by the vote, from the Distributor
     uint256 public reward_tally;
     /// @notice The redistributed FXS rewards payable to each child gauge
-    mapping(address => uint256) public gauge_to_reward_tally;
+    mapping(address => uint256) internal gauge_to_reward_tally;
 
     // Reward period & Time tracking
     /// @notice The timestamp of the last reward period
-    uint256 public periodFinish;
+    uint256 internal periodFinish;
     /// @notice The number of seconds in a week
     uint256 internal constant rewardsDuration = 604800; // 7 * 86400  (7 days)
     /// @notice For the first time children are added, pull in the reward period finish for each.
@@ -117,20 +117,20 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     constructor (
         address _owner,
         address _timelock_address,
-        address _rewards_distributor_address,
+        address _rewards_distributor,
         string memory _name,
         // address[] memory _gauges,
-        address _gauge_controller_address,
-        address _distributor
+        address _gauge_controller,
+        address _reward_token
     ) Owned(_owner) {
         timelock_address = _timelock_address;
 
-        rewards_distributor_address = _rewards_distributor_address;
+        rewards_distributor = _rewards_distributor;
 
         name = _name;
 
-        gauge_controller_address = _gauge_controller_address;
-        distributor = _distributor;
+        gauge_controller = _gauge_controller;
+        reward_token = _reward_token;
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -150,12 +150,12 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
         if (block.timestamp > time_total_stored) {
             //// First, update all the state variables applicable to all child gauges
             // store the most recent time_total for the farms to use & prevent this logic from being executed until epoch
-            time_total_stored = IFraxGaugeController(gauge_controller_address).time_total();//latest_time_total;
+            time_total_stored = IFraxGaugeController(gauge_controller).time_total();//latest_time_total;
 
             // get & set the gauge controller's last global emission rate
             // note this should be the same for all gauges, but if there were to be multiple controllers,
             // we would need to have the emission rate for each of them.
-            global_emission_rate_stored = IFraxGaugeController(gauge_controller_address).global_emission_rate();//gauge_to_controller[gauges[i]]).global_emission_rate();
+            global_emission_rate_stored = IFraxGaugeController(gauge_controller).global_emission_rate();//gauge_to_controller[gauges[i]]).global_emission_rate();
 
             // to prevent re-calling the first gauge
             address _gauge_calling;
@@ -175,7 +175,7 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
 
             // get the familial vote weight for this period
             total_familial_relative_weight = 
-                IFraxGaugeController(gauge_controller_address).gauge_relative_weight_write(address(this), timestamp);
+                IFraxGaugeController(gauge_controller).gauge_relative_weight_write(address(this), timestamp);
 
             // update all the gauge weights
             for (uint256 i; i < gauges.length; i++) {
@@ -196,7 +196,7 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
             }
 
             // pull in the reward tokens allocated to the fam
-            (weeks_elapsed, reward_tally) = IFraxGaugeFXSRewardsDistributor(distributor).distributeReward(address(this));
+            (weeks_elapsed, reward_tally) = IFraxGaugeFXSRewardsDistributor(rewards_distributor).distributeReward(address(this));
             emit FamilialRewardClaimed(address(this), weeks_elapsed, reward_tally);
 
             // divide the reward_tally amount by the gauge's allocation
@@ -265,21 +265,13 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
         uint256 claimingGaugeRewardTally = gauge_to_reward_tally[child_gauge];
         
         /// when the reward is distributed, send the amount in gauge_to_reward_tally to the gauge & zero that value out
-        TransferHelper.safeTransfer(reward_token_address, child_gauge, claimingGaugeRewardTally);
+        TransferHelper.safeTransfer(reward_token, child_gauge, claimingGaugeRewardTally);
         
         // reset the reward tally to zero for the gauge
         gauge_to_reward_tally[child_gauge] = 0;
         emit ChildGaugeRewardDistributed(child_gauge, gauge_to_reward_tally[child_gauge]);
         
         return (weeks_elapsed, claimingGaugeRewardTally);
-    }
-
-    function global_emission_rate() external view returns (uint256) {
-        return global_emission_rate_stored;
-    }
-
-    function time_total() external view returns (uint256) {
-        return time_total_stored;
     }
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
@@ -332,18 +324,60 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
         gauge_active[gauges[_gaugeIndex]] = false;
     }
 
+    // function setRewardsDistributor(address _rewards_distributor) external onlyByOwnGov {
+    //     emit RewardsDistributorChanged(rewards_distributor, _rewards_distributor);
+    //     rewards_distributor = _rewards_distributor;
+    // }
+
+    // function setGaugeController(address _gauge_controller) external onlyByOwnGov {
+    //     emit GaugeControllerChanged(gauge_controller, _gauge_controller);
+    //     gauge_controller = _gauge_controller;
+    // }
+    /* ========== GETTERS ========== */
+
+    /// @notice Matches the abi available in the farms 
+    /// @return global_emission_rate The global emission rate from the controller
+    function global_emission_rate() external view returns (uint256) {
+        return global_emission_rate_stored;
+    }
+
+    /// @notice Matches the abi available in the farms
+    /// @return time_total The end of the vote period from the controller
+    function time_total() external view returns (uint256) {
+        return time_total_stored;
+    }
+
+    
     function getNumberOfGauges() external view returns (uint256) {
         return gauges.length;
     }
 
-    function setRewardsDistributor(address _rewards_distributor_address) external onlyByOwnGov {
-        emit RewardsDistributorChanged(rewards_distributor_address, _rewards_distributor_address);
-        rewards_distributor_address = _rewards_distributor_address;
+    function getChildGauges() external view returns (address[] memory) {
+        return gauges;
     }
 
-    function setGaugeController(address _gauge_controller_address) external onlyByOwnGov {
-        emit GaugeControllerChanged(gauge_controller_address, _gauge_controller_address);
-        gauge_controller_address = _gauge_controller_address;
+    function getGaugeState(address _gauge) external view returns (bool) {
+        return gauge_active[_gauge];
+    }
+
+    function getStateAddresses() external view returns (address, address, address, address) {
+        return (timelock_address, gauge_controller, rewards_distributor, reward_token);
+    }
+
+    /// @notice Returns the last relative weight and reward tally for a gauge
+    /// @return last_relative_weight The redistributed last relative weight of the gauge
+    /// @return reward_tally The redistributed reward tally of the gauge
+    function getChildGaugeValues(address child_gauge) external view returns (uint256, uint256) {
+        return (
+            gauge_to_last_relative_weight[child_gauge],
+            gauge_to_reward_tally[child_gauge]
+        );
+    }
+
+    /// @notice Returns the `periodFinish` stored
+    /// @return periodFinish The periodFinish timestamp when gauges can call to distribute rewards
+    function getPeriodFinish() external view returns (uint256) {
+        return periodFinish;
     }
 
     /* ========== EVENTS ========== */
