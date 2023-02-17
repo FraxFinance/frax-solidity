@@ -28,7 +28,7 @@ pragma solidity ^0.8.17;
 // import "../Math/SafeMath.sol";
 // import "../ERC20/ERC20.sol";
 // import "../ERC20/SafeERC20.sol";
-import {IFraxGaugeFXSRewardsDistributor as IDistributor} from "./IFraxGaugeFXSRewardsDistributor.sol";
+import "./IFraxGaugeFXSRewardsDistributor.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../Staking/Owned.sol";
 // import "../Utils/ReentrancyGuard.sol";
@@ -196,7 +196,7 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
             }
 
             // pull in the reward tokens allocated to the fam
-            (weeks_elapsed, reward_tally) = IDistributor(distributor).distributeReward(address(this));
+            (weeks_elapsed, reward_tally) = IFraxGaugeFXSRewardsDistributor(distributor).distributeReward(address(this));
             emit FamilialRewardClaimed(address(this), weeks_elapsed, reward_tally);
 
             // divide the reward_tally amount by the gauge's allocation
