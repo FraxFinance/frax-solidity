@@ -115,11 +115,10 @@ contract FraxFamilialPitchGauge is Owned {//, ReentrancyGuard {
     /* ========== CONSTRUCTOR ========== */
 
     constructor (
+        string memory _name,
         address _owner,
         address _timelock_address,
         address _rewards_distributor,
-        string memory _name,
-        // address[] memory _gauges,
         address _gauge_controller,
         address _reward_token
     ) Owned(_owner) {
