@@ -675,16 +675,15 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     /// @param lockedStakeIndex The index of the locked stake
     /// @param amount The amount to spend
     function _spendAllowance(address staker, uint256 lockedStakeIndex, uint256 amount) internal {
-            // if (spenderApprovalForAllLocks[staker][msg.sender]) {
-            //     return;
-            // } 
-            if (spenderAllowance[staker][lockedStakeIndex][msg.sender] == amount) {
-                spenderAllowance[staker][lockedStakeIndex][msg.sender] = 0;
-            } else if (spenderAllowance[staker][lockedStakeIndex][msg.sender] > amount) {
-                spenderAllowance[staker][lockedStakeIndex][msg.sender] -= amount;
-            } else {
-                revert InsufficientAllowance();
-            }
+        // determine if the allowance is sufficient and spend it accordingly, based on the available allowance
+        if (spenderAllowance[staker][lockedStakeIndex][msg.sender] == amount) {
+            spenderAllowance[staker][lockedStakeIndex][msg.sender] = 0;
+        } else if (spenderAllowance[staker][lockedStakeIndex][msg.sender] > amount) {
+            spenderAllowance[staker][lockedStakeIndex][msg.sender] -= amount;
+        } else {
+            // otherwise, if there's not enough allowance, revert
+            revert InsufficientAllowance();
+        }
     }
 
     // ------ TRANSFERRING LOCKED STAKES ------
@@ -834,9 +833,10 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
         // call the receiver with the destination lockedStake to verify receiving is ok
         if (addrs[1].code.length > 0) {
-            require(ILockReceiver(addrs[1]).onLockReceived(addrs[0], addrs[1], receiver_lock_index, "") 
+            require(
+                ILockReceiver(addrs[1]).onLockReceived(addrs[0], addrs[1], receiver_lock_index, "") 
                 == 
-                ILockReceiver.beforeLockTransfer.selector
+                ILockReceiver.onLockReceived.selector
             );
         }
         
