@@ -735,9 +735,6 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             revert InvalidAmount();
         }
 
-        // Update the liquidity for sender
-        _updateLiqAmts(addrs[0], transfer_amount, false);
-
         // if sent amount was all the liquidity, delete the stake, otherwise decrease the balance
         if (transfer_amount == senderStake.liquidity) {
             // disable the stake
@@ -746,6 +743,9 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             // otherwise, deduct the transfer amount from the stake
             lockedStakes[addrs[0]][sender_lock_index].liquidity -= transfer_amount;
         }
+
+        // Update the liquidity for sender
+        _updateLiqAmts(addrs[0], transfer_amount, false);
 
         /** if use_receiver_lock_index is true & the incoming stake wouldn't extend the receiver's stake
         *       & the index is valid 
