@@ -500,13 +500,13 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     // }
 
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
-    function stakeLocked(uint256 liquidity, uint256 secs, bool useTargetStakeIndex, uint256 targetIndex) nonReentrant external returns (uint256) {
-        return _stakeLocked(msg.sender, msg.sender, liquidity, secs, useTargetStakeIndex, targetIndex);//block.timestamp, 
+    function manageStake(uint256 liquidity, uint256 secs, bool useTargetStakeIndex, uint256 targetIndex) nonReentrant external returns (uint256) {
+        return _manageStake(msg.sender, msg.sender, liquidity, secs, useTargetStakeIndex, targetIndex);//block.timestamp, 
     }
 
     // If this were not internal, and source_address had an infinite approve, this could be exploitable
     // (pull funds from source_address and stake for an arbitrary staker_address)
-    function _stakeLocked(
+    function _manageStake(
         address staker_address,
         address source_address,
         uint256 liquidity,
