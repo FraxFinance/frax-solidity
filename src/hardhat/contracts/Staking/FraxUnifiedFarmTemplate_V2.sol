@@ -135,7 +135,9 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     bool internal stakingPaused; // For emergencies
 
     /// @notice Maximum number of locked stakes allowed per address (prevent dust attacks)
-    uint256 public max_locked_stakes = 12;
+    /// @dev In the unlikely event that we need to increase this, we can using `setMiscVars`, but only ever increase (prevent making user's stakes unreachable)
+    /// @notice default to 5, as that is the most that users tend to have, on average
+    uint256 public max_locked_stakes = 5;
 
     /* ========== STRUCTS ========== */
     // In children...
