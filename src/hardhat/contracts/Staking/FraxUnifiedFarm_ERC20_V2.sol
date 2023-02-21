@@ -767,7 +767,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         if (block.timestamp >= senderStake.ending_timestamp || stakesUnlocked) {
             revert StakesUnlocked();
         }
-        if (transfer_amount > senderStake.liquidity) {
+        if (transfer_amount > senderStake.liquidity || transfer_amount == 0) {
             revert InvalidAmount();
         }
 
