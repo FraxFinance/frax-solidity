@@ -765,7 +765,12 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         lock_time_for_max_multiplier = _misc_vars[4];
         lock_time_min = _misc_vars[5];
 
-        max_locked_stakes = _misc_vars[6];
+        /// This value can only ever be increased.
+        /// If it were decreased, user locked stakes would be un-reachable for transfers & management, although they would be withdrawable once unlocked.
+        /// If we must be able to decrease, stakes above this value could be made immediately withdrawable
+        if (_misc_vars[6] > max_locked_stakes) {
+            max_locked_stakes = _misc_vars[6];
+        }
     }
 
     // The owner or the reward token managers can set reward rates 
