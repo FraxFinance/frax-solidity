@@ -67,8 +67,8 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     error MinimumStakeTimeNotMet();
     error TryingToLockForTooLong();
     error CannotShortenLockTime();
-    error MustBeInTheFuture();
-    error MustBePositive();
+    // error MustBeInTheFuture();
+    // error MustBePositive();
     error CannotBeZero();
     error AllowanceIsZero();
 
@@ -435,73 +435,73 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         updateRewardAndBalance(staker_address, false);
     }
 
-    // Add additional LPs to an existing locked stake
-    function lockAdditional(uint256 theArrayIndex, uint256 addl_liq) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) external {
-        // Get the stake by its index
-        LockedStake memory thisStake = lockedStakes[msg.sender][theArrayIndex];
+    // // Add additional LPs to an existing locked stake
+    // function lockAdditional(uint256 theArrayIndex, uint256 addl_liq) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) external {
+    //     // Get the stake by its index
+    //     LockedStake memory thisStake = lockedStakes[msg.sender][theArrayIndex];
 
-        // Checks
-        if (addl_liq <= 0) revert MustBePositive();
+    //     // Checks
+    //     if (addl_liq <= 0) revert MustBePositive();
 
-        // Pull the tokens from the sender
-        TransferHelperV2.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);
+    //     // Pull the tokens from the sender
+    //     TransferHelperV2.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);
 
-        // Update the stake
-        _updateStake(
-            msg.sender, 
-            theArrayIndex, 
-            thisStake.start_timestamp, 
-            (thisStake.liquidity + addl_liq), 
-            thisStake.ending_timestamp, 
-            thisStake.lock_multiplier
-        );
-        // Update liquidities
-        _updateLiqAmts(msg.sender, addl_liq, true);
+    //     // Update the stake
+    //     _updateStake(
+    //         msg.sender, 
+    //         theArrayIndex, 
+    //         thisStake.start_timestamp, 
+    //         (thisStake.liquidity + addl_liq), 
+    //         thisStake.ending_timestamp, 
+    //         thisStake.lock_multiplier
+    //     );
+    //     // Update liquidities
+    //     _updateLiqAmts(msg.sender, addl_liq, true);
 
-        emit LockedAdditional(msg.sender, theArrayIndex, addl_liq);
-    }
+    //     emit LockedAdditional(msg.sender, theArrayIndex, addl_liq);
+    // }
 
-    // Extends the lock of an existing stake
-    function lockLonger(uint256 theArrayIndex, uint256 new_ending_ts) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) external {
-        // Get the stake by its index
-        LockedStake memory thisStake = lockedStakes[msg.sender][theArrayIndex];
+    // // Extends the lock of an existing stake
+    // function lockLonger(uint256 theArrayIndex, uint256 new_ending_ts) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) external {
+    //     // Get the stake by its index
+    //     LockedStake memory thisStake = lockedStakes[msg.sender][theArrayIndex];
 
-        // Check
-        // require(new_ending_ts > block.timestamp, "Must be in the future");
-        if (new_ending_ts <= block.timestamp) revert MustBeInTheFuture();
+    //     // Check
+    //     // require(new_ending_ts > block.timestamp, "Must be in the future");
+    //     if (new_ending_ts <= block.timestamp) revert MustBeInTheFuture();
 
-        // Calculate some times
-        //uint256 time_left = (thisStake.ending_timestamp > block.timestamp) ? thisStake.ending_timestamp - block.timestamp : 0;
-        uint256 new_secs = new_ending_ts - block.timestamp;
+    //     // Calculate some times
+    //     //uint256 time_left = (thisStake.ending_timestamp > block.timestamp) ? thisStake.ending_timestamp - block.timestamp : 0;
+    //     uint256 new_secs = new_ending_ts - block.timestamp;
 
-        // Checks
-        // require(time_left > 0, "Already expired");
-        if (new_secs <= (
-            (thisStake.ending_timestamp > block.timestamp) ? 
-            thisStake.ending_timestamp - block.timestamp : 0
-        )) revert CannotShortenLockTime();
-        if (new_secs < lock_time_min) revert MinimumStakeTimeNotMet();
-        if (new_secs > lock_time_for_max_multiplier) revert TryingToLockForTooLong();
+    //     // Checks
+    //     // require(time_left > 0, "Already expired");
+    //     if (new_secs <= (
+    //         (thisStake.ending_timestamp > block.timestamp) ? 
+    //         thisStake.ending_timestamp - block.timestamp : 0
+    //     )) revert CannotShortenLockTime();
+    //     if (new_secs < lock_time_min) revert MinimumStakeTimeNotMet();
+    //     if (new_secs > lock_time_for_max_multiplier) revert TryingToLockForTooLong();
 
-        // Update the stake
-        _updateStake(
-            msg.sender, 
-            theArrayIndex, 
-            block.timestamp, 
-            thisStake.liquidity, 
-            new_ending_ts, 
-            lockMultiplier(new_secs)
-        );
+    //     // Update the stake
+    //     _updateStake(
+    //         msg.sender, 
+    //         theArrayIndex, 
+    //         block.timestamp, 
+    //         thisStake.liquidity, 
+    //         new_ending_ts, 
+    //         lockMultiplier(new_secs)
+    //     );
 
-        // Need to call to update the combined weights
-        updateRewardAndBalance(msg.sender, false);
+    //     // Need to call to update the combined weights
+    //     updateRewardAndBalance(msg.sender, false);
 
-        emit LockedLonger(msg.sender, theArrayIndex, new_secs, block.timestamp, new_ending_ts);
-    }
+    //     emit LockedLonger(msg.sender, theArrayIndex, new_secs, block.timestamp, new_ending_ts);
+    // }
 
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
-    function stakeLocked(uint256 liquidity, uint256 secs) nonReentrant external returns (uint256) {
-        return _stakeLocked(msg.sender, msg.sender, liquidity, secs, block.timestamp);
+    function stakeLocked(uint256 liquidity, uint256 secs, bool useTargetStakeIndex, uint256 targetIndex) nonReentrant external returns (uint256) {
+        return _stakeLocked(msg.sender, msg.sender, liquidity, secs, useTargetStakeIndex, targetIndex);//block.timestamp, 
     }
 
     // If this were not internal, and source_address had an infinite approve, this could be exploitable
@@ -511,7 +511,9 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         address source_address,
         uint256 liquidity,
         uint256 secs,
-        uint256 start_timestamp
+        // uint256 start_timestamp, 
+        bool useTargetStakeIndex,
+        uint256 targetIndex
     ) internal updateRewardAndBalanceMdf(staker_address, true) returns (uint256) {
         if (stakingPaused) revert StakingPaused();
         if (secs < lock_time_min) revert MinimumStakeTimeNotMet();
@@ -519,23 +521,55 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
         // Pull in the required token(s)
         // Varies per farm
-        TransferHelperV2.safeTransferFrom(address(stakingToken), source_address, address(this), liquidity);
+        if (liquidity > 0) {
+            TransferHelperV2.safeTransferFrom(address(stakingToken), source_address, address(this), liquidity);
+        }
 
-        // Create the locked stake
-        _createNewStake(
-            staker_address, 
-            start_timestamp, 
-            liquidity, 
-            block.timestamp + secs, 
-            lockMultiplier(secs)
-        );
+        if (!useTargetStakeIndex) {
+            // Create the locked stake
+            _createNewStake(
+                staker_address, 
+                block.timestamp, 
+                liquidity, 
+                block.timestamp + secs, 
+                lockMultiplier(secs)
+            );
+        } else {
+            // Otherwise, we are either locking additional or extending lock duration
 
-        // Update liquidities
-        _updateLiqAmts(staker_address, liquidity, true);
+            // Get the stake by its index
+            LockedStake memory thisStake = lockedStakes[msg.sender][targetIndex];
+
+            uint256 new_ending_ts = secs + block.timestamp;
+
+            if (new_ending_ts < thisStake.ending_timestamp) revert CannotShortenLockTime();
+
+            // Update the stake
+            _updateStake(
+                msg.sender, 
+                targetIndex, 
+                block.timestamp, 
+                thisStake.liquidity + liquidity, // if locking additional, add to existing liquidity
+                new_ending_ts, 
+                lockMultiplier(secs)
+            );
+        }
+
+        if (liquidity == 0) {
+            // Need to call to update the combined weights
+            updateRewardAndBalance(msg.sender, false);
+        } else {
+            // Update liquidities
+            _updateLiqAmts(staker_address, liquidity, true);
+        }
 
         emit StakeLocked(staker_address, liquidity, secs, lockedStakes[staker_address].length - 1, source_address);
 
-        return lockedStakes[staker_address].length - 1;
+        uint256 num_stakes = lockedStakes[staker_address].length;
+
+        if (num_stakes > max_locked_stakes) revert TooManyStakes();
+
+        return num_stakes - 1;
     }
 
     // ------ WITHDRAWING ------
@@ -731,7 +765,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         if (block.timestamp >= senderStake.ending_timestamp || stakesUnlocked) {
             revert StakesUnlocked();
         }
-        if (transfer_amount > senderStake.liquidity || transfer_amount <= 0) {
+        if (transfer_amount > senderStake.liquidity || transfer_amount == 0) {
             revert InvalidAmount();
         }
 
@@ -771,6 +805,9 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
                 }
             }
         } else {
+            // check that the receiver doesn't have too many stakes
+            if (lockedStakes[addrs[1]].length + 1 > max_locked_stakes) revert TooManyStakes();
+
             // create the new lockedStake
             _createNewStake(
                 addrs[1], 
@@ -794,7 +831,6 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             sender_lock_index,
             receiver_lock_index
         );
-
 
         // call the receiver with the destination lockedStake to verify receiving is ok
         if (addrs[1].code.length > 0) {

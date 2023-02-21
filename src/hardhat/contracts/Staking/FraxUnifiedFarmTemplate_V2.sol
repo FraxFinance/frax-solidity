@@ -62,6 +62,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     error NotOwnerOrTimelock();
     error NotOwnerOrTknMgr();
     error NotEnoughRewardTokensAvailable(address);
+    error TooManyStakes();
 
     /* ========== STATE VARIABLES ========== */
 
@@ -132,6 +133,9 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     bool internal withdrawalsPaused; // For emergencies
     bool internal rewardsCollectionPaused; // For emergencies
     bool internal stakingPaused; // For emergencies
+
+    /// @notice Maximum number of locked stakes allowed per address (prevent dust attacks)
+    uint256 public max_locked_stakes = 12;
 
     /* ========== STRUCTS ========== */
     // In children...
@@ -738,7 +742,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     }
 
     function setMiscVariables(
-        uint256[6] memory _misc_vars
+        uint256[7] memory _misc_vars
         // [0]: uint256 _lock_max_multiplier, 
         // [1] uint256 _vefxs_max_multiplier, 
         // [2] uint256 _vefxs_per_frax_for_max_boost,
@@ -760,6 +764,8 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         vefxs_boost_scale_factor = _misc_vars[3];
         lock_time_for_max_multiplier = _misc_vars[4];
         lock_time_min = _misc_vars[5];
+
+        max_locked_stakes = _misc_vars[6];
     }
 
     // The owner or the reward token managers can set reward rates 
