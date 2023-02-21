@@ -67,8 +67,8 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     error MinimumStakeTimeNotMet();
     error TryingToLockForTooLong();
     error CannotShortenLockTime();
-    // error MustBeInTheFuture();
-    // error MustBePositive();
+    error BeforeLockTransferFailed();
+    error OnLockReceivedFailed();
     error CannotBeZero();
     error AllowanceIsZero();
 
@@ -724,6 +724,9 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     /// @param transfer_amount The amount to transfer
     /// @param use_receiver_lock_index If true, the receiver wants the assets sent to an existing, valid lockedStake they control
     /// @param receiver_lock_index The index of the receiver's lockedStake to add these assets to
+    /// @notice @dev Similar to ERC721 `onERC721Received` callbacks, the risk exists for a sender or receiver to grief or censor transactions. 
+    /// @notice @dev This griefing/censoring may warrant off-chain monitoring of transactions and preventing the malicious actor from being involved in transfers.
+    /// @notice @dev The need for being able to allow senders and receivers that are contracts needing to update user balances necessitates that these two calls remain in place despite these vectors.  
     function transferLocked(
         address receiver_address,
         uint256 sender_lock_index,
@@ -747,11 +750,11 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
         // on transfer, call addrs[0] to verify sending is ok
         if (addrs[0].code.length > 0) {
-            require(
+            if (
                 ILockReceiver(addrs[0]).beforeLockTransfer(addrs[0], addrs[1], sender_lock_index, "") 
-                == 
+                != 
                 ILockReceiver.beforeLockTransfer.selector
-            );
+            ) { revert BeforeLockTransferFailed(); }
         }
         
         // Get the stake and its index
@@ -833,11 +836,11 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
         // call the receiver with the destination lockedStake to verify receiving is ok
         if (addrs[1].code.length > 0) {
-            require(
+            if (
                 ILockReceiver(addrs[1]).onLockReceived(addrs[0], addrs[1], receiver_lock_index, "") 
-                == 
+                != 
                 ILockReceiver.onLockReceived.selector
-            );
+            ) { revert OnLockReceivedFailed(); }
         }
         
         return (sender_lock_index, receiver_lock_index);
