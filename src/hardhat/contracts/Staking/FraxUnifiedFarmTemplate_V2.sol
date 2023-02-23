@@ -205,7 +205,8 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // See if the caller_addr is a manager for the reward token 
     function isTokenManagerFor(address caller_addr, address reward_token_addr) public view returns (bool){
-        if (caller_addr == owner) return true; // Contract owner
+        if (caller_addr == address(0) || reward_token_addr == address(0)) return false;
+        else if (caller_addr == owner) return true; // Contract owner
         else if (rewardManagers[reward_token_addr] == caller_addr) return true; // Reward manager
         return false; 
     }
