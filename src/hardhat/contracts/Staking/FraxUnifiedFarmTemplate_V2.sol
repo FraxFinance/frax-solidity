@@ -147,8 +147,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     }
 
     modifier onlyTknMgrs(address reward_token_address) {
-        // require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "Not owner or tkn mgr");
-        if(msg.sender != owner && !isTokenManagerFor(msg.sender, reward_token_address)) revert NotOwnerOrTknMgr();
+        if(!isTokenManagerFor(msg.sender, reward_token_address)) revert NotOwnerOrTknMgr();
         _;
     }
 
