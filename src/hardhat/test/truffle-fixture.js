@@ -62,10 +62,11 @@ const IUniswapV3PositionsNFT = artifacts.require("Uniswap_V3/IUniswapV3Positions
 
 // veFPIS
 const veFPIS = artifacts.require("Curve/veFPIS");
+const veFPISYieldDistributorV5 = artifacts.require("Staking/veFPISYieldDistributorV5");
 
 // veFXS
 const veFXS = artifacts.require("Curve/IveFXS");
-const veFXSYieldDistributorV4 = artifacts.require("Staking/veFXSYieldDistributorV4.sol");
+const veFXSYieldDistributorV4 = artifacts.require("Staking/veFXSYieldDistributorV4");
 const veFXSBoost = artifacts.require("Curve/IVotingEscrowDelegation");
 const veFXSBoostDelegationProxy = artifacts.require("Curve/IDelegationProxy");
 
@@ -127,6 +128,7 @@ module.exports = async (deployer) => {
 
     // veFPIS
     let veFPIS_instance;
+    let veFPISYieldDistributorV5_instance;
 
     // veFXS
     let veFXS_instance;
@@ -231,15 +233,19 @@ module.exports = async (deployer) => {
 
     console.log(chalk.yellow('========== veFPIS =========='));
     // veFPIS
-    veFPIS_instance = await veFPIS.new(
-        CONTRACT_ADDRESSES.ethereum.canonicals.FPIS, 
-        "veFPIS",
-        "veFPIS",
-        "veFPIS_1.0.0"
-    );
+    veFPIS_instance = await veFPIS.new();
 
     // // Add in a gauge type
     // await frax_gauge_controller_v2.add_type("Ethereum Mainnet", "1000000000000000000", { from: THE_ACCOUNTS[0] });
+
+    console.log(chalk.yellow('========== veFPISYieldDistributorV5 =========='));
+    // veFPISYieldDistributorV5
+	veFPISYieldDistributorV5_instance = await veFPISYieldDistributorV5.new(
+        THE_ACCOUNTS[6], 
+		CONTRACT_ADDRESSES.ethereum.canonicals.FPIS, 
+		CONTRACT_ADDRESSES.ethereum.misc.timelock,
+		veFPIS_instance.address
+	);
 
     // console.log(chalk.yellow("========== FraxMiddlemanGauge_ARBI_Curve_VSTFRAX =========="));
     // middlemanGauge_ARBI_Curve_VSTFRAX = await FraxMiddlemanGauge_ARBI_Curve_VSTFRAX.new(
@@ -577,6 +583,7 @@ module.exports = async (deployer) => {
 
     console.log(chalk.yellow("--------DEPLOYING veFPIS CONTRACTS--------"));
     veFPIS.setAsDeployed(veFPIS_instance);
+    veFPISYieldDistributorV5.setAsDeployed(veFPISYieldDistributorV5_instance);
 
     console.log(chalk.yellow("--------DEPLOYING veFXS CONTRACTS--------"));
     veFXS.setAsDeployed(veFXS_instance);

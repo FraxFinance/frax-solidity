@@ -24,14 +24,17 @@ If you need to fork mainnet, single test contract
 Verbosely test a single contract while forking mainnet
 or ```source .env.forge && forge test --fork-url $MAINNET_RPC_URL -m veFPISProxy.t.sol -vvvvv``` for single test verbosity level 5
 
+
 ## Hardhat
 **------Testing------**
+tsc
 cd ./src/hardhat
 npx hardhat compile
 
 ARBITRUM
 npx hardhat test ./test/__ARBITRUM/CrossChainBridgeBacker_ARBI_AnySwap-Tests.js
 npx hardhat test ./test/__ARBITRUM/FraxCrossChainFarmV2-Tests.js
+npx hardhat test ./test/__ARBITRUM/FraxCrossChainFarmV3-Tests.js
 npx hardhat test ./test/__ARBITRUM/CurveAMO-ARBI-Tests.js
 
 AURORA
@@ -91,6 +94,7 @@ npx hardhat test ./test/UniV3LiquidityAMO_V2-Tests.js
 npx hardhat test ./test/UniV3TWAPOracle-Tests.js
 npx hardhat test ./test/openzeppelin/ERC20.test.js
 npx hardhat test ./test/veFPIS-Tests.js
+npx hardhat test ./test/veFPISYieldDistributorV5-Tests.js
 npx hardhat test ./test/veFXSYieldDistributorV4-Tests.js
 
 FANTOM

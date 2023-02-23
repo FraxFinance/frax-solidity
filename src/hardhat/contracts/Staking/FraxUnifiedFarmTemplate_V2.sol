@@ -57,7 +57,6 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     error NeedsGRELLogic();
     error NoValidTokensToRecover();
     error MustBeGEMulPrec();
-    error MustBeGEZero();
     error MustBeGEOne();
     error NotOwnerOrTimelock();
     error NotOwnerOrTknMgr();
@@ -81,7 +80,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // Lock time and multiplier settings
     uint256 public lock_max_multiplier = 2e18; // E18. 1x = e18
-    uint256 public lock_time_for_max_multiplier = 1 * 365 * 86400; // 1 years
+    uint256 public lock_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
     // uint256 public lock_time_for_max_multiplier = 2 * 86400; // 2 days
     uint256 public lock_time_min = 594000; // 6.875 * 86400 (~7 day)
 
@@ -132,6 +131,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     bool internal withdrawalsPaused; // For emergencies
     bool internal rewardsCollectionPaused; // For emergencies
     bool internal stakingPaused; // For emergencies
+    bool internal collectRewardsOnWithdrawalPaused; // For emergencies if a token is overemitted
 
     /* ========== STRUCTS ========== */
     // In children...
@@ -146,8 +146,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     }
 
     modifier onlyTknMgrs(address reward_token_address) {
-        // require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "Not owner or tkn mgr");
-        if(msg.sender != owner && !isTokenManagerFor(msg.sender, reward_token_address)) revert NotOwnerOrTknMgr();
+        if(!isTokenManagerFor(msg.sender, reward_token_address)) revert NotOwnerOrTknMgr();
         _;
     }
 
@@ -204,7 +203,8 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // See if the caller_addr is a manager for the reward token 
     function isTokenManagerFor(address caller_addr, address reward_token_addr) public view returns (bool){
-        if (caller_addr == owner) return true; // Contract owner
+        if (caller_addr == address(0) || reward_token_addr == address(0)) return false;
+        else if (caller_addr == owner) return true; // Contract owner
         else if (rewardManagers[reward_token_addr] == caller_addr) return true; // Reward manager
         return false; 
     }
@@ -692,11 +692,13 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     function setPauses(
         bool _stakingPaused,
         bool _withdrawalsPaused,
-        bool _rewardsCollectionPaused
+        bool _rewardsCollectionPaused,
+        bool _collectRewardsOnWithdrawalPaused
     ) external onlyByOwnGov {
         stakingPaused = _stakingPaused;
         withdrawalsPaused = _withdrawalsPaused;
         rewardsCollectionPaused = _rewardsCollectionPaused;
+        collectRewardsOnWithdrawalPaused = _collectRewardsOnWithdrawalPaused;
     }
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
@@ -751,7 +753,6 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         // require((_misc_vars[4] >= 1) && (_misc_vars[5] >= 1), "Must be >= 1");
         /// TODO check this rewrite
         if(_misc_vars[4] < _misc_vars[5]) revert MustBeGEMulPrec();
-        if((_misc_vars[1] < 0) || (_misc_vars[2] < 0) || (_misc_vars[3] < 0)) revert MustBeGEZero();
         if((_misc_vars[4] < 1) || (_misc_vars[5] < 1)) revert MustBeGEOne();
 
         lock_max_multiplier = _misc_vars[0];
