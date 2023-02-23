@@ -553,7 +553,9 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         uint256 theArrayIndex
     ) internal returns (uint256) {
         // Collect rewards first and then update the balances
-        _getReward(staker_address, destination_address, true);
+        // collectRewardsOnWithdrawalPaused to be used in an emergency situation if reward is overemitted or not available
+        // and the user can forfeit rewards to get their principal back
+        if (!collectRewardsOnWithdrawalPaused) _getReward(staker_address, destination_address, true);
 
         // Get the stake by its index
         LockedStake memory thisStake = lockedStakes[staker_address][theArrayIndex];

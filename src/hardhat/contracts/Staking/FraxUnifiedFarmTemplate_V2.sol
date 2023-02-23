@@ -81,7 +81,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // Lock time and multiplier settings
     uint256 public lock_max_multiplier = 2e18; // E18. 1x = e18
-    uint256 public lock_time_for_max_multiplier = 1 * 365 * 86400; // 1 years
+    uint256 public lock_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
     // uint256 public lock_time_for_max_multiplier = 2 * 86400; // 2 days
     uint256 public lock_time_min = 594000; // 6.875 * 86400 (~7 day)
 
@@ -132,6 +132,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     bool internal withdrawalsPaused; // For emergencies
     bool internal rewardsCollectionPaused; // For emergencies
     bool internal stakingPaused; // For emergencies
+    bool internal collectRewardsOnWithdrawalPaused; // For emergencies if a token is overemitted
 
     /* ========== STRUCTS ========== */
     // In children...
@@ -692,11 +693,13 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     function setPauses(
         bool _stakingPaused,
         bool _withdrawalsPaused,
-        bool _rewardsCollectionPaused
+        bool _rewardsCollectionPaused,
+        bool _collectRewardsOnWithdrawalPaused
     ) external onlyByOwnGov {
         stakingPaused = _stakingPaused;
         withdrawalsPaused = _withdrawalsPaused;
         rewardsCollectionPaused = _rewardsCollectionPaused;
+        collectRewardsOnWithdrawalPaused = _collectRewardsOnWithdrawalPaused;
     }
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
