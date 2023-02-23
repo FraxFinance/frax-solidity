@@ -2,6 +2,9 @@
 @ensdomains/=node_modules/@ensdomains/
 @eth-optimism/=node_modules/@eth-optimism/
 @openzeppelin/=node_modules/@openzeppelin/
+@openzeppelin-contracts/=lib/openzeppelin-contracts/
+openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/
+@openzeppelin/=lib/openzeppelin-contracts/
 @uniswap/=node_modules/@uniswap/
 base64-sol/=node_modules/base64-sol/
 ds-test/=lib/forge-std/lib/ds-test/src/

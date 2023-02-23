@@ -5,14 +5,14 @@ interface ILockReceiver {
     function beforeLockTransfer(
         address _sender,
         address _receiver,
-        bytes32 _lockId,
+        uint256 _lockId,
         bytes calldata _data
     ) external returns (bytes4);
 
     function onLockReceived(
         address _sender,
         address _receiver,
-        bytes32 _lockId,
+        uint256 _lockId,
         bytes calldata _data
     ) external returns (bytes4);
 }

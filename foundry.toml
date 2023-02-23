@@ -4,3 +4,42 @@ out = 'out'
 libs = ['node_modules', 'lib']
 test = 'src/foundry/test/'
 cache_path  = 'forge-cache'
+remappings = [
+    '@fraxmocks/=lib/frax-solidity/src/hardhat/contracts/mocks/',
+    '@staking/=/src/hardhat/contracts/Staking/',
+    '@openzeppelin-contracts/=lib/openzeppelin-contracts/',
+    'openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/',
+    '@openzeppelin/=lib/openzeppelin-contracts/',
+]
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config
+
+solc_version = "0.8.17"
+gas_reports = ["*"]
+
+# settings for coverage reports
+via_ir = true
+optimizer = true #testing this out - was false
+optimizer_runs = 100_000
+
+
+[profile.default.optimizer_details]
+jumpdestRemover = true
+orderLiterals = true
+deduplicate = true
+
+yul = true
+constantOptimizer = true
+stackAllocation = true
+
+# Have `cse = true` commented out for faster testing compilation, 
+### but UNCOMMENT it for DEPLOYMENT! ###
+cse = true
+
+
+[profile.default.optimizer_details.yulDetails]
+stackAllocation = true
+
+# Have `optimizerSteps = ""` uncommented for faster testing compilation, 
+### but COMMENT IT out for DEPLOYMENT!###
+# optimizerSteps = ""

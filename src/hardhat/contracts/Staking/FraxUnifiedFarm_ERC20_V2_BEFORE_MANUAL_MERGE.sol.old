@@ -466,7 +466,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
     function _updateLiqAmts(address staker_address, uint256 amt, bool is_add) internal {
         // Get the proxy address
-        address the_proxy = staker_designated_proxies[staker_address];
+        address the_proxy = getProxyFor(staker_address);
 
         if (is_add) {
             // Update total liquidities

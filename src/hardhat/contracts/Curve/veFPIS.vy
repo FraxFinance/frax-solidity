@@ -94,10 +94,10 @@ PROXY_ADD: constant(int128) = 6
 PROXY_SLASH: constant(int128) = 7
 CHECKPOINT_ONLY: constant(int128) = 8
 
-event CommitOwnership:
+event NominateOwnership:
     admin: address
 
-event ApplyOwnership:
+event AcceptOwnership:
     admin: address
 
 event Deposit:
@@ -227,55 +227,53 @@ future_admin: public(address)
 
 
 @external
-def __init__(token_addr: address, _name: String[64], _symbol: String[32], _version: String[32]):
+def __init__():
     """
-    @notice Contract constructor
-    @param token_addr `ERC20CRV` token address
-    @param _name Token name
-    @param _symbol Token symbol
-    @param _version Contract version - required for Aragon compatibility
+    @notice Contract constructor. No constructor args due to Etherscan verification issues
     """
+    token_addr: address = 0xc2544A32872A91F4A553b404C6950e89De901fdb
     self.admin = msg.sender
     self.token = token_addr
     self.point_history[0].blk = block.number
     self.point_history[0].ts = block.timestamp
     self.point_history[0].fpis_amt = 0
-    self.appTransferFromsEnabled = True
-    self.appTransferTosEnabled = True
-    self.proxyAddsEnabled = True
-    self.proxySlashesEnabled = True
+    self.appTransferFromsEnabled = False
+    self.appTransferTosEnabled = False
+    self.proxyAddsEnabled = False
+    self.proxySlashesEnabled = False
 
     _decimals: uint256 = ERC20(token_addr).decimals()
     assert _decimals <= 255
     self.decimals = _decimals
 
-    self.name = _name
-    self.symbol = _symbol
-    self.version = _version
-
+    self.name = "veFPIS"
+    self.symbol = "veFPIS"
+    self.version = "veFPIS_1.0.0"
 
 @external
-def commit_transfer_ownership(addr: address):
+def nominate_ownership(addr: address):
     """
-    @notice Transfer ownership of VotingEscrow contract to `addr`
-    @param addr Address to have ownership transferred to
+    @notice Transfer ownership of this contract to `addr`
+    @param addr Address of the new owner
     """
     assert msg.sender == self.admin  # dev: admin only
+
     self.future_admin = addr
-    log CommitOwnership(addr)
+    log NominateOwnership(addr)
 
 
 @external
-def apply_transfer_ownership():
+def accept_transfer_ownership():
     """
-    @notice Apply ownership transfer
+    @notice Accept a pending ownership transfer
+    @dev Only callable by the new owner
     """
-    assert msg.sender == self.admin  # dev: admin only
     _admin: address = self.future_admin
-    assert _admin != empty(address)  # dev: admin not set
-    self.admin = _admin
-    log ApplyOwnership(_admin)
+    assert msg.sender == _admin  # dev: future admin only
 
+    self.admin = _admin
+    self.future_admin = empty(address)
+    log AcceptOwnership(_admin)
 
 @external
 def commit_smart_wallet_checker(addr: address):

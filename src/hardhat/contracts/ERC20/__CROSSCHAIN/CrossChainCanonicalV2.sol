@@ -29,7 +29,7 @@ import { ERC20PermitPermissionedMint } from "../ERC20PermitPermissionedMint.sol"
 
 contract CrossChainCanonicalV2 is ERC20PermitPermissionedMint {
     /* ========== CONSTRUCTOR ========== */
-        constructor(
+    constructor(
         address _creator_address,
         address _timelock_address,
         string memory _name,
