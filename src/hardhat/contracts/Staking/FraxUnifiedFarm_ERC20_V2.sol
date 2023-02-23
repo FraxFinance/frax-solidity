@@ -500,12 +500,27 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     // }
 
     // Two different stake functions are needed because of delegateCall and msg.sender issues (important for proxies)
+    /// @notice Creation, extension, and addition of liquidity to a locked stake.
+    /// @notice Combines the functionality of stakeLocked, lockAdditional, and lockLonger into a single function.
+    /// @dev Note that `secs` is now only ever the amount of time to add to block.timestamp - secs can be 0 if locking additional only.
+    /// @param liquidity The amount of liquidity to stake.
+    /// @param secs The number of seconds to lock the liquidity for.
+    /// @param useTargetStakeIndex If true, alter certain parameters of an existing stake. If false, create a new stake.
+    /// @param targetIndex The index of the stake to alter, if applicable.
+    /// @return The index of the stake that was created or altered.
     function manageStake(uint256 liquidity, uint256 secs, bool useTargetStakeIndex, uint256 targetIndex) nonReentrant external returns (uint256) {
         return _manageStake(msg.sender, msg.sender, liquidity, secs, useTargetStakeIndex, targetIndex);//block.timestamp, 
     }
 
     // If this were not internal, and source_address had an infinite approve, this could be exploitable
     // (pull funds from source_address and stake for an arbitrary staker_address)
+    /// @notice Creation, extension, and addition of liquidity to a locked stake.
+    /// @notice Combines the functionality of stakeLocked, lockAdditional, and lockLonger into a single function.
+    /// @dev Note that `secs` is now only ever the amount of time to add to block.timestamp - secs can be 0 if locking additional only.
+    /// @param staker_address The address of the staker.
+    /// @param source_address The address of the source of the liquidity.
+    /// @param liquidity The amount of liquidity to stake.
+    /// @param secs The number of seconds to lock the liquidity for.
     function _manageStake(
         address staker_address,
         address source_address,
@@ -514,7 +529,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         // uint256 start_timestamp, 
         bool useTargetStakeIndex,
         uint256 targetIndex
-    ) internal updateRewardAndBalanceMdf(staker_address, true) returns (uint256) {
+    ) internal updateRewardAndBalanceMdf(staker_address, true) returns (uint256 stakeIndex) {
         if (stakingPaused) revert StakingPaused();
         if (secs < lock_time_min) revert MinimumStakeTimeNotMet();
         if (secs > lock_time_for_max_multiplier) revert TryingToLockForTooLong();
@@ -525,6 +540,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             TransferHelperV2.safeTransferFrom(address(stakingToken), source_address, address(this), liquidity);
         }
 
+        // If we are not using a target stake index, we are creating a new stake
         if (!useTargetStakeIndex) {
             // Create the locked stake
             _createNewStake(
@@ -534,42 +550,52 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
                 block.timestamp + secs, 
                 lockMultiplier(secs)
             );
+            
+            // set the return value to the index of the new stake
+            stakeIndex = lockedStakes[staker_address].length - 1;
+
+            // check that the number of this address' stakes are not over the limit
+            if (lockedStakes[staker_address].length > max_locked_stakes) revert TooManyStakes();
+
         } else {
             // Otherwise, we are either locking additional or extending lock duration
 
             // Get the stake by its index
             LockedStake memory thisStake = lockedStakes[msg.sender][targetIndex];
 
+            // calculate the new ending timestamp (can = block.timestamp if secs = 0)
             uint256 new_ending_ts = secs + block.timestamp;
 
+            // if `secs` is 0, we are "locking additional"
             if (new_ending_ts < thisStake.ending_timestamp) revert CannotShortenLockTime();
 
-            // Update the stake
+            // Update the stake. If `secs` is 0, we are "locking additional" so don't need to change the time values
             _updateStake(
                 msg.sender, 
                 targetIndex, 
-                block.timestamp, 
+                secs == 0 ? thisStake.start_timestamp : block.timestamp, 
                 thisStake.liquidity + liquidity, // if locking additional, add to existing liquidity
-                new_ending_ts, 
+                secs == 0 ? thisStake.ending_timestamp : new_ending_ts, 
                 lockMultiplier(secs)
             );
+            
+            // set the return value to the index of the stake we altered
+            stakeIndex = targetIndex;
+
+            // no need to check the number of stakes here because we are not creating a new stake
         }
 
         if (liquidity == 0) {
-            // Need to call to update the combined weights
+            // Need to call to update the combined weights if we are just extending the lock time
             updateRewardAndBalance(msg.sender, false);
         } else {
-            // Update liquidities
+            // Update liquidities if we are creating a new stake or locking additional
             _updateLiqAmts(staker_address, liquidity, true);
         }
 
         emit StakeLocked(staker_address, liquidity, secs, lockedStakes[staker_address].length - 1, source_address);
 
-        uint256 num_stakes = lockedStakes[staker_address].length;
-
-        if (num_stakes > max_locked_stakes) revert TooManyStakes();
-
-        return num_stakes - 1;
+        return stakeIndex;
     }
 
     // ------ WITHDRAWING ------
