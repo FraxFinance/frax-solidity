@@ -53,6 +53,7 @@ contract Fraxferry {
    address public captain;
    address public firstOfficer;
    mapping(address => bool) public crewmembers;
+   mapping(address => bool) public fee_exempt_addrs;
 
    bool public paused;
    
@@ -118,7 +119,9 @@ contract Fraxferry {
    event SetCrewmember(address indexed crewmember,bool set); 
    event SetFee(uint previousFeeRate, uint feeRate,uint previousFeeMin, uint feeMin,uint previousFeeMax, uint feeMax);
    event SetMinWaitPeriods(uint previousMinWaitAdd,uint previousMinWaitExecute,uint minWaitAdd,uint minWaitExecute); 
+   event FeeExemptToggled(address addr,bool is_fee_exempt); 
    
+
    // ############## Modifiers ##############
    
    modifier isOwner() {
@@ -150,7 +153,11 @@ contract Fraxferry {
    
    function embarkWithRecipient(uint amount, address recipient) public notPaused {
       amount = (amount/REDUCED_DECIMALS)*REDUCED_DECIMALS; // Round amount to fit in data structure
-      uint fee = Math.min(Math.max(FEE_MIN,amount*FEE_RATE/10000),FEE_MAX);
+      uint fee;
+      if(fee_exempt_addrs[msg.sender]) fee = 0;
+      else {
+         fee = Math.min(Math.max(FEE_MIN,amount*FEE_RATE/10000),FEE_MAX);
+      }
       require (amount>fee,"Amount too low");
       require (amount/REDUCED_DECIMALS<=type(uint64).max,"Amount too high");
       TransferHelper.safeTransferFrom(address(token),msg.sender,address(this),amount); 
@@ -292,6 +299,11 @@ contract Fraxferry {
    function setCrewmember(address crewmember, bool set) external isOwner {
       crewmembers[crewmember]=set;
       emit SetCrewmember(crewmember,set);
+   }   
+
+   function toggleFeeExemptAddr(address addr) external isOwner {
+      fee_exempt_addrs[addr] = !fee_exempt_addrs[addr];
+      emit FeeExemptToggled(addr,fee_exempt_addrs[addr]);
    }   
   
    

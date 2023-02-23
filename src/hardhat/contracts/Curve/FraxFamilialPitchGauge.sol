@@ -11,18 +11,17 @@ pragma solidity ^0.8.17;
 // ====================================================================
 // ======================== FraxMiddlemanGauge ========================
 // ====================================================================
-// Looks at the gauge controller contract and pushes out FXS rewards once
-// a week to the gauges (farms).
-// This contract is what gets added to the gauge as a 'slice'
-
-// Frax Finance: https://github.com/FraxFinance
-
-// Primary Author(s)
-// Travis Moore: https://github.com/FortisFortuna
-
-// Reviewer(s) / Contributor(s)
-// Jason Huan: https://github.com/jasonhuan
-// Sam Kazemian: https://github.com/samkazemian
+/**
+*   @title FraxFamilialPitchGauge
+*   @notice Redistributes gauge rewards to multiple gauges (FraxFarms) based on each "child" gauge's `total_combined_weight`.
+*   @author Modified version of the FraxMiddlemanGauge - by ZrowGz @ Pitch Foundation
+*   @dev To use this:
+*       - Add to GaugeController as a gauge
+*       - Add to FXS Rewards Distributor as a gauge
+*           * BUT do not set as a middleman gauge on the FXS Rewards Distributor
+*       - Set as the `gaugeController` & `rewardsDistributor` on all children FraxFarms
+*       - Disable rewards for pre-existing gauges on the FXS Rewards Distributor
+*/
 
 // import "../Math/Math.sol";
 // import "../Math/SafeMath.sol";
@@ -32,7 +31,7 @@ import "./IFraxGaugeFXSRewardsDistributor.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../Staking/Owned.sol";
 // import "../Utils/ReentrancyGuard.sol";
-import "./IFraxFarm.sol";
+import "../Staking/IFraxFarm.sol";
 import "./IFraxGaugeControllerV2.sol";
 
 /**
