@@ -57,7 +57,6 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     error NeedsGRELLogic();
     error NoValidTokensToRecover();
     error MustBeGEMulPrec();
-    error MustBeGEZero();
     error MustBeGEOne();
     error NotOwnerOrTimelock();
     error NotOwnerOrTknMgr();
@@ -754,7 +753,6 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         // require((_misc_vars[4] >= 1) && (_misc_vars[5] >= 1), "Must be >= 1");
         /// TODO check this rewrite
         if(_misc_vars[4] < _misc_vars[5]) revert MustBeGEMulPrec();
-        if((_misc_vars[1] < 0) || (_misc_vars[2] < 0) || (_misc_vars[3] < 0)) revert MustBeGEZero();
         if((_misc_vars[4] < 1) || (_misc_vars[5] < 1)) revert MustBeGEOne();
 
         lock_max_multiplier = _misc_vars[0];
