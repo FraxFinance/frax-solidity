@@ -61,6 +61,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     error NotOwnerOrTimelock();
     error NotOwnerOrTknMgr();
     error NotEnoughRewardTokensAvailable(address);
+    error TooManyStakes();
 
     /* ========== STATE VARIABLES ========== */
 
@@ -132,6 +133,11 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     bool internal rewardsCollectionPaused; // For emergencies
     bool internal stakingPaused; // For emergencies
     bool internal collectRewardsOnWithdrawalPaused; // For emergencies if a token is overemitted
+
+    /// @notice Maximum number of locked stakes allowed per address (prevent dust attacks)
+    /// @dev In the unlikely event that we need to increase this, we can using `setMiscVars`, but only ever increase (prevent making user's stakes unreachable)
+    /// @notice default to 5, as that is the most that users tend to have, on average
+    uint256 public max_locked_stakes = 5;
 
     /* ========== STRUCTS ========== */
     // In children...
@@ -740,7 +746,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     }
 
     function setMiscVariables(
-        uint256[6] memory _misc_vars
+        uint256[7] memory _misc_vars
         // [0]: uint256 _lock_max_multiplier, 
         // [1] uint256 _vefxs_max_multiplier, 
         // [2] uint256 _vefxs_per_frax_for_max_boost,
@@ -761,6 +767,13 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         vefxs_boost_scale_factor = _misc_vars[3];
         lock_time_for_max_multiplier = _misc_vars[4];
         lock_time_min = _misc_vars[5];
+
+        /// This value can only ever be increased.
+        /// If it were decreased, user locked stakes would be un-reachable for transfers & management, although they would be withdrawable once unlocked.
+        /// If we must be able to decrease, stakes above this value could be made immediately withdrawable
+        if (_misc_vars[6] > max_locked_stakes) {
+            max_locked_stakes = _misc_vars[6];
+        }
     }
 
     // The owner or the reward token managers can set reward rates 
