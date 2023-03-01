@@ -399,6 +399,16 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     /* =============== MUTATIVE FUNCTIONS =============== */
 
     // ------ STAKING ------
+    function _findUnusedStakeIndex(address staker) internal view returns (uint256,bool) {
+        uint256 i;
+        while (i < lockedStakes[staker].length) {
+            if (lockedStakes[staker][i].ending_timestamp == 0) {
+                return (i,true);
+            }
+            i++;
+        }
+        return (i,false);
+    }
 
     function _updateStake(address staker, uint256 index, uint256 start_timestamp, uint256 liquidity, uint256 ending_timestamp, uint256 lock_multiplier) internal {
         lockedStakes[staker][index] = LockedStake(start_timestamp, liquidity, ending_timestamp, lock_multiplier);
@@ -541,7 +551,8 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         }
 
         // If we are not using a target stake index, we are creating a new stake
-        if (!useTargetStakeIndex) {
+        // AND if there's enough stake space, create a new one, otherwise check for zeroed out stakes
+        if (!useTargetStakeIndex && lockedStakes[staker_address].length < max_locked_stakes) {
             // Create the locked stake
             _createNewStake(
                 staker_address, 
@@ -555,7 +566,26 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             stakeIndex = lockedStakes[staker_address].length - 1;
 
             // check that the number of this address' stakes are not over the limit
-            if (lockedStakes[staker_address].length > max_locked_stakes) revert TooManyStakes();
+            // if (lockedStakes[staker_address].length > max_locked_stakes) revert TooManyStakes();
+        } else if (!useTargetStakeIndex && lockedStakes[staker_address].length == max_locked_stakes) {
+            // look for unused stakes that were previously used but zeroed out by withdrawals or transfers
+            (uint256 index, bool success) = _findUnusedStakeIndex(staker_address);
+
+            // if no unused stake was found, revert
+            if (!success) revert TooManyStakes();
+            
+            // set the index being used
+            stakeIndex = index;
+            
+            // reuse the zeroed out stake to create this new locked stake
+            _updateStake(
+                staker_address, 
+                index, 
+                block.timestamp, 
+                liquidity, 
+                block.timestamp + secs, 
+                lockMultiplier(secs)
+            );
 
         } else {
             // Otherwise, we are either locking additional or extending lock duration
@@ -571,7 +601,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
             // Update the stake. If `secs` is 0, we are "locking additional" so don't need to change the time values
             _updateStake(
-                msg.sender, 
+                staker_address, 
                 targetIndex, 
                 secs == 0 ? thisStake.start_timestamp : block.timestamp, 
                 thisStake.liquidity + liquidity, // if locking additional, add to existing liquidity
@@ -585,13 +615,14 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             // no need to check the number of stakes here because we are not creating a new stake
         }
 
-        if (liquidity == 0) {
-            // Need to call to update the combined weights if we are just extending the lock time
-            updateRewardAndBalance(msg.sender, false);
-        } else {
+        // if altering balances of a stake, update the liquidities
+        if (liquidity > 0) {
             // Update liquidities if we are creating a new stake or locking additional
             _updateLiqAmts(staker_address, liquidity, true);
         }
+
+        // Whether updating durations, creating new stake, or locking additional, update the rewards & balances
+        updateRewardAndBalance(msg.sender, false);
 
         emit StakeLocked(staker_address, liquidity, secs, lockedStakes[staker_address].length - 1, source_address);
 
@@ -819,7 +850,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         * note using nested if checks to reduce gas costs slightly
         */
         if (
-            use_receiver_lock_index == true 
+            use_receiver_lock_index
             && 
             senderStake.ending_timestamp <= lockedStakes[addrs[1]][receiver_lock_index].ending_timestamp
         ) {
@@ -835,20 +866,41 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
                 }
             }
         } else {
-            // check that the receiver doesn't have too many stakes
-            if (lockedStakes[addrs[1]].length + 1 > max_locked_stakes) revert TooManyStakes();
+            // if receiver would have too many stakes to create a new one, look for zeroed out stakes
+            if (lockedStakes[addrs[1]].length == max_locked_stakes) {
+                // look for unused stakes that were previously used but zeroed out by withdrawals or transfers
+                (uint256 index, bool success) = _findUnusedStakeIndex(addrs[1]);
+                
+                // if no unused stake was found, revert
+                if (!success) revert TooManyStakes();
+                
+                // set the index being used
+                receiver_lock_index = index;
+                
+                // reuse the zeroed out stake to create this new locked stake
+                _updateStake(
+                    addrs[1], 
+                    index, 
+                    block.timestamp, 
+                    transfer_amount, 
+                    senderStake.ending_timestamp, 
+                    senderStake.lock_multiplier
+                );
 
-            // create the new lockedStake
-            _createNewStake(
-                addrs[1], 
-                senderStake.start_timestamp, 
-                transfer_amount,
-                senderStake.ending_timestamp, 
-                senderStake.lock_multiplier
-            );
-            
-            // update the return value of the locked index 
-            receiver_lock_index = lockedStakes[addrs[1]].length - 1;
+            // otherwise, create a new locked stake
+            } else {
+                // create the new lockedStake
+                _createNewStake(
+                    addrs[1], 
+                    senderStake.start_timestamp, 
+                    transfer_amount,
+                    senderStake.ending_timestamp, 
+                    senderStake.lock_multiplier
+                );
+                
+                // update the return value of the locked index 
+                receiver_lock_index = lockedStakes[addrs[1]].length - 1;
+            }
         }
 
         // update liquidity of the receiver

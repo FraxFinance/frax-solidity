@@ -138,7 +138,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     /// @notice Maximum number of locked stakes allowed per address (prevent dust attacks)
     /// @dev In the unlikely event that we need to increase this, we can using `setMiscVars`, but only ever increase (prevent making user's stakes unreachable)
     /// @notice default to 5, as that is the most that users tend to have, on average
-    uint256 public max_locked_stakes = 5;
+    uint256 public max_locked_stakes;
 
     /* ========== STRUCTS ========== */
     // In children...
@@ -199,12 +199,12 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
             last_gauge_time_totals.push(0);
         }
 
-        // Other booleans
-        // stakesUnlocked = false;
-
         // Initialization
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp + rewardsDuration;
+
+        // set the max locked stakes
+        max_locked_stakes = 12;
     }
 
     /* ============= VIEWS ============= */
