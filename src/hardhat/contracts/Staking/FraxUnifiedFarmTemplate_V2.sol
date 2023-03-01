@@ -101,6 +101,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     address[] internal gaugeControllers;
     address[] internal rewardDistributors;
     uint256[] internal rewardRatesManual;
+    mapping(address => bool) internal isRewardToken;
     mapping(address => uint256) public rewardTokenAddrToIdx; // token addr -> token index
     
     // Reward period
@@ -182,6 +183,9 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
             // For fast token address -> token ID lookups later
             rewardTokenAddrToIdx[_rewardTokens[i]] = i;
 
+            // Add to the mapping
+            isRewardToken[_rewardTokens[i]] = true;
+
             // Initialize the stored rewards
             rewardsPerTokenStored.push(0);
 
@@ -209,7 +213,8 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // See if the caller_addr is a manager for the reward token 
     function isTokenManagerFor(address caller_addr, address reward_token_addr) public view returns (bool){
-        if (caller_addr == address(0) || reward_token_addr == address(0)) return false;
+        if (!isRewardToken[reward_token_addr]) return false;
+        else if (caller_addr == address(0) || reward_token_addr == address(0)) return false;
         else if (caller_addr == owner) return true; // Contract owner
         else if (rewardManagers[reward_token_addr] == caller_addr) return true; // Reward manager
         return false; 
@@ -721,20 +726,14 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTknMgrs(tokenAddress) {
         // Check if the desired token is a reward token
-        bool isRewardToken;
-        for (uint256 i; i < rewardTokens.length; i++){ 
-            if (rewardTokens[i] == tokenAddress) {
-                isRewardToken = true;
-                break;
-            }
-        }
+        bool isRewTkn = isRewardToken[tokenAddress];
 
         // Only the reward managers can take back their reward tokens
         // Also, other tokens, like the staking token, airdrops, or accidental deposits, can be withdrawn by the owner
         if (
-                (isRewardToken && rewardManagers[tokenAddress] == msg.sender)
+                (isRewTkn && rewardManagers[tokenAddress] == msg.sender)
                 || 
-                (!isRewardToken && (msg.sender == owner))
+                (!isRewTkn && (msg.sender == owner))
             ) {
                 TransferHelperV2.safeTransfer(tokenAddress, msg.sender, tokenAmount);
                 return;
@@ -783,6 +782,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         address _gauge_controller_address, 
         address _rewards_distributor_address
     ) external onlyTknMgrs(reward_token_address) {
+        require(isRewardToken[reward_token_address], 'Not a reward token');
         rewardRatesManual[rewardTokenAddrToIdx[reward_token_address]] = _new_rate;
         gaugeControllers[rewardTokenAddrToIdx[reward_token_address]] = _gauge_controller_address;
         rewardDistributors[rewardTokenAddrToIdx[reward_token_address]] = _rewards_distributor_address;
