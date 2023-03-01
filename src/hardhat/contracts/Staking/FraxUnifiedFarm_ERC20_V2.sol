@@ -615,13 +615,14 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             // no need to check the number of stakes here because we are not creating a new stake
         }
 
-        if (liquidity == 0) {
-            // Need to call to update the combined weights if we are just extending the lock time
-            updateRewardAndBalance(msg.sender, false);
-        } else {
+        // if altering balances of a stake, update the liquidities
+        if (liquidity > 0) {
             // Update liquidities if we are creating a new stake or locking additional
             _updateLiqAmts(staker_address, liquidity, true);
         }
+
+        // Whether updating durations, creating new stake, or locking additional, update the rewards & balances
+        updateRewardAndBalance(msg.sender, false);
 
         emit StakeLocked(staker_address, liquidity, secs, lockedStakes[staker_address].length - 1, source_address);
 
