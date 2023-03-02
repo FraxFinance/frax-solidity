@@ -71,6 +71,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     error OnLockReceivedFailed();
     error CannotBeZero();
     error AllowanceIsZero();
+    error NoStakeIndexProvided();
 
     /* ========== STATE VARIABLES ========== */
 
@@ -589,7 +590,8 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
 
         } else {
             // Otherwise, we are either locking additional or extending lock duration
-
+            if (!useTargetStakeIndex) revert NoStakeIndexProvided();
+            
             // Get the stake by its index
             LockedStake memory thisStake = lockedStakes[msg.sender][targetIndex];
 
