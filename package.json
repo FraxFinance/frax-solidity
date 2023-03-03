@@ -24,7 +24,7 @@
     "@maticnetwork/maticjs": "^3.5.0",
     "@maticnetwork/maticjs-ethers": "^1.0.3",
     "@maticnetwork/maticjs-web3": "^1.0.4",
-    "@openzeppelin/contracts": "^4.8.0",
+    "@openzeppelin/contracts": "^4.8.2",
     "@openzeppelin/hardhat-upgrades": "^1.22.0",
     "@poanet/solidity-flattener": "^3.0.8",
     "@solana/spl-token": "^0.3.6",
