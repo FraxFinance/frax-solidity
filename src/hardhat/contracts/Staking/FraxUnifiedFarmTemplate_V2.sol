@@ -9,7 +9,7 @@ pragma solidity >=0.8.4;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ====================== FraxUnifiedFarmTemplate =====================
+// ==================== FraxUnifiedFarmTemplate_V2 ====================
 // ====================================================================
 // Farming contract that accounts for veFXS
 // Overrideable for UniV3, ERC20s, etc
@@ -158,7 +158,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     }
 
     modifier updateRewardAndBalanceMdf(address account, bool sync_too) {
-        updateRewardAndBalance(account, sync_too);
+        _updateRewardAndBalance(account, sync_too);
         _;
     }
 
@@ -463,7 +463,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // ------ REWARDS SYNCING ------
 
-    function updateRewardAndBalance(address account, bool sync_too) public {
+    function _updateRewardAndBalance(address account, bool sync_too) internal {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
         if (sync_too){
             sync();
