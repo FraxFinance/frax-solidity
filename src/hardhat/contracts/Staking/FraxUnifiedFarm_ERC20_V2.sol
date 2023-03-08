@@ -682,7 +682,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     /// @param destination_address The address to send the withdrawn liquidity to.
     /// @return The amount of liquidity withdrawn.
     function withdrawLocked(uint256 theArrayIndex, address destination_address) nonReentrant external returns (uint256) {
-        if (withdrawalsPaused == true) revert WithdrawalsPaused();
+        if (withdrawalsPaused) revert WithdrawalsPaused();
         return _withdrawLocked(msg.sender, destination_address, theArrayIndex);
     }
 

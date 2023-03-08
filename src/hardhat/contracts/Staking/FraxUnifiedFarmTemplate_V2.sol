@@ -572,7 +572,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     /// @notice A function that can be overridden to add extra logic to the getReward function
     /// @param destination_address The address to send the rewards to
     function getRewardExtraLogic(address destination_address) public nonReentrant {
-        if(rewardsCollectionPaused == true) revert RewardsCollectionPaused();
+        if(rewardsCollectionPaused) revert RewardsCollectionPaused();
 
         return _getRewardExtraLogic(msg.sender, destination_address);
     }
@@ -616,7 +616,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         lastRewardClaimTime[rewardee] = block.timestamp;
         
         // Make sure rewards collection isn't paused
-        if(rewardsCollectionPaused == true) revert RewardsCollectionPaused();
+        if(rewardsCollectionPaused) revert RewardsCollectionPaused();
         
         // Update the rewards array and distribute rewards
         rewards_before = new uint256[](rewardTokens.length);
