@@ -9,7 +9,7 @@ pragma solidity >=0.8.0;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ======================= FraxCrossChainFarmV3 =======================
+// ==================== FraxCrossChainFarmV3_ERC20 ====================
 // ====================================================================
 // No veFXS logic
 // Because of lack of cross-chain reading of the gauge controller's emission rate,
@@ -41,13 +41,19 @@ import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
 
+
+import '../Misc_AMOs/balancer/IStablePool.sol'; // Balancer frxETH-WETH
+import '../Misc_AMOs/balancer/IBalancerVault.sol'; // Balancer frxETH-WETH
+import "../Oracle/AggregatorV3Interface.sol"; // Balancer frxETH-WETH
+
 // import '../Misc_AMOs/curve/I2pool.sol'; // Curve 2-token
 // import '../Misc_AMOs/curve/I3pool.sol'; // Curve 3-token
 // import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
 // import '../Misc_AMOs/impossible/IStableXPair.sol'; // Impossible
 // import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
-import '../Misc_AMOs/saddle/ISaddleLPToken.sol'; // Saddle Arbitrum L2D4
-import '../Misc_AMOs/saddle/ISaddlePermissionlessSwap.sol'; // Saddle Arbitrum L2D4
+// import '../Misc_AMOs/saddle/ISaddleLPToken.sol'; // Saddle Arbitrum L2D4
+// import '../Misc_AMOs/saddle/ISaddlePermissionlessSwap.sol'; // Saddle Arbitrum L2D4
+// import '../Misc_AMOs/sentiment/ILToken.sol'; // Sentiment LFrax
 // import '../Misc_AMOs/snowball/ILPToken.sol'; // Snowball S4D - [Part 1]
 // import '../Misc_AMOs/snowball/ISwapFlashLoan.sol'; // Snowball S4D - [Part 2]
 // import '../Uniswap/Interfaces/IUniswapV2Pair.sol'; // Uniswap V2
@@ -57,7 +63,7 @@ import "../Utils/ReentrancyGuard.sol";
 // Inheritance
 import "./Owned.sol";
 
-contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
+contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -68,11 +74,27 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
     CrossChainCanonicalFXS public rewardsToken0; // Assumed to be canFXS
     ERC20 public rewardsToken1;
     
+    IStablePool public stakingToken; // Balancer frxETH-WETH
+    AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0xF9680D99D6C9589e2a93a78A04A279e509205945); // For Balancer frxETH-WETH
+    function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
+        require(_eth_usd_oracle_address != address(0), "Zero address detected");
+
+        priceFeedETHUSD = AggregatorV3Interface(_eth_usd_oracle_address);
+    }
+    function getLatestETHPriceE8() public view returns (int) {
+        // Returns in E8
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+        
+        return price;
+    }
+    
     // I2pool public stakingToken; // Curve 2-token
     // I3pool public stakingToken; // Curve 3-token
     // IStableXPair public stakingToken; // Impossible
     // IFeederPool public stakingToken; // mStable
-    ISaddleLPToken public stakingToken; // Saddle L2D4
+    // ISaddleLPToken public stakingToken; // Saddle L2D4
+    // ILToken public stakingToken; // Sentiment LFrax
     // ILPToken public stakingToken; // Snowball S4D
     // IUniswapV2Pair public stakingToken; // Uniswap V2
 
@@ -147,6 +169,7 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
     bool public withdrawalsPaused; // For emergencies
     bool public rewardsCollectionPaused; // For emergencies
     bool public stakingPaused; // For emergencies
+    bool public collectRewardsOnWithdrawalPaused; // For emergencies if a token is overemitted
     bool public isInitialized;
 
     /* ========== STRUCTS ========== */
@@ -182,7 +205,7 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
     }
 
     modifier updateRewardAndBalance(address account, bool sync_too) {
-        _updateRewardAndBalance(account, sync_too);
+        _updateRewardAndBalance(account, sync_too, false);
         _;
     }
     
@@ -201,11 +224,13 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
         rewardsToken0 = CrossChainCanonicalFXS(_rewardsToken0);
         rewardsToken1 = ERC20(_rewardsToken1);
         
+        stakingToken = IStablePool(_stakingToken); // frxETH-WETH
         // stakingToken = I2pool(_stakingToken);
         // stakingToken = I3pool(_stakingToken);
         // stakingToken = IStableXPair(_stakingToken);
         // stakingToken = IFeederPool(_stakingToken);
-        stakingToken = ISaddleLPToken(_stakingToken);
+        // stakingToken = ISaddleLPToken(_stakingToken);
+        // stakingToken = ILToken(_stakingToken);
         // stakingToken = ILPToken(_stakingToken);
         // stakingToken = IUniswapV2Pair(_stakingToken);
 
@@ -276,9 +301,22 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
+        // Balancer frxETH-WETH
+        // ============================================
+        {
+            IBalancerVault vault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+            /**
+            * `cash` is the number of tokens the Vault currently holds for the Pool. `managed` is the number of tokens
+            * withdrawn and held outside the Vault by the Pool's token Asset Manager. The Pool's total balance for `token`
+            * equals the sum of `cash` and `managed`.
+            */
+            (uint256 cash, uint256 managed, , ) = vault.getPoolTokenInfo(0x5dee84ffa2dc27419ba7b3419d7146e53e4f7ded000200000000000000000a4e, 0xEe327F889d5947c1dc1934Bb208a1E792F953E96);
+            uint256 frxETH_usd_val_per_lp_e8 = ((cash + managed) * uint256(getLatestETHPriceE8())) / stakingToken.totalSupply();
+            frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here. Scale up to E18
+        }
 
-        // // Curve 2-token
-        // // ============================================
+        // Curve 2-token
+        // ============================================
         // {
         //     address coin0 = stakingToken.coins(0);
         //     uint256 total_frax_reserves;
@@ -291,8 +329,8 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
         //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
         // }
 
-        // // Curve 3-token
-        // // ============================================
+        // Curve 3-token
+        // ============================================
         // {
         //     address coin0 = stakingToken.coins(0);
         //     address coin1 = stakingToken.coins(1);
@@ -320,11 +358,11 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
 
         // Saddle L2D4
         // ============================================
-        {
-            ISaddlePermissionlessSwap ISPS = ISaddlePermissionlessSwap(0xF2839E0b30B5e96083085F498b14bbc12530b734);
-            uint256 total_frax = ISPS.getTokenBalance(ISPS.getTokenIndex(frax_address));
-            frax_per_lp_token = total_frax.mul(1e18).div(stakingToken.totalSupply());
-        }
+        // {
+        //     ISaddlePermissionlessSwap ISPS = ISaddlePermissionlessSwap(0xF2839E0b30B5e96083085F498b14bbc12530b734);
+        //     uint256 total_frax = ISPS.getTokenBalance(ISPS.getTokenIndex(frax_address));
+        //     frax_per_lp_token = total_frax.mul(1e18).div(stakingToken.totalSupply());
+        // }
 
         // Most Saddles / Snowball S4D
         // ============================================
@@ -332,6 +370,12 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
         //     ISwapFlashLoan ISFL = ISwapFlashLoan(0xfeEa4D1BacB0519E8f952460A70719944fe56Ee0);
         //     uint256 total_frax = ISFL.getTokenBalance(ISFL.getTokenIndex(frax_address));
         //     frax_per_lp_token = total_frax.mul(1e18).div(stakingToken.totalSupply());
+        // }
+
+        // Sentiment LFrax
+        // ============================================
+        // {
+        //     frax_per_lp_token = stakingToken.convertToAssets(1e18);
         // }
 
         // Uniswap V2 & Impossible
@@ -523,10 +567,15 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
         
     }
 
-    function _updateRewardAndBalance(address account, bool sync_too) internal {
+    function _updateRewardAndBalance(address account, bool sync_too, bool pre_sync_vemxstored) internal {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
         if (sync_too){
             sync();
+        }
+
+        // Used to make sure the veFXS multiplier is correct if a stake is increased, before calcCurCombinedWeight
+        if (pre_sync_vemxstored){
+            _vefxsMultiplierStored[account] = veFXSMultiplier(account);
         }
         
         if (account != address(0)) {
@@ -586,7 +635,7 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
         _locked_liquidity[msg.sender] += addl_liq;
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(msg.sender, false);
+        _updateRewardAndBalance(msg.sender, false, true);
 
         emit LockedAdditional(msg.sender, kek_id, addl_liq);
     }
@@ -619,7 +668,7 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
         );
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(msg.sender, false);
+        _updateRewardAndBalance(msg.sender, false, true);
 
         emit LockedLonger(msg.sender, kek_id, new_secs, block.timestamp, new_ending_ts);
     }
@@ -684,23 +733,29 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
         _locked_liquidity[staker_address] = _locked_liquidity[staker_address].add(liquidity);
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(staker_address, false);
+        _updateRewardAndBalance(staker_address, false, true);
 
         emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
     }
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function withdrawLocked(bytes32 kek_id) nonReentrant public {
+    function withdrawLocked(bytes32 kek_id, bool claim_rewards) nonReentrant public {
         require(withdrawalsPaused == false, "Withdrawals paused");
-        _withdrawLocked(msg.sender, msg.sender, kek_id);
+        _withdrawLocked(msg.sender, msg.sender, kek_id, claim_rewards);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
     // functions like withdraw(), migrator_withdraw_unlocked() and migrator_withdraw_locked()
-    function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id) internal  {
+    function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id, bool claim_rewards) internal  {
         // Collect rewards first and then update the balances
-        _getReward(staker_address, destination_address);
-
+        // collectRewardsOnWithdrawalPaused to be used in an emergency situation if reward is overemitted or not available
+        // and the user can forfeit rewards to get their principal back. User can also specify it in withdrawLocked
+        if (claim_rewards || !collectRewardsOnWithdrawalPaused) _getReward(staker_address, destination_address);
+        else {
+            // Sync the rewards at least
+            _updateRewardAndBalance(staker_address, true, false);
+        }
+        
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(staker_address, kek_id);
         require(thisStake.kek_id == kek_id, "Stake not found");
         require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true || valid_migrators[msg.sender] == true, "Stake is still locked!");
@@ -716,7 +771,7 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
             delete lockedStakes[staker_address][theArrayIndex];
 
             // Need to call to update the combined weights
-            _updateRewardAndBalance(staker_address, false);
+            _updateRewardAndBalance(staker_address, true, true);
 
             // Give the tokens to the destination_address
             // Should throw if insufficient balance
@@ -767,7 +822,8 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
 
         // Get the current reward token balances
         uint256 curr_bal_0 = rewardsToken0.balanceOf(address(this));
-        uint256 curr_bal_1 = rewardsToken1.balanceOf(address(this));
+        uint256 curr_bal_1;
+        if (address(rewardsToken1) != address(0)) curr_bal_1 = rewardsToken1.balanceOf(address(this));
 
         // Update the owed amounts based off the old reward rates
         // Anything over a week is zeroed
@@ -850,7 +906,7 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
     // Used for migrations
     function migrator_withdraw_locked(address staker_address, bytes32 kek_id) external isMigrating {
         require(staker_allowed_migrators[staker_address][msg.sender] && valid_migrators[msg.sender], "Mig. invalid or unapproved");
-        _withdrawLocked(staker_address, msg.sender, kek_id);
+        _withdrawLocked(staker_address, msg.sender, kek_id, true);
     }
 
     // Adds supported migrator address 
@@ -908,6 +964,10 @@ contract FraxCrossChainFarmV3 is Owned, ReentrancyGuard {
 
     function toggleMigrations() external onlyByOwnGov {
         migrationsOn = !migrationsOn;
+    }
+
+    function toggleCollectRewardsOnWithdrawal() external onlyByOwnGov {
+        collectRewardsOnWithdrawalPaused = !collectRewardsOnWithdrawalPaused;
     }
 
     function toggleStaking() external onlyByOwnGov {

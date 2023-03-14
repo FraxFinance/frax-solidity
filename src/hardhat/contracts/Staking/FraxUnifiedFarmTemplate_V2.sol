@@ -9,7 +9,7 @@ pragma solidity >=0.8.4;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ====================== FraxUnifiedFarmTemplate =====================
+// ==================== FraxUnifiedFarmTemplate_V2 ====================
 // ====================================================================
 // Farming contract that accounts for veFXS
 // Overrideable for UniV3, ERC20s, etc
@@ -57,11 +57,12 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     error NeedsGRELLogic();
     error NoValidTokensToRecover();
     error MustBeGEMulPrec();
-    error MustBeGEZero();
     error MustBeGEOne();
     error NotOwnerOrTimelock();
     error NotOwnerOrTknMgr();
     error NotEnoughRewardTokensAvailable(address);
+    error TooManyStakes();
+    error NotARewardToken();
 
     /* ========== STATE VARIABLES ========== */
 
@@ -70,13 +71,16 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     
     // Frax related
     address internal constant frax_address = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
-    uint256 public fraxPerLPStored; // fraxPerLPToken is a public view function, although doesn't show the stored value
+    /// @notice fraxPerLPToken is a public view function, although doesn't show the stored value
+    uint256 public fraxPerLPStored;
 
     // Constant for various precisions
     uint256 internal constant MULTIPLIER_PRECISION = 1e18;
 
     // Time tracking
+    /// @notice Ending timestamp for the current period
     uint256 public periodFinish;
+    /// @notice Timestamp of the last update - when this period started
     uint256 public lastUpdateTime;
 
     // Lock time and multiplier settings
@@ -96,12 +100,15 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     mapping(address => mapping(address => bool)) internal proxy_allowed_stakers;
 
     // Reward addresses, gauge addresses, reward rates, and reward managers
-    mapping(address => address) public rewardManagers; // token addr -> manager addr
+    /// @notice token addr -> manager addr
+    mapping(address => address) public rewardManagers; 
     address[] internal rewardTokens;
     address[] internal gaugeControllers;
     address[] internal rewardDistributors;
     uint256[] internal rewardRatesManual;
-    mapping(address => uint256) public rewardTokenAddrToIdx; // token addr -> token index
+    mapping(address => bool) internal isRewardToken;
+    /// @notice token addr -> token index
+    mapping(address => uint256) public rewardTokenAddrToIdx;
     
     // Reward period
     uint256 public constant rewardsDuration = 604800; // 7 * 86400  (7 days)
@@ -121,11 +128,13 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     uint256 internal _total_combined_weight;
     mapping(address => uint256) internal _locked_liquidity;
     mapping(address => uint256) internal _combined_weights;
-    mapping(address => uint256) public proxy_lp_balances; // Keeps track of LP balances proxy-wide. Needed to make sure the proxy boost is kept in line
+    /// @notice Keeps track of LP balances proxy-wide. Needed to make sure the proxy boost is kept in line
+    mapping(address => uint256) public proxy_lp_balances; 
 
 
-    // Stakers set which proxy(s) they want to use
-    mapping(address => address) public staker_designated_proxies; // Keep public so users can see on the frontend if they have a proxy
+    /// @notice Stakers set which proxy(s) they want to use
+    /// @dev Keep public so users can see on the frontend if they have a proxy
+    mapping(address => address) public staker_designated_proxies;
 
     // Admin booleans for emergencies and overrides
     bool public stakesUnlocked; // Release locked stakes in case of emergency
@@ -133,6 +142,11 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     bool internal rewardsCollectionPaused; // For emergencies
     bool internal stakingPaused; // For emergencies
     bool internal collectRewardsOnWithdrawalPaused; // For emergencies if a token is overemitted
+
+    /// @notice Maximum number of locked stakes allowed per address (prevent dust attacks)
+    /// @dev In the unlikely event that we need to increase this, we can using `setMiscVars`, but only ever increase (prevent making user's stakes unreachable)
+    /// @notice default to 5, as that is the most that users tend to have, on average
+    uint256 public max_locked_stakes;
 
     /* ========== STRUCTS ========== */
     // In children...
@@ -147,13 +161,12 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     }
 
     modifier onlyTknMgrs(address reward_token_address) {
-        // require(msg.sender == owner || isTokenManagerFor(msg.sender, reward_token_address), "Not owner or tkn mgr");
-        if(msg.sender != owner && !isTokenManagerFor(msg.sender, reward_token_address)) revert NotOwnerOrTknMgr();
+        if(!isTokenManagerFor(msg.sender, reward_token_address)) revert NotOwnerOrTknMgr();
         _;
     }
 
     modifier updateRewardAndBalanceMdf(address account, bool sync_too) {
-        updateRewardAndBalance(account, sync_too);
+        _updateRewardAndBalance(account, sync_too, false);
         _;
     }
 
@@ -178,6 +191,9 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
             // For fast token address -> token ID lookups later
             rewardTokenAddrToIdx[_rewardTokens[i]] = i;
 
+            // Add to the mapping
+            isRewardToken[_rewardTokens[i]] = true;
+
             // Initialize the stored rewards
             rewardsPerTokenStored.push(0);
 
@@ -191,26 +207,36 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
             last_gauge_time_totals.push(0);
         }
 
-        // Other booleans
-        // stakesUnlocked = false;
-
         // Initialization
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp + rewardsDuration;
+
+        // Set the max locked stakes
+        max_locked_stakes = 12;
+
+        // Sync the first period finish here with the gauge's 
+        // periodFinish = IFraxGaugeController(gaugeControllers[0]).time_total();
+        periodFinish = IFraxGaugeController(0x3669C421b77340B2979d1A00a792CC2ee0FcE737).time_total();
     }
 
     /* ============= VIEWS ============= */
 
     // ------ REWARD RELATED ------
 
-    // See if the caller_addr is a manager for the reward token 
+    /// @notice Checks if the caller is a manager for the reward token
+    /// @param caller_addr The address of the caller
+    /// @param reward_token_addr The address of the reward token
+    /// @return bool True if the caller is a manager for the reward token
     function isTokenManagerFor(address caller_addr, address reward_token_addr) public view returns (bool){
-        if (caller_addr == owner) return true; // Contract owner
+        if (!isRewardToken[reward_token_addr]) return false;
+        else if (caller_addr == address(0) || reward_token_addr == address(0)) return false;
+        else if (caller_addr == owner) return true; // Contract owner
         else if (rewardManagers[reward_token_addr] == caller_addr) return true; // Reward manager
         return false; 
     }
 
-    // All the reward tokens
+    /// @notice Gets all the reward tokens this contract handles
+    /// @return rewardTokens_ The reward tokens array
     function getAllRewardTokens() external view returns (address[] memory) {
         return rewardTokens;
     }
@@ -220,6 +246,9 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         return Math.min(block.timestamp, periodFinish);
     }
 
+    /// @notice The amount of reward tokens being paid out per second this period
+    /// @param token_idx The index of the reward token
+    /// @return rwd_rate The reward rate
     function rewardRates(uint256 token_idx) public view returns (uint256 rwd_rate) {
         // address gauge_controller_address = gaugeControllers[token_idx];
         if (gaugeControllers[token_idx] != address(0)) {
@@ -233,7 +262,8 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         }
     }
 
-    // Amount of reward tokens per LP token / liquidity unit
+    /// @notice The rate of reward tokens earned per liquidity unit
+    /// @return newRewardsPerTokenStored The new rewards per token stored array
     function rewardsPerToken() public view returns (uint256[] memory newRewardsPerTokenStored) {
         if (_total_liquidity_locked == 0 || _total_combined_weight == 0) {
             return rewardsPerTokenStored;
@@ -249,9 +279,10 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         }
     }
 
-    // Amount of reward tokens an account has earned / accrued
-    // Note: In the edge-case of one of the account's stake expiring since the last claim, this will
-    // return a slightly inflated number
+    /// @notice The amount of reward tokens an account has earned / accrued
+    /// @dev In the edge-case of one of the account's stake expiring since the last claim, this will
+    /// @param account The account to check
+    /// @return new_earned Array of reward token amounts earned by the account
     function earned(address account) public view returns (uint256[] memory new_earned) {
         uint256[] memory reward_arr = rewardsPerToken();
         new_earned = new uint256[](rewardTokens.length);
@@ -267,7 +298,8 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         }
     }
 
-    // Total reward tokens emitted in the given period
+    /// @notice The total reward tokens emitted in the given period
+    /// @return rewards_per_duration_arr Array of reward token amounts emitted in the current period
     function getRewardForDuration() external view returns (uint256[] memory rewards_per_duration_arr) {
         rewards_per_duration_arr = new uint256[](rewardRatesManual.length);
 
@@ -279,23 +311,29 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // ------ LIQUIDITY AND WEIGHTS ------
 
-    // User locked liquidity / LP tokens
+    /// @notice The farm's total locked liquidity / LP tokens
+    /// @return The total locked liquidity
     function totalLiquidityLocked() external view returns (uint256) {
         return _total_liquidity_locked;
     }
 
-    // Total locked liquidity / LP tokens
+    /// @notice A user's locked liquidity / LP tokens
+    /// @param account The address of the account
+    /// @return The locked liquidity
     function lockedLiquidityOf(address account) external view returns (uint256) {
         return _locked_liquidity[account];
     }
 
-    // Total combined weight
+    /// @notice The farm's total combined weight of all users
+    /// @return The total combined weight
     function totalCombinedWeight() external view returns (uint256) {
         return _total_combined_weight;
     }
 
-    // Total 'balance' used for calculating the percent of the pool the account owns
-    // Takes into account the locked stake time multiplier and veFXS multiplier
+    /// @notice Total 'balance' used for calculating the percent of the pool the account owns
+    /// @notice Takes into account the locked stake time multiplier and veFXS multiplier
+    /// @param account The address of the account
+    /// @return The combined weight
     function combinedWeightOf(address account) external view returns (uint256) {
         return _combined_weights[account];
     }
@@ -312,14 +350,10 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     }
     // ------ LOCK RELATED ------
 
-    // Multiplier amount, given the length of the lock
+    /// @notice Reads the lock boost multiplier for a given duration
+    /// @param secs The duration of the lock in seconds
+    /// @return The multiplier amount
     function lockMultiplier(uint256 secs) public view returns (uint256) {
-        // return Math.min(
-        //     lock_max_multiplier,
-        //     uint256(MULTIPLIER_PRECISION) + (
-        //         (secs * (lock_max_multiplier - MULTIPLIER_PRECISION)) / lock_time_for_max_multiplier
-        //     )
-        // ) ;
         return Math.min(
             lock_max_multiplier,
             (secs * lock_max_multiplier) / lock_time_for_max_multiplier
@@ -328,34 +362,52 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // ------ FRAX RELATED ------
 
+    /// @notice The amount of FRAX denominated value being boosted that an address has staked
+    /// @param account The address to check
+    /// @return The amount of FRAX value boosted
     function userStakedFrax(address account) public view returns (uint256) {
         return (fraxPerLPStored * _locked_liquidity[account]) / MULTIPLIER_PRECISION;
     }
 
+    /// @notice The amount of FRAX denominated value being boosted that a proxy address has staked
+    /// @param proxy_address The address to check
+    /// @return The amount of FRAX value boosted
     function proxyStakedFrax(address proxy_address) public view returns (uint256) {
         return (fraxPerLPStored * proxy_lp_balances[proxy_address]) / MULTIPLIER_PRECISION;
     }
 
-    // Max LP that can get max veFXS boosted for a given address at its current veFXS balance
+    /// @notice The maximum LP that can get max veFXS boosted for a given address at its current veFXS balance
+    /// @param account The address to check
+    /// @return The maximum LP that can get max veFXS boosted for a given address at its current veFXS balance
     function maxLPForMaxBoost(address account) external view returns (uint256) {
         return (veFXS.balanceOf(account) * MULTIPLIER_PRECISION * MULTIPLIER_PRECISION) / (vefxs_per_frax_for_max_boost * fraxPerLPStored);
     }
 
-    // Meant to be overridden
+    /// @notice Must be overriden to return the current FRAX per LP token
+    /// @return The current number of FRAX per LP token
     function fraxPerLPToken() public virtual view returns (uint256) {
         revert NeedsFPLPTLogic();
     }
 
     // ------ veFXS RELATED ------
 
+    /// @notice The minimum veFXS required to get max boost for a given address
+    /// @param account The address to check
+    /// @return The minimum veFXS required to get max boost
     function minVeFXSForMaxBoost(address account) public view returns (uint256) {
         return (userStakedFrax(account) * vefxs_per_frax_for_max_boost) / MULTIPLIER_PRECISION;
     }
 
+    /// @notice The minimum veFXS required to get max boost for a given proxy
+    /// @param proxy_address The proxy address
+    /// @return The minimum veFXS required to get max boost
     function minVeFXSForMaxBoostProxy(address proxy_address) public view returns (uint256) {
         return (proxyStakedFrax(proxy_address) * vefxs_per_frax_for_max_boost) / MULTIPLIER_PRECISION;
     }
 
+    /// @notice Looks up a staker's proxy
+    /// @param addr The address to check
+    /// @return the_proxy The proxy address, or address(0)
     function getProxyFor(address addr) public view returns (address){
         if (valid_vefxs_proxies[addr]) {
             // If addr itself is a proxy, return that.
@@ -368,6 +420,9 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         }
     }
 
+    /// @notice The multiplier for a given account, based on veFXS
+    /// @param account The account to check
+    /// @return vefxs_multiplier The multiplier boost for the account
     function veFXSMultiplier(address account) public view returns (uint256 vefxs_multiplier) {
         // Use either the user's or their proxy's veFXS balance
         //  uint256 vefxs_bal_to_use = 0;
@@ -405,10 +460,8 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     /* =============== MUTATIVE FUNCTIONS =============== */
 
-
-    // Proxy can allow a staker to use their veFXS balance (the staker will have to reciprocally toggle them too)
-    // Must come before stakerSetVeFXSProxy
-    // CALLED BY PROXY
+    /// @notice Toggle whether a staker can use the proxy's veFXS balance to boost yields
+    /// @notice Proxy must call this first, then the staker must call stakerSetVeFXSProxy
     function proxyToggleStaker(address staker_address) external {
         if(!valid_vefxs_proxies[msg.sender]) revert InvalidProxy();
 
@@ -423,8 +476,8 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         }
     }
 
-    // Staker can allow a veFXS proxy (the proxy will have to toggle them first)
-    // CALLED BY STAKER
+    /// @notice After proxy toggles staker to true, staker must call and confirm this
+    /// @param proxy_address The address of the veFXS proxy
     function stakerSetVeFXSProxy(address proxy_address) external {
         if(!valid_vefxs_proxies[proxy_address]) revert InvalidProxy();
         if(!proxy_allowed_stakers[proxy_address][msg.sender]) revert ProxyHasNotApprovedYou();
@@ -453,10 +506,19 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // ------ REWARDS SYNCING ------
 
-    function updateRewardAndBalance(address account, bool sync_too) public {
+    function _updateRewardAndBalance(address account, bool sync_too) internal {
+        _updateRewardAndBalance(account, sync_too, false);
+    }
+
+    function _updateRewardAndBalance(address account, bool sync_too, bool pre_sync_vemxstored) internal {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
         if (sync_too){
             sync();
+        }
+
+        // Used to make sure the veFXS multiplier is correct if a stake is increased, before calcCurCombinedWeight
+        if (pre_sync_vemxstored){
+            _vefxsMultiplierStored[account] = veFXSMultiplier(account);
         }
         
         if (account != address(0)) {
@@ -518,8 +580,10 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // ------ REWARDS CLAIMING ------
 
+    /// @notice A function that can be overridden to add extra logic to the getReward function
+    /// @param destination_address The address to send the rewards to
     function getRewardExtraLogic(address destination_address) public nonReentrant {
-        if(rewardsCollectionPaused == true) revert RewardsCollectionPaused();
+        if(rewardsCollectionPaused) revert RewardsCollectionPaused();
 
         return _getRewardExtraLogic(msg.sender, destination_address);
     }
@@ -529,16 +593,26 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     }
 
     /// @notice A function that can be overridden to add extra logic to the pre-transfer process to process curve LP rewards
+    /// @dev param0: from The sender address of the transfer
+    /// @dev param1: to The recipient address of the transfer
+    /// @dev Override in children
     function preTransferProcess(address, address) public virtual {
         revert NeedsPreTransferProcessLogic();
     }
 
     // Two different getReward functions are needed because of delegateCall and msg.sender issues
     // For backwards-compatibility
+    /// @notice Claims rewards to destination address
+    /// @param destination_address The address to send the rewards to
+    /// @return rewards_before The rewards available before the claim
     function getReward(address destination_address) external nonReentrant returns (uint256[] memory) {
         return _getReward(msg.sender, destination_address, true);
     }
 
+    /// @notice Claims rewards to destination address & wether to do extra logic
+    /// @param destination_address The address to send the rewards to
+    /// @param claim_extra_too Whether to do extra logic
+    /// @return rewards_before The rewards available before the claim
     function getReward2(address destination_address, bool claim_extra_too) external nonReentrant returns (uint256[] memory) {
         return _getReward(msg.sender, destination_address, claim_extra_too);
     }
@@ -553,7 +627,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         lastRewardClaimTime[rewardee] = block.timestamp;
         
         // Make sure rewards collection isn't paused
-        if(rewardsCollectionPaused == true) revert RewardsCollectionPaused();
+        if(rewardsCollectionPaused) revert RewardsCollectionPaused();
         
         // Update the rewards array and distribute rewards
         rewards_before = new uint256[](rewardTokens.length);
@@ -611,12 +685,6 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         // lastUpdateTime = periodFinish;
         periodFinish = periodFinish + ((num_periods_elapsed + 1) * rewardsDuration);
 
-        // Update the rewards and time
-        _updateStoredRewardsAndTime();
-
-        // Update the fraxPerLPStored
-        fraxPerLPStored = fraxPerLPToken();
-
         // Pull in rewards and set the reward rate for one week, based off of that
         // If the rewards get messed up for some reason, set this to 0 and it will skip
         // if (rewardRatesManual[1] != 0 && rewardRatesManual[2] != 0) {
@@ -651,6 +719,8 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         lastUpdateTime = lastTimeRewardApplicable();
     }
 
+    /// @notice Updates the gauge weights, if applicable
+    /// @param force_update If true, will update the weights even if the time hasn't elapsed
     function sync_gauge_weights(bool force_update) public {
         // Loop through the gauge controllers
         for (uint256 i; i < gaugeControllers.length; i++){ 
@@ -668,6 +738,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         }
     }
 
+    /// @notice Updates gauge weights, fraxPerLP, pulls in new rewards or updates rewards
     function sync() public {
         // Sync the gauge weight, if applicable
         sync_gauge_weights(false);
@@ -690,6 +761,11 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // ------ PAUSES ------
 
+    /// @notice Owner or governance can pause/unpause staking, withdrawals, rewards collection, and collectRewardsOnWithdrawal
+    /// @param _stakingPaused Whether staking is paused
+    /// @param _withdrawalsPaused Whether withdrawals are paused
+    /// @param _rewardsCollectionPaused Whether rewards collection is paused
+    /// @param _collectRewardsOnWithdrawalPaused Whether collectRewardsOnWithdrawal is paused
     function setPauses(
         bool _stakingPaused,
         bool _withdrawalsPaused,
@@ -704,32 +780,30 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
     
+    /// @notice Owner or governance can unlock stakes - irreversible!
     function unlockStakes() external onlyByOwnGov {
         stakesUnlocked = !stakesUnlocked;
     }
 
-    // Adds a valid veFXS proxy address
+    /// @notice Owner or governance sets whether an address is a valid veFXS proxy
+    /// @param _proxy_addr The address to set
     function toggleValidVeFXSProxy(address _proxy_addr) external onlyByOwnGov {
         valid_vefxs_proxies[_proxy_addr] = !valid_vefxs_proxies[_proxy_addr];
     }
 
-    // Added to support recovering LP Rewards and other mistaken tokens from other systems to be distributed to holders
+    /// @notice Allows owner to recover any ERC20 or token manager to recover their reward token.
+    /// @param tokenAddress The address of the token to recover
+    /// @param tokenAmount The amount of the token to recover
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyTknMgrs(tokenAddress) {
         // Check if the desired token is a reward token
-        bool isRewardToken;
-        for (uint256 i; i < rewardTokens.length; i++){ 
-            if (rewardTokens[i] == tokenAddress) {
-                isRewardToken = true;
-                break;
-            }
-        }
+        bool isRewTkn = isRewardToken[tokenAddress];
 
         // Only the reward managers can take back their reward tokens
         // Also, other tokens, like the staking token, airdrops, or accidental deposits, can be withdrawn by the owner
         if (
-                (isRewardToken && rewardManagers[tokenAddress] == msg.sender)
+                (isRewTkn && rewardManagers[tokenAddress] == msg.sender)
                 || 
-                (!isRewardToken && (msg.sender == owner))
+                (!isRewTkn && (msg.sender == owner))
             ) {
                 TransferHelperV2.safeTransfer(tokenAddress, msg.sender, tokenAmount);
                 return;
@@ -740,8 +814,17 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         }
     }
 
+    /// @notice Sets multiple variables at once
+    /// @param _misc_vars The variables to set:
+    /// [0]: uint256 _lock_max_multiplier,
+    /// [1] uint256 _vefxs_max_multiplier,
+    /// [2] uint256 _vefxs_per_frax_for_max_boost,
+    /// [3] uint256 _vefxs_boost_scale_factor,
+    /// [4] uint256 _lock_time_for_max_multiplier,
+    /// [5] uint256 _lock_time_min
+    /// [6] uint256 _max_stake_limit (must be at greater or equal to old value)
     function setMiscVariables(
-        uint256[6] memory _misc_vars
+        uint256[7] memory _misc_vars
         // [0]: uint256 _lock_max_multiplier, 
         // [1] uint256 _vefxs_max_multiplier, 
         // [2] uint256 _vefxs_per_frax_for_max_boost,
@@ -754,7 +837,6 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         // require((_misc_vars[4] >= 1) && (_misc_vars[5] >= 1), "Must be >= 1");
         /// TODO check this rewrite
         if(_misc_vars[4] < _misc_vars[5]) revert MustBeGEMulPrec();
-        if((_misc_vars[1] < 0) || (_misc_vars[2] < 0) || (_misc_vars[3] < 0)) revert MustBeGEZero();
         if((_misc_vars[4] < 1) || (_misc_vars[5] < 1)) revert MustBeGEOne();
 
         lock_max_multiplier = _misc_vars[0];
@@ -763,21 +845,37 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         vefxs_boost_scale_factor = _misc_vars[3];
         lock_time_for_max_multiplier = _misc_vars[4];
         lock_time_min = _misc_vars[5];
+
+        /// This value can only ever be increased.
+        /// If it were decreased, user locked stakes would be un-reachable for transfers & management, although they would be withdrawable once unlocked.
+        /// If we must be able to decrease, stakes above this value could be made immediately withdrawable
+        if (_misc_vars[6] > max_locked_stakes) {
+            max_locked_stakes = _misc_vars[6];
+        }
     }
 
     // The owner or the reward token managers can set reward rates 
+    /// @notice Allows owner or reward token managers to set the reward rate for a given reward token
+    /// @param reward_token_address The address of the reward token
+    /// @param _new_rate The new reward rate (token amount divided by reward period duration)
+    /// @param _gauge_controller_address The address of the gauge controller for this reward token
+    /// @param _rewards_distributor_address The address of the rewards distributor for this reward token
     function setRewardVars(
         address reward_token_address, 
         uint256 _new_rate, 
         address _gauge_controller_address, 
         address _rewards_distributor_address
     ) external onlyTknMgrs(reward_token_address) {
+        if (!isRewardToken[reward_token_address]) revert NotARewardToken();
         rewardRatesManual[rewardTokenAddrToIdx[reward_token_address]] = _new_rate;
         gaugeControllers[rewardTokenAddrToIdx[reward_token_address]] = _gauge_controller_address;
         rewardDistributors[rewardTokenAddrToIdx[reward_token_address]] = _rewards_distributor_address;
     }
 
     // The owner or the reward token managers can change managers
+    /// @notice Allows owner or reward token managers to change the reward manager for a given reward token
+    /// @param reward_token_address The address of the reward token
+    /// @param new_manager_address The new reward manager address
     function changeTokenManager(address reward_token_address, address new_manager_address) external onlyTknMgrs(reward_token_address) {
         rewardManagers[reward_token_address] = new_manager_address;
     }

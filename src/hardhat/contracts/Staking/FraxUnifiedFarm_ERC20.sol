@@ -20,16 +20,16 @@ import "./FraxUnifiedFarmTemplate.sol";
 
 // Convex wrappers
 // import "../Curve/ICurvefrxETHETHPool.sol";
-import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
-import "../Misc_AMOs/convex/IDepositToken.sol";
-import "../Misc_AMOs/curve/I2pool.sol";
-import "../Misc_AMOs/curve/I2poolToken.sol";
+// import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
+// import "../Misc_AMOs/convex/IDepositToken.sol";
+// import "../Misc_AMOs/curve/I2pool.sol";
+// import "../Misc_AMOs/curve/I2poolToken.sol";
 
 // Fraxlend
 // import '../Fraxlend/IFraxlendPair.sol';
 
 // Fraxswap
-// import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
+import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
 
 // G-UNI
 // import "../Misc_AMOs/gelato/IGUniPool.sol";
@@ -61,13 +61,13 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // -------------------- VARIES --------------------
 
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
-    IConvexStakingWrapperFrax public stakingToken;
-    I2poolToken public curveToken;
-    I2pool public curvePool;
+    // IConvexStakingWrapperFrax public stakingToken;
+    // I2poolToken public curveToken;
+    // I2pool public curvePool;
     // ICurvefrxETHETHPool public curvePool;
 
     // Fraxswap
-    // IFraxswapPair public stakingToken;
+    IFraxswapPair public stakingToken;
 
     // Fraxlend
     // IFraxlendPair public stakingToken;
@@ -391,7 +391,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         }
 
         // Need to call to update the combined weights
-        updateRewardAndBalance(staker_address, false);
+        _updateRewardAndBalance(staker_address, false, true);
     }
 
     function _getStake(address staker_address, bytes32 kek_id) internal view returns (LockedStake memory locked_stake, uint256 arr_idx) {
@@ -463,7 +463,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         );
 
         // Need to call to update the combined weights
-        updateRewardAndBalance(msg.sender, false);
+        _updateRewardAndBalance(msg.sender, false, true);
 
         emit LockedLonger(msg.sender, kek_id, new_secs, block.timestamp, new_ending_ts);
     }
@@ -516,19 +516,26 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // ------ WITHDRAWING ------
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for proxies)
-    function withdrawLocked(bytes32 kek_id, address destination_address) nonReentrant external returns (uint256) {
+    function withdrawLocked(bytes32 kek_id, address destination_address, bool claim_rewards) nonReentrant external returns (uint256) {
         require(withdrawalsPaused == false, "Withdrawals paused");
-        return _withdrawLocked(msg.sender, destination_address, kek_id);
+        return _withdrawLocked(msg.sender, destination_address, kek_id, claim_rewards);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
     function _withdrawLocked(
         address staker_address,
         address destination_address,
-        bytes32 kek_id
+        bytes32 kek_id,
+        bool claim_rewards
     ) internal returns (uint256) {
         // Collect rewards first and then update the balances
-        _getReward(staker_address, destination_address, true);
+        // collectRewardsOnWithdrawalPaused to be used in an emergency situation if reward is overemitted or not available
+        // and the user can forfeit rewards to get their principal back. User can also specify it in withdrawLocked
+        if (claim_rewards || !collectRewardsOnWithdrawalPaused) _getReward(staker_address, destination_address, true);
+        else {
+            // Sync the rewards at least
+            _updateRewardAndBalance(staker_address, true, false);
+        }
 
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(staker_address, kek_id);

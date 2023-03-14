@@ -8,8 +8,8 @@ const chalk = require('chalk');
 const Contract = require('web3-eth-contract');
 const { expectRevert, time } = require('@openzeppelin/test-helpers');
 
-const constants = require(path.join(__dirname, '../../../dist/types/constants'));
-const utilities = require(path.join(__dirname, '../../../dist/misc/utilities'));
+const constants = require(path.join(__dirname, '../../../../dist/types/constants'));
+const utilities = require(path.join(__dirname, '../../../../dist/misc/utilities'));
 
 // Set provider for all later instances to use
 Contract.setProvider('http://127.0.0.1:7545');
@@ -25,12 +25,10 @@ const CrossChainCanonicalFXS = artifacts.require("ERC20/__CROSSCHAIN/CrossChainC
 const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 
 // LP Pairs
-const I2pool = artifacts.require("Misc_AMOs/curve/I2pool");
 const ISaddleLPToken = artifacts.require("Misc_AMOs/saddle/ISaddleLPToken");
 
 // Staking contracts
-const FraxCCFarmV2_ArbiCurveVSTFRAX = artifacts.require("Staking/Variants/FraxCCFarmV2_ArbiCurveVSTFRAX");
-const FraxCCFarmV2_SaddleArbUSDv2 = artifacts.require("Staking/Variants/FraxCCFarmV2_SaddleArbUSDv2");
+const FraxCCFarmV3_ArbiSaddleL2D4 = artifacts.require("Staking/Variants/FraxCCFarmV3_ArbiSaddleL2D4");
 
 const BIG6 = new BigNumber("1e6");
 const BIG18 = new BigNumber("1e18");
@@ -40,7 +38,7 @@ const METAMASK_ADDRESS = "0x6666666666666666666666666666666666666666";
 
 const REWARDS_DURATION = 7 * 86400; // 7 days
 
-contract('FraxCrossChainFarmV2-Tests', async (accounts) => {
+contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 	let CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
 	let CHAIN_ADDRESSES = CONTRACT_ADDRESSES.arbitrum;
 
@@ -55,9 +53,9 @@ contract('FraxCrossChainFarmV2-Tests', async (accounts) => {
 	let STAKING_REWARDS_DISTRIBUTOR;
 	let INVESTOR_CUSTODIAN_ADDRESS;
 	let MIGRATOR_ADDRESS;
-	const ADDRESS_WITH_FXS = '0xbCa9a9Aab13a68d311160D4f997E3D783Da865Fb';
-	const ADDRESS_WITH_REW1_TKN = '0xbCa9a9Aab13a68d311160D4f997E3D783Da865Fb';
-	const ADDRESS_WITH_LP_TOKENS = '0xbCa9a9Aab13a68d311160D4f997E3D783Da865Fb';
+	const ADDRESS_WITH_FXS = '0x5180db0237291A6449DdA9ed33aD90a38787621c';
+	const ADDRESS_WITH_REW1_TKN = '0x5180db0237291A6449DdA9ed33aD90a38787621c';
+	const ADDRESS_WITH_LP_TOKENS = '0x5180db0237291A6449DdA9ed33aD90a38787621c';
 
 	// Initialize core contract instances
 	let canFRAX_instance;
@@ -97,11 +95,10 @@ contract('FraxCrossChainFarmV2-Tests', async (accounts) => {
 		canFXS_instance = await CrossChainCanonicalFXS.deployed();
 
 		// Get instances of the Curve pair 
-		lp_tkn_instance = await I2pool.at(CHAIN_ADDRESSES.pair_tokens["Curve VSTFRAX-f"]);
-		// lp_tkn_instance = await ISaddleLPToken.at(CHAIN_ADDRESSES.bearer_tokens.saddleArbUSDv2);
+		lp_tkn_instance = await ISaddleLPToken.at(CHAIN_ADDRESSES.bearer_tokens.saddleL2D4);
 
 		// Fill the staking rewards instances
-		staking_instance = await FraxCCFarmV2_ArbiCurveVSTFRAX.deployed();
+		staking_instance = await FraxCCFarmV3_ArbiSaddleL2D4.deployed();
 
 		// Fill reward token instance
 		const rew1_address = await staking_instance.rewardsToken1.call();
@@ -550,7 +547,7 @@ contract('FraxCrossChainFarmV2-Tests', async (accounts) => {
 		console.log(chalk.hex("#ff8b3d")("REFILL REWARDS AND SYNC"));
 		console.log(chalk.hex("#ff8b3d")("===================================================================="));
 
-		console.log("Give the staking contract some FXS");
+		console.log("Give the staking contract 1000 FXS");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
 			params: [ADDRESS_WITH_FXS]
@@ -563,7 +560,7 @@ contract('FraxCrossChainFarmV2-Tests', async (accounts) => {
 			params: [ADDRESS_WITH_FXS]
 		});
 
-		console.log("Give the staking contract some REW1");
+		console.log("Give the staking contract 100 REW1");
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
 			params: [ADDRESS_WITH_REW1_TKN]
