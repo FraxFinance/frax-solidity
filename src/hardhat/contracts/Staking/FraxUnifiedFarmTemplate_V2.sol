@@ -48,7 +48,6 @@ import "../Misc_AMOs/convex/IConvexBaseRewardPool.sol";
 
 contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
-    error NeedsPreTransferProcessLogic();
     error NeedsCCCWLogic();
     error NeedsFPLPTLogic();
     error InvalidProxy();
@@ -579,14 +578,6 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     function _getRewardExtraLogic(address, address) internal virtual {
         revert NeedsGRELLogic();
-    }
-
-    /// @notice A function that can be overridden to add extra logic to the pre-transfer process to process curve LP rewards
-    /// @dev param0: from The sender address of the transfer
-    /// @dev param1: to The recipient address of the transfer
-    /// @dev Override in children
-    function preTransferProcess(address, address) public virtual {
-        revert NeedsPreTransferProcessLogic();
     }
 
     // Two different getReward functions are needed because of delegateCall and msg.sender issues

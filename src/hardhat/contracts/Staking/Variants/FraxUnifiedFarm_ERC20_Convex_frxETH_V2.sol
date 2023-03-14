@@ -68,9 +68,4 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH_V2 is FraxUnifiedFarm_ERC20_V2 {
 
         return frax_per_lp_token;
     }
-
-    function preTransferProcess(address from, address to) public override {
-        stakingToken.user_checkpoint(from);
-        stakingToken.user_checkpoint(to);
-    }
 }
