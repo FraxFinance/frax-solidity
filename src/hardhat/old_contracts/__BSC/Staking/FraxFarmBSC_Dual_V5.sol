@@ -357,7 +357,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
         _locked_liquidity[staker_address] = _locked_liquidity[staker_address].add(liquidity);
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(staker_address, false);
+        _updateRewardAndBalance(staker_address, true);
 
         emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
     }

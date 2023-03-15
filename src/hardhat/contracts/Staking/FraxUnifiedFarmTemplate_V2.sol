@@ -165,7 +165,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     }
 
     modifier updateRewardAndBalanceMdf(address account, bool sync_too) {
-        _updateRewardAndBalance(account, sync_too);
+        _updateRewardAndBalance(account, sync_too, false);
         _;
     }
 
@@ -210,8 +210,12 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp + rewardsDuration;
 
-        // set the max locked stakes
+        // Set the max locked stakes
         max_locked_stakes = 12;
+
+        // Sync the first period finish here with the gauge's 
+        // periodFinish = IFraxGaugeController(gaugeControllers[0]).time_total();
+        periodFinish = IFraxGaugeController(0x3669C421b77340B2979d1A00a792CC2ee0FcE737).time_total();
     }
 
     /* ============= VIEWS ============= */
@@ -230,7 +234,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         return false; 
     }
 
-    /// @notice Get's all the reward tokens this contract handles
+    /// @notice Gets all the reward tokens this contract handles
     /// @return rewardTokens_ The reward tokens array
     function getAllRewardTokens() external view returns (address[] memory) {
         return rewardTokens;
@@ -504,9 +508,18 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
     // ------ REWARDS SYNCING ------
 
     function _updateRewardAndBalance(address account, bool sync_too) internal {
+        _updateRewardAndBalance(account, sync_too, false);
+    }
+
+    function _updateRewardAndBalance(address account, bool sync_too, bool pre_sync_vemxstored) internal {
         // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
         if (sync_too){
             sync();
+        }
+
+        // Used to make sure the veFXS multiplier is correct if a stake is increased, before calcCurCombinedWeight
+        if (pre_sync_vemxstored){
+            _vefxsMultiplierStored[account] = veFXSMultiplier(account);
         }
         
         if (account != address(0)) {
@@ -633,6 +646,9 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // If the period expired, renew it
     function retroCatchUp() internal {
+        // Catch up the old rewards first
+        _updateStoredRewardsAndTime();
+        
         // Pull in rewards from the rewards distributor, if applicable
         for (uint256 i; i < rewardDistributors.length; i++){ 
             address reward_distributor_address = rewardDistributors[i];
@@ -664,12 +680,6 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
         // lastUpdateTime = periodFinish;
         periodFinish = periodFinish + ((num_periods_elapsed + 1) * rewardsDuration);
-
-        // Update the rewards and time
-        _updateStoredRewardsAndTime();
-
-        // Update the fraxPerLPStored
-        fraxPerLPStored = fraxPerLPToken();
 
         // Pull in rewards and set the reward rate for one week, based off of that
         // If the rewards get messed up for some reason, set this to 0 and it will skip

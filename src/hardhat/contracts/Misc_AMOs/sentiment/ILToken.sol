@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity >=0.8.0;
+
+interface ILToken {
+  function DOMAIN_SEPARATOR() external view returns(bytes32);
+  function accountManager() external view returns(address);
+  function admin() external view returns(address);
+  function allowance(address, address) external view returns(uint256);
+  function approve(address spender, uint256 amount) external returns(bool);
+  function asset() external view returns(address);
+  function balanceOf(address) external view returns(uint256);
+  function borrows() external view returns(uint256);
+  function borrowsOf(address) external view returns(uint256);
+  function collectFrom(address account, uint256 amt) external returns(bool);
+  function convertToAssets(uint256 shares) external view returns(uint256);
+  function convertToShares(uint256 assets) external view returns(uint256);
+  function decimals() external view returns(uint8);
+  function deposit(uint256 assets, address receiver) external returns(uint256 shares);
+  function getBorrowBalance(address account) external view returns(uint256);
+  function getBorrows() external view returns(uint256);
+  function init(address _asset, string memory _name, string memory _symbol, address _registry, uint256 _originationFee, address _treasury, uint256 _reserveShares, uint256 _maxSupply) external;
+  function initDep(string memory _rateModel) external;
+  function lastUpdated() external view returns(uint256);
+  function lendTo(address account, uint256 amt) external returns(bool isFirstBorrow);
+  function maxDeposit(address) external view returns(uint256);
+  function maxMint(address) external view returns(uint256);
+  function maxRedeem(address owner) external view returns(uint256);
+  function maxSupply() external view returns(uint256);
+  function maxWithdraw(address owner) external view returns(uint256);
+  function mint(uint256 shares, address receiver) external returns(uint256 assets);
+  function name() external view returns(string memory);
+  function nonces(address) external view returns(uint256);
+  function originationFee() external view returns(uint256);
+  function paused() external view returns(bool);
+  function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external;
+  function previewDeposit(uint256 assets) external view returns(uint256);
+  function previewMint(uint256 shares) external view returns(uint256);
+  function previewRedeem(uint256 shares) external view returns(uint256);
+  function previewWithdraw(uint256 assets) external view returns(uint256);
+  function rateModel() external view returns(address);
+  function redeem(uint256 shares, address receiver, address owner) external returns(uint256 assets);
+  function registry() external view returns(address);
+  function symbol() external view returns(string memory);
+  function togglePause() external;
+  function totalAssets() external view returns(uint256);
+  function totalBorrowShares() external view returns(uint256);
+  function totalSupply() external view returns(uint256);
+  function transfer(address to, uint256 amount) external returns(bool);
+  function transferFrom(address from, address to, uint256 amount) external returns(bool);
+  function transferOwnership(address newAdmin) external;
+  function treasury() external view returns(address);
+  function updateMaxSupply(uint256 _maxSupply) external;
+  function updateOriginationFee(uint256 _originationFee) external;
+  function updateState() external;
+  function withdraw(uint256 assets, address receiver, address owner) external returns(uint256 shares);
+}

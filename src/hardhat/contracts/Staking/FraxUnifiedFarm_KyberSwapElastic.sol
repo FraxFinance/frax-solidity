@@ -275,7 +275,7 @@ contract FraxUnifiedFarm_KyberSwapElastic is FraxUnifiedFarmTemplate {
         }
 
         // Need to call to update the combined weights
-        updateRewardAndBalance(staker_address, false);
+        _updateRewardAndBalance(staker_address, true);
     }
 
     function _getStake(address staker_address, uint256 token_id) internal view returns (LockedNFT memory locked_nft, uint256 arr_idx) {
@@ -401,22 +401,30 @@ contract FraxUnifiedFarm_KyberSwapElastic is FraxUnifiedFarmTemplate {
     // ------ WITHDRAWING ------
 
     // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for proxies)
-    function withdrawLocked(uint256 token_id, address destination_address) nonReentrant external returns (uint256) {
+    function withdrawLocked(uint256 token_id, address destination_address, bool claim_rewards) nonReentrant external returns (uint256) {
         require(withdrawalsPaused == false, "Withdrawals paused");
-        return _withdrawLocked(msg.sender, destination_address, token_id);
+        return _withdrawLocked(msg.sender, destination_address, token_id, claim_rewards);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
     function _withdrawLocked(
         address staker_address,
         address destination_address,
-        uint256 token_id
+        uint256 token_id,
+        bool claim_rewards
     ) internal returns (uint256) {
         // Collect rewards first and then update the balances
         // Ignore the extra rewards (LP fees) here for KyberSwap Elastic NFTs when withdrawing
         // If it bugs out, the user's NFT could be permanently stuck in this farm
         // They can always just manually get the LP fees on Kyber's UI once their NFT is withdrawn
-        _getReward(staker_address, destination_address, false);
+        // Collect rewards first and then update the balances
+        // collectRewardsOnWithdrawalPaused to be used in an emergency situation if reward is overemitted or not available
+        // and the user can forfeit rewards to get their principal back. User can also specify it in withdrawLocked
+        if (claim_rewards || !collectRewardsOnWithdrawalPaused) _getReward(staker_address, destination_address, true);
+        else {
+            // Sync the rewards at least
+            _updateRewardAndBalance(staker_address, true);
+        }
 
         LockedNFT memory thisNFT;
         thisNFT.liquidity = 0;

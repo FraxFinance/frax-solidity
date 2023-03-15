@@ -490,7 +490,7 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         }
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(staker_address, false);
+        _updateRewardAndBalance(staker_address, false, true);
     }
 
     // // Add additional LPs to an existing locked stake
@@ -680,22 +680,28 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     /// @notice This function is only callable by the staker.
     /// @param theArrayIndex The index of the stake in the staker's array of stakes.
     /// @param destination_address The address to send the withdrawn liquidity to.
+    /// @param claim_rewards Whether to claim rewards or not
     /// @return The amount of liquidity withdrawn.
-    function withdrawLocked(uint256 theArrayIndex, address destination_address) nonReentrant external returns (uint256) {
+    function withdrawLocked(uint256 theArrayIndex, address destination_address, bool claim_rewards) nonReentrant external returns (uint256) {
         if (withdrawalsPaused) revert WithdrawalsPaused();
-        return _withdrawLocked(msg.sender, destination_address, theArrayIndex);
+        return _withdrawLocked(msg.sender, destination_address, theArrayIndex, claim_rewards);
     }
 
     // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
     function _withdrawLocked(
         address staker_address,
         address destination_address,
-        uint256 theArrayIndex
+        uint256 theArrayIndex,
+        bool claim_rewards
     ) internal returns (uint256) {
         // Collect rewards first and then update the balances
         // collectRewardsOnWithdrawalPaused to be used in an emergency situation if reward is overemitted or not available
-        // and the user can forfeit rewards to get their principal back
-        if (!collectRewardsOnWithdrawalPaused) _getReward(staker_address, destination_address, true);
+        // and the user can forfeit rewards to get their principal back. User can also specify it in withdrawLocked
+        if (claim_rewards || !collectRewardsOnWithdrawalPaused) _getReward(staker_address, destination_address, true);
+        else {
+            // Sync the rewards at least
+            _updateRewardAndBalance(staker_address, true, false);
+        }
 
         // Get the stake by its index
         LockedStake memory thisStake = lockedStakes[staker_address][theArrayIndex];

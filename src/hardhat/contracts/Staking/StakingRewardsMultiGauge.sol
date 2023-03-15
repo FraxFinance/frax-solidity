@@ -626,7 +626,7 @@ contract StakingRewardsMultiGauge is Owned, ReentrancyGuard {
         _locked_liquidity[staker_address] = _locked_liquidity[staker_address].add(liquidity);
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(staker_address, false);
+        _updateRewardAndBalance(staker_address, true);
 
         // Needed for edge case if the staker only claims once, and after the lock expired
         if (lastRewardClaimTime[staker_address] == 0) lastRewardClaimTime[staker_address] = block.timestamp;

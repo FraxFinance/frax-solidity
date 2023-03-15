@@ -522,7 +522,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
         _locked_liquidity[staker_address] = _locked_liquidity[staker_address].add(liquidity);
 
         // Need to call again to make sure everything is correct
-        _updateRewardAndBalance(staker_address, false);
+        _updateRewardAndBalance(staker_address, true);
 
         emit LockNFT(staker_address, liquidity, token_id, secs, source_address);
     }
@@ -580,7 +580,7 @@ contract FraxUniV3Farm_Volatile is Owned, ReentrancyGuard {
             delete lockedNFTs[staker_address][theArrayIndex];
 
             // Need to call again to make sure everything is correct
-            _updateRewardAndBalance(staker_address, false);
+            _updateRewardAndBalance(staker_address, true);
 
             // Give the tokens to the destination_address
             stakingTokenNFT.safeTransferFrom(address(this), destination_address, token_id);

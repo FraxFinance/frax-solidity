@@ -2848,6 +2848,7 @@ export const CONTRACT_ADDRESSES = {
       "Curve VSTFRAX-f": "0x127963A74c07f72D862F2Bdc225226c3251BD117", // Arbitrum
       "mStable FRAX/mUSD": "0x3e14f6EEDCC5Bc1d0Fc7B20B45eAE7B1F74a6AeC", // Polygon
       "Saddle L2D4 [Arbitrum]": "0x9B8AEd182B8A9430C14e97Bf2C02F129f2b36854", // Arbitrum
+      "Sentiment LFrax": "0x86c0A521807f43A646978e9f302BAF693350eAa3", // Arbitrum
       // "Snowball S4D": "0x66fD216bCBeb566EF038A116B7270f241005e186", // Avalanche
       "SpiritSwap FRAX/FXS": "0xebF993690F65B23862E10F489656529ac06A27B8", // Fantom
       "Sushi FRAX/FXS": "", // Polygon
@@ -2942,6 +2943,7 @@ export const CONTRACT_ADDRESSES = {
       FRAX2pool: "0xf07d553B195080F84F582e88ecdD54bAa122b279",
       FRAXBP: "0xC9B8a3FDECB9D5b218d02555a8Baf332E5B740d5", // L2 Curve LP Token and Pool are same contract
       hFRAX: "0xb1c4426C86082D91a6c097fC588E5D5d8dD1f5a8",
+      LFrax: "0x2E9963ae673A885b6bfeDa2f80132CE28b784C40", // Sentiment
       saddleArbUSDv2: "0x0a20c2FFa10cD43F67D06170422505b7D6fC0953",
       saddleL2D4: "0x147D0Af556C6D89640BFa915D2b9619d7b55947a",
       saddleL2D4_Permissionless_Swap: "0xF2839E0b30B5e96083085F498b14bbc12530b734",
@@ -2956,6 +2958,7 @@ export const CONTRACT_ADDRESSES = {
       "Fraxswap V1 FRAX/WETH": "0xb771410E2b1d892C3469711824c44769528fdc89",
       "Fraxswap V2 FRAX/WETH": "0x0BB5A573886bbcecf18590b6Cb59E980FAC7d278",
       "Saddle L2D4 [Arbitrum]": "0x147D0Af556C6D89640BFa915D2b9619d7b55947a",
+      "Sentiment LFrax": "0x2E9963ae673A885b6bfeDa2f80132CE28b784C40",
       "Sushi canFRAX/canFXS": "0xfb5DB4f55Bb97A608f6EE50864104457FA04DA4f",
       "Sushi canFRAX/WETH": "0xaebfda10b251d650126830b952ee74b4a599f71f",
       "Sushi canFRAX/arbiUSDC": "0x8286a9881CEe20E71ac1215f8D39De6853Dd9A8F",
@@ -2964,6 +2967,7 @@ export const CONTRACT_ADDRESSES = {
     staking_contracts: {
       "Curve VSTFRAX-f": "0x127963A74c07f72D862F2Bdc225226c3251BD117",
       "Saddle L2D4 [Arbitrum]": "0xd1dF24e8D225b20F9c8f4912BE88cCCec93f36E5",
+      "Sentiment LFrax": "0xcdE7054e7a232938CdDe8BF40faf827e6f377f54",
       "Olympus Pro FRAX Bond [Arbitrum]": "",
     },
   },
@@ -4067,10 +4071,13 @@ export const CONTRACT_ADDRESSES = {
       // fpi_controller_amo: "0xC03d43d1F3086dB4A1e51fE9d518dd41Dd0a0721",
       market_xyz_liquidity: "0x2182d5Bcc9110594d49530CA3EDAaBFd3C302E6e",
       sushiswap_liquidity: "0xBF667807Ff4d431E2aa77c50497434646F190Bfa", // Old: "0x6800EEdB4cEb7bBc092791C9C5B9b480B6950f09"
+      ragequitter_temple: "0x53f0995a86bd5D349BE693AA99c7F5b78F2dFa0c",
     },
     reward_tokens: {
+      bal: "0x9a71012b13ca4d3d0cdc72a177df3ef03b0e76a3",
       mta: "0xF501dd45a1198C2E1b5aEF5314A68B9006D842E0",
       sushi: "0x0b3f868e0be5597d5db7feb59e1cadbb0fdda50a",
+      weth: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
       wmatic: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
     },
     bearer_tokens: {
@@ -4082,6 +4089,7 @@ export const CONTRACT_ADDRESSES = {
     },
     vamms: {},
     pair_tokens: {
+      "Balancer frxETH-WETH": "0x5DEe84FfA2DC27419Ba7b3419d7146E53e4F7dEd",
       "Fraxswap V1 FRAX/FXS": "0x60AC6d228ffeeefF423879baA02091558e6480dc",
       "Fraxswap V2 FRAX/FXS": "0xd2105fE5f1B631daf2398e918549758Cd181cA7C",
       "Fraxswap V1 FRAX/WMATIC": "0x4F7267Af6DB7B284dF74BEA9e35402987D8C72a7",
@@ -4094,6 +4102,7 @@ export const CONTRACT_ADDRESSES = {
       "Sushi canFXS/polyUSDC": "0xF850c261AdC576E6713D14af590a40d55936a982",
     },
     staking_contracts: {
+      "Balancer frxETH-WETH": "0xAD8B9BaF8e537d520D3F25267F5996e1E7CFae7b",
       "mStable FRAX/mUSD": "0xc425Fd9Ed3C892d849C9E1a971516da1C1B29696",
       // "Sushi FRAX/FXS": "0x6386a4d52966D864698BF9AdA2cd081ab2F487c4"
     },

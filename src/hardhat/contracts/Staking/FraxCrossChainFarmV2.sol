@@ -121,6 +121,7 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
     mapping(address => uint256) public rewards1;
     uint256 public lastRewardPull;
     mapping(address => uint256) internal lastRewardClaimTime; // staker addr -> timestamp
+    mapping(address => uint256) internal lastUserInteractionTime; // staker addr -> timestamp
 
     // Balance tracking
     uint256 private _total_liquidity_locked;
@@ -502,6 +503,9 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
             }
 
         }
+
+        // Update the last user interaction time 
+        lastUserInteractionTime[account] = block.timestamp;
     }
 
     // Add additional LPs to an existing locked stake
@@ -595,7 +599,7 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
         _locked_liquidity[staker_address] = _locked_liquidity[staker_address].add(liquidity);
 
         // Need to call to update the combined weights
-        _updateRewardAndBalance(staker_address, false);
+        _updateRewardAndBalance(staker_address, true);
 
         emit StakeLocked(staker_address, liquidity, secs, kek_id, source_address);
     }
@@ -627,7 +631,7 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
             delete lockedStakes[staker_address][theArrayIndex];
 
             // Need to call to update the combined weights
-            _updateRewardAndBalance(staker_address, false);
+            _updateRewardAndBalance(staker_address, true);
 
             // Give the tokens to the destination_address
             // Should throw if insufficient balance
@@ -664,7 +668,7 @@ contract FraxCrossChainFarmV2 is Owned, ReentrancyGuard {
             emit RewardPaid(rewardee, reward1, address(rewardsToken1), destination_address);
         }
 
-        // Update the last reward claim time
+        // Update the last reward claim and interaction time
         lastRewardClaimTime[rewardee] = block.timestamp;
     }
 
