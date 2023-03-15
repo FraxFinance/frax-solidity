@@ -611,7 +611,8 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
                 lockMultiplier(secs)
             );
 
-            // check that the number of this address' stakes are not over the limit
+            emit StakeLocked(staker_address, liquidity, secs, stakeIndex, source_address);
+
         } else if (!useTargetStakeIndex && lockedStakes[staker_address].length == max_locked_stakes) {
             // look for unused stakes that were previously used but zeroed out by withdrawals or transfers
             (uint256 index, bool success) = _findUnusedStakeIndex(staker_address);
@@ -632,6 +633,8 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
                 lockMultiplier(secs)
             );
 
+            emit StakeLocked(staker_address, liquidity, secs, stakeIndex, source_address);
+            
         } else {
             // Otherwise, we are either locking additional or extending lock duration
             if (!useTargetStakeIndex) revert NoStakeIndexProvided();
@@ -657,6 +660,8 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             
             // set the return value to the index of the stake we altered
             stakeIndex = targetIndex;
+
+            emit StakeManaged(staker_address, liquidity, secs, stakeIndex, source_address);
         }
 
         // if altering balances of a stake, update the liquidities
@@ -669,7 +674,6 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
             // otherwise, only update rewards and balances
             _updateRewardAndBalance(msg.sender, false);
         }
-        emit StakeLocked(staker_address, liquidity, secs, lockedStakes[staker_address].length - 1, source_address);
 
         return stakeIndex;
     }
@@ -982,9 +986,8 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
     // Inherited...
 
     /* ========== EVENTS ========== */
-    event LockedAdditional(address indexed user, uint256 locked_stake_index, uint256 amount);
-    event LockedLonger(address indexed user, uint256 locked_stake_index, uint256 new_secs, uint256 new_start_ts, uint256 new_end_ts);
     event StakeLocked(address indexed user, uint256 amount, uint256 secs, uint256 locked_stake_index, address source_address);
+    event StakeManaged(address indexed user, uint256 liquidity, uint256 secs, uint256 stakeIndex, address source_address);
     event WithdrawLocked(address indexed user, uint256 liquidity, uint256 locked_stake_index, address destination_address);
     
     event Approval(address indexed owner, address indexed spender, uint256 locked_stake_index, uint256 amount);
