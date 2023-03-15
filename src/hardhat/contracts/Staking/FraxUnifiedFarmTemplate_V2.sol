@@ -208,7 +208,6 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
         // Initialization
         lastUpdateTime = block.timestamp;
-        
         // Set the max locked stakes
         max_locked_stakes = 12;
 
