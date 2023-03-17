@@ -147,7 +147,7 @@ contract FraxFamilialGaugeDistributor is Owned {
 
             // get the familial vote weight for this period
             total_familial_relative_weight = 
-                IFraxGaugeController(gauge_controller).gauge_relative_weight_write(address(this), timestamp);
+                IFraxGaugeController(gauge_controller).gauge_relative_weight_write(address(this), block.timestamp);
 
             // update all the gauge weights
             for (uint256 i; i < gauges.length; i++) {
