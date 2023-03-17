@@ -212,8 +212,8 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         max_locked_stakes = 12;
 
         // Sync the first period finish here with the gauge's 
-        // periodFinish = IFraxGaugeController(gaugeControllers[0]).time_total();
-        periodFinish = IFraxGaugeController(0x3669C421b77340B2979d1A00a792CC2ee0FcE737).time_total();
+        periodFinish = IFraxGaugeController(gaugeControllers[0]).time_total();
+        // periodFinish = IFraxGaugeController(0x3669C421b77340B2979d1A00a792CC2ee0FcE737).time_total();
     }
 
     /* ============= VIEWS ============= */
