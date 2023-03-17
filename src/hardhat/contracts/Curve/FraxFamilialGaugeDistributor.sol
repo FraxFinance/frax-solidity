@@ -170,6 +170,9 @@ contract FraxFamilialGaugeDistributor is Owned {
             (weeks_elapsed, reward_tally) = IFraxGaugeFXSRewardsDistributor(rewards_distributor).distributeReward(address(this));
             emit FamilialRewardClaimed(address(this), weeks_elapsed, reward_tally);
 
+            // ensure that reward_tally == the amount of FXS held in this contract
+            require(reward_tally == IERC20(reward_token).balanceOf(address(this)), "tally!=balance");
+            
             // divide the reward_tally amount by the gauge's allocation to get the allocation
             for (uint256 i; i < gauges.length; i++) {
                 if (gauge_active[gauges[i]]) { 
@@ -198,6 +201,7 @@ contract FraxFamilialGaugeDistributor is Owned {
             }
 
             ////////// FINALLY - all other farms are updated, let the calling farm finish execution //////////
+            /// @dev: this contract, after execution through each child farm, should not retain any token!
         }
 
         // preserve the gauge's reward tally for returning to the gauge
