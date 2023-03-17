@@ -31,11 +31,8 @@ import "../Staking/Owned.sol";
 import "../Staking/IFraxFarm.sol";
 import "./IFraxGaugeControllerV2.sol";
 import "../ERC20/IERC20.sol";
-import "../ERC20/SafeERC20.sol";
 
 contract FraxFamilialGaugeDistributor is Owned {
-    using SafeERC20 for IERC20;
-    
     /* ========== STATE VARIABLES ========== */
     /// Note: variables made internal for execution gas savings, available through getters below
 
@@ -188,7 +185,7 @@ contract FraxFamilialGaugeDistributor is Owned {
 
             // call `sync_gauge_weights` on the other gauges
             for (uint256 i; i < gauges.length; i++) {
-                if (gauges[i] != _gauge_calling && gauge_active[gauges[i]]) {
+                if (gauges[i] != child_gauge && gauge_active[gauges[i]]) {
                     IFraxFarm(gauges[i]).sync_gauge_weights(true);
                 }
             }
