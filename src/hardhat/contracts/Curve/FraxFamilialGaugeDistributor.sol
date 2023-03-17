@@ -12,7 +12,7 @@ pragma solidity ^0.8.17;
 // ======================== FraxMiddlemanGauge ========================
 // ====================================================================
 /**
-*   @title FraxFamilialPitchGauge
+*   @title FraxFamilialGaugeDistributor
 *   @notice Redistributes gauge rewards to multiple gauges (FraxFarms) based on each "child" gauge's `total_combined_weight`.
 *   @author Modified version of the FraxMiddlemanGauge - by ZrowGz @ Pitch Foundation
 *   @dev To use this:
@@ -31,7 +31,7 @@ import "../Staking/Owned.sol";
 import "../Staking/IFraxFarm.sol";
 import "./IFraxGaugeControllerV2.sol";
 
-contract FraxFamilialGaugeDistributor is Owned {//, ReentrancyGuard {
+contract FraxFamilialGaugeDistributor is Owned {
     /* ========== STATE VARIABLES ========== */
     /// Note: variables made internal for execution gas savings, available through getters below
 
@@ -46,7 +46,8 @@ contract FraxFamilialGaugeDistributor is Owned {//, ReentrancyGuard {
     /// @notice Address of the FXS Rewards Distributor
     address internal immutable rewards_distributor;
     /// @notice Address of the rewardToken
-    address internal immutable reward_token;// = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0; // FXS
+    // address internal immutable reward_token;// = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0; // FXS
+    address internal constant reward_token = address(0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0); // FXS
 
     ///// Familial Gauge Storage /////
     /// @notice Array of all child gauges
@@ -96,8 +97,8 @@ contract FraxFamilialGaugeDistributor is Owned {//, ReentrancyGuard {
         address _owner,
         address _timelock_address,
         address _rewards_distributor,
-        address _gauge_controller,
-        address _reward_token
+        address _gauge_controller//,
+        // address _reward_token
     ) Owned(_owner) {
         timelock_address = _timelock_address;
 
@@ -106,7 +107,7 @@ contract FraxFamilialGaugeDistributor is Owned {//, ReentrancyGuard {
         name = _name;
 
         gauge_controller = _gauge_controller;
-        reward_token = _reward_token;
+        // reward_token = _reward_token;
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
