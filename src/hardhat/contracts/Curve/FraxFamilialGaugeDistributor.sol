@@ -30,8 +30,12 @@ import '../Uniswap/TransferHelper.sol';
 import "../Staking/Owned.sol";
 import "../Staking/IFraxFarm.sol";
 import "./IFraxGaugeControllerV2.sol";
+import "../ERC20/IERC20.sol";
+import "../ERC20/SafeERC20.sol";
 
 contract FraxFamilialGaugeDistributor is Owned {
+    using SafeERC20 for IERC20;
+    
     /* ========== STATE VARIABLES ========== */
     /// Note: variables made internal for execution gas savings, available through getters below
 
