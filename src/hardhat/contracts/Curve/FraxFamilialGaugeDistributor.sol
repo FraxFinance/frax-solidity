@@ -71,6 +71,8 @@ contract FraxFamilialGaugeDistributor is Owned {
     mapping(address => uint256) internal gauge_to_total_combined_weight;
     
     // Distributor provided 
+    /// @notice The timestamp of the vote period
+    // uint256 public weeks_elapsed;
     /// @notice The amount of FXS awarded to the family by the vote, from the Distributor
     uint256 public reward_tally;
     /// @notice The redistributed FXS rewards payable to each child gauge
