@@ -886,7 +886,8 @@ contract FraxUnifiedFarm_ERC20_V2 is FraxUnifiedFarmTemplate_V2 {
         LockedStake memory senderStake = getLockedStake(addrs[0], sender_lock_index);
 
         // perform checks
-        if (addrs[1] == address(0) || addrs[1] == addrs[0]) {
+        // due to the limit of max_locked_stakes, OK for a user to transfer to themselves to consolidate stakes as needed
+        if (addrs[1] == address(0)) { //|| addrs[1] == addrs[0]) {
             revert InvalidReceiver();
         }
         if (block.timestamp >= senderStake.ending_timestamp || stakesUnlocked) {
