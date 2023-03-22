@@ -71,19 +71,16 @@ contract FraxFamilialGaugeDistributor is Owned {
     mapping(address => uint256) internal gauge_to_total_combined_weight;
     
     // Distributor provided 
-    /// @notice The timestamp of the vote period
-    uint256 public weeks_elapsed;
     /// @notice The amount of FXS awarded to the family by the vote, from the Distributor
     uint256 public reward_tally;
     /// @notice The redistributed FXS rewards payable to each child gauge
     mapping(address => uint256) internal gauge_to_reward_amount;
 
-    // Reward period & Time tracking
-    /// @notice The timestamp of the last reward period
-    // uint256 internal periodFinish;
     /// @notice The number of seconds in a week
     uint256 internal constant rewardsDuration = 604800; // 7 * 86400  (7 days)
 
+    /// Amount sent to gauge this week MOCK ONLY
+    // mapping(address => uint256) public amountSentThisRound;
     /* ========== MODIFIERS ========== */
 
     modifier onlyByOwnGov() {
@@ -109,6 +106,9 @@ contract FraxFamilialGaugeDistributor is Owned {
 
         gauge_controller = _gauge_controller;
         // reward_token = _reward_token;
+
+        // set the time total to the current period
+        time_total_stored = IFraxGaugeController(_gauge_controller).time_total();
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -126,7 +126,7 @@ contract FraxFamilialGaugeDistributor is Owned {
     //       - this results in numerous for loops being used
 
     /// @notice Obtains the rewards, calculates each farm's FXS reward rate, update's the farm reward rate, & sends the FXS to the child
-    function distributeReward(address child_gauge) public returns (uint256, uint256) {
+    function distributeReward(address child_gauge) public returns (uint256 weeks_elapsed, uint256 claimingGaugeRewardAmount) {
         // check that the child gauge is active
         require(gauge_active[child_gauge], "Gauge not active");
         require(child_gauge == msg.sender, "caller!farm");
@@ -134,11 +134,8 @@ contract FraxFamilialGaugeDistributor is Owned {
         // the first call to this within the new rewards period should update everything & call all child farms
         // the call to this is triggered by any interaction with the farm by a user, or by calling `sync`
         if (block.timestamp > time_total_stored) {
-
             ////////// FIRST - update the time period variables //////////
-
-            // store the most recent time_total for the farms to use & prevent this logic from being executed until epoch
-            time_total_stored = IFraxGaugeController(gauge_controller).time_total();//latest_time_total;
+            uint256 num_gauges = gauges.length;
 
             ////////// SECOND - get the reward rates and calculate them for the new period (from controller & distributor) //////////
 
@@ -148,19 +145,26 @@ contract FraxFamilialGaugeDistributor is Owned {
             // get the familial vote weight for this period
             total_familial_relative_weight = 
                 IFraxGaugeController(gauge_controller).gauge_relative_weight_write(address(this), block.timestamp);
+            
+            // store the most recent time_total for the farms to use & prevent this logic from being executed until epoch
+            time_total_stored = IFraxGaugeController(gauge_controller).time_total();//latest_time_total;
+
+            // for the new reward period, zero out the total familial combined weight
+            familial_total_combined_weight = 0;
 
             // update all the gauge weights
-            for (uint256 i; i < gauges.length; i++) {
+            for (uint256 i; i < num_gauges; i++) {
                 // it shouldn't be zero, unless we don't use `delete` to remove a gauge
                 if (gauge_active[gauges[i]]) { 
                     /// update the child gauges' total combined weights
                     gauge_to_total_combined_weight[gauges[i]] = IFraxFarm(gauges[i]).totalCombinedWeight();
                     familial_total_combined_weight += gauge_to_total_combined_weight[gauges[i]];
+
                 }
             }
 
             // divvy up the relative weights based on each gauges `total combined weight` 
-            for (uint256 i; i < gauges.length; i++) {
+            for (uint256 i; i < num_gauges; i++) {
                 if (gauge_active[gauges[i]]) { 
                     gauge_to_last_relative_weight[gauges[i]] = 
                         gauge_to_total_combined_weight[gauges[i]] * total_familial_relative_weight / familial_total_combined_weight;
@@ -171,45 +175,43 @@ contract FraxFamilialGaugeDistributor is Owned {
             (weeks_elapsed, reward_tally) = IFraxGaugeFXSRewardsDistributor(rewards_distributor).distributeReward(address(this));
             emit FamilialRewardClaimed(address(this), weeks_elapsed, reward_tally);
 
-            // ensure that reward_tally == the amount of FXS held in this contract
-            require(reward_tally == IERC20(reward_token).balanceOf(address(this)), "tally!=balance");
-            
             // divide the reward_tally amount by the gauge's allocation to get the allocation
-            for (uint256 i; i < gauges.length; i++) {
+            for (uint256 i; i < num_gauges; i++) {
                 if (gauge_active[gauges[i]]) { 
                     // gauge reward token allocation = family reward amount * gauge's total combined weight / familial total combined weight
                     // note this is NOT the reward rate to write to the farm, just the redistributed amount
-                    gauge_to_reward_amount[gauges[i]] = reward_tally * gauge_to_total_combined_weight[gauges[i]] / familial_total_combined_weight;
+                    gauge_to_reward_amount[gauges[i]] = 
+                        (((1e18 * reward_tally) * gauge_to_total_combined_weight[gauges[i]]) / familial_total_combined_weight) / 1e18;
                 }
             }
-
-            // // call `sync_gauge_weights` on the other gauges
-            // for (uint256 i; i < gauges.length; i++) {
-            //     if (gauges[i] != child_gauge && gauge_active[gauges[i]]) {
-            //         IFraxFarm(gauges[i]).sync_gauge_weights(true);
-            //     }
-            // }
 
             ////////// THIRD - trigger all child gauges to call this contract //////////
 
             // now that this logic won't be ran on the next call & all gauges are updated, call each farm's `sync`
             // during the first call to this contract, it will call all other child farms, but not itsself again
-            for (uint256 i; i < gauges.length; i++) {
+            /// @dev call `sync` because this is a token manager, there is no gauge controller for the farm level
+            for (uint256 i; i < num_gauges; i++) {
                 // if the iteration is not the initial calling gauge & the gauge is active, call `sync`
                 if (gauges[i] != child_gauge && gauge_active[gauges[i]]) {
                     IFraxFarm(gauges[i]).sync();
                 }
             }
+            claimingGaugeRewardAmount = _payRewards(child_gauge);
 
             ////////// FINALLY - all other farms are updated, let the calling farm finish execution //////////
-            /// @dev: this contract, after execution through each child farm, should not retain any token!
+            /// @dev: this contract, after execution through each child farm, should not retain any significant token balance
+        } else {
+            claimingGaugeRewardAmount = _payRewards(child_gauge);
         }
+    }
 
+    function _payRewards(address child_gauge) internal returns (uint256 claimingGaugeRewardAmount) {
         // preserve the gauge's reward tally for returning to the gauge
-        uint256 claimingGaugeRewardAmount = gauge_to_reward_amount[child_gauge];
-        
+        claimingGaugeRewardAmount = gauge_to_reward_amount[child_gauge];
         /// when the reward is distributed, send the amount in gauge_to_reward_amount to the gauge & zero that value out
         TransferHelper.safeTransfer(reward_token, child_gauge, claimingGaugeRewardAmount);
+        /// @dev this is for testing only, commented out.
+        // amountSentThisRound[child_gauge] = claimingGaugeRewardAmount;
         
         // Update the child farm reward vars: reward token, the reward rate/tally, zero address for gauge controller, this address as distributor
         IFraxFarm(child_gauge).setRewardVars(reward_token, (claimingGaugeRewardAmount / rewardsDuration), address(0), address(this));
@@ -217,9 +219,6 @@ contract FraxFamilialGaugeDistributor is Owned {
         // reset the reward tally to zero for the gauge
         gauge_to_reward_amount[child_gauge] = 0;
         emit ChildGaugeRewardDistributed(child_gauge, claimingGaugeRewardAmount);
-
-        // the farm doesn't actually write this anywhere
-        return (weeks_elapsed, claimingGaugeRewardAmount);
     }
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */
@@ -249,6 +248,7 @@ contract FraxFamilialGaugeDistributor is Owned {
         // set the latest period finish for the child gauges
         for (uint256 i; i < _gauges.length; i++) {
             // set gauge to active
+            gauges.push(_gauges[i]);
             gauge_active[_gauges[i]] = true;
             emit ChildGaugeAdded(_gauges[i], _gauges.length - 1);
         }
@@ -259,15 +259,15 @@ contract FraxFamilialGaugeDistributor is Owned {
         gauge_active[gauges[_gaugeIndex]] = false;
     }
 
-    // function setRewardsDistributor(address _rewards_distributor) external onlyByOwnGov {
-    //     emit RewardsDistributorChanged(rewards_distributor, _rewards_distributor);
-    //     rewards_distributor = _rewards_distributor;
-    // }
+    function setRewardsDistributor(address _rewards_distributor) external onlyByOwnGov {
+        emit RewardsDistributorChanged(rewards_distributor, _rewards_distributor);
+        rewards_distributor = _rewards_distributor;
+    }
 
-    // function setGaugeController(address _gauge_controller) external onlyByOwnGov {
-    //     emit GaugeControllerChanged(gauge_controller, _gauge_controller);
-    //     gauge_controller = _gauge_controller;
-    // }
+    function setGaugeController(address _gauge_controller) external onlyByOwnGov {
+        emit GaugeControllerChanged(gauge_controller, _gauge_controller);
+        gauge_controller = _gauge_controller;
+    }
 
     /* ========== GETTERS ========== */
 
@@ -309,12 +309,6 @@ contract FraxFamilialGaugeDistributor is Owned {
             gauge_to_reward_amount[child_gauge]
         );
     }
-
-    // /// @notice Returns the `periodFinish` stored
-    // /// @return periodFinish The periodFinish timestamp when gauges can call to distribute rewards
-    // function periodFinish() external view returns (uint256) {
-    //     return periodFinish;
-    // }
 
     /* ========== EVENTS ========== */
     event ChildGaugeAdded(address gauge, uint256 gauge_index);
