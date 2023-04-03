@@ -29,12 +29,12 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH_V2 is FraxUnifiedFarm_ERC20_V2 {
     {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
-        // Convex frxETHETH only
-        stakingToken = IConvexStakingWrapperFrax(_stakingToken);
-        curveToken = I2poolToken(stakingToken.curveToken());
-        curvePool = ICurvefrxETHETHPool(curveToken.minter());
-        // address token0 = curvePool.coins(0);
-        // frax_is_token0 = false; // Doesn't matter for frxETH
+        // // Convex frxETHETH only
+        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        // curveToken = I2poolToken(stakingToken.curveToken());
+        // curvePool = ICurvefrxETHETHPool(curveToken.minter());
+        // // address token0 = curvePool.coins(0);
+        // // frax_is_token0 = false; // Doesn't matter for frxETH
     }
 
     function getLatestETHPriceE8() public view returns (int) {
@@ -56,20 +56,20 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH_V2 is FraxUnifiedFarm_ERC20_V2 {
     function fraxPerLPToken() public view override returns (uint256) {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
-        // Get the amount of FRAX 'inside' of the lp tokens
-        uint256 frax_per_lp_token;
+        // // Get the amount of FRAX 'inside' of the lp tokens
+        // uint256 frax_per_lp_token;
 
-        // Convex frxETH/ETH
-        // ============================================
-        {
-            // Assume frxETH = ETH for pricing purposes
-            // Get the USD value of the frxETH per LP token
-            uint256 frxETH_in_pool = IERC20(0x5E8422345238F34275888049021821E8E08CAa1f).balanceOf(address(curvePool));
-            uint256 frxETH_usd_val_per_lp_e8 = (frxETH_in_pool * uint256(getLatestETHPriceE8())) / curveToken.totalSupply();
-            frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here
-        }
+        // // Convex frxETH/ETH
+        // // ============================================
+        // {
+        //     // Assume frxETH = ETH for pricing purposes
+        //     // Get the USD value of the frxETH per LP token
+        //     uint256 frxETH_in_pool = IERC20(0x5E8422345238F34275888049021821E8E08CAa1f).balanceOf(address(curvePool));
+        //     uint256 frxETH_usd_val_per_lp_e8 = (frxETH_in_pool * uint256(getLatestETHPriceE8())) / curveToken.totalSupply();
+        //     frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here
+        // }
 
-        return frax_per_lp_token;
+        // return frax_per_lp_token;
     }
 
     function preTransferProcess(address from, address to) public override {

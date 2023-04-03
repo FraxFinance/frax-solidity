@@ -5,10 +5,18 @@ src/hardhat/artifacts/*
 src/hardhat/artifacts/*/*
 src/hardhat/artifacts/*/*/*
 src/hardhat/artifacts/*/*/*/*
+src/hardhat/artifacts-zk/*
+src/hardhat/artifacts-zk/*/*
+src/hardhat/artifacts-zk/*/*/*
+src/hardhat/artifacts-zk/*/*/*/*
 src/hardhat/cache/*
 src/hardhat/cache/*/*
 src/hardhat/cache/*/*/*
 src/hardhat/cache/*/*/*/*
+src/hardhat/cache-zk/*
+src/hardhat/cache-zk/*/*
+src/hardhat/cache-zk/*/*/*
+src/hardhat/cache-zk/*/*/*/*
 src/hardhat/___For_Etherscan/*
 
 # Bin

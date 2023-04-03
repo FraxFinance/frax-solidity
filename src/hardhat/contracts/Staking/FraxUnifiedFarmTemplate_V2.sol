@@ -209,7 +209,6 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
         // Initialization
         lastUpdateTime = block.timestamp;
-        periodFinish = block.timestamp + rewardsDuration;
 
         // Set the max locked stakes
         max_locked_stakes = 12;
@@ -653,6 +652,9 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
 
     // If the period expired, renew it
     function retroCatchUp() internal {
+        // Catch up the old rewards first
+        _updateStoredRewardsAndTime();
+
         // Pull in rewards from the rewards distributor, if applicable
         for (uint256 i; i < rewardDistributors.length; i++){ 
             address reward_distributor_address = rewardDistributors[i];

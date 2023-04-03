@@ -24,7 +24,8 @@
     "@maticnetwork/maticjs": "^3.5.0",
     "@maticnetwork/maticjs-ethers": "^1.0.3",
     "@maticnetwork/maticjs-web3": "^1.0.4",
-    "@openzeppelin/contracts": "^4.8.0",
+    "@matterlabs/hardhat-zksync-chai-matchers": "^0.1.2",
+    "@openzeppelin/contracts": "^4.8.2",
     "@openzeppelin/hardhat-upgrades": "^1.22.0",
     "@poanet/solidity-flattener": "^3.0.8",
     "@solana/spl-token": "^0.3.6",
@@ -63,13 +64,14 @@
     "truffle-contract-size": "^2.0.1",
     "truffle-hdwallet-provider": "^1.0.6",
     "tslib": "^2.4.1",
-    "typescript": "^4.9.4",
     "util": "^0.12.5",
     "web3-eth-contract": "^1.8.1",
     "web3-utils": "^1.8.1",
     "ws": "^8.11.0"
   },
   "devDependencies": {
+    "@matterlabs/hardhat-zksync-deploy": "^0.6.3",
+    "@matterlabs/hardhat-zksync-solc": "^0.3.14",
     "@nomiclabs/hardhat-ethers": "^2.2.1",
     "@nomiclabs/hardhat-etherscan": "^3.1.4",
     "@nomiclabs/hardhat-truffle5": "^2.0.7",
@@ -81,9 +83,12 @@
     "chai": "^4.3.7",
     "ethereum-waffle": "^3.4.4",
     "ethers": "^5.7.2",
-    "hardhat": "^2.12.5",
+    "hardhat": "^2.13.0",
     "hardhat-deploy": "^0.11.22",
     "json-loader": "^0.5.7",
-    "web3": "^1.8.1"
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.3",
+    "web3": "^1.8.1",
+    "zksync-web3": "^0.14.3"
   }
 }
