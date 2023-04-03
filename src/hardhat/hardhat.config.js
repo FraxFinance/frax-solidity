@@ -5,6 +5,8 @@ require('dotenv').config({ path: envPath });
 require('hardhat-deploy');
 require('hardhat-contract-sizer');
 require('hardhat-gas-reporter');
+require("@matterlabs/hardhat-zksync-deploy");
+require("@matterlabs/hardhat-zksync-solc");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-web3");
@@ -12,6 +14,7 @@ require("@nomiclabs/hardhat-etherscan");
 require('@openzeppelin/hardhat-upgrades');
 require("@nomiclabs/hardhat-vyper");
 require('hardhat-spdx-license-identifier');
+
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -40,7 +43,7 @@ module.exports = {
 				// url: `${process.env.AVALANCHE_FORKING_NETWORK_ENDPOINT}`, // Avalanche
 				// url: `${process.env.BOBA_NETWORK_ENDPOINT}`, // Boba
 				// url: `${process.env.BSC_NETWORK_ENDPOINT}`, // BSC
-				url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}`, // Ethereum
+				// url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}`, // Ethereum
 				// url: `${process.env.EVMOS_NETWORK_ENDPOINT}`, // Evmos
 				// url: `${process.env.FANTOM_FORKING_NETWORK_ENDPOINT}`, // Fantom
 				// url: `${process.env.FUSE_NETWORK_ENDPOINT}`, // Fuse
@@ -49,7 +52,8 @@ module.exports = {
 				// url: `${process.env.MOONRIVER_NETWORK_ENDPOINT}`, // Moonriver
 				// url: `${process.env.OPTIMISM_NETWORK_ENDPOINT}`, // Optimism
 				// url: `${process.env.POLYGON_NETWORK_ENDPOINT}`, // Polygon
-				// url: `${process.env.ZKSYNC_NETWORK_ENDPOINT}`, // zkSync
+				url: `${process.env.ZKSYNC_NETWORK_ENDPOINT}`, // zkSync
+				zksync: true
 
 				// TESTING (npx hardhat node --hostname 0.0.0.0)
 				// Also see src/hardhat/justin-scripts/instructions.txt
@@ -118,7 +122,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 30000000000, // 30 Gwei
+			gasPrice: 40000000000, // 40 Gwei
 			gasMultiplier: 1.2,
 		},
 		evmos: {
@@ -188,7 +192,7 @@ module.exports = {
 			},
 			chainId: 10,
 			gas: "auto",
-			gasPrice: 1000000000, // 1 Gwei
+			gasPrice: 10000000, // 0.01 Gwei
 			gasMultiplier: 1.2
 		},
 		polygon: {
@@ -198,7 +202,7 @@ module.exports = {
 			},
 			chainId: 137,
 			gas: "auto",
-			gasPrice: 75000000000, // 75 Gwei
+			gasPrice: 150000000000, // 150 Gwei
 			gasMultiplier: 1.2
 		},
 		polygon_mumbai: {
@@ -231,16 +235,18 @@ module.exports = {
 			gasPrice: "auto",
 			gasMultiplier: 1.2
 		},
-		// zksync: {
-		// 	url: process.env.ZKSYNC_NETWORK_ENDPOINT,
-		// 	accounts: {
-		// 		mnemonic: process.env.ZKSYNC_MNEMONIC_PHRASE
-		// 	},
-		// 	chainId: 123456,
-		// 	gas: "auto",
-		// 	gasPrice: 5000000000, // 5 Gwei
-		// 	gasMultiplier: 1.2
-		// },
+		zksync: {
+			url: process.env.ZKSYNC_NETWORK_ENDPOINT,
+			accounts: {
+				mnemonic: process.env.ZKSYNC_MNEMONIC_PHRASE
+			},
+			chainId: 324,
+			gas: "auto",
+			gasPrice: "auto",
+			// gasPrice: 3000000000, // 3 Gwei
+			gasMultiplier: 1.2,
+			zksync: true
+		},
     },
 	solidity: {
 		compilers: [
@@ -355,24 +361,35 @@ module.exports = {
 			{
 				version: "0.8.17",
 				settings: {
-					viaIR: true,
+					// viaIR: true,
+					// optimizer: {
+					// 	enabled: true,
+					// 	runs: 200000,
+					// 	details: {
+					// 		orderLiterals: true,
+					// 		deduplicate: true,
+					// 		cse: true,
+					// 		constantOptimizer: true,
+					// 		yul: true,
+					// 		yulDetails: {
+					// 			stackAllocation: true
+					// 		}
+					// 	},
+					// }
 					optimizer: {
 						enabled: true,
-						runs: 200000,
-						details: {
-							orderLiterals: true,
-							deduplicate: true,
-							cse: true,
-							constantOptimizer: true,
-							yul: true,
-							yulDetails: {
-								stackAllocation: true
-							}
-						},
+						runs: 100000
 					}
 				}
 			},
 		],
+	},
+	zksolc: {
+		version: "1.3.7",
+		compilerSource: "binary",
+		settings: {
+			// forceEvmla: true // optional. Falls back to EVM legacy assembly if there is a bug with Yul
+		}
 	},
     paths: {
       sources: "./contracts",

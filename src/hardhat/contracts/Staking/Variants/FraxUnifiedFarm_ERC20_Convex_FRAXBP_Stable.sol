@@ -22,26 +22,26 @@ contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Stable is FraxUnifiedFarm_ERC20 {
     {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
-        // // Convex stkcvxBUSDBP and other metaFRAXBPs, where the token is also the pool (Convex Stable/FRAXBP)
-        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
-        // curveToken = I2poolToken(stakingToken.curveToken());
-        // curvePool = I2pool(address(curveToken));
-        // frax_is_token0 = false; // Irrelevant here, as token 0 will be FRAXBP
+        // Convex stkcvxBUSDBP and other metaFRAXBPs, where the token is also the pool (Convex Stable/FRAXBP)
+        stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        curveToken = I2poolToken(stakingToken.curveToken());
+        curvePool = I2pool(address(curveToken));
+        frax_is_token0 = false; // Irrelevant here, as token 0 will be FRAXBP
     }
 
     function fraxPerLPToken() public view override returns (uint256) {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
         
-        // // Get the amount of FRAX 'inside' of the lp tokens
-        // uint256 frax_per_lp_token;
+        // Get the amount of FRAX 'inside' of the lp tokens
+        uint256 frax_per_lp_token;
 
-        // // Convex Stable/FRAXBP
-        // // ============================================
-        // {
-        //     // Half of the LP is FRAXBP. Half of that should be FRAX.
-        //     // Using 0.25 * virtual price for gas savings
-        //     frax_per_lp_token = curvePool.get_virtual_price() / 4; 
-        // }
+        // Convex Stable/FRAXBP
+        // ============================================
+        {
+            // Half of the LP is FRAXBP. Half of that should be FRAX.
+            // Using 0.25 * virtual price for gas savings
+            frax_per_lp_token = curvePool.get_virtual_price() / 4; 
+        }
 
 
         // return frax_per_lp_token;

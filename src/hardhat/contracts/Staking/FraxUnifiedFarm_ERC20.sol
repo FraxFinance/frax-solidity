@@ -19,17 +19,17 @@ import "./FraxUnifiedFarmTemplate.sol";
 // -------------------- VARIES --------------------
 
 // Convex wrappers
-// import "../Curve/ICurvefrxETHETHPool.sol";
-// import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
-// import "../Misc_AMOs/convex/IDepositToken.sol";
-// import "../Misc_AMOs/curve/I2pool.sol";
-// import "../Misc_AMOs/curve/I2poolToken.sol";
+import "../Curve/ICurvefrxETHETHPool.sol";
+import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
+import "../Misc_AMOs/convex/IDepositToken.sol";
+import "../Misc_AMOs/curve/I2pool.sol";
+import "../Misc_AMOs/curve/I2poolToken.sol";
 
 // Fraxlend
 // import '../Fraxlend/IFraxlendPair.sol';
 
 // Fraxswap
-import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
+// import '../Fraxswap/core/interfaces/IFraxswapPair.sol';
 
 // G-UNI
 // import "../Misc_AMOs/gelato/IGUniPool.sol";
@@ -61,13 +61,13 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // -------------------- VARIES --------------------
 
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
-    // IConvexStakingWrapperFrax public stakingToken;
-    // I2poolToken public curveToken;
-    // I2pool public curvePool;
+    IConvexStakingWrapperFrax public stakingToken;
+    I2poolToken public curveToken;
+    I2pool public curvePool;
     // ICurvefrxETHETHPool public curvePool;
 
     // Fraxswap
-    IFraxswapPair public stakingToken;
+    // IFraxswapPair public stakingToken;
 
     // Fraxlend
     // IFraxlendPair public stakingToken;
