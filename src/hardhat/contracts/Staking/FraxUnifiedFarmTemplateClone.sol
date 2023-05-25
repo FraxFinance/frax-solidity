@@ -9,7 +9,7 @@ pragma solidity >=0.8.0;
 // | /_/   /_/   \__,_/_/|_|  /_/   /_/_/ /_/\__,_/_/ /_/\___/\___/   |
 // |                                                                  |
 // ====================================================================
-// ====================== FraxUnifiedFarmTemplate =====================
+// ====================== FraxUnifiedFarmTemplateClone =====================
 // ====================================================================
 // Farming contract that accounts for veFXS
 // Overrideable for UniV3, ERC20s, etc
@@ -49,7 +49,7 @@ import "../Misc_AMOs/bunni/IBunniLens.sol";
 import "../Misc_AMOs/bunni/IBunniMinter.sol";
 // import "../Misc_AMOs/convex/IConvexBaseRewardPool.sol";
 
-contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
+contract FraxUnifiedFarmTemplateClone is Owned, ReentrancyGuard {
 
 
     // -------------------- VARIES --------------------
@@ -638,23 +638,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // lastUpdateTime = periodFinish;
         periodFinish = periodFinish + ((num_periods_elapsed + 1) * rewardsDuration);
 
-        // // Bunni oLIT rewards
-        // // ==========================================
-        // // Pull in rewards and set the reward rate for one week, based off of that
-        // // If the rewards get messed up for some reason, set this to 0 and it will skip
-        // // Should only be called once per week max
-        // if (rewardRatesManual[1] != 0) {
-        //     // oLIT
-        //     // ====================================
-        //     uint256 olit_before = IERC20(rewardTokens[1]).balanceOf(address(this));
-        //     minter.mint(address(stakingToken));
-        //     uint256 olit_after = IERC20(rewardTokens[1]).balanceOf(address(this));
 
-        //     // Set the new reward rate
-        //     rewardRatesManual[1] = (olit_after - olit_before) / rewardsDuration;
-        // }
-
-        // CONVEX EXTRA REWARDS (OLD METHOD)
+        // CONVEX EXTRA REWARDS
         // ==========================================
         // Pull in rewards and set the reward rate for one week, based off of that
         // If the rewards get messed up for some reason, set this to 0 and it will skip

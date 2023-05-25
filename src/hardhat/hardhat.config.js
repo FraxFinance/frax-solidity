@@ -43,7 +43,7 @@ module.exports = {
 				// url: `${process.env.AVALANCHE_FORKING_NETWORK_ENDPOINT}`, // Avalanche
 				// url: `${process.env.BOBA_NETWORK_ENDPOINT}`, // Boba
 				// url: `${process.env.BSC_NETWORK_ENDPOINT}`, // BSC
-				// url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}`, // Ethereum
+				url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}`, // Ethereum
 				// url: `${process.env.EVMOS_NETWORK_ENDPOINT}`, // Evmos
 				// url: `${process.env.FANTOM_FORKING_NETWORK_ENDPOINT}`, // Fantom
 				// url: `${process.env.FUSE_NETWORK_ENDPOINT}`, // Fuse
@@ -52,13 +52,14 @@ module.exports = {
 				// url: `${process.env.MOONRIVER_NETWORK_ENDPOINT}`, // Moonriver
 				// url: `${process.env.OPTIMISM_NETWORK_ENDPOINT}`, // Optimism
 				// url: `${process.env.POLYGON_NETWORK_ENDPOINT}`, // Polygon
-				url: `${process.env.ZKSYNC_NETWORK_ENDPOINT}`, // zkSync
-				zksync: true
+				// url: `${process.env.ZKSYNC_NETWORK_ENDPOINT}`, // zkSync
+				// zksync: true
 
 				// TESTING (npx hardhat node --hostname 0.0.0.0)
 				// Also see src/hardhat/justin-scripts/instructions.txt
 				// url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`, // Ethereum (alternate)
-				// blockNumber: 14806990 // Ethereum (alternate)
+
+				// blockNumber: 17203211 // Pin the block to allow caching
 				
 			},
 			accounts: {
@@ -122,7 +123,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 40000000000, // 40 Gwei
+			gasPrice: 50000000000, // 50 Gwei
 			gasMultiplier: 1.2,
 		},
 		evmos: {
@@ -203,6 +204,16 @@ module.exports = {
 			chainId: 137,
 			gas: "auto",
 			gasPrice: 150000000000, // 150 Gwei
+			gasMultiplier: 1.2
+		},
+		polygon_zkevm: {
+			url: `${process.env.POLYGON_ZKEVM_NETWORK_ENDPOINT}`,
+			accounts: {
+				mnemonic: process.env.POLYGON_ZKEVM_MNEMONIC_PHRASE
+			},
+			chainId: 1101,
+			gas: "auto",
+			gasPrice: 10000000000, // 10 Gwei
 			gasMultiplier: 1.2
 		},
 		polygon_mumbai: {
@@ -385,7 +396,7 @@ module.exports = {
 		],
 	},
 	zksolc: {
-		version: "1.3.7",
+		version: "1.3.9",
 		compilerSource: "binary",
 		settings: {
 			// forceEvmla: true // optional. Falls back to EVM legacy assembly if there is a bug with Yul

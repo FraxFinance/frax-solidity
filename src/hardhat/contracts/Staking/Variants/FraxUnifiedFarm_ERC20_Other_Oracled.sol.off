@@ -1,0 +1,90 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity >=0.8.0;
+
+import "../FraxUnifiedFarm_ERC20.sol";
+import "../../Misc_AMOs/bunni/IBunniGauge.sol";
+import "../../Misc_AMOs/bunni/IBunniTokenLP.sol";
+import "../../Oracle/AggregatorV3Interface.sol";
+import "../../Uniswap_V3/IUniswapV3Pool.sol";
+
+contract FraxUnifiedFarm_ERC20_Other_Oracled is FraxUnifiedFarm_ERC20 {
+
+    // Bunni
+    IBunniTokenLP public lp_tkn;
+    IUniswapV3Pool public univ3_pool;
+
+    // Oracles
+    AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
+
+    constructor (
+        address _owner,
+        address[] memory _rewardTokens,
+        address[] memory _rewardManagers,
+        uint256[] memory _rewardRates,
+        address[] memory _gaugeControllers,
+        address[] memory _rewardDistributors,
+        address _stakingToken 
+    ) 
+    FraxUnifiedFarm_ERC20(_owner , _rewardTokens, _rewardManagers, _rewardRates, _gaugeControllers, _rewardDistributors, _stakingToken)
+    {
+        // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
+        
+        // Bunni
+        stakingToken = IBunniGauge(_stakingToken);
+        lp_tkn = IBunniTokenLP(stakingToken.lp_token());
+        univ3_pool = IUniswapV3Pool(lp_tkn.pool());
+        address token0 = univ3_pool.token0();
+        frax_is_token0 = (token0 == 0x5E8422345238F34275888049021821E8E08CAa1f); // frxETH here
+    }
+
+    function getLatestETHPriceE8() public view returns (int) {
+        // Returns in E8
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+        
+        return price;
+    }
+
+    function setBunniAddrs(address _lens, address _minter) public onlyByOwnGov {
+        lens = IBunniLens(_lens);
+        minter = IBunniMinter(_minter);
+    }
+
+    // In case the rewards get screwed up
+    function toggleBunni3rdPartyOLITClaimer(address _claimer) public onlyByOwnGov {
+        minter.toggle_approve_mint(_claimer);
+    }
+
+    function setETHUSDOracleAddrs(address _eth_usd_oracle_address) public onlyByOwnGov {
+        require(_eth_usd_oracle_address != address(0), "Zero address detected");
+
+        priceFeedETHUSD = AggregatorV3Interface(_eth_usd_oracle_address);
+    }
+
+    function fraxPerLPToken() public view override returns (uint256 frax_per_lp_token) {
+        // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
+
+        // Bunni frxETH/WETH Gauge
+        // ============================================
+        {
+            // Get the BunniKey so you can query the lens
+            IBunniLens.BunniKey memory bkey = IBunniLens.BunniKey({
+                pool: univ3_pool,
+                tickLower: lp_tkn.tickLower(),
+                tickUpper: lp_tkn.tickUpper()
+            });
+            (, uint256 amt0, uint256 amt1) = lens.pricePerFullShare(bkey);
+
+            // Assume frxETH = ETH for pricing purposes
+            // Get the USD value of the frxETH per LP token so it becomes "FRAX"
+            if (frax_is_token0) {
+                // frxETH as token0 actually
+                frax_per_lp_token = (amt0 * uint256(getLatestETHPriceE8())) / (1e8);
+            }
+            else {
+                frax_per_lp_token = (amt1 * uint256(getLatestETHPriceE8())) / (1e8);
+            }
+        }
+
+    }
+}

@@ -12,4 +12,5 @@ contract OwnerTesting {
   function timelock_address() external view returns(address) {}
   function custodian() external view returns(address) {}
   function custodian_address() external view returns(address) {}
+  function rewardManagers(address tkn_addr) external view returns(address) {}
 }

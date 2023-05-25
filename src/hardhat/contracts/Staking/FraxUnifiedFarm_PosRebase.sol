@@ -14,7 +14,7 @@ pragma solidity >=0.8.0;
 // For positive rebase ERC20 Tokens like Aave's aToken and Compound's cToken
 // Uses FraxUnifiedFarmTemplate.sol
 
-import "./FraxUnifiedFarmTemplate.sol";
+import "./FraxUnifiedFarmTemplateClone.sol";
 
 // -------------------- VARIES --------------------
 
@@ -24,7 +24,7 @@ import '../Misc_AMOs/Lending_AMOs/aave/ILendingPool.sol';
 
 // ------------------------------------------------
 
-contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
+contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplateClone {
 
     /* ========== STATE VARIABLES ========== */
 
@@ -68,7 +68,7 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplate {
         address[] memory _rewardDistributors,
         address _stakingToken
     ) 
-    FraxUnifiedFarmTemplate(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers, _rewardDistributors)
+    FraxUnifiedFarmTemplateClone(_owner, _rewardTokens, _rewardManagers, _rewardRatesManual, _gaugeControllers, _rewardDistributors)
     {
         frax_is_token0 = true;
 
