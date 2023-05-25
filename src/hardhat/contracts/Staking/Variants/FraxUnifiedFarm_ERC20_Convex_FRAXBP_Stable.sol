@@ -29,12 +29,9 @@ contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Stable is FraxUnifiedFarm_ERC20 {
         frax_is_token0 = false; // Irrelevant here, as token 0 will be FRAXBP
     }
 
-    function fraxPerLPToken() public view override returns (uint256) {
+    function fraxPerLPToken() public view override returns (uint256 frax_per_lp_token) {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
         
-        // Get the amount of FRAX 'inside' of the lp tokens
-        uint256 frax_per_lp_token;
-
         // Convex Stable/FRAXBP
         // ============================================
         {
@@ -43,7 +40,5 @@ contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Stable is FraxUnifiedFarm_ERC20 {
             frax_per_lp_token = curvePool.get_virtual_price() / 4; 
         }
 
-
-        // return frax_per_lp_token;
     }
 }

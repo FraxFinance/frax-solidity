@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity >=0.8.0;
+
+import "../FraxUnifiedFarm_ERC20.sol";
+import "../../Misc_AMOs/bunni/IBunniTokenLP.sol";
+import "../../Misc_AMOs/bunni/IBunniGauge.sol";
+import "../../Misc_AMOs/bunni/IBunniLens.sol";
+import "../../Misc_AMOs/bunni/IBunniMinter.sol";
+import "../../Oracle/AggregatorV3Interface.sol";
+import "../../Uniswap_V3/IUniswapV3Pool.sol";
+
+contract FraxUnifiedFarm_ERC20_Other is FraxUnifiedFarm_ERC20 {
+
+    // Bunni
+    IBunniTokenLP public lp_tkn;
+    IUniswapV3Pool public univ3_pool;
+
+    constructor (
+        address _owner,
+        address[] memory _rewardTokens,
+        address[] memory _rewardManagers,
+        uint256[] memory _rewardRates,
+        address[] memory _gaugeControllers,
+        address[] memory _rewardDistributors,
+        address _stakingToken 
+    ) 
+    FraxUnifiedFarm_ERC20(_owner , _rewardTokens, _rewardManagers, _rewardRates, _gaugeControllers, _rewardDistributors, _stakingToken)
+    {
+        // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
+        
+        // Bunni
+        stakingToken = IBunniGauge(_stakingToken);
+        lp_tkn = IBunniTokenLP(stakingToken.lp_token());
+        univ3_pool = IUniswapV3Pool(lp_tkn.pool());
+        address token0 = univ3_pool.token0();
+        frax_is_token0 = (token0 == frax_address);
+    }
+
+    function setBunniAddrs(address _lens, address _minter) public onlyByOwnGov {
+        lens = IBunniLens(_lens);
+        minter = IBunniMinter(_minter);
+    }
+
+    // In case the rewards get screwed up
+    function toggleBunni3rdPartyOLITClaimer(address _claimer) public onlyByOwnGov {
+        minter.toggle_approve_mint(_claimer);
+    }
+
+    function fraxPerLPToken() public view override returns (uint256 frax_per_lp_token) {
+        // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
+
+        // Bunni FRAX/USDC Gauge
+        // ============================================
+        {
+            // Get the BunniKey so you can query the lens
+            IBunniLens.BunniKey memory bkey = IBunniLens.BunniKey({
+                pool: univ3_pool,
+                tickLower: lp_tkn.tickLower(),
+                tickUpper: lp_tkn.tickUpper()
+            });
+            (, uint256 amt0, uint256 amt1) = lens.pricePerFullShare(bkey);
+
+            // Calc FRAX per LP
+            if (frax_is_token0) frax_per_lp_token = amt0;
+            else frax_per_lp_token = amt1;
+        }
+
+    }
+}

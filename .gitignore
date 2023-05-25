@@ -22,6 +22,10 @@ src/hardhat/___For_Etherscan/*
 # Bin
 bin
 
+# Lib
+lib
+lib/*
+
 # Forge
 broadcast
 forge-cache

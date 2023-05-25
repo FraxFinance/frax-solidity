@@ -24,6 +24,6 @@
 		"resolveJsonModule": true,
 		"sourceMap": true
 	},
-	"exclude": ["dist", "out", "node_modules"],
+	"exclude": ["dist", "out", "node_modules", "lib"],
 	"include": ["**/*.ts", "**/*.tsx"]
 }

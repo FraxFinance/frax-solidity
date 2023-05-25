@@ -18,6 +18,9 @@ import "./FraxUnifiedFarmTemplate.sol";
 
 // -------------------- VARIES --------------------
 
+// Bunni
+import "../Misc_AMOs/bunni/IBunniGauge.sol";
+
 // Convex wrappers
 import "../Curve/ICurvefrxETHETHPool.sol";
 import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
@@ -122,6 +125,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         // -------------------- VARIES (USE CHILD FOR LOGIC) --------------------
 
+        // Bunni
+        // USE CHILD
+
         // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
         // USE CHILD
 
@@ -162,6 +168,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     function fraxPerLPToken() public virtual view override returns (uint256) {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
+
+        // Bunni
+        // ============================================
+        // USE CHILD
 
         // Convex stkcvxFPIFRAX and stkcvxFRAXBP only
         // ============================================

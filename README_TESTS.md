@@ -1,9 +1,3 @@
-# PREP
-1) Using SAMPLE.env and SAMPLE.env.forge, make local versions of .env and .env.forge
-2) npm install
-3) tsc
-4) forge b
-
 ## FORGE
 **------Testing------**
 Do first
@@ -19,11 +13,10 @@ If you need to fork mainnet
 ```source .env.forge && forge test --fork-url $MAINNET_RPC_URL -vv```
 
 If you need to fork mainnet, single test contract
-```source .env.forge && forge test --fork-url $MAINNET_RPC_URL -vv --match-path ./src/foundry/test/veFPISProxy.t.sol```
+```source .env.forge && forge test --fork-url $MAINNET_RPC_URL -vv --match-path ./src/foundry/test/FXS/FXSDisableVoteTracking.t.sol```
 
 Verbosely test a single contract while forking mainnet
-or ```source .env.forge && forge test --fork-url $MAINNET_RPC_URL -m veFPISProxy.t.sol -vvvvv``` for single test verbosity level 5
-
+or ```source .env && forge test --fork-url $MAINNET_RPC_URL -vvvvv --match-path ./src/foundry/test/XYZ/XYZ.t.sol``` for single test verbosity level 5
 
 ## Hardhat
 **------Testing------**
@@ -34,7 +27,7 @@ npx hardhat compile
 ARBITRUM
 npx hardhat test ./test/__ARBITRUM/CrossChainBridgeBacker_ARBI_AnySwap-Tests.js
 npx hardhat test ./test/__ARBITRUM/FraxCrossChainFarmV2-Tests.js
-npx hardhat test ./test/__ARBITRUM/FraxCrossChainFarmV3-Tests.js
+npx hardhat test ./test/__ARBITRUM/FraxCrossChainFarmV3_ERC20-Tests.js
 npx hardhat test ./test/__ARBITRUM/CurveAMO-ARBI-Tests.js
 
 AURORA
@@ -51,6 +44,7 @@ Todo
 ETHEREUM
 npx hardhat test  ./test/TWAMM_AMO-Tests.js
 npx hardhat test --no-compile ./test/AaveAMO-Tests.js
+npx hardhat test ./test/BAMM/BAMM.js
 npx hardhat test ./test/CPITrackerOracle-Tests.js
 npx hardhat test ./test/ComboOracle_SLP_UniV2_UniV3-Tests.js
 npx hardhat test ./test/CommunalFarm-Tests.js
@@ -65,6 +59,7 @@ npx hardhat test ./test/FraxCrossChainLiquidityTracker-Tests.js
 npx hardhat test ./test/FraxFarmBSC_Dual_V5.js
 npx hardhat test ./test/FraxFarmRageQuitter-Tests.js
 npx hardhat test ./test/Fraxferry/Fraxferry-test.js
+npx hardhat test ./test/FraxferryV2/FerryV2-test.js
 npx hardhat test ./test/FraxGaugeController-Tests.js
 npx hardhat test ./test/FraxLendingAMO.js
 npx hardhat test ./test/FraxLiquidityBridger-Tests.js

@@ -10,6 +10,7 @@ base64-sol/=node_modules/base64-sol/
 ds-test/=lib/forge-std/lib/ds-test/src/
 eth-gas-reporter/=node_modules/eth-gas-reporter/
 forge-std/=lib/forge-std/src/
+frax-std/=lib/frax-standard-solidity/src/
 hardhat-deploy/=node_modules/hardhat-deploy/
 hardhat/=node_modules/hardhat/
 prb-math/=node_modules/prb-math/

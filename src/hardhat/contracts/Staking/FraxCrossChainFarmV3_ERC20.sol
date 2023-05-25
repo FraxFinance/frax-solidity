@@ -41,10 +41,11 @@ import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
 
-
-import '../Misc_AMOs/balancer/IStablePool.sol'; // Balancer frxETH-WETH
-import '../Misc_AMOs/balancer/IBalancerVault.sol'; // Balancer frxETH-WETH
-import "../Oracle/AggregatorV3Interface.sol"; // Balancer frxETH-WETH
+import '../Misc_AMOs/balancer/IBalancerVault.sol'; // Balancer frxETH-bb-a-WETH Gauge
+import '../Misc_AMOs/balancer/IBalancerChildLiquidityGauge.sol'; // Balancer frxETH-bb-a-WETH Gauge
+import '../Misc_AMOs/balancer/IL2BalancerPseudoMinter.sol'; // Balancer frxETH-bb-a-WETH Gauge
+import '../Misc_AMOs/balancer/IStablePool.sol'; // Balancer frxETH-bb-a-WETH Gauge
+import "../Oracle/AggregatorV3Interface.sol"; // Balancer frxETH-bb-a-WETH Gauge
 
 // import '../Misc_AMOs/curve/I2pool.sol'; // Curve 2-token
 // import '../Misc_AMOs/curve/I3pool.sol'; // Curve 3-token
@@ -74,8 +75,8 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
     CrossChainCanonicalFXS public rewardsToken0; // Assumed to be canFXS
     ERC20 public rewardsToken1;
     
-    IStablePool public stakingToken; // Balancer frxETH-WETH
-    AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0xF9680D99D6C9589e2a93a78A04A279e509205945); // For Balancer frxETH-WETH
+    IBalancerChildLiquidityGauge public stakingToken; // Balancer frxETH-bb-a-WETH Gauge
+    AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0xF9680D99D6C9589e2a93a78A04A279e509205945); // For Balancer frxETH-bb-a-WETH Gauge
     function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
         require(_eth_usd_oracle_address != address(0), "Zero address detected");
 
@@ -224,7 +225,7 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
         rewardsToken0 = CrossChainCanonicalFXS(_rewardsToken0);
         rewardsToken1 = ERC20(_rewardsToken1);
         
-        stakingToken = IStablePool(_stakingToken); // frxETH-WETH
+        stakingToken = IBalancerChildLiquidityGauge(_stakingToken); // Balancer frxETH-bb-a-WETH Gauge
         // stakingToken = I2pool(_stakingToken);
         // stakingToken = I3pool(_stakingToken);
         // stakingToken = IStableXPair(_stakingToken);
@@ -301,7 +302,7 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
 
-        // Balancer frxETH-WETH
+        // Balancer frxETH-bb-a-WETH Gauge
         // ============================================
         {
             IBalancerVault vault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
@@ -310,7 +311,8 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
             * withdrawn and held outside the Vault by the Pool's token Asset Manager. The Pool's total balance for `token`
             * equals the sum of `cash` and `managed`.
             */
-            (uint256 cash, uint256 managed, , ) = vault.getPoolTokenInfo(0x5dee84ffa2dc27419ba7b3419d7146e53e4f7ded000200000000000000000a4e, 0xEe327F889d5947c1dc1934Bb208a1E792F953E96);
+        
+            (uint256 cash, uint256 managed, , ) = vault.getPoolTokenInfo(0xd00f9ca46ce0e4a63067c4657986f0167b0de1e5000000000000000000000b42, 0xEe327F889d5947c1dc1934Bb208a1E792F953E96);
             uint256 frxETH_usd_val_per_lp_e8 = ((cash + managed) * uint256(getLatestETHPriceE8())) / stakingToken.totalSupply();
             frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here. Scale up to E18
         }
@@ -815,8 +817,16 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
     // Quasi-notifyRewardAmount() logic
     function syncRewards() internal {
         // Bring in rewards, if applicable
-        if ((address(rewarder) != address(0)) && ((block.timestamp).sub(lastRewardPull) >= rewardsDuration)){
-            rewarder.distributeReward();
+        if ((block.timestamp).sub(lastRewardPull) >= rewardsDuration) {
+            if (address(rewarder) != address(0)) {
+                rewarder.distributeReward();
+            }
+
+            // Pull in reward1 tokens, if possible
+            if (address(rewardsToken1) != address(0)) {
+                IL2BalancerPseudoMinter(0x47B489bf5836f83ABD928C316F8e39bC0587B020).mint(address(stakingToken));
+            }
+
             lastRewardPull = block.timestamp;
         }
 
