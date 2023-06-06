@@ -8,10 +8,9 @@ pragma solidity ^0.8.4;
 - User provides proofs of the L1 payment on L2 and gets the FRAX.
 */
 
-import {RLPReader} from "./RLPReader.sol";
-import {StateProofVerifier as Verifier} from "./StateProofVerifier.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
-import "./interface/IStateRootOracle.sol";
+import "../Fraxoracle/interface/IStateRootOracle.sol";
+import "../Fraxoracle/library/MerkleTreeProver.sol";
 import "hardhat/console.sol";
 
 contract FerryOnL2 {
@@ -79,13 +78,13 @@ contract FerryOnL2 {
    
    function disembark(address captain, uint32 index, uint blockNumber, bytes[] memory _proofAccount,bytes[][] memory _proofValue) external {
       IStateRootOracle.BlockInfo memory blockInfo = stateRootOracle.getBlockInfo(blockNumber);
-      Verifier.Account memory accountPool = proofStorageRoot(blockInfo.stateRoot, L1_ADDRESS, _proofAccount);
+      Verifier.Account memory accountPool = MerkleTreeProver.proofStorageRoot(blockInfo.stateRoot, L1_ADDRESS, _proofAccount);
       CaptainData storage data = captainData[captain];
       if (data.index!=index) revert("Wrong index");
       data.index+=uint32(_proofValue.length); 
       for (uint i=0;i<_proofValue.length;i++) {
          bytes32 slot = bytes32(uint(keccak256(abi.encodePacked(keccak256(abi.encodePacked(abi.encode(captain),bytes32(0))))))+index+i);
-         uint value = uint(proofStorageSlotValue(accountPool.storageRoot, slot, _proofValue[i]).value);
+         uint value = uint(MerkleTreeProver.proofStorageSlotValue(accountPool.storageRoot, slot, _proofValue[i]).value);
          if (value==0) revert("Empty slot");
          uint amount = uint64(value>>160)*REDUCED_DECIMALS;
          address recipient = address(uint160(value));
@@ -116,10 +115,10 @@ contract FerryOnL2 {
       if (transaction.done) revert("Already collected");
       transaction.done=true;
       IStateRootOracle.BlockInfo memory blockInfo = stateRootOracle.getBlockInfo(blockNumber);
-      Verifier.Account memory accountPool = proofStorageRoot(blockInfo.stateRoot, L1_ADDRESS, _proofAccount);
+      Verifier.Account memory accountPool = MerkleTreeProver.proofStorageRoot(blockInfo.stateRoot, L1_ADDRESS, _proofAccount);
       bytes32 hash = keccak256(abi.encodePacked(transaction.amount,transaction.recipient,index));
       bytes32 slot = keccak256(abi.encodePacked(hash,bytes32(uint(1))));
-      uint256 value = proofStorageSlotValue(accountPool.storageRoot, slot, _proofValue).value;
+      uint256 value = MerkleTreeProver.proofStorageSlotValue(accountPool.storageRoot, slot, _proofValue).value;
       if (value==0) { // Not disembarked, return the funds
          if (blockInfo.timestamp<transaction.deadline) revert("Too soon");
          TransferHelper.safeTransfer(address(token),transaction.recipient,transaction.amount+transaction.tip);
@@ -129,7 +128,7 @@ contract FerryOnL2 {
       }
    }
    
-   function proofStorageRoot(bytes32 stateRootHash, address proofAddress, bytes[] memory _proofBytesArray) public view returns (Verifier.Account memory accountPool) {
+   /*function proofStorageRoot(bytes32 stateRootHash, address proofAddress, bytes[] memory _proofBytesArray) public view returns (Verifier.Account memory accountPool) {
       RLPReader.RLPItem[] memory proof = new RLPReader.RLPItem[](_proofBytesArray.length);
       for (uint i=0;i<_proofBytesArray.length;i++) proof[i] = _proofBytesArray[i].toRlpItem();
       accountPool = Verifier.extractAccountFromProof(keccak256(abi.encodePacked(proofAddress)), stateRootHash, proof);
@@ -139,5 +138,5 @@ contract FerryOnL2 {
       RLPReader.RLPItem[] memory proof = new RLPReader.RLPItem[](_proofBytesArray.length);
       for (uint i=0;i<_proofBytesArray.length;i++) proof[i] = _proofBytesArray[i].toRlpItem();
       slotValue = Verifier.extractSlotValueFromProof(keccak256(abi.encodePacked(slot)),storageRoot,proof);
-   }
+   }*/
 }

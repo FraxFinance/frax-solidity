@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.4;
 
-import {RLPReader} from "./RLPReader.sol";
-import {StateProofVerifier as Verifier} from "./StateProofVerifier.sol";
+import {RLPReader} from "./library/RLPReader.sol";
+import {StateProofVerifier as Verifier} from "./library/StateProofVerifier.sol";
 import "hardhat/console.sol";
 
 contract StateProver {

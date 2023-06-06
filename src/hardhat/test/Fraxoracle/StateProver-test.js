@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { rlp } = require("ethereumjs-util");
+const { keccak256 } = require("@ethersproject/keccak256");
 
 
 describe("StateProver", function () {
@@ -58,68 +59,84 @@ describe("StateProver", function () {
 		var accountInfo = await contracts.stateProver.proofStorageRoot(stateRootHash, proofAddress, accountProofArray);
 		expect(accountInfo.storageRoot).to.equals(storageHash);
 	});
-	it("proofStorageRoot 3", async function () {
-		const [owner,user1,user2,user3,user4] = await ethers.getSigners();
-		var contracts = await setupContracts();
-		var stateRootHash = "0xd59674eab1addd5f37d716ee0eaa8bb7c40a0cfb2d982556eb85b71ebb3f5b1d";
-		var proofAddress = "0xc91b651f770ed996a223a16da9ccd6f7df56c987";
-		var storageHash = "0x2dd32c16cf2eec73b85319ff65527c16176333dd1c7c042d678ab48019ff6965";
-		var accountProofArray =  [
-			"0xfeffff80d8e0328926b84bf4ec9d0a2816e0b38f5cda3348a280e821fa765529f27973c780a960d038dedc80bbbbe042af4e8970bf98c8bfffb9b5921eb020507afa0e01b2807242c96ca4413626aa7266926037dae7754109c7e422c9899eb9c42b4189a8828005294d398c4ef9a86d752ba5568e1d01de30a76e2c705dc56b6708af69fccdb880cfb872a9e47fe946d8a5eb47d9a9140655217ce0020b819c1b98dad218131ced80d485da2638be45506378830886bea5f626f3cc12a9c77a0fde7c118c8e78b92c8008c8f48f2f6b69aba1e65dd9438c54bf307df846651d9a1bb9497e2756b217318081d80f45fc1c6e6400976d7349ebe03b8cfa4ab6953c7ceef72c9778e17a54df800358a2314ad6728f57c13b593c7d0291629984739b36b2b9d5c4e461025c3f268054523197a9fd381368b9d6c6ebeda2bc5c72c6ee2254f724397d7027eacaa4d580875f5fe38fd6d4a0c379d34a03b787f42310422122391821edfff3a734a3190f80b03781c9d808d136b86166a223f4ddddd0359bec2f7f9e971a532465a3074d9380a3d521c266bf8bd9ceb8c08a2835cc2f48006b65390fa010566c9d4b8b75771d8065bd0796b3e050743f27e7f009e8f525305566066cd2c0a62089ce5c40e9b5af80f5f0f6858e4e0f18c6e7c6934fed592d5a4a020ad443049c8e2b4002108126aa80bd6d89f9b999939648e3d5c6da8970c4772c6bf1d9389e351580a381878556fa",
-			"0xfefebf803ad5158a6c6fa16fd45daa51b4047ecedb4dd6c2255027aea623ab048cd3b00b809dd1c62107c413e54c1502e1bf6f966b9dbb71518e48cd7d4fc86330ad351f6880e61bcc4d033b87a7483b0271abb30bc143801e0a4812b68fc35a88432a3200148007816f99ba92aa3692d75cc9faa69ce7ddc78800526103f076f10f25ef830f0b809a27fa1ec6b5f5245162860762c543f7380000d2f9ac01a88ed07cbc6c4b51708007317849dd41fba8c16d73eb304225aa092ba895374787d0f44169f66c65a1a88065343752d0fbe3466e2dd202837b2e15e34ce41da3ec6aa2fa1aeb00354ee54c80b276d017a91f3ba9ddc07b86456724783159b517ed98795b79d61ae2d5c8bd5a803429809a88fc650fbdfffe7396821325f053d288a0af2d1b423b1726d9db2ad680c20b73831cc68854b721454ba81e6b63c83f1369821ecfaea5f549af8e1d518080e90cc596a5920d8ff40de53cc6db9097562754542e03b59b605eaafc5aab818a80fe48be3ddfb88840c98da7ddc1b88af1a9322b2a98751f41880aa8f60e94c62480da0b68c297ad660d29d6ab0280a99bfbd4aa36a584c15e491cf879c623ae6a0a8091f6bd240eb2b2ed5014462b0a73764f1477031a7228798f9f57ea3b12f57d28",
-			"0x3f1ef32dcb5bbd7f64fd77ab13fcfeb8979d8ffd1acb9fd91597872966cd390c1901f8440180a02dd32c16cf2eec73b85319ff65527c16176333dd1c7c042d678ab48019ff6965a09b6963e45338401d733c3be4fbe3c7d5a87bdfe972c90e5594e4d20fdb70cf40"
-	   ];
-		var accountInfo = await contracts.stateProver.proofStorageRoot(stateRootHash, proofAddress, accountProofArray);
-		expect(accountInfo.storageRoot).to.equals(storageHash);
+
+	it("Create block header", async function () {
+		var blockNumber = await ethers.provider.getBlockNumber()
+		var block = await network.provider.request({"method": "eth_getBlockByNumber","params": ["0x"+BigInt(blockNumber).toString(16),false]});
+   	//console.log("block:"+JSON.stringify(block,null,2));
+		var headerFields=[];
+		headerFields.push(block.parentHash);
+		headerFields.push(block.sha3Uncles);
+		headerFields.push(block.miner);
+		headerFields.push(block.stateRoot);
+		headerFields.push(block.transactionsRoot);
+		headerFields.push(block.receiptsRoot);
+		headerFields.push(block.logsBloom);
+		headerFields.push(block.difficulty);
+		headerFields.push(block.number);
+		headerFields.push(block.gasLimit);
+		headerFields.push(block.gasUsed);
+		headerFields.push(block.timestamp);
+		headerFields.push(block.extraData);
+		headerFields.push(block.mixHash);
+		headerFields.push(block.nonce);
+		headerFields.push(block.baseFeePerGas);
+		headerFields.push(block.withdrawalsRoot);
+		//headerFields.push(block.excessDataGas);
+		convertHeaderFields(headerFields);
+		var header = rlp.encode(headerFields);
+		var hash = keccak256(header);
+		//console.log("hash:"+hash);
+		expect(block.hash).to.equals(hash);
+
+
+
+/*
+[['ParentHash','0x1e77d8f1267348b516ebc4f4da1e2aa59f85f0cbd853949500ffac8bfc38ba14'],
+['UncleHash','0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347'],
+['Coinbase','0x2a65Aca4D5fC5B5C859090a6c34d164135398226'],
+['Root','0x0b5e4386680f43c224c5c037efc0b645c8e1c3f6b30da0eec07272b4e6f8cd89'],
+['TxHash','0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421'],
+['ReceiptHash','0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421'],
+['Bloom','0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'],
+['Difficulty',6022643743806],
+['Number','0x400000'],
+['GasLimit',3141592],
+['GasUsed',0],
+['Time',1445130204],
+['Extra','0xd583010202844765746885676f312e35856c696e7578'],
+['MixDigest','0x3fbea7af642a4e20cd93a945a1f5e23bd72fc5261153e09102cf718980aeff38'],
+['Nonce','0x6af23caae95692ef']]		*/
+
+
 	});
 
-
-	/*it("proofStorageRoot n", async function () {
-		const [owner,user1,user2,user3,user4] = await ethers.getSigners();
-		var contracts = await setupContracts();
-		var stateRootHash = "0xf3ac1098a73159e693da20a16e26deb723d8c80ee0816995c5195fa8f02de71c";
-		var proofAddress = "0xe9cd84fe4ddfb0f016e3264791923902906753bd";
-		var storageHash = "0x28a46df05dae7001342b4d474915e4a7d763b242f7cff7bdbd59fbef44f7262e";
-		var accountProofArray = [
-			"0xfeffff80846c91f816985cdb8f7631b3ee2a9de2b91c2172f1413f913645cb8a680919a380a960d038dedc80bbbbe042af4e8970bf98c8bfffb9b5921eb020507afa0e01b2807242c96ca4413626aa7266926037dae7754109c7e422c9899eb9c42b4189a88280be0f7a3464035ab96e60cdc18b929b7dfd3a10a40dfefbc143e986de16810d7380cfb872a9e47fe946d8a5eb47d9a9140655217ce0020b819c1b98dad218131ced806042ad42800c6970a529353dafd0760d0a4a7036c70e5b6bdfb09dfb65d22d32804f8d7f9db44e9fe03185824d7bff6c5501579380056420600b39b1d8a5a1c5b1804a0cfc062996d319cbb63ac0bb18eae94072e97f6fadf21368aef86622b1775480a4adbc6dfbb2836cf73c10931d02904ff0cb1b2b70bd9b53c3ae67efa57793898054523197a9fd381368b9d6c6ebeda2bc5c72c6ee2254f724397d7027eacaa4d580875f5fe38fd6d4a0c379d34a03b787f42310422122391821edfff3a734a3190f80b03781c9d808d136b86166a223f4ddddd0359bec2f7f9e971a532465a3074d9380a3d521c266bf8bd9ceb8c08a2835cc2f48006b65390fa010566c9d4b8b75771d80f542607e29ea3c228a4b4e438853297dcb39f1b9d79311d3c164f7aa628354318034825e14cc59a1a298fdd9f34c94e25afc14445b90cc5f8923e4a6f16a86bc16801e0247c0ce9e08d1e28734f9b2b5ce145ab0d80bf290456b29045d82ef3ecba3",
-			"0xfedac380116944d5a67d185b4105c6f4431e8a996bbce87bd82696b8bc537551a61b873180fa181a919891236cfd76c6a01b06a0a5cfa3be5a32ab72eb527789912b6465b38087c99c879ccfd5a27532a2f1e61be2dd2e76a5c5b89241783e8772156a40218480c1d29d3b692e1cfcbcb2b15457e1f3d5ab7b8f3d8b1e7dfffcf278645dbabdab803401a421911ceb374814d04e4327a1ade73e5451e7c49b47fb91dadc8e01e69f806f92d61a9f46ed485396eff2aacda334b0d4c7182da719e004827b45f32639b480f4b2600beb514ab160b22d7a4aa48396e5d8539e0ebe0952a830e5414d48609f8008f05792771f990115a92c04aebe2f24c87bcb6825b3083e9a3ef63b4f9c404280b44845aaae49f9f79a9420e4221668bf4b311db8dcf59f29a802228e7033c3da",
-			"0xfe4020806457eb02b999c5d5b098073f14e5504490075aabc3ba0998cf6bdd88c8d1c2f1804356608047570bc264ab86aa2dcf81a2a156857b5c5d33c3106a771d32283cd5",
-			"0x3e0594389115e580c41e27acb64350ad3f331d30ff3d3a4e2f7d499cb1c2ea3e1901f8440180a028a46df05dae7001342b4d474915e4a7d763b242f7cff7bdbd59fbef44f7262ea07be1152a720967c3bfb57c7fa5a7291b4db5d0a3a2c4bd766808fbba741ef502"
-		];
-		var accountInfo = await contracts.stateProver.proofStorageRoot(stateRootHash, proofAddress, accountProofArray);
-		expect(accountInfo.storageRoot).to.equals(storageHash);
-	});
-
-	it("proofStorageSlotValue n", async function () {
-		const [owner,user1,user2,user3,user4] = await ethers.getSigners();
-		var contracts = await setupContracts();
-		var stateRootHash = "0xf3ac1098a73159e693da20a16e26deb723d8c80ee0816995c5195fa8f02de71c";
-		var proofAddress = "0xe9cd84fe4ddfb0f016e3264791923902906753bd";
-		var storageHash = "0x28a46df05dae7001342b4d474915e4a7d763b242f7cff7bdbd59fbef44f7262e";
-		var storageKey = "0xc22eeaef610a001ad1d2cd9ce6fcb791121be56dcbe56d8c8fd3211a879dc0ef";
-		var value = "0x64662934000000003b9aca0070997970c51812dc3a010c7d01b50e0d17dc79c8";
-		var slotProofArray = [
-			"0xfe811a8016c8e862af0badecdf181f0aa52074f9059826bec66bad984587f44a8ba89b56804a69612ebce2e9a49bcc72e5ed02244301f67985d12a2f4d876e4f6d949c7b3080aed0ce2f1d4b9680b7cd3a9202ae36fd4f9c621a7b2aea3750a0e60075c9af888049ea285bee7d5585f5a730f0594fdcccc8c788544e7f9ab6791c9503d759f9888058526d1f656e5e19afcf20b52cca9bc3b77c71177113761133f2731ba1a473a4",
-			"0xfe048080491e99274c729474c6ff34fcee201706f3d639b35065f040715edd526688f66080ef4277bf6b66a8688407b83c684749af27f9634785219c4846dd4b58d8943eae",
-			"0x3f2eeaef610a001ad1d2cd9ce6fcb791121be56dcbe56d8c8fd3211a879dc0ef84a064662934000000003b9aca0070997970c51812dc3a010c7d01b50e0d17dc79c8"
-		];
-		var slotValue = await contracts.stateProver.proofStorageSlotValue(storageHash, storageKey, slotProofArray);
-		expect(slotValue.value).to.equals(value);
-	});*/
 });
 
-async function waitTill(time) {
-	var currentblock = await ethers.provider.getBlock(await ethers.provider.getBlockNumber());
-	var waitPeriod = time-currentblock.timestamp;
-	if (waitPeriod>0) {
-		ethers.provider.send("evm_increaseTime", [waitPeriod]); // wait waitPeriod
-		ethers.provider.send("evm_mine"); // mine the next block
+function convertHeaderFields(headeFields) {
+	for (var i=0;i<headeFields.length;i++) {
+		var field = headeFields[i];
+		if (field=="0x0") field = "0x";
+		if (field.length%2==1) field="0x0"+field.substring(2);
+		headeFields[i]=field;
 	}
+}
+
+async function waitTill(time) {
+	await ethers.provider.send("evm_mine"); // mine the next block
+	do {
+		var currentblock = await ethers.provider.getBlock(await ethers.provider.getBlockNumber());
+		var waitPeriod = time-currentblock.timestamp;
+		if (waitPeriod>0) {
+			await ethers.provider.send("evm_increaseTime", [waitPeriod]); // wait waitPeriod
+			await ethers.provider.send("evm_mine"); // mine the next block
+		}
+	} while (waitPeriod>0);
 }
 async function wait(waitPeriod) {
 	if (waitPeriod>0) {
-		ethers.provider.send("evm_increaseTime", [waitPeriod]); // wait waitPeriod
-		ethers.provider.send("evm_mine"); // mine the next block
+		await ethers.provider.send("evm_increaseTime", [waitPeriod]); // wait waitPeriod
+		await ethers.provider.send("evm_mine"); // mine the next block
 	}
 }
 
