@@ -5,7 +5,7 @@ import "../interface/IBlockhashProvider.sol";
 
 contract TelepathyBlockhashProvider is IBlockhashProvider {
    address public l1Source;
-   address deployer;
+   address immutable deployer;
    address immutable public telepathyRouter;
    mapping(bytes32 => bool) storedHashes;
    

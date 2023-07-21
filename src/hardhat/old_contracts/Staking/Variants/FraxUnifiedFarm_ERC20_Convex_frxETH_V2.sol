@@ -35,6 +35,13 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH_V2 is FraxUnifiedFarm_ERC20_V2 {
         // curvePool = ICurvefrxETHETHPool(curveToken.minter());
         // // address token0 = curvePool.coins(0);
         // // frax_is_token0 = false; // Doesn't matter for frxETH
+
+        // Convex swETHfrxETH
+        stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        curveToken = I2poolToken(stakingToken.curveToken());
+        curvePool = ICurvefrxETHETHPool(curveToken.minter());
+        // address token0 = curvePool.coins(0);
+        // frax_is_token0 = false; // Doesn't matter for frxETH
     }
 
     function getLatestETHPriceE8() public view returns (int) {
@@ -59,7 +66,7 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH_V2 is FraxUnifiedFarm_ERC20_V2 {
         // // Get the amount of FRAX 'inside' of the lp tokens
         // uint256 frax_per_lp_token;
 
-        // // Convex frxETH/ETH
+        // // Convex frxETH/ETH and Convex swETH/frxETH
         // // ============================================
         // {
         //     // Assume frxETH = ETH for pricing purposes

@@ -5,12 +5,19 @@ import "../interface/IBlockhashProvider.sol";
 import "@arbitrum/nitro-contracts/src/libraries/AddressAliasHelper.sol";
 
 contract ArbitrumBlockhashProvider is IBlockhashProvider {
-   address immutable public l1Source;
+   address public l1Source;
+   address immutable deployer;
    mapping(bytes32 => bool) storedHashes;
    
    event BlockhashReceived(bytes32 hash);
    
-   constructor(address _l1Source) {
+   constructor() {
+      deployer = msg.sender;
+   }
+   
+   function init(address _l1Source) external {
+      require (msg.sender==deployer);
+      require(l1Source==address(0));
       l1Source = _l1Source;
    }
    

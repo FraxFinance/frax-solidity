@@ -27,12 +27,15 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
     {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
-        // // Convex frxETHETH only
+        // Most Convex frxETH/XYZ (TOKEN != MINTER)
         // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
         // curveToken = I2poolToken(stakingToken.curveToken());
         // curvePool = ICurvefrxETHETHPool(curveToken.minter());
-        // // address token0 = curvePool.coins(0);
-        // // frax_is_token0 = false; // Doesn't matter for frxETH
+
+        // Some Convex frxETH/XYZ (TOKEN = MINTER))
+        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        // curveToken = I2poolToken(stakingToken.curveToken());
+        // curvePool = ICurvefrxETHETHPool(stakingToken.curveToken());
     }
 
     function getLatestETHPriceE8() public view returns (int) {
@@ -52,11 +55,11 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
     function fraxPerLPToken() public view override returns (uint256) {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
-        // // Get the amount of FRAX 'inside' of the lp tokens
-        // uint256 frax_per_lp_token;
+        // Get the amount of FRAX 'inside' of the lp tokens
+        uint256 frax_per_lp_token;
 
-        // // Convex frxETH/ETH
-        // // ============================================
+        // Convex frxETH/XYZ
+        // ============================================
         // {
         //     // Assume frxETH = ETH for pricing purposes
         //     // Get the USD value of the frxETH per LP token
@@ -65,6 +68,6 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
         //     frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here
         // }
 
-        // return frax_per_lp_token;
+        return frax_per_lp_token;
     }
 }

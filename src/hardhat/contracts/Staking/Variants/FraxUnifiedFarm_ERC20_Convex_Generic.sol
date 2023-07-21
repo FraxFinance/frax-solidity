@@ -4,10 +4,10 @@ pragma solidity >=0.8.0;
 import "../FraxUnifiedFarm_ERC20.sol";
 import "../../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
 import "../../Misc_AMOs/convex/IDepositToken.sol";
-import "../../Misc_AMOs/curve/I2pool.sol";
 import "../../Misc_AMOs/curve/I2poolToken.sol";
+import "../../Misc_AMOs/curve/I2pool.sol";
 
-contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Stable is FraxUnifiedFarm_ERC20 {
+contract FraxUnifiedFarm_ERC20_Convex_Generic is FraxUnifiedFarm_ERC20 {
 
     constructor (
         address _owner,
@@ -22,22 +22,27 @@ contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Stable is FraxUnifiedFarm_ERC20 {
     {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
-        // // Convex stkcvxBUSDBP and other metaFRAXBPs, where the token is also the pool (Convex Stable/FRAXBP)
+        // // Convex crvUSD/FRAX
+        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        // curveToken = I2poolTokenNoLending(stakingToken.curveToken());
+        // frax_is_token0 = true; 
+
+        // // Convex FRAX/USDP
         // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
         // curveToken = I2poolToken(stakingToken.curveToken());
-        // curvePool = I2pool(address(curveToken));
-        // frax_is_token0 = false; // Irrelevant here, as token 0 will be FRAXBP
+        // curvePool = I2pool(curveToken.minter());
+        // frax_is_token0 = true; 
     }
 
     function fraxPerLPToken() public view override returns (uint256 frax_per_lp_token) {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
         
-        // // Convex Stable/FRAXBP
-        // // ============================================
+        // Convex crvUSD/FRAX
+        // ============================================
         // {
-        //     // Half of the LP is FRAXBP. Half of that should be FRAX.
-        //     // Using 0.25 * virtual price for gas savings
-        //     frax_per_lp_token = curvePool.get_virtual_price() / 4; 
+        //     // Half of the LP should be FRAX
+        //     // Using 0.50 * virtual price for gas savings
+        //     frax_per_lp_token = curvePool.get_virtual_price() / 2; 
         // }
 
     }

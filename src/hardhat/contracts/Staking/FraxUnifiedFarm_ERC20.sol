@@ -19,14 +19,15 @@ import "./FraxUnifiedFarmTemplate.sol";
 // -------------------- VARIES --------------------
 
 // Bunni
-import "../Misc_AMOs/bunni/IBunniGauge.sol";
+// import "../Misc_AMOs/bunni/IBunniGauge.sol";
 
 // Convex wrappers
-import "../Curve/ICurvefrxETHETHPool.sol";
-import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
-import "../Misc_AMOs/convex/IDepositToken.sol";
-import "../Misc_AMOs/curve/I2pool.sol";
-import "../Misc_AMOs/curve/I2poolToken.sol";
+// import "../Curve/ICurvefrxETHETHPool.sol";
+// import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
+// import "../Misc_AMOs/convex/IDepositToken.sol";
+// import "../Misc_AMOs/curve/I2pool.sol";
+// import "../Misc_AMOs/curve/I2poolToken.sol";
+// import "../Misc_AMOs/curve/I2poolTokenNoLending.sol";
 
 // Fraxlend
 // import '../Fraxlend/IFraxlendPair.sol';
@@ -36,6 +37,9 @@ import "../Misc_AMOs/curve/I2poolToken.sol";
 
 // G-UNI
 // import "../Misc_AMOs/gelato/IGUniPool.sol";
+
+// KyberSwap Elastic KyberSwapFarmingToken (KS-FT)
+import "../Misc_AMOs/kyberswap/elastic/IKyberSwapFarmingToken.sol";
 
 // mStable
 // import '../Misc_AMOs/mstable/IFeederPool.sol';
@@ -63,10 +67,15 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // -------------------- VARIES --------------------
 
+    // Convex crvUSD/FRAX
+    // IConvexStakingWrapperFrax public stakingToken;
+    // I2poolTokenNoLending public curveToken;
+    // ICurvefrxETHETHPool public curvePool;
+
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
-    IConvexStakingWrapperFrax public stakingToken;
-    I2poolToken public curveToken;
-    I2pool public curvePool;
+    // IConvexStakingWrapperFrax public stakingToken;
+    // I2poolToken public curveToken;
+    // I2pool public curvePool;
     // ICurvefrxETHETHPool public curvePool;
 
     // Fraxswap
@@ -77,6 +86,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // G-UNI
     // IGUniPool public stakingToken;
+
+    // KyberSwap Elastic KyberSwapFarmingToken (KS-FT)
+    IKyberSwapFarmingToken public stakingToken;
     
     // mStable
     // IFeederPool public stakingToken;
@@ -142,6 +154,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // address token0 = address(stakingToken.token0());
         // frax_is_token0 = (token0 == frax_address);
 
+        // KyberSwap Elastic KyberSwapFarmingToken (KS-FT)
+        stakingToken = IKyberSwapFarmingToken(_stakingToken);
+
         // mStable
         // stakingToken = IFeederPool(_stakingToken);
 
@@ -201,6 +216,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
         // }
+
+        // KyberSwap Elastic KyberSwapFarmingToken (KS-FT)
+        // ============================================
+        // USE CHILD
 
         // mStable
         // ============================================
