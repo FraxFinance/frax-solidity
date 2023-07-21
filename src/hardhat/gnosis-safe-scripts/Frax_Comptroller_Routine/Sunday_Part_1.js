@@ -8,12 +8,9 @@ const util = require("util");
 const chalk = require("chalk");
 const fse = require("fs-extra");
 const { formatUnits } = require("ethers/lib/utils");
-
+const { BIG6, BIG18, stringifyReplacer, serializeJSONObject, calculateChecksum, GetCVXMintAmount } = require("../utils/utils");
 global.artifacts = artifacts;
 global.web3 = web3;
-
-const BIG6 = BigNumber.from(10).pow(6);
-const BIG18 = BigNumber.from(10).pow(18);
 
 const hre = require("hardhat");
 
@@ -34,7 +31,7 @@ const batch_json = {
 }
 
 async function main() {
-	// Set up the provider for some future calls
+	// Set up the provider for some future informational calls
 	[owner, addr1, addr2] = await ethers.getSigners();
 
 	// Useful info to use later
@@ -55,59 +52,59 @@ async function main() {
 	const thisBlock = await ethers.provider.getBlock(await ethers.provider.getBlockNumber());
 
 
-	// ===============================================================
-	// ===================== WEEKLY veFXS YIELD ======================
-	// ===============================================================
+	// // ===============================================================
+	// // ===================== WEEKLY veFXS YIELD ======================
+	// // ===============================================================
 
-	// Approve for weekly veFXS rewards
-	// =====================================
-	batch_json.transactions.push({
-		"to": "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [
-				{
-					"internalType": "address",
-					"name": "spender",
-					"type": "address"
-				},
-				{
-					"internalType": "uint256",
-					"name": "amount",
-					"type": "uint256"
-				}
-			],
-			"name": "approve",
-			"payable": false
-		},
-		"contractInputsValues": {
-			"spender": "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
-			"amount": "7500000000000000000000"
-		}
-	});
+	// // Approve for weekly veFXS rewards
+	// // =====================================
+	// batch_json.transactions.push({
+	// 	"to": "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0",
+	// 	"value": "0",
+	// 	"data": null,
+	// 	"contractMethod": {
+	// 		"inputs": [
+	// 			{
+	// 				"internalType": "address",
+	// 				"name": "spender",
+	// 				"type": "address"
+	// 			},
+	// 			{
+	// 				"internalType": "uint256",
+	// 				"name": "amount",
+	// 				"type": "uint256"
+	// 			}
+	// 		],
+	// 		"name": "approve",
+	// 		"payable": false
+	// 	},
+	// 	"contractInputsValues": {
+	// 		"spender": "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
+	// 		"amount": "3250000000000000000000"
+	// 	}
+	// });
 
-	// NotifyRewardAmount for weekly veFXS rewards
-	// =====================================
-	batch_json.transactions.push({
-		"to": "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "amount",
-					"type": "uint256"
-				},
-			],
-			"name": "notifyRewardAmount",
-			"payable": false
-		},
-		"contractInputsValues": {
-			"amount": "7500000000000000000000"
-		}
-	});
+	// // NotifyRewardAmount for weekly veFXS rewards
+	// // =====================================
+	// batch_json.transactions.push({
+	// 	"to": "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
+	// 	"value": "0",
+	// 	"data": null,
+	// 	"contractMethod": {
+	// 		"inputs": [
+	// 			{
+	// 				"internalType": "uint256",
+	// 				"name": "amount",
+	// 				"type": "uint256"
+	// 			},
+	// 		],
+	// 		"name": "notifyRewardAmount",
+	// 		"payable": false
+	// 	},
+	// 	"contractInputsValues": {
+	// 		"amount": "3250000000000000000000"
+	// 	}
+	// });
 
 
 	// ===============================================================
@@ -214,17 +211,18 @@ async function main() {
 	// 	}
 	// });
 
-	// Convex Frax FRAX/USDC rewards
+	// Convex Frax FRAX/USDC (stkcvxFRAXBP) rewards
 	const IStakingProxyConvex = path.join(__dirname, '../../artifacts/contracts/Misc_AMOs/convex/IStakingProxyConvex.sol/IStakingProxyConvex.json');
 	const { abi: IStakingProxyConvex_ABI } = JSON.parse( await fse.readFileSync(IStakingProxyConvex, 'utf-8'));
 	const convex_frax_usdc_staking_proxy = new ethers.Contract("0x2AA609715488B09EFA93883759e8B089FBa11296", IStakingProxyConvex_ABI).connect(owner);
 	const convex_frax_usdc_rewards = await convex_frax_usdc_staking_proxy.earned();
 	const crv_from_convex_frax_usdc = BigNumber.from(convex_frax_usdc_rewards[1][1]);
 	const cvx_from_convex_frax_usdc = BigNumber.from(convex_frax_usdc_rewards[1][2]);
-	// FRAXBP rewards get saved/reinvested
-	summary_info.crv_to_save = summary_info.crv_to_save.add(crv_from_convex_frax_usdc);
+	// FRAXBP rewards: 50% of CRV and 100% of CVX is saved/reinvested
+	summary_info.crv_to_save = summary_info.crv_to_save.add(crv_from_convex_frax_usdc.mul(50).div(100));
+	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_usdc.mul(50).div(100));
 	summary_info.cvx_to_lock = summary_info.cvx_to_lock.add(cvx_from_convex_frax_usdc);
-	console.log(`----------- Convex Frax FRAX/USDC -----------`);
+	console.log(`----------- Convex Frax FRAX/USDC (stkcvxFRAXBP) -----------`);
 	console.log(`CRV: ${formatUnits(crv_from_convex_frax_usdc, 18)}`);
 	console.log(`CVX: ${formatUnits(cvx_from_convex_frax_usdc, 18)}`);
 
@@ -241,14 +239,14 @@ async function main() {
 		"contractInputsValues": null
 	});
 
-	// Convex Frax Frax/FPI rewards
+	// Convex Frax Frax/FPI (stkcvxFPIFRAX) rewards
 	const convex_frax_fpi_staking_proxy = new ethers.Contract("0x2df2378103baB456457329D4C603440B92b9c0bd", IStakingProxyConvex_ABI).connect(owner);
 	const convex_frax_fpi_rewards = await convex_frax_fpi_staking_proxy.earned();
 	const crv_from_convex_frax_fpi = BigNumber.from(convex_frax_fpi_rewards[1][1]);
 	const cvx_from_convex_frax_fpi = BigNumber.from(convex_frax_fpi_rewards[1][2]);
 	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_fpi);
 	summary_info.cvx_to_sell = summary_info.cvx_to_sell.add(cvx_from_convex_frax_fpi);
-	console.log(`----------- Convex Frax FRAX/FPI -----------`);
+	console.log(`----------- Convex Frax FRAX/FPI (stkcvxFPIFRAX) -----------`);
 	console.log(`CRV: ${formatUnits(crv_from_convex_frax_fpi, 18)}`);
 	console.log(`CVX: ${formatUnits(cvx_from_convex_frax_fpi, 18)}`);
 	// =====================================
@@ -945,7 +943,35 @@ async function main() {
 	summary_info.crv_to_convert_to_cvxcrv = BigNumber.from(0);
 	summary_info.cvxcrv_direct_collected = summary_info.cvxcrv_direct_collected.add(slipped_cvxcrv_out);
 
-	// Lock the cvxCRV in Convex
+	// Lock the cvxCRV in Convex (approve)
+	// =====================================
+	batch_json.transactions.push({
+		"to": "0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7",
+		"value": "0",
+		"data": null,
+		"contractMethod": {
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "spender",
+					"type": "address"
+				},
+				{
+					"internalType": "uint256",
+					"name": "amount",
+					"type": "uint256"
+				}
+			],
+			"name": "approve",
+			"payable": false
+		},
+		"contractInputsValues": {
+			"spender": "0xaa0C3f5F7DFD688C6E646F66CD2a6B66ACdbE434",
+			"amount": summary_info.cvxcrv_direct_collected.toString()
+		}
+	});
+
+	// Lock the cvxCRV in Convex (stake)
 	// =====================================
 	batch_json.transactions.push({
 		"to": "0xaa0C3f5F7DFD688C6E646F66CD2a6B66ACdbE434",
@@ -1002,67 +1028,6 @@ async function main() {
 		"utf8"
 	);
 
-}
-
-const stringifyReplacer = (_, value) => (value === undefined ? null : value)
-
-const serializeJSONObject = (json) => {
-  if (Array.isArray(json)) {
-    return `[${json.map((el) => serializeJSONObject(el)).join(',')}]`
-  }
-
-  if (typeof json === 'object' && json !== null) {
-    let acc = ''
-    const keys = Object.keys(json).sort()
-    acc += `{${JSON.stringify(keys, stringifyReplacer)}`
-
-    for (let i = 0; i < keys.length; i++) {
-      acc += `${serializeJSONObject(json[keys[i]])},`
-    }
-
-    return `${acc}}`
-  }
-
-  return `${JSON.stringify(json, stringifyReplacer)}`
-}
-
-const calculateChecksum = (batchFile) => {
-  const serialized = serializeJSONObject({
-    ...batchFile,
-    meta: { ...batchFile.meta, name: null },
-  })
-  const sha = web3.utils.sha3(serialized)
-
-  return sha || undefined
-}
-
-
-// From https://docs.convexfinance.com/convexfinanceintegration/cvx-minting
-const GetCVXMintAmount = ( crvEarned, cvxTotalSupply ) => {
-	// Constants
-	let cliffSize = BigNumber.from("1000000000000000000").mul(100000); // New cliff every 100000 tokens
-	let cliffCount = BigNumber.from("1000"); // 1,000 cliffs
-	let maxSupply = BigNumber.from("1000000000000000000").mul(100000000); // 100 mil max supply
-    
-    // Get current cliff
-    let currentCliff = cvxTotalSupply.div(cliffSize);
-    
-    // If current cliff is under the max
-    if(currentCliff.lt(cliffCount)){
-        // Get remaining cliffs
-        let remaining = cliffCount.sub(currentCliff);
-        
-        // Multiply ratio of remaining cliffs to total cliffs against amount CRV received
-        var cvxEarned = (crvEarned.mul(remaining)).div(cliffCount);
-    
-        // Double check we have not gone over the max supply
-        var amountTillMax = maxSupply.sub(cvxTotalSupply);
-        if(cvxEarned.gt(amountTillMax)){
-            cvxEarned = amountTillMax;
-        }
-        return cvxEarned;
-    }
-    return BigNumber.from(0);
 }
 
 main()

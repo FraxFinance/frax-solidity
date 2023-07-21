@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity >=0.8.0;
+
+interface ICrossChainCanonical {
+  function DOMAIN_SEPARATOR (  ) external view returns ( bytes32 );
+  function PERMIT_TYPEHASH (  ) external view returns ( bytes32 );
+  function acceptOwnership (  ) external;
+  function addBridgeToken ( address bridge_token_address ) external;
+  function addMinter ( address minter_address ) external;
+  function allBridgeTokens (  ) external view returns ( address[] memory );
+  function allowance ( address owner, address spender ) external view returns ( uint256 );
+  function approve ( address spender, uint256 amount ) external returns ( bool );
+  function balanceOf ( address account ) external view returns ( uint256 );
+  function bridge_tokens ( address ) external view returns ( bool );
+  function bridge_tokens_array ( uint256 ) external view returns ( address );
+  function burn ( uint256 amount ) external;
+  function burnFrom ( address account, uint256 amount ) external;
+  function canSwap ( address ) external view returns ( bool );
+  function custodian_address (  ) external view returns ( address );
+  function decimals (  ) external view returns ( uint8 );
+  function decreaseAllowance ( address spender, uint256 subtractedValue ) external returns ( bool );
+  function exchangeCanonicalForOld ( address bridge_token_address, uint256 token_amount ) external returns ( uint256 bridge_tokens_out );
+  function exchangeOldForCanonical ( address bridge_token_address, uint256 token_amount ) external returns ( uint256 canonical_tokens_out );
+  function exchangesPaused (  ) external view returns ( bool );
+  function fee_exempt_list ( address ) external view returns ( bool );
+  function increaseAllowance ( address spender, uint256 addedValue ) external returns ( bool );
+  function mint_cap (  ) external view returns ( uint256 );
+  function minter_burn ( uint256 amount ) external;
+  function minter_mint ( address m_address, uint256 m_amount ) external;
+  function minters ( address ) external view returns ( bool );
+  function minters_array ( uint256 ) external view returns ( address );
+  function name (  ) external view returns ( string memory );
+  function nominateNewOwner ( address _owner ) external;
+  function nominatedOwner (  ) external view returns ( address );
+  function nonces ( address owner ) external view returns ( uint256 );
+  function owner (  ) external view returns ( address );
+  function permit ( address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s ) external;
+  function recoverERC20 ( address tokenAddress, uint256 tokenAmount ) external;
+  function removeMinter ( address minter_address ) external;
+  function setCustodian ( address _custodian_address ) external;
+  function setMintCap ( uint256 _mint_cap ) external;
+  function setSwapFees ( address bridge_token_address, uint256 _bridge_to_canonical, uint256 _canonical_to_old ) external;
+  function setTimelock ( address new_timelock ) external;
+  function swap_fees ( address, uint256 ) external view returns ( uint256 );
+  function symbol (  ) external view returns ( string memory );
+  function timelock_address (  ) external view returns ( address );
+  function toggleBridgeToken ( address bridge_token_address ) external;
+  function toggleExchanges (  ) external;
+  function toggleFeesForAddress ( address the_address ) external;
+  function totalSupply (  ) external view returns ( uint256 );
+  function transfer ( address recipient, uint256 amount ) external returns ( bool );
+  function transferFrom ( address sender, address recipient, uint256 amount ) external returns ( bool );
+  function withdrawBridgeTokens ( address bridge_token_address, uint256 bridge_token_amount ) external;
+}

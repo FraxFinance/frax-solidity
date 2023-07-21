@@ -41,14 +41,16 @@ import "../ERC20/ERC20.sol";
 import '../Uniswap/TransferHelper.sol';
 import "../ERC20/SafeERC20.sol";
 
-import '../Misc_AMOs/balancer/IBalancerVault.sol'; // Balancer frxETH-bb-a-WETH Gauge
-import '../Misc_AMOs/balancer/IBalancerChildLiquidityGauge.sol'; // Balancer frxETH-bb-a-WETH Gauge
-import '../Misc_AMOs/balancer/IL2BalancerPseudoMinter.sol'; // Balancer frxETH-bb-a-WETH Gauge
-import '../Misc_AMOs/balancer/IStablePool.sol'; // Balancer frxETH-bb-a-WETH Gauge
-import "../Oracle/AggregatorV3Interface.sol"; // Balancer frxETH-bb-a-WETH Gauge
-
+// import '../Misc_AMOs/balancer/IBalancerVault.sol'; // Balancer frxETH-bb-a-WETH Gauge
+// import '../Misc_AMOs/balancer/IBalancerChildLiquidityGauge.sol'; // Balancer frxETH-bb-a-WETH Gauge
+// import '../Misc_AMOs/balancer/IL2BalancerPseudoMinter.sol'; // Balancer frxETH-bb-a-WETH Gauge
+// import '../Misc_AMOs/balancer/IStablePool.sol'; // Balancer frxETH-bb-a-WETH Gauge
+// import "../Oracle/AggregatorV3Interface.sol"; // Balancer frxETH-bb-a-WETH Gauge
 // import '../Misc_AMOs/curve/I2pool.sol'; // Curve 2-token
 // import '../Misc_AMOs/curve/I3pool.sol'; // Curve 3-token
+import '../Misc_AMOs/kyberswap/elastic/IKSElasticLMV2.sol'; // KyberSwap Elastic
+import '../Misc_AMOs/kyberswap/elastic/IKyberSwapFarmingToken.sol'; // KyberSwap Elastic
+import '../Misc_AMOs/kyberswap/elastic/IKSReinvestmentTokenPool.sol'; // KyberSwap Elastic
 // import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
 // import '../Misc_AMOs/impossible/IStableXPair.sol'; // Impossible
 // import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
@@ -75,20 +77,24 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
     CrossChainCanonicalFXS public rewardsToken0; // Assumed to be canFXS
     ERC20 public rewardsToken1;
     
-    IBalancerChildLiquidityGauge public stakingToken; // Balancer frxETH-bb-a-WETH Gauge
-    AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0xF9680D99D6C9589e2a93a78A04A279e509205945); // For Balancer frxETH-bb-a-WETH Gauge
-    function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
-        require(_eth_usd_oracle_address != address(0), "Zero address detected");
+    // KyberSwap Elastic
+    IKyberSwapFarmingToken public stakingToken; // KyberSwap Elastic
 
-        priceFeedETHUSD = AggregatorV3Interface(_eth_usd_oracle_address);
-    }
-    function getLatestETHPriceE8() public view returns (int) {
-        // Returns in E8
-        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
-        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+    // Balancer frxETH-bb-a-WETH Gauge
+    // IBalancerChildLiquidityGauge public stakingToken; // Balancer frxETH-bb-a-WETH Gauge
+    // AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0xF9680D99D6C9589e2a93a78A04A279e509205945); // For Balancer frxETH-bb-a-WETH Gauge
+    // function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
+    //     require(_eth_usd_oracle_address != address(0), "Zero address detected");
+
+    //     priceFeedETHUSD = AggregatorV3Interface(_eth_usd_oracle_address);
+    // }
+    // function getLatestETHPriceE8() public view returns (int) {
+    //     // Returns in E8
+    //     (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
+    //     require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
         
-        return price;
-    }
+    //     return price;
+    // }
     
     // I2pool public stakingToken; // Curve 2-token
     // I3pool public stakingToken; // Curve 3-token
@@ -225,7 +231,7 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
         rewardsToken0 = CrossChainCanonicalFXS(_rewardsToken0);
         rewardsToken1 = ERC20(_rewardsToken1);
         
-        stakingToken = IBalancerChildLiquidityGauge(_stakingToken); // Balancer frxETH-bb-a-WETH Gauge
+        // stakingToken = IBalancerChildLiquidityGauge(_stakingToken); // Balancer frxETH-bb-a-WETH Gauge
         // stakingToken = I2pool(_stakingToken);
         // stakingToken = I3pool(_stakingToken);
         // stakingToken = IStableXPair(_stakingToken);
@@ -234,6 +240,7 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
         // stakingToken = ILToken(_stakingToken);
         // stakingToken = ILPToken(_stakingToken);
         // stakingToken = IUniswapV2Pair(_stakingToken);
+        stakingToken = IKyberSwapFarmingToken(_stakingToken); // KyberSwap Elastic
 
         timelock_address = _timelock_address;
         rewarder = FraxCrossChainRewarder(_rewarder_address);
@@ -304,18 +311,18 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
 
         // Balancer frxETH-bb-a-WETH Gauge
         // ============================================
-        {
-            IBalancerVault vault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-            /**
-            * `cash` is the number of tokens the Vault currently holds for the Pool. `managed` is the number of tokens
-            * withdrawn and held outside the Vault by the Pool's token Asset Manager. The Pool's total balance for `token`
-            * equals the sum of `cash` and `managed`.
-            */
+        // {
+        //     IBalancerVault vault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+        //     /**
+        //     * `cash` is the number of tokens the Vault currently holds for the Pool. `managed` is the number of tokens
+        //     * withdrawn and held outside the Vault by the Pool's token Asset Manager. The Pool's total balance for `token`
+        //     * equals the sum of `cash` and `managed`.
+        //     */
         
-            (uint256 cash, uint256 managed, , ) = vault.getPoolTokenInfo(0xd00f9ca46ce0e4a63067c4657986f0167b0de1e5000000000000000000000b42, 0xEe327F889d5947c1dc1934Bb208a1E792F953E96);
-            uint256 frxETH_usd_val_per_lp_e8 = ((cash + managed) * uint256(getLatestETHPriceE8())) / stakingToken.totalSupply();
-            frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here. Scale up to E18
-        }
+        //     (uint256 cash, uint256 managed, , ) = vault.getPoolTokenInfo(0xd00f9ca46ce0e4a63067c4657986f0167b0de1e5000000000000000000000b42, 0xEe327F889d5947c1dc1934Bb208a1E792F953E96);
+        //     uint256 frxETH_usd_val_per_lp_e8 = ((cash + managed) * uint256(getLatestETHPriceE8())) / stakingToken.totalSupply();
+        //     frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here. Scale up to E18
+        // }
 
         // Curve 2-token
         // ============================================
@@ -347,6 +354,32 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
         //         total_frax_reserves = stakingToken.balances(2);
         //     }
         //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        // }
+
+        // KyberSwap Elastic
+        // ============================================
+        // {
+        //     IKSReinvestmentTokenPool memory pool = IKSReinvestmentTokenPool(0xA852DDD69C13d42669840A692f6bBf94245ac54A);
+        //     address coin0 = pool.token0();
+        //     address coin1 = pool.token1();
+        //     uint256 total_frax_reserves;
+        //     if (coin0 == frax_address) {
+        //         total_frax_reserves = ERC20(coin0).balanceOf(address(pool));
+        //     }
+        //                // INCOMPLETE
+        //                           // INCOMPLETE
+        //                                      // INCOMPLETE
+        //                                                 // INCOMPLETE
+        //                                                            // INCOMPLETE
+        //                                                                       // INCOMPLETE
+        //                                                                                  // INCOMPLETE
+        //     else {
+        //         total_frax_reserves = ERC20(coin1).balanceOf(address(pool));
+        //     }
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+
+        //     // INCOMPLETE
+
         // }
 
         // mStable
@@ -824,7 +857,8 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
 
             // Pull in reward1 tokens, if possible
             if (address(rewardsToken1) != address(0)) {
-                IL2BalancerPseudoMinter(0x47B489bf5836f83ABD928C316F8e39bC0587B020).mint(address(stakingToken));
+                // Balancer
+                // IL2BalancerPseudoMinter(0x47B489bf5836f83ABD928C316F8e39bC0587B020).mint(address(stakingToken));
             }
 
             lastRewardPull = block.timestamp;
