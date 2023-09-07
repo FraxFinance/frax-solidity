@@ -121,70 +121,70 @@ async function main() {
 	const cvx_total_supply = BigNumber.from(await cvx.totalSupply());
 	// console.log(cvx_total_supply.toString());
 
-	// Get CRV rewards
-	const IConvexAMO_Old_json_path = path.join(__dirname, '../../artifacts/contracts/Misc_AMOs/IConvexAMO_Old.sol/IConvexAMO_Old.json');
-	const { abi: IConvexAMO_Old_ABI } = JSON.parse( await fse.readFileSync(IConvexAMO_Old_json_path, 'utf-8'));
-	const convex_amo = new ethers.Contract("0x49ee75278820f409ecd67063D8D717B38d66bd71", IConvexAMO_Old_ABI).connect(owner);
-	const convex_amo_rewards = await convex_amo.showRewards();
-	const crv_from_convex_amo = BigNumber.from(convex_amo_rewards[0]);
-	const cvx_from_convex_amo = GetCVXMintAmount(crv_from_convex_amo, cvx_total_supply);
-	console.log(`----------- Convex AMO (FRAX3CRV) -----------`);
-	console.log(`CRV: ${formatUnits(crv_from_convex_amo, 18)}`);
-	console.log(`CVX: ${formatUnits(cvx_from_convex_amo, 18)}`);
-	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_amo);
-	summary_info.cvx_to_lock = summary_info.cvx_to_lock.add(cvx_from_convex_amo);
+	// // Get CRV rewards
+	// const IConvexAMO_Old_json_path = path.join(__dirname, '../../artifacts/contracts/Misc_AMOs/IConvexAMO_Old.sol/IConvexAMO_Old.json');
+	// const { abi: IConvexAMO_Old_ABI } = JSON.parse( await fse.readFileSync(IConvexAMO_Old_json_path, 'utf-8'));
+	// const convex_amo = new ethers.Contract("0x49ee75278820f409ecd67063D8D717B38d66bd71", IConvexAMO_Old_ABI).connect(owner);
+	// const convex_amo_rewards = await convex_amo.showRewards();
+	// const crv_from_convex_amo = BigNumber.from(convex_amo_rewards[0]);
+	// const cvx_from_convex_amo = GetCVXMintAmount(crv_from_convex_amo, cvx_total_supply);
+	// console.log(`----------- Convex AMO (FRAX3CRV) -----------`);
+	// console.log(`CRV: ${formatUnits(crv_from_convex_amo, 18)}`);
+	// console.log(`CVX: ${formatUnits(cvx_from_convex_amo, 18)}`);
+	// summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_amo);
+	// summary_info.cvx_to_lock = summary_info.cvx_to_lock.add(cvx_from_convex_amo);
 
-	batch_json.transactions.push({
-		"to": "0x49ee75278820f409ecd67063D8D717B38d66bd71",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [],
-			"name": "claimRewardsFRAX3CRV",
-			"payable": false
-		},
-		"contractInputsValues": null
-	});
+	// batch_json.transactions.push({
+	// 	"to": "0x49ee75278820f409ecd67063D8D717B38d66bd71",
+	// 	"value": "0",
+	// 	"data": null,
+	// 	"contractMethod": {
+	// 		"inputs": [],
+	// 		"name": "claimRewardsFRAX3CRV",
+	// 		"payable": false
+	// 	},
+	// 	"contractInputsValues": null
+	// });
 
-	// Convex AMO rewards (withdraw)
-	// =====================================
-	batch_json.transactions.push({
-		"to": "0x49ee75278820f409ecd67063D8D717B38d66bd71",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [
-				{
-				  "internalType": "uint256",
-				  "name": "crv_amt",
-				  "type": "uint256"
-				},
-				{
-				  "internalType": "uint256",
-				  "name": "cvx_amt",
-				  "type": "uint256"
-				},
-				{
-				  "internalType": "uint256",
-				  "name": "cvxCRV_amt",
-				  "type": "uint256"
-				},
-				{
-				  "internalType": "uint256",
-				  "name": "fxs_amt",
-				  "type": "uint256"
-				}
-			  ],
-			"name": "withdrawRewards",
-			"payable": false
-		},
-		"contractInputsValues": {
-			"crv_amt": crv_from_convex_amo.toString(),
-			"cvx_amt": cvx_from_convex_amo.toString(),
-			"cvxCRV_amt": "0",
-			"fxs_amt": "0",
-		}
-	});
+	// // Convex AMO rewards (withdraw)
+	// // =====================================
+	// batch_json.transactions.push({
+	// 	"to": "0x49ee75278820f409ecd67063D8D717B38d66bd71",
+	// 	"value": "0",
+	// 	"data": null,
+	// 	"contractMethod": {
+	// 		"inputs": [
+	// 			{
+	// 			  "internalType": "uint256",
+	// 			  "name": "crv_amt",
+	// 			  "type": "uint256"
+	// 			},
+	// 			{
+	// 			  "internalType": "uint256",
+	// 			  "name": "cvx_amt",
+	// 			  "type": "uint256"
+	// 			},
+	// 			{
+	// 			  "internalType": "uint256",
+	// 			  "name": "cvxCRV_amt",
+	// 			  "type": "uint256"
+	// 			},
+	// 			{
+	// 			  "internalType": "uint256",
+	// 			  "name": "fxs_amt",
+	// 			  "type": "uint256"
+	// 			}
+	// 		  ],
+	// 		"name": "withdrawRewards",
+	// 		"payable": false
+	// 	},
+	// 	"contractInputsValues": {
+	// 		"crv_amt": crv_from_convex_amo.toString(),
+	// 		"cvx_amt": cvx_from_convex_amo.toString(),
+	// 		"cvxCRV_amt": "0",
+	// 		"fxs_amt": "0",
+	// 	}
+	// });
 
 	// Curve Voter Proxy (withdraw 3CRV rewards)
 	// TODO
@@ -218,9 +218,10 @@ async function main() {
 	const convex_frax_usdc_rewards = await convex_frax_usdc_staking_proxy.earned();
 	const crv_from_convex_frax_usdc = BigNumber.from(convex_frax_usdc_rewards[1][1]);
 	const cvx_from_convex_frax_usdc = BigNumber.from(convex_frax_usdc_rewards[1][2]);
-	// FRAXBP rewards: 50% of CRV and 100% of CVX is saved/reinvested
-	summary_info.crv_to_save = summary_info.crv_to_save.add(crv_from_convex_frax_usdc.mul(50).div(100));
-	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_usdc.mul(50).div(100));
+	
+	// FRAXBP rewards: 33.3% of CRV and 100% of CVX is saved/reinvested
+	summary_info.crv_to_save = summary_info.crv_to_save.add(crv_from_convex_frax_usdc.mul(333).div(1000));
+	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_usdc.mul(666).div(1000));
 	summary_info.cvx_to_lock = summary_info.cvx_to_lock.add(cvx_from_convex_frax_usdc);
 	console.log(`----------- Convex Frax FRAX/USDC (stkcvxFRAXBP) -----------`);
 	console.log(`CRV: ${formatUnits(crv_from_convex_frax_usdc, 18)}`);
@@ -239,30 +240,30 @@ async function main() {
 		"contractInputsValues": null
 	});
 
-	// Convex Frax Frax/FPI (stkcvxFPIFRAX) rewards
-	const convex_frax_fpi_staking_proxy = new ethers.Contract("0x2df2378103baB456457329D4C603440B92b9c0bd", IStakingProxyConvex_ABI).connect(owner);
-	const convex_frax_fpi_rewards = await convex_frax_fpi_staking_proxy.earned();
-	const crv_from_convex_frax_fpi = BigNumber.from(convex_frax_fpi_rewards[1][1]);
-	const cvx_from_convex_frax_fpi = BigNumber.from(convex_frax_fpi_rewards[1][2]);
-	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_fpi);
-	summary_info.cvx_to_sell = summary_info.cvx_to_sell.add(cvx_from_convex_frax_fpi);
-	console.log(`----------- Convex Frax FRAX/FPI (stkcvxFPIFRAX) -----------`);
-	console.log(`CRV: ${formatUnits(crv_from_convex_frax_fpi, 18)}`);
-	console.log(`CVX: ${formatUnits(cvx_from_convex_frax_fpi, 18)}`);
-	// =====================================
-	batch_json.transactions.push({
-		"to": "0x2df2378103baB456457329D4C603440B92b9c0bd",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [],
-			"name": "getReward",
-			"payable": false
-		},
-		"contractInputsValues": null
-	});
+	// // Convex Frax Frax/FPI (stkcvxFPIFRAX) rewards
+	// const convex_frax_fpi_staking_proxy = new ethers.Contract("0x2df2378103baB456457329D4C603440B92b9c0bd", IStakingProxyConvex_ABI).connect(owner);
+	// const convex_frax_fpi_rewards = await convex_frax_fpi_staking_proxy.earned();
+	// const crv_from_convex_frax_fpi = BigNumber.from(convex_frax_fpi_rewards[1][1]);
+	// const cvx_from_convex_frax_fpi = BigNumber.from(convex_frax_fpi_rewards[1][2]);
+	// summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_fpi);
+	// summary_info.cvx_to_sell = summary_info.cvx_to_sell.add(cvx_from_convex_frax_fpi);
+	// console.log(`----------- Convex Frax FRAX/FPI (stkcvxFPIFRAX) -----------`);
+	// console.log(`CRV: ${formatUnits(crv_from_convex_frax_fpi, 18)}`);
+	// console.log(`CVX: ${formatUnits(cvx_from_convex_frax_fpi, 18)}`);
+	// // =====================================
+	// batch_json.transactions.push({
+	// 	"to": "0x2df2378103baB456457329D4C603440B92b9c0bd",
+	// 	"value": "0",
+	// 	"data": null,
+	// 	"contractMethod": {
+	// 		"inputs": [],
+	// 		"name": "getReward",
+	// 		"payable": false
+	// 	},
+	// 	"contractInputsValues": null
+	// });
 
-	// Convex Curve Claim All (excluding cvxCRV and locked CVX)
+	// Convex Curve (cvxLP) Claim All (excluding cvxCRV and locked CVX)
 	// =====================================
 	const IConvexBaseRewardPool = path.join(__dirname, '../../artifacts/contracts/Misc_AMOs/convex/IConvexBaseRewardPool.sol/IConvexBaseRewardPool.json');
 	const { abi: IConvexBaseRewardPool_ABI } = JSON.parse( await fse.readFileSync(IConvexBaseRewardPool, 'utf-8'));
@@ -280,7 +281,8 @@ async function main() {
 		convex_cvxgusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
 		convex_cvxlusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
 	])
-	// FRAXBP rewards get saved/reinvested, everything else is selled.
+
+	// FRAXBP rewards get saved/reinvested, everything else is sold.
 	// CRV
 	summary_info.crv_to_save = summary_info.crv_to_save.add(cvx_crv_claim_all_rews[0]);
 	summary_info.crv_to_sell = summary_info.crv_to_sell
@@ -793,9 +795,9 @@ async function main() {
 	// ===============================================================================
 	// ============================= CALCULATE SELL STUFF ============================
 	// ===============================================================================
-	// CRV
-	summary_info.crv_to_convert_to_cvxcrv = summary_info.crv_to_save.mul(90).div(100); // 90%
-	summary_info.crv_to_send_to_curve_voter_proxy = summary_info.crv_to_save.mul(10).div(100); // 10%
+	// CRV (For SAVED CRV, 100% goes to voter proxy for now. We are not adding to our cvxCRV stake)
+	summary_info.crv_to_convert_to_cvxcrv = summary_info.crv_to_save.mul(0).div(100); // 0%
+	summary_info.crv_to_send_to_curve_voter_proxy = summary_info.crv_to_save.mul(100).div(100); // 100%
 	summary_info.crv_to_save = BigNumber.from(0);
 
 	console.log(`\n----------- Post Reward Collection Status -----------`);
@@ -900,109 +902,112 @@ async function main() {
 	// ======================== HANDLE CVXCRV ========================
 	// ===============================================================
 
-	// Swap CRV for cvxCRV
-	// =====================================
-	const I2PoolcvxCRVCRV_json_path = path.join(__dirname, '../../artifacts/contracts/Misc_AMOs/curve/I2PoolcvxCRVCRV.sol/I2PoolcvxCRVCRV.json');
-	const { abi: I2PoolcvxCRVCRV_ABI } = JSON.parse( await fse.readFileSync(I2PoolcvxCRVCRV_json_path, 'utf-8'));
-	let cvxcrvcrv = new ethers.Contract("0x971add32ea87f10bd192671630be3be8a11b8623", I2PoolcvxCRVCRV_ABI).connect(owner);
-	const est_cvxcrv_out = await cvxcrvcrv.get_dy(0, 1, summary_info.crv_to_convert_to_cvxcrv);
-	const slipped_cvxcrv_out = est_cvxcrv_out.mul(9997).div(10000); // 0.03% slippage
-	batch_json.transactions.push({
-		"to": "0x971add32ea87f10bd192671630be3be8a11b8623",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [
-				{
-					"name": "i",
-					"type": "int128"
-				},
-				{
-					"name": "j",
-					"type": "int128"
-				},
-				{
-					"name": "_dx",
-					"type": "uint256"
-				},
-				{
-					"name": "_min_dy",
-					"type": "uint256"
-				}
-			],
-			"name": "exchange",
-			"payable": false
-		},
-		"contractInputsValues": {
-			"i": "0",
-			"j": "1",
-			"_dx": summary_info.crv_to_convert_to_cvxcrv.toString(),
-			"_min_dy": slipped_cvxcrv_out.toString(),
-		}
-	});
-	summary_info.crv_to_convert_to_cvxcrv = BigNumber.from(0);
-	summary_info.cvxcrv_direct_collected = summary_info.cvxcrv_direct_collected.add(slipped_cvxcrv_out);
-
-	// Lock the cvxCRV in Convex (approve)
-	// =====================================
-	batch_json.transactions.push({
-		"to": "0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [
-				{
-					"internalType": "address",
-					"name": "spender",
-					"type": "address"
-				},
-				{
-					"internalType": "uint256",
-					"name": "amount",
-					"type": "uint256"
-				}
-			],
-			"name": "approve",
-			"payable": false
-		},
-		"contractInputsValues": {
-			"spender": "0xaa0C3f5F7DFD688C6E646F66CD2a6B66ACdbE434",
-			"amount": summary_info.cvxcrv_direct_collected.toString()
-		}
-	});
-
-	// Lock the cvxCRV in Convex (stake)
-	// =====================================
-	batch_json.transactions.push({
-		"to": "0xaa0C3f5F7DFD688C6E646F66CD2a6B66ACdbE434",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "_amount",
-					"type": "uint256"
-				},
-				{
-					"internalType": "address",
-					"name": "_to",
-					"type": "address"
-				}
-			],
-			"name": "stake",
-			"payable": false
-		},
-		"contractInputsValues": {
-			"_amount": summary_info.cvxcrv_direct_collected.toString(),
-			"_to": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
-		}
-	});
-	summary_info.crv_to_convert_to_cvxcrv = BigNumber.from(0);
-	summary_info.cvxcrv_direct_collected = BigNumber.from(0);
-
-	console.log(`\n----------- Post cvxCRV Handling Status -----------`);
-	console.log(summary_info);
+	// // Swap CRV for cvxCRV
+	// // =====================================
+	// if (summary_info.crv_to_convert_to_cvxcrv.gt(BigNumber.from(0))) {
+	// 	const I2PoolcvxCRVCRV_json_path = path.join(__dirname, '../../artifacts/contracts/Misc_AMOs/curve/I2PoolcvxCRVCRV.sol/I2PoolcvxCRVCRV.json');
+	// 	const { abi: I2PoolcvxCRVCRV_ABI } = JSON.parse( await fse.readFileSync(I2PoolcvxCRVCRV_json_path, 'utf-8'));
+	// 	let cvxcrvcrv = new ethers.Contract("0x971add32ea87f10bd192671630be3be8a11b8623", I2PoolcvxCRVCRV_ABI).connect(owner);
+	// 	const est_cvxcrv_out = await cvxcrvcrv.get_dy(0, 1, summary_info.crv_to_convert_to_cvxcrv);
+	// 	const slipped_cvxcrv_out = est_cvxcrv_out.mul(9997).div(10000); // 0.03% slippage
+	// 	batch_json.transactions.push({
+	// 		"to": "0x971add32ea87f10bd192671630be3be8a11b8623",
+	// 		"value": "0",
+	// 		"data": null,
+	// 		"contractMethod": {
+	// 			"inputs": [
+	// 				{
+	// 					"name": "i",
+	// 					"type": "int128"
+	// 				},
+	// 				{
+	// 					"name": "j",
+	// 					"type": "int128"
+	// 				},
+	// 				{
+	// 					"name": "_dx",
+	// 					"type": "uint256"
+	// 				},
+	// 				{
+	// 					"name": "_min_dy",
+	// 					"type": "uint256"
+	// 				}
+	// 			],
+	// 			"name": "exchange",
+	// 			"payable": false
+	// 		},
+	// 		"contractInputsValues": {
+	// 			"i": "0",
+	// 			"j": "1",
+	// 			"_dx": summary_info.crv_to_convert_to_cvxcrv.toString(),
+	// 			"_min_dy": slipped_cvxcrv_out.toString(),
+	// 		}
+	// 	});
+	// 	summary_info.crv_to_convert_to_cvxcrv = BigNumber.from(0);
+	// 	summary_info.cvxcrv_direct_collected = summary_info.cvxcrv_direct_collected.add(slipped_cvxcrv_out);
+	
+	// 	// Lock the cvxCRV in Convex (approve)
+	// 	// =====================================
+	// 	batch_json.transactions.push({
+	// 		"to": "0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7",
+	// 		"value": "0",
+	// 		"data": null,
+	// 		"contractMethod": {
+	// 			"inputs": [
+	// 				{
+	// 					"internalType": "address",
+	// 					"name": "spender",
+	// 					"type": "address"
+	// 				},
+	// 				{
+	// 					"internalType": "uint256",
+	// 					"name": "amount",
+	// 					"type": "uint256"
+	// 				}
+	// 			],
+	// 			"name": "approve",
+	// 			"payable": false
+	// 		},
+	// 		"contractInputsValues": {
+	// 			"spender": "0xaa0C3f5F7DFD688C6E646F66CD2a6B66ACdbE434",
+	// 			"amount": summary_info.cvxcrv_direct_collected.toString()
+	// 		}
+	// 	});
+	
+	// 	// Lock the cvxCRV in Convex (stake)
+	// 	// =====================================
+	// 	batch_json.transactions.push({
+	// 		"to": "0xaa0C3f5F7DFD688C6E646F66CD2a6B66ACdbE434",
+	// 		"value": "0",
+	// 		"data": null,
+	// 		"contractMethod": {
+	// 			"inputs": [
+	// 				{
+	// 					"internalType": "uint256",
+	// 					"name": "_amount",
+	// 					"type": "uint256"
+	// 				},
+	// 				{
+	// 					"internalType": "address",
+	// 					"name": "_to",
+	// 					"type": "address"
+	// 				}
+	// 			],
+	// 			"name": "stake",
+	// 			"payable": false
+	// 		},
+	// 		"contractInputsValues": {
+	// 			"_amount": summary_info.cvxcrv_direct_collected.toString(),
+	// 			"_to": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+	// 		}
+	// 	});
+	// 	summary_info.crv_to_convert_to_cvxcrv = BigNumber.from(0);
+	// 	summary_info.cvxcrv_direct_collected = BigNumber.from(0);
+	
+	// 	console.log(`\n----------- Post cvxCRV Handling Status -----------`);
+	// 	console.log(summary_info);
+	// }
+	
 
 
 	// ===============================================================
