@@ -28,7 +28,7 @@ import "./FraxUnifiedFarmTemplate.sol";
 // import "../Misc_AMOs/curve/I2pool.sol";
 // import "../Misc_AMOs/curve/I2poolToken.sol";
 // import "../Misc_AMOs/curve/I2poolTokenNoLending.sol";
-
+// 
 // Fraxlend
 // import '../Fraxlend/IFraxlendPair.sol';
 
@@ -155,7 +155,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // frax_is_token0 = (token0 == frax_address);
 
         // KyberSwap Elastic KyberSwapFarmingToken (KS-FT)
-        stakingToken = IKyberSwapFarmingToken(_stakingToken);
+        // stakingToken = IKyberSwapFarmingToken(_stakingToken);
 
         // mStable
         // stakingToken = IFeederPool(_stakingToken);

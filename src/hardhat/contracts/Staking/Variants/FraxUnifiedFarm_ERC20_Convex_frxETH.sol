@@ -27,12 +27,12 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
     {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
-        // Most Convex frxETH/XYZ (TOKEN != MINTER)
+        // Most Convex frxETH/XYZ (TOKEN != MINTER / POOL)
         // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
         // curveToken = I2poolToken(stakingToken.curveToken());
         // curvePool = ICurvefrxETHETHPool(curveToken.minter());
 
-        // Some Convex frxETH/XYZ (TOKEN = MINTER))
+        // Some Convex frxETH/XYZ (TOKEN = MINTER / POOL))
         // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
         // curveToken = I2poolToken(stakingToken.curveToken());
         // curvePool = ICurvefrxETHETHPool(stakingToken.curveToken());

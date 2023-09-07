@@ -51,6 +51,9 @@ import "../ERC20/SafeERC20.sol";
 import '../Misc_AMOs/kyberswap/elastic/IKSElasticLMV2.sol'; // KyberSwap Elastic
 import '../Misc_AMOs/kyberswap/elastic/IKyberSwapFarmingToken.sol'; // KyberSwap Elastic
 import '../Misc_AMOs/kyberswap/elastic/IKSReinvestmentTokenPool.sol'; // KyberSwap Elastic
+import "../Misc_AMOs/kyberswap/factory/IKyberFactory.sol"; // KyberSwap Elastic
+import "../Misc_AMOs/kyberswap/elastic/IKyberSwapFarmingToken.sol"; // KyberSwap Elastic
+import "../Oracle/ComboOracle_KyberSwapElasticV2.sol"; // KyberSwap Elastic
 // import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
 // import '../Misc_AMOs/impossible/IStableXPair.sol'; // Impossible
 // import '../Misc_AMOs/mstable/IFeederPool.sol'; // mStable
@@ -78,7 +81,25 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
     ERC20 public rewardsToken1;
     
     // KyberSwap Elastic
+    // Manually set during deploy
+    // ===================================================================
+    // <>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>
     IKyberSwapFarmingToken public stakingToken; // KyberSwap Elastic
+    ComboOracle_KyberSwapElasticV2 public KSE_ComboOracleV2 = ComboOracle_KyberSwapElasticV2(0xfBCB0F967817c924f83e26e04F0FB28ED4d6276F);  // KyberSwap Elastic
+    IKyberFactory public immutable kyber_factory = IKyberFactory(0xC7a590291e07B9fe9E64b86c58fD8fC764308C4A);  // KyberSwap Elastic
+    // Need to seed a starting token to use both as a basis for fraxPerLPToken
+    // as well as getting ticks, etc
+    uint256 public seed_token_id = 7366; 
+    
+    function setSeedTokenID(uint256 _seed_token_id) public onlyByOwnGov {
+        seed_token_id = _seed_token_id;
+    }
+
+    function setKyberSwapElasticComboOracle(address _kse_combo_oracle_address) public onlyByOwnGov {
+        KSE_ComboOracleV2 = ComboOracle_KyberSwapElasticV2(_kse_combo_oracle_address);
+    }
+    // <>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>
+
 
     // Balancer frxETH-bb-a-WETH Gauge
     // IBalancerChildLiquidityGauge public stakingToken; // Balancer frxETH-bb-a-WETH Gauge
@@ -124,7 +145,7 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
     // Lock time and multiplier settings
     uint256 public lock_max_multiplier = uint256(3e18); // E18. 1x = e18
     uint256 public lock_time_for_max_multiplier = 3 * 365 * 86400; // 3 years
-    uint256 public lock_time_min = 86400; // 1 * 86400  (1 day)
+    uint256 public lock_time_min = 1; // 1 second
 
     // veFXS related
     uint256 public vefxs_per_frax_for_max_boost = uint256(4e18); // E18. 4e18 means 4 veFXS must be held by the staker per 1 FRAX
@@ -358,29 +379,13 @@ contract FraxCrossChainFarmV3_ERC20 is Owned, ReentrancyGuard {
 
         // KyberSwap Elastic
         // ============================================
-        // {
-        //     IKSReinvestmentTokenPool memory pool = IKSReinvestmentTokenPool(0xA852DDD69C13d42669840A692f6bBf94245ac54A);
-        //     address coin0 = pool.token0();
-        //     address coin1 = pool.token1();
-        //     uint256 total_frax_reserves;
-        //     if (coin0 == frax_address) {
-        //         total_frax_reserves = ERC20(coin0).balanceOf(address(pool));
-        //     }
-        //                // INCOMPLETE
-        //                           // INCOMPLETE
-        //                                      // INCOMPLETE
-        //                                                 // INCOMPLETE
-        //                                                            // INCOMPLETE
-        //                                                                       // INCOMPLETE
-        //                                                                                  // INCOMPLETE
-        //     else {
-        //         total_frax_reserves = ERC20(coin1).balanceOf(address(pool));
-        //     }
-        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        {
+            // Fetch total pool TVL using the seed token id
+            ComboOracle_KyberSwapElasticV2.NFTValueInfo memory nft_value_info = KSE_ComboOracleV2.getNFTValueInfo(seed_token_id);
 
-        //     // INCOMPLETE
-
-        // }
+            // Assume half of the liquidity is FRAX or FRAX-related, even if it is not.
+            frax_per_lp_token = (nft_value_info.pool_tvl_usd * MULTIPLIER_PRECISION) / (stakingToken.totalSupply() * 2);
+        }
 
         // mStable
         // ============================================

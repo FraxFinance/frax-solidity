@@ -45,27 +45,17 @@ async function main() {
 	const thisBlock = await ethers.provider.getBlock(await ethers.provider.getBlockNumber());
 
 	const wrapperAddrs = [
-		// ADDRS_ETH_LPS['Convex stkcvxfrxETHCRV_New'],
-		// ADDRS_ETH_LPS['Convex stkcvxfrxETHCVX_New'],
-		// ADDRS_ETH_LPS['Convex stkcvxfrxETHalETH_New'],
-		// ADDRS_ETH_LPS['Convex stkcvxfrxETHankrETH_New'],
-		// ADDRS_ETH_LPS['Convex stkcvxfrxETHcbETH_New'],
-		// ADDRS_ETH_LPS['Convex stkcvxfrxETHrETH_New'],
-		// ADDRS_ETH_LPS['Convex stkcvxfrxETHsETH_New'],
-		// ADDRS_ETH_LPS['Convex stkcvxfrxETHstETH_New']
-		ADDRS_ETH_LPS['Convex stkcvxZUSDFRAXBP']
+		ADDRS_ETH_LPS['Convex stkcvxfrxETHmsETH'],
+		ADDRS_ETH_LPS['Convex stkcvxfrxETHrETH_StaFi'],
+		ADDRS_ETH_LPS['Convex stkcvxfrxETHzETH'],
+		ADDRS_ETH_LPS['Convex stkcvxGRAIFRAXBP']
 	];
 
 	const farmAddrs = [
-		// ADDRS_ETH_FARMS['Convex stkcvxfrxETHCRV_New'],
-		// ADDRS_ETH_FARMS['Convex stkcvxfrxETHCVX_New'],
-		// ADDRS_ETH_FARMS['Convex stkcvxfrxETHalETH_New'],
-		// ADDRS_ETH_FARMS['Convex stkcvxfrxETHankrETH_New'],
-		// ADDRS_ETH_FARMS['Convex stkcvxfrxETHcbETH_New'],
-		// ADDRS_ETH_FARMS['Convex stkcvxfrxETHrETH_New'],
-		// ADDRS_ETH_FARMS['Convex stkcvxfrxETHsETH_New'],
-		// ADDRS_ETH_FARMS['Convex stkcvxfrxETHstETH_New']
-		ADDRS_ETH_FARMS['Convex stkcvxZUSDFRAXBP']
+		ADDRS_ETH_FARMS['Convex stkcvxfrxETHmsETH'],
+		ADDRS_ETH_FARMS['Convex stkcvxfrxETHrETH_StaFi'],
+		ADDRS_ETH_FARMS['Convex stkcvxfrxETHzETH'],
+		ADDRS_ETH_FARMS['Convex stkcvxGRAIFRAXBP']
 	];
 
 	// ===============================================================
