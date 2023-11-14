@@ -9,6 +9,7 @@ const chalk = require("chalk");
 const fse = require("fs-extra");
 const { formatUnits } = require("ethers/lib/utils");
 const { BIG6, BIG18, stringifyReplacer, serializeJSONObject, calculateChecksum } = require("../utils/utils");
+const { wrapperAddrs, farmAddrs } = require("./Script_Constants");
 const constants = require(path.join(__dirname, '../../../../dist/types/constants'));
 const CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
 let ADDRS_ETH = CONTRACT_ADDRESSES.ethereum;
@@ -43,20 +44,6 @@ async function main() {
 
 	console.log(`Using env file from ${envPath}`);
 	const thisBlock = await ethers.provider.getBlock(await ethers.provider.getBlockNumber());
-
-	const wrapperAddrs = [
-		ADDRS_ETH_LPS['Convex stkcvxfrxETHmsETH'],
-		ADDRS_ETH_LPS['Convex stkcvxfrxETHrETH_StaFi'],
-		ADDRS_ETH_LPS['Convex stkcvxfrxETHzETH'],
-		ADDRS_ETH_LPS['Convex stkcvxGRAIFRAXBP']
-	];
-
-	const farmAddrs = [
-		ADDRS_ETH_FARMS['Convex stkcvxfrxETHmsETH'],
-		ADDRS_ETH_FARMS['Convex stkcvxfrxETHrETH_StaFi'],
-		ADDRS_ETH_FARMS['Convex stkcvxfrxETHzETH'],
-		ADDRS_ETH_FARMS['Convex stkcvxGRAIFRAXBP']
-	];
 
 	// ===============================================================
 	// =============== ADD GAUGES TO REWARD DISTRIBUTOR ==============

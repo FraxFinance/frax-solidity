@@ -9,6 +9,8 @@ import "../../Misc_AMOs/curve/I2poolToken.sol";
 
 contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Volatile is FraxUnifiedFarm_ERC20 {
 
+    string public farm_type = "ERC20_Convex_FRAXBP_Volatile";
+
     constructor (
         address _owner,
         address[] memory _rewardTokens,

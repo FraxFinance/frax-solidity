@@ -25,9 +25,11 @@ cd ./src/hardhat
 npx hardhat compile
 
 ARBITRUM
+npx hardhat test ./test/__ARBITRUM/ComboOracle_KyberSwapElastic-Tests_ARBI.js --vv
 npx hardhat test ./test/__ARBITRUM/CrossChainBridgeBacker_ARBI_AnySwap-Tests.js
 npx hardhat test ./test/__ARBITRUM/FraxCrossChainFarmV2-Tests.js
 npx hardhat test ./test/__ARBITRUM/FraxCrossChainFarmV3_ERC20-Tests.js
+npx hardhat test ./test/__ARBITRUM/FraxCrossChainFarmV4_ERC20-Tests.js --no-compile --full-trace-error
 npx hardhat test ./test/__ARBITRUM/CurveAMO-ARBI-Tests.js
 
 AURORA
@@ -58,6 +60,7 @@ npx hardhat test ./test/FXS1559AMO-Tests.js
 npx hardhat test ./test/FraxCrossChainLiquidityTracker-Tests.js
 npx hardhat test ./test/FraxFarmBSC_Dual_V5.js
 npx hardhat test ./test/FraxFarmRageQuitter-Tests.js
+npx hardhat test ./test/Fraxbonds/SlippageAuction.js
 npx hardhat test ./test/Fraxferry/Fraxferry-test.js
 npx hardhat test ./test/FraxferryV2/FerryV2-test.js
 npx hardhat test ./test/FraxGaugeController-Tests.js
@@ -73,6 +76,7 @@ npx hardhat test ./test/FraxUnifiedFarm_PosRebase-Tests.js
 npx hardhat test ./test/FraxUnifiedFarm_UniV3-Tests.js
 npx hardhat test ./test/Fraxswap/fraxswap-twamm-test.js
 npx hardhat test ./test/Fraxswap/fraxswap-uniV2-test.js
+npx hardhat test ./test/FrxETH/FrxETHMiniRouter-Tests.js
 npx hardhat test ./test/Governance_Slap_2.js
 npx hardhat test ./test/IFraxGaugeFXSRewardsDistributor-Tests.js
 npx hardhat test ./test/InvestorAMO_V3-Tests.js

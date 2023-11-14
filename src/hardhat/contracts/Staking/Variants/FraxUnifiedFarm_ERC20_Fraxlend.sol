@@ -7,6 +7,8 @@ import '../../Fraxlend/IFraxlendPairHelper.sol';
 
 contract FraxUnifiedFarm_ERC20_Fraxlend is FraxUnifiedFarm_ERC20 {
 
+    string public farm_type = "ERC20_Fraxlend";
+
     IFraxlendPairHelper public flp_helper = IFraxlendPairHelper(0x1b0bCeD6dd26a7c234506E261BC68C9A3A4031b7);
 
     constructor (

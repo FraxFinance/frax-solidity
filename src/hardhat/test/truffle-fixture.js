@@ -22,9 +22,10 @@ const CrossChainBridgeBacker_ARBI_AnySwap = artifacts.require("Bridges/Arbitrum/
 const CrossChainOracle = artifacts.require("Oracle/CrossChainOracle");
 
 // Staking contracts
-const FraxCCFarmV2_ArbiCurveVSTFRAX = artifacts.require("Staking/Variants/FraxCCFarmV2_ArbiCurveVSTFRAX");
-const FraxCCFarmV2_SaddleArbUSDv2 = artifacts.require("Staking/Variants/FraxCCFarmV2_SaddleArbUSDv2");
-const FraxCCFarmV3_ArbiSaddleL2D4 = artifacts.require("Staking/Variants/FraxCCFarmV3_ArbiSaddleL2D4");
+// const FraxCCFarmV2_ArbiCurveVSTFRAX = artifacts.require("Staking/Variants/FraxCCFarmV2_ArbiCurveVSTFRAX");
+// const FraxCCFarmV2_SaddleArbUSDv2 = artifacts.require("Staking/Variants/FraxCCFarmV2_SaddleArbUSDv2");
+// const FraxCCFarmV3_ArbiSaddleL2D4 = artifacts.require("Staking/Variants/FraxCCFarmV3_ArbiSaddleL2D4");
+const FraxCCFarmV4_cvxUSDPlusFRAXBP = artifacts.require("Staking/Variants/FraxCCFarmV4_cvxUSDPlusFRAXBP");
 
 // AMOs
 const SushiSwapLiquidityAMO_ARBI = artifacts.require("Misc_AMOs/__CROSSCHAIN/Arbitrum/SushiSwapLiquidityAMO_ARBI.sol");
@@ -52,9 +53,10 @@ module.exports = async (deployer) => {
     let cross_chain_oracle_instance;
     
 	// Staking
-    let FraxCCFarmV2_ArbiCurveVSTFRAX_instance;
-    let FraxCCFarmV2_SaddleArbUSDv2_instance;
-    let FraxCCFarmV3_ArbiSaddleL2D4_instance;
+    // let FraxCCFarmV2_ArbiCurveVSTFRAX_instance;
+    // let FraxCCFarmV2_SaddleArbUSDv2_instance;
+    // let FraxCCFarmV3_ArbiSaddleL2D4_instance;
+    let FraxCCFarmV4_cvxUSDPlusFRAXBP_instance;
     
     // AMOs
     let curve_amo_arbi_instance;
@@ -169,39 +171,55 @@ module.exports = async (deployer) => {
 	// 	]
     // );
 
-    console.log(chalk.yellow("========== FraxCCFarmV2_ArbiCurveVSTFRAX =========="));
-    // FraxCCFarmV2_ArbiCurveVSTFRAX 
-    FraxCCFarmV2_ArbiCurveVSTFRAX_instance = await FraxCCFarmV2_ArbiCurveVSTFRAX.new(
-        THE_ACCOUNTS[6], 
-        CONTRACT_ADDRESSES.arbitrum.bridge_tokens.anyFXS, // anyFXS
-        CONTRACT_ADDRESSES.arbitrum.canonicals.FXS, // canFXS
-        CONTRACT_ADDRESSES.arbitrum.reward_tokens.VSTA, 
-        CONTRACT_ADDRESSES.arbitrum.pair_tokens["Curve VSTFRAX-f"],
-        CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX, // canFRAX
-        "0x0000000000000000000000000000000000000000", // Timelock
-        "0x0000000000000000000000000000000000000000", // Rewarder
-    );
+    // console.log(chalk.yellow("========== FraxCCFarmV2_ArbiCurveVSTFRAX =========="));
+    // // FraxCCFarmV2_ArbiCurveVSTFRAX 
+    // FraxCCFarmV2_ArbiCurveVSTFRAX_instance = await FraxCCFarmV2_ArbiCurveVSTFRAX.new(
+    //     THE_ACCOUNTS[6], 
+    //     CONTRACT_ADDRESSES.arbitrum.bridge_tokens.anyFXS, // anyFXS
+    //     CONTRACT_ADDRESSES.arbitrum.canonicals.FXS, // canFXS
+    //     CONTRACT_ADDRESSES.arbitrum.reward_tokens.VSTA, 
+    //     CONTRACT_ADDRESSES.arbitrum.pair_tokens["Curve VSTFRAX-f"],
+    //     CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX, // canFRAX
+    //     "0x0000000000000000000000000000000000000000", // Timelock
+    //     "0x0000000000000000000000000000000000000000", // Rewarder
+    // );
 
-    console.log(chalk.yellow("========== FraxCCFarmV2_SaddleArbUSDv2 =========="));
-    // FraxCCFarmV2_SaddleArbUSDv2 
-    FraxCCFarmV2_SaddleArbUSDv2_instance = await FraxCCFarmV2_SaddleArbUSDv2.new(
-        THE_ACCOUNTS[6], 
-        CONTRACT_ADDRESSES.arbitrum.bridge_tokens.anyFXS, // anyFXS
-        CONTRACT_ADDRESSES.arbitrum.canonicals.FXS, // canFXS
-        CONTRACT_ADDRESSES.arbitrum.reward_tokens.SPELL, // Should be SDL, but run tests with SPELL
-        CONTRACT_ADDRESSES.arbitrum.bearer_tokens.saddleArbUSDv2,
-        CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX, // canFRAX
-        "0x0000000000000000000000000000000000000000", // Timelock
-        "0x0000000000000000000000000000000000000000", // Rewarder
-    );
+    // console.log(chalk.yellow("========== FraxCCFarmV2_SaddleArbUSDv2 =========="));
+    // // FraxCCFarmV2_SaddleArbUSDv2 
+    // FraxCCFarmV2_SaddleArbUSDv2_instance = await FraxCCFarmV2_SaddleArbUSDv2.new(
+    //     THE_ACCOUNTS[6], 
+    //     CONTRACT_ADDRESSES.arbitrum.bridge_tokens.anyFXS, // anyFXS
+    //     CONTRACT_ADDRESSES.arbitrum.canonicals.FXS, // canFXS
+    //     CONTRACT_ADDRESSES.arbitrum.reward_tokens.SPELL, // Should be SDL, but run tests with SPELL
+    //     CONTRACT_ADDRESSES.arbitrum.bearer_tokens.saddleArbUSDv2,
+    //     CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX, // canFRAX
+    //     "0x0000000000000000000000000000000000000000", // Timelock
+    //     "0x0000000000000000000000000000000000000000", // Rewarder
+    // );
 
-    console.log(chalk.yellow("========== FraxCCFarmV3_ArbiSaddleL2D4 =========="));
-    // FraxCCFarmV3_ArbiSaddleL2D4 
-    FraxCCFarmV3_ArbiSaddleL2D4_instance = await FraxCCFarmV3_ArbiSaddleL2D4.new(
-        THE_ACCOUNTS[6], 
-        CONTRACT_ADDRESSES.arbitrum.canonicals.FXS, // canFXS
-        CONTRACT_ADDRESSES.arbitrum.reward_tokens.SDL,
-        CONTRACT_ADDRESSES.arbitrum.bearer_tokens.saddleL2D4,
+    // console.log(chalk.yellow("========== FraxCCFarmV3_ArbiSaddleL2D4 =========="));
+    // // FraxCCFarmV3_ArbiSaddleL2D4 
+    // FraxCCFarmV3_ArbiSaddleL2D4_instance = await FraxCCFarmV3_ArbiSaddleL2D4.new(
+    //     THE_ACCOUNTS[6], 
+    //     CONTRACT_ADDRESSES.arbitrum.canonicals.FXS, // canFXS
+    //     CONTRACT_ADDRESSES.arbitrum.reward_tokens.SDL,
+    //     CONTRACT_ADDRESSES.arbitrum.bearer_tokens.saddleL2D4,
+    //     CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX, // canFRAX
+    //     CONTRACT_ADDRESSES.arbitrum.multisigs.Comptrollers, // Timelock
+    //     "0x0000000000000000000000000000000000000000", // Rewarder
+    // );
+
+    console.log(chalk.yellow("========== FraxCCFarmV4_cvxUSDPlusFRAXBP =========="));
+    // FraxCCFarmV4_cvxUSDPlusFRAXBP 
+    FraxCCFarmV4_cvxUSDPlusFRAXBP_instance = await FraxCCFarmV4_cvxUSDPlusFRAXBP.new(
+        THE_ACCOUNTS[6], // After initializing, switch to CONTRACT_ADDRESSES.arbitrum.multisigs.Comptrollers, 
+        [
+            CONTRACT_ADDRESSES.arbitrum.canonicals.FXS,
+            CONTRACT_ADDRESSES.arbitrum.reward_tokens.CRV,
+            CONTRACT_ADDRESSES.arbitrum.reward_tokens.ARB,
+            CONTRACT_ADDRESSES.arbitrum.reward_tokens.OVN
+        ],
+        CONTRACT_ADDRESSES.arbitrum.bearer_tokens.cvxUSDPlusFRAXBP,
         CONTRACT_ADDRESSES.arbitrum.canonicals.FRAX, // canFRAX
         CONTRACT_ADDRESSES.arbitrum.multisigs.Comptrollers, // Timelock
         "0x0000000000000000000000000000000000000000", // Rewarder
@@ -250,9 +268,10 @@ module.exports = async (deployer) => {
     arbiUSDT.setAsDeployed(arbiUSDT_instance);
     CrossChainBridgeBacker_ARBI_AnySwap.setAsDeployed(cross_chain_bridge_backer_instance);
     CrossChainOracle.setAsDeployed(cross_chain_oracle_instance);
-    FraxCCFarmV2_ArbiCurveVSTFRAX.setAsDeployed(FraxCCFarmV2_ArbiCurveVSTFRAX_instance);
-    FraxCCFarmV2_SaddleArbUSDv2.setAsDeployed(FraxCCFarmV2_SaddleArbUSDv2_instance);
-    FraxCCFarmV3_ArbiSaddleL2D4.setAsDeployed(FraxCCFarmV3_ArbiSaddleL2D4_instance);
-    SushiSwapLiquidityAMO_ARBI.setAsDeployed(sushiswap_liquidity_amo_arbi_instance);
-    CurveAMO_ARBI.setAsDeployed(curve_amo_arbi_instance);
+    // FraxCCFarmV2_ArbiCurveVSTFRAX.setAsDeployed(FraxCCFarmV2_ArbiCurveVSTFRAX_instance);
+    // FraxCCFarmV2_SaddleArbUSDv2.setAsDeployed(FraxCCFarmV2_SaddleArbUSDv2_instance);
+    // FraxCCFarmV3_ArbiSaddleL2D4.setAsDeployed(FraxCCFarmV3_ArbiSaddleL2D4_instance);
+    FraxCCFarmV4_cvxUSDPlusFRAXBP.setAsDeployed(FraxCCFarmV4_cvxUSDPlusFRAXBP_instance);
+    // SushiSwapLiquidityAMO_ARBI.setAsDeployed(sushiswap_liquidity_amo_arbi_instance);
+    // CurveAMO_ARBI.setAsDeployed(curve_amo_arbi_instance);
 }

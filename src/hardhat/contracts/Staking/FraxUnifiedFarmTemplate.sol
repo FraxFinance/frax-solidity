@@ -136,6 +136,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     bool internal stakingPaused; // For emergencies
     bool internal collectRewardsOnWithdrawalPaused; // For emergencies if a token is overemitted
 
+    // Version
+    string public version = "1.0.5";
+
     /* ========== STRUCTS ========== */
     // In children...
 

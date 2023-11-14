@@ -510,7 +510,10 @@ contract FraxCrossChainFarmV3_ERC20_Pos_Rebase is Owned, ReentrancyGuard {
 
     // Add additional LPs to an existing locked stake
     // REBASE: If you simply want to accrue interest, call this with addl_liq = 0
-    function lockAdditional(bytes32 kek_id, uint256 addl_liq) updateRewardAndBalance(msg.sender, true) public {
+    function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant updateRewardAndBalance(msg.sender, true) public {
+        // Make sure staking isn't paused
+        require(!stakingPaused, "Staking paused");
+        
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
 
@@ -550,6 +553,9 @@ contract FraxCrossChainFarmV3_ERC20_Pos_Rebase is Owned, ReentrancyGuard {
 
     // Extends the lock of an existing stake
     function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant updateRewardAndBalance(msg.sender, true) public {
+        // Make sure staking isn't paused
+        require(!stakingPaused, "Staking paused");
+        
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
 

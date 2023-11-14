@@ -6,8 +6,11 @@ import "../../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
 import "../../Misc_AMOs/convex/IDepositToken.sol";
 import "../../Misc_AMOs/curve/I2poolToken.sol";
 import "../../Misc_AMOs/curve/I2pool.sol";
+import "../../Misc_AMOs/curve/ICurveTricryptoOptimizedWETH.sol";
 
 contract FraxUnifiedFarm_ERC20_Convex_Generic is FraxUnifiedFarm_ERC20 {
+
+    string public farm_type = "ERC20_Convex_Generic";
 
     constructor (
         address _owner,
@@ -32,6 +35,12 @@ contract FraxUnifiedFarm_ERC20_Convex_Generic is FraxUnifiedFarm_ERC20 {
         // curveToken = I2poolToken(stakingToken.curveToken());
         // curvePool = I2pool(curveToken.minter());
         // frax_is_token0 = true; 
+
+        // // Convex triSDT
+        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        // curveToken = ICurveTricryptoOptimizedWETH(address(stakingToken.curveToken()));
+        // curvePool = ICurveTricryptoOptimizedWETH(address(stakingToken.curveToken()));
+        // frax_is_token0 = false; 
     }
 
     function fraxPerLPToken() public view override returns (uint256 frax_per_lp_token) {
@@ -43,6 +52,14 @@ contract FraxUnifiedFarm_ERC20_Convex_Generic is FraxUnifiedFarm_ERC20 {
         //     // Half of the LP should be FRAX
         //     // Using 0.50 * virtual price for gas savings
         //     frax_per_lp_token = curvePool.get_virtual_price() / 2; 
+        // }
+
+        // Convex triSDT
+        // ============================================
+        // {
+        //     // One third of the LP should be frxETH
+        //     // Using lp_price / 3 for gas savings
+        //     frax_per_lp_token = curvePool.lp_price() / 3; 
         // }
 
     }

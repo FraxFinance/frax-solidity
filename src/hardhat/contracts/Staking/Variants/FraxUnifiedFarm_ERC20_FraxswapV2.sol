@@ -6,6 +6,8 @@ import '../../Fraxswap/core/interfaces/IFraxswapPair.sol';
 
 contract FraxUnifiedFarm_ERC20_FraxswapV2 is FraxUnifiedFarm_ERC20 {
 
+    string public farm_type = "ERC20_Fraxswap_V2";
+
     constructor (
         address _owner,
         address[] memory _rewardTokens,

@@ -9,6 +9,8 @@ import "../../Misc_AMOs/curve/I2poolToken.sol";
 
 contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Stable is FraxUnifiedFarm_ERC20 {
 
+    string public farm_type = "ERC20_Convex_FRAXBP_Stable";
+
     constructor (
         address _owner,
         address[] memory _rewardTokens,
@@ -22,7 +24,7 @@ contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Stable is FraxUnifiedFarm_ERC20 {
     {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
-        // // Convex stkcvxBUSDBP and other metaFRAXBPs, where the token is also the pool (Convex Stable/FRAXBP)
+        // Convex stkcvxBUSDBP and other metaFRAXBPs, where the token is also the pool (Convex Stable/FRAXBP)
         // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
         // curveToken = I2poolToken(stakingToken.curveToken());
         // curvePool = I2pool(address(curveToken));

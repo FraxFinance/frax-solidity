@@ -256,6 +256,9 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplateClone {
     // Add additional LPs to an existing locked stake
     // REBASE: If you simply want to accrue interest, call this with addl_liq = 0
     function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
+        // Make sure staking isn't paused
+        require(!stakingPaused, "Staking paused");
+        
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
 
@@ -299,6 +302,9 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplateClone {
 
     // Extends the lock of an existing stake
     function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
+        // Make sure staking isn't paused
+        require(!stakingPaused, "Staking paused");
+        
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
 
