@@ -601,6 +601,17 @@ export const rewardTokenSymbolFromAddress = (rew_tkn_addr: string): string => {
     }
     if (found_name) return found_name;
 
+    // Search Arbitrum next
+    const arbi_rew_obj = CONTRACT_ADDRESSES.arbitrum.reward_tokens;
+    const arbi_rew_keys = Object.keys(arbi_rew_obj);
+    for (let k = 0; k < arbi_rew_keys.length; k++){
+        const test_key = arbi_rew_keys[k];
+        if (arbi_rew_obj[test_key].toLowerCase() == rew_tkn_addr.toLowerCase()) {
+            found_name = test_key.toUpperCase();
+            break;
+        }
+    }
+
     // Search BSC next
     const bsc_rew_obj = CONTRACT_ADDRESSES.bsc.reward_tokens;
     const bsc_rew_keys = Object.keys(bsc_rew_obj);

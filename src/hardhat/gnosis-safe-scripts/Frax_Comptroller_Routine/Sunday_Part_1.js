@@ -212,6 +212,7 @@ async function main() {
 	// });
 
 	// Convex Frax FRAX/USDC (stkcvxFRAXBP) rewards
+	// ================================================================
 	const IStakingProxyConvex = path.join(__dirname, '../../artifacts/contracts/Misc_AMOs/convex/IStakingProxyConvex.sol/IStakingProxyConvex.json');
 	const { abi: IStakingProxyConvex_ABI } = JSON.parse( await fse.readFileSync(IStakingProxyConvex, 'utf-8'));
 	const convex_frax_usdc_staking_proxy = new ethers.Contract("0x2AA609715488B09EFA93883759e8B089FBa11296", IStakingProxyConvex_ABI).connect(owner);
@@ -239,6 +240,35 @@ async function main() {
 		},
 		"contractInputsValues": null
 	});
+
+
+	// Convex Frax FRAX/USDP (stkcvxFRAXUSDP) rewards
+	// ================================================================
+	const convex_frax_usdp_staking_proxy = new ethers.Contract("0xD25D60aBafC220dd6F7BA37baD23e1105Db05a06", IStakingProxyConvex_ABI).connect(owner);
+	const convex_frax_usdp_rewards = await convex_frax_usdp_staking_proxy.callStatic.earned();
+	const crv_from_convex_frax_usdp = BigNumber.from(convex_frax_usdp_rewards[1][1]);
+	const cvx_from_convex_frax_usdp = BigNumber.from(convex_frax_usdp_rewards[1][2]);
+	
+	// FRAXUSDP Rewards: Sell all
+	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_usdp);
+	summary_info.cvx_to_sell = summary_info.cvx_to_sell.add(cvx_from_convex_frax_usdp);
+	console.log(`----------- Convex Frax FRAX/USDP (stkcvxFRAXUSDP) -----------`);
+	console.log(`CRV: ${formatUnits(crv_from_convex_frax_usdp, 18)}`);
+	console.log(`CVX: ${formatUnits(cvx_from_convex_frax_usdp, 18)}`);
+
+	// =====================================
+	batch_json.transactions.push({
+		"to": "0xD25D60aBafC220dd6F7BA37baD23e1105Db05a06",
+		"value": "0",
+		"data": null,
+		"contractMethod": {
+			"inputs": [],
+			"name": "getReward",
+			"payable": false
+		},
+		"contractInputsValues": null
+	});
+
 
 	// // Convex Frax Frax/FPI (stkcvxFPIFRAX) rewards
 	// const convex_frax_fpi_staking_proxy = new ethers.Contract("0x2df2378103baB456457329D4C603440B92b9c0bd", IStakingProxyConvex_ABI).connect(owner);

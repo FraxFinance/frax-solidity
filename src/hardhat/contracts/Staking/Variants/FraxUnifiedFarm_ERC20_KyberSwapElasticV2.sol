@@ -8,6 +8,8 @@ import "../../Oracle/ComboOracle_KyberSwapElasticV2.sol";
 
 contract FraxUnifiedFarm_ERC20_KyberSwapElasticV2 is FraxUnifiedFarm_ERC20 {
 
+    string public farm_type = "ERC20_KyberSwapElasticV2";
+
     // Need to seed a starting token to use both as a basis for fraxPerLPToken
     // as well as getting ticks, etc
     uint256 public seed_token_id; 
@@ -30,11 +32,11 @@ contract FraxUnifiedFarm_ERC20_KyberSwapElasticV2 is FraxUnifiedFarm_ERC20 {
     FraxUnifiedFarm_ERC20(_owner , _rewardTokens, _rewardManagers, _rewardRates, _gaugeControllers, _rewardDistributors, _stakingToken)
     {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
-        stakingToken = IKyberSwapFarmingToken(_stakingToken);
-        frax_is_token0 = false; // Doesn't really matter here
+        // stakingToken = IKyberSwapFarmingToken(_stakingToken);
+        // frax_is_token0 = false; // Doesn't really matter here
 
-        seed_token_id = _seed_token_id;
-        KSE_ComboOracleV2 = ComboOracle_KyberSwapElasticV2(_kse_combo_oracle);
+        // seed_token_id = _seed_token_id;
+        // KSE_ComboOracleV2 = ComboOracle_KyberSwapElasticV2(_kse_combo_oracle);
         
     }
 
@@ -52,13 +54,13 @@ contract FraxUnifiedFarm_ERC20_KyberSwapElasticV2 is FraxUnifiedFarm_ERC20 {
 
         // KyberSwap Elastic KyberSwapFarmingToken (KS-FT)
         // ============================================
-        {
-            // Fetch liquidity info from the seed token id
-            // ComboOracle_KyberSwapElasticV2.NFTBasicInfo memory nft_basic_info = KSE_ComboOracleV2.getNFTBasicInfo(seed_token_id);
-            ComboOracle_KyberSwapElasticV2.NFTValueInfo memory nft_value_info = KSE_ComboOracleV2.getNFTValueInfo(seed_token_id);
+        // {
+        //     // Fetch liquidity info from the seed token id
+        //     // ComboOracle_KyberSwapElasticV2.NFTBasicInfo memory nft_basic_info = KSE_ComboOracleV2.getNFTBasicInfo(seed_token_id);
+        //     ComboOracle_KyberSwapElasticV2.NFTValueInfo memory nft_value_info = KSE_ComboOracleV2.getNFTValueInfo(seed_token_id);
 
-            // Assume half of the liquidity is FRAX or FRAX-related, even if it is not.
-            frax_per_lp_token = (nft_value_info.pool_tvl_usd * MULTIPLIER_PRECISION) / (stakingToken.totalSupply() * 2);
-        }
+        //     // Assume half of the liquidity is FRAX or FRAX-related, even if it is not.
+        //     frax_per_lp_token = (nft_value_info.pool_tvl_usd * MULTIPLIER_PRECISION) / (stakingToken.totalSupply() * 2);
+        // }
     }
 }

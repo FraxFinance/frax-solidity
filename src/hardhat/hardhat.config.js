@@ -5,6 +5,7 @@ require('dotenv').config({ path: envPath });
 require('hardhat-deploy');
 require('hardhat-contract-sizer');
 require('hardhat-gas-reporter');
+require("hardhat-tracer");
 require("@matterlabs/hardhat-zksync-deploy");
 require("@matterlabs/hardhat-zksync-solc");
 require("@nomiclabs/hardhat-waffle");
@@ -59,12 +60,13 @@ module.exports = {
 				// Also see src/hardhat/justin-scripts/instructions.txt
 				// url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`, // Ethereum (alternate)
 
-				// blockNumber: 17203211 // Pin the block to allow caching
+				blockNumber: 149451388 // Pin the block to allow caching
 				
 			},
 			accounts: {
 				mnemonic: process.env.ROPSTEN_HARDHAT_PHRASE
 			},
+			// hardfork: 'shanghai'
 		},
 		arbitrum: {
 			url: process.env.ARBITRUM_NETWORK_ENDPOINT,
@@ -73,7 +75,7 @@ module.exports = {
 			},
 			chainId: 42161,
 			gas: "auto",
-			gasPrice: 300000000, // 0.3 Gwei
+			gasPrice: 150000000, // 0.15 Gwei
 			gasMultiplier: 1.2
 		},
 		aurora: {
@@ -123,7 +125,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 50000000000, // 50 Gwei
+			gasPrice: 35000000000, // 35 Gwei
 			gasMultiplier: 1.2,
 		},
 		evmos: {
@@ -146,6 +148,32 @@ module.exports = {
 			gasPrice: 750000000000, // 750 Gwei
 			gasMultiplier: 1.2
 		},
+		fraxchain_devnet_l1: {
+			url:`${process.env.FRAXCHAIN_DEVNET_L1_NETWORK_ENDPOINT}`,
+			accounts: {
+				mnemonic: process.env.MNEMONIC_PHRASE,
+			},
+			httpHeaders: {
+				"Cookie": `${process.env.FRAXCHAIN_DEVNET_COOKIE}`
+			},
+			chainId: 2520,
+			gas: "auto",
+			gasPrice: 2000000000, // 2 Gwei
+			gasMultiplier: 1.2,
+		},
+		fraxchain_devnet_l2: {
+			url:`${process.env.FRAXCHAIN_DEVNET_L2_NETWORK_ENDPOINT}`,
+			accounts: {
+				mnemonic: process.env.MNEMONIC_PHRASE,
+			},
+			httpHeaders: {
+				"Cookie": `${process.env.FRAXCHAIN_DEVNET_COOKIE}`
+			},
+			chainId: 2521,
+			gas: "auto",
+			gasPrice: 2000000000, // 2 Gwei
+			gasMultiplier: 1.2,
+		},
 		// fuse: {
 		// 	url: process.env.FUSE_NETWORK_ENDPOINT,
 		// 	accounts: {
@@ -164,6 +192,16 @@ module.exports = {
 			chainId: 1666600000,
 			gas: "auto",
 			gasPrice: 50000000000, // 50 Gwei
+			gasMultiplier: 1.2
+		},
+		holesky: {
+			url: process.env.HOLESKY_NETWORK_ENDPOINT,
+			accounts: {
+				mnemonic: process.env.HOLESKY_MNEMONIC_PHRASE
+			},
+			chainId: 17000,
+			gas: "auto",
+			gasPrice: 10000000000, // 10 Gwei
 			gasMultiplier: 1.2
 		},
 		moonbeam: {
@@ -193,7 +231,7 @@ module.exports = {
 			},
 			chainId: 10,
 			gas: "auto",
-			gasPrice: 10000000, // 0.01 Gwei
+			gasPrice: 25000000, // 0.025 Gwei
 			gasMultiplier: 1.2
 		},
 		polygon: {
@@ -203,7 +241,7 @@ module.exports = {
 			},
 			chainId: 137,
 			gas: "auto",
-			gasPrice: 150000000000, // 150 Gwei
+			gasPrice: 50000000000, // 50 Gwei
 			gasMultiplier: 1.2
 		},
 		polygon_zkevm: {
@@ -370,7 +408,55 @@ module.exports = {
 				  }
 			},
 			{
-				version: "0.8.17",
+				version: "0.8.15",
+				settings: {
+					// viaIR: true,
+					// optimizer: {
+					// 	enabled: true,
+					// 	runs: 200000,
+					// 	details: {
+					// 		orderLiterals: true,
+					// 		deduplicate: true,
+					// 		cse: true,
+					// 		constantOptimizer: true,
+					// 		yul: true,
+					// 		yulDetails: {
+					// 			stackAllocation: true
+					// 		}
+					// 	},
+					// }
+					optimizer: {
+						enabled: true,
+						runs: 100000
+					}
+				}
+			},
+			{
+				version: "0.8.19",
+				settings: {
+					// viaIR: true,
+					// optimizer: {
+					// 	enabled: true,
+					// 	runs: 200000,
+					// 	details: {
+					// 		orderLiterals: true,
+					// 		deduplicate: true,
+					// 		cse: true,
+					// 		constantOptimizer: true,
+					// 		yul: true,
+					// 		yulDetails: {
+					// 			stackAllocation: true
+					// 		}
+					// 	},
+					// }
+					optimizer: {
+						enabled: true,
+						runs: 100000
+					}
+				}
+			},
+			{
+				version: "0.8.23",
 				settings: {
 					// viaIR: true,
 					// optimizer: {

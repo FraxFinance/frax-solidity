@@ -22,13 +22,14 @@ import "./FraxUnifiedFarmTemplate.sol";
 // import "../Misc_AMOs/bunni/IBunniGauge.sol";
 
 // Convex wrappers
-// import "../Curve/ICurvefrxETHETHPool.sol";
-// import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
+import "../Curve/ICurvefrxETHETHPool.sol";
+import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
 // import "../Misc_AMOs/convex/IDepositToken.sol";
 // import "../Misc_AMOs/curve/I2pool.sol";
-// import "../Misc_AMOs/curve/I2poolToken.sol";
+import "../Misc_AMOs/curve/I2poolToken.sol";
 // import "../Misc_AMOs/curve/I2poolTokenNoLending.sol";
-// 
+// import "../Misc_AMOs/curve/ICurveTricryptoOptimizedWETH.sol";
+
 // Fraxlend
 // import '../Fraxlend/IFraxlendPair.sol';
 
@@ -39,7 +40,7 @@ import "./FraxUnifiedFarmTemplate.sol";
 // import "../Misc_AMOs/gelato/IGUniPool.sol";
 
 // KyberSwap Elastic KyberSwapFarmingToken (KS-FT)
-import "../Misc_AMOs/kyberswap/elastic/IKyberSwapFarmingToken.sol";
+// import "../Misc_AMOs/kyberswap/elastic/IKyberSwapFarmingToken.sol";
 
 // mStable
 // import '../Misc_AMOs/mstable/IFeederPool.sol';
@@ -73,10 +74,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // ICurvefrxETHETHPool public curvePool;
 
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
-    // IConvexStakingWrapperFrax public stakingToken;
-    // I2poolToken public curveToken;
+    IConvexStakingWrapperFrax public stakingToken;
+    I2poolToken public curveToken;
+    // ICurveTricryptoOptimizedWETH public curveToken;
     // I2pool public curvePool;
-    // ICurvefrxETHETHPool public curvePool;
+    ICurvefrxETHETHPool public curvePool;
+    // ICurveTricryptoOptimizedWETH public curvePool;
 
     // Fraxswap
     // IFraxswapPair public stakingToken;
@@ -88,7 +91,7 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // IGUniPool public stakingToken;
 
     // KyberSwap Elastic KyberSwapFarmingToken (KS-FT)
-    IKyberSwapFarmingToken public stakingToken;
+    // IKyberSwapFarmingToken public stakingToken;
     
     // mStable
     // IFeederPool public stakingToken;
@@ -437,6 +440,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // Add additional LPs to an existing locked stake
     function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
+        // Make sure staking isn't paused
+        require(!stakingPaused, "Staking paused");
+        
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
 
@@ -466,6 +472,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // Extends the lock of an existing stake
     function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
+        // Make sure staking isn't paused
+        require(!stakingPaused, "Staking paused");
+        
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
 

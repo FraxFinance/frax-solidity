@@ -301,7 +301,10 @@ contract FraxUnifiedFarm_KyberSwapElastic is FraxUnifiedFarmTemplate {
         uint256 token0_min_in, 
         uint256 token1_min_in,
         bool use_balof_override // Use balanceOf Override
-    ) updateRewardAndBalanceMdf(msg.sender, true) public {
+    ) nonReentrant updateRewardAndBalanceMdf(msg.sender, true) public {
+        // Make sure staking isn't paused
+        require(!stakingPaused, "Staking paused");
+
         // Get the stake and its index
         (LockedNFT memory thisNFT, uint256 theArrayIndex) = _getStake(msg.sender, token_id);
 

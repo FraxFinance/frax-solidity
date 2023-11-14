@@ -10,6 +10,7 @@ const fse = require("fs-extra");
 const { formatUnits } = require("ethers/lib/utils");
 const { BIG6, BIG18, stringifyReplacer, serializeJSONObject, calculateChecksum } = require("../utils/utils");
 const constants = require(path.join(__dirname, '../../../../dist/types/constants'));
+const { wrapperAddrs, farmAddrs } = require("./Script_Constants");
 const CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
 let ADDRS_ETH = CONTRACT_ADDRESSES.ethereum;
 let ADDRS_ETH_LPS = ADDRS_ETH.pair_tokens;
@@ -37,6 +38,8 @@ const batch_json = {
     ]
 }
 
+
+
 async function main() {
 	// Set up the provider for some future informational calls
 	[owner, addr1, addr2] = await ethers.getSigners();
@@ -44,19 +47,7 @@ async function main() {
 	console.log(`Using env file from ${envPath}`);
 	const thisBlock = await ethers.provider.getBlock(await ethers.provider.getBlockNumber());
 
-	const wrapperAddrs = [
-		ADDRS_ETH_LPS['Convex stkcvxfrxETHmsETH'],
-		ADDRS_ETH_LPS['Convex stkcvxfrxETHrETH_StaFi'],
-		ADDRS_ETH_LPS['Convex stkcvxfrxETHzETH'],
-		ADDRS_ETH_LPS['Convex stkcvxGRAIFRAXBP']
-	];
 
-	const farmAddrs = [
-		ADDRS_ETH_FARMS['Convex stkcvxfrxETHmsETH'],
-		ADDRS_ETH_FARMS['Convex stkcvxfrxETHrETH_StaFi'],
-		ADDRS_ETH_FARMS['Convex stkcvxfrxETHzETH'],
-		ADDRS_ETH_FARMS['Convex stkcvxGRAIFRAXBP']
-	];
 
 
 	// ===============================================================
@@ -220,3 +211,5 @@ main()
 		console.error(error);
 		process.exit(1);
 	});
+
+
