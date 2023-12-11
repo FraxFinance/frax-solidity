@@ -46,11 +46,12 @@ import "../ERC20/SafeERC20.sol";
 // import '../Misc_AMOs/balancer/IBalancerChildLiquidityGauge.sol'; // Balancer frxETH-bb-a-WETH Gauge
 // import '../Misc_AMOs/balancer/IL2BalancerPseudoMinter.sol'; // Balancer frxETH-bb-a-WETH Gauge
 // import '../Misc_AMOs/balancer/IStablePool.sol'; // Balancer frxETH-bb-a-WETH Gauge
-// import "../Oracle/AggregatorV3Interface.sol"; // Balancer frxETH-bb-a-WETH Gauge
+import "../Oracle/AggregatorV3Interface.sol"; // Balancer frxETH-bb-a-WETH Gauge and Convex frxETH/XXXETH
 import '../Misc_AMOs/convex/IConvexCvxLPRewardPoolCombo.sol'; // Convex cvxLP/RewardPool Combo
 import '../Misc_AMOs/curve/ICurveChildLiquidityGauge.sol'; // Convex cvxLP/RewardPool Combo
 // import '../Misc_AMOs/curve/I2pool.sol'; // Curve 2-token
-import '../Misc_AMOs/curve/I3pool.sol'; // Curve 3-token
+import '../Misc_AMOs/curve/I2poolTokenNoLending.sol'; // Curve 2-token (No Lending)
+// import '../Misc_AMOs/curve/I3pool.sol'; // Curve 3-token
 // import '../Misc_AMOs/curve/I3poolAndToken.sol'; // Curve 3-token with pool
 // import '../Misc_AMOs/kyberswap/elastic/IKSElasticLMV2.sol'; // KyberSwap Elastic
 // import '../Misc_AMOs/kyberswap/elastic/IKyberSwapFarmingToken.sol'; // KyberSwap Elastic
@@ -109,21 +110,21 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
     // // <>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>KYBERSWAP<>
 
 
-    // Balancer frxETH-bb-a-WETH Gauge
+    // Balancer frxETH-bb-a-WETH Gauge or Convex frxETH/XXXETH
     // IBalancerChildLiquidityGauge public stakingToken; // Balancer frxETH-bb-a-WETH Gauge
-    // AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0xF9680D99D6C9589e2a93a78A04A279e509205945); // For Balancer frxETH-bb-a-WETH Gauge
-    // function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
-    //     require(_eth_usd_oracle_address != address(0), "Zero address detected");
+    AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612); // For Balancer frxETH-bb-a-WETH Gauge
+    function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
+        require(_eth_usd_oracle_address != address(0), "Zero address detected");
 
-    //     priceFeedETHUSD = AggregatorV3Interface(_eth_usd_oracle_address);
-    // }
-    // function getLatestETHPriceE8() public view returns (int) {
-    //     // Returns in E8
-    //     (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
-    //     require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+        priceFeedETHUSD = AggregatorV3Interface(_eth_usd_oracle_address);
+    }
+    function getLatestETHPriceE8() public view returns (int) {
+        // Returns in E8
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
         
-    //     return price;
-    // }
+        return price;
+    }
     
     /// @notice The token being staked
     // I2pool public stakingToken; // Curve 2-token
@@ -451,28 +452,47 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
 
         // Convex cvxLP/RewardPool Combo
         // ============================================
-        {
-            // Half of the LP is FRAXBP. Half of that should be FRAX.
-            // Using 0.25 * virtual price for gas savings
-            ICurveChildLiquidityGauge gauge = ICurveChildLiquidityGauge(stakingToken.curveGauge());
-            I3pool pool = I3pool(gauge.lp_token());
-            frax_per_lp_token = pool.get_virtual_price() / 4; 
-        }
-
-        // Curve 2-token
-        // ============================================
         // {
-        //     address coin0 = stakingToken.coins(0);
-        //     uint256 total_frax_reserves;
-        //     if (coin0 == fraxAddress) {
-        //         total_frax_reserves = stakingToken.balances(0);
-        //     }
-        //     else {
-        //         total_frax_reserves = stakingToken.balances(1);
-        //     }
-        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(stakingToken.totalSupply());
+        //     // Half of the LP is FRAXBP. Half of that should be FRAX.
+        //     // Using 0.25 * virtual price for gas savings
+        //     ICurveChildLiquidityGauge gauge = ICurveChildLiquidityGauge(stakingToken.curveGauge());
+        //     I3pool pool = I3pool(gauge.lp_token());
+        //     frax_per_lp_token = pool.get_virtual_price() / 4; 
         // }
 
+        // Convex cvxfrxETH/XXXETH
+        // ============================================
+        {
+            // Get the pool
+            ICurveChildLiquidityGauge gauge = ICurveChildLiquidityGauge(stakingToken.curveGauge());
+            I2poolTokenNoLending pool = I2poolTokenNoLending(gauge.lp_token());
+
+            // Assume frxETH = ETH for pricing purposes
+            // Get the USD value of the frxETH per LP token
+            uint256 frxETH_in_pool = IERC20(0x178412e79c25968a32e89b11f63B33F733770c2A).balanceOf(address(pool));
+            uint256 frxETH_usd_val_per_lp_e8 = (frxETH_in_pool * uint256(getLatestETHPriceE8())) / pool.totalSupply();
+            frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here
+        }
+
+        // Curve 2-token (No Lending)
+        // ============================================
+        // {
+        //     // Get the pool
+        //     ICurveChildLiquidityGauge gauge = ICurveChildLiquidityGauge(stakingToken.curveGauge());
+        //     I2poolTokenNoLending pool = I2poolTokenNoLending(gauge.lp_token());
+        //     address coin0 = pool.coins(0);
+        //     uint256 total_frax_reserves;
+        //     uint256[2] memory _balanceResults = pool.get_balances();
+        //     if (coin0 == fraxAddress) {
+        //         total_frax_reserves = _balanceResults[0];
+        //     }
+        //     else {
+        //         total_frax_reserves = _balanceResults[1];
+        //     }
+        //     frax_per_lp_token = total_frax_reserves.mul(1e18).div(pool.totalSupply());
+        // }
+
+    
         // Curve 3-token
         // ============================================
         // {
@@ -809,15 +829,20 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
         }
     }
 
-    /// @notice Add additional LPs to an existing locked stake
+    /// @notice Add additional LPs to an existing locked stake. Also claims rewards at the old balance first
     /// @param kek_id The kek_id of the stake
     /// @param addl_liq The amount of additional liquidity to add
-    function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant updateRewardAndBalance(msg.sender, true) public {
+    function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant public {
         // Make sure staking isn't paused
         require(!stakingPaused, "Staking paused");
+
+        // Claim rewards at the old balance first
+        _getReward(msg.sender, msg.sender);
         
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
+
+        // Claim rewards at the old rate first
 
         // Calculate the new amount
         uint256 new_amt = thisStake.liquidity + addl_liq;
@@ -847,12 +872,15 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
         emit LockedAdditional(msg.sender, kek_id, addl_liq);
     }
 
-    /// @notice Extends the lock of an existing stake
+    /// @notice Extends the lock of an existing stake. Also claims rewards at the old balance first
     /// @param kek_id The kek_id of the stake
     /// @param new_ending_ts The new ending timestamp you want to extend to
-    function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant updateRewardAndBalance(msg.sender, true) public {
+    function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant public {
         // Make sure staking isn't paused
         require(!stakingPaused, "Staking paused");
+
+        // Claim rewards at the old balance first
+        _getReward(msg.sender, msg.sender);
         
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);

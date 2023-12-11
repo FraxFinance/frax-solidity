@@ -457,6 +457,28 @@ async function main() {
 		}
 	});
 
+	// Convex Prisma
+	// =====================================
+	batch_json.transactions.push({
+		"to": "0x0c73f1cFd5C9dFc150C8707Aa47Acbd14F0BE108",
+		"value": "0",
+		"data": null,
+		"contractMethod": {
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "_account",
+					"type": "address"
+				},
+			],
+			"name": "getReward",
+			"payable": false
+		},
+		"contractInputsValues": {
+			"_account": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+		}
+	});
+
 	// Relock expired locked CVX
 	// =====================================
 	// Determine if you need to process expired locks
@@ -496,59 +518,63 @@ async function main() {
 	// =====================================
 	const frxETH = new ethers.Contract("0x5E8422345238F34275888049021821E8E08CAa1f", ERC20_ABI).connect(owner);
 	const frxETH_balance = await frxETH.balanceOf("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27");
-	batch_json.transactions.push({
-		"to": "0x5E8422345238F34275888049021821E8E08CAa1f",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [
-				{
-				  "internalType": "address",
-				  "name": "spender",
-				  "type": "address"
-				},
-				{
-				  "internalType": "uint256",
-				  "name": "amount",
-				  "type": "uint256"
-				}
-			],
-			"name": "approve",
-			"payable": false
-		},
-		"contractInputsValues": {
-			"spender": "0xac3E018457B222d93114458476f3E3416Abbe38F",
-			"amount": frxETH_balance.toString(),
-		}
-	});
-
-	// frxETH to sfrxETH deposit
-	// =====================================
-	batch_json.transactions.push({
-		"to": "0xac3E018457B222d93114458476f3E3416Abbe38F",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "assets",
-					"type": "uint256"
-				},
-				{
-					"internalType": "address",
-					"name": "receiver",
-					"type": "address"
-				}
-			],
-			"name": "deposit",
-			"payable": false
-		},
-		"contractInputsValues": {
-			"assets": frxETH_balance.toString(),
-			"receiver": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
-		}
-	});
+	const frxETH_balance_dec = formatUnits(frxETH_balance, 18);
+	if (frxETH_balance_dec > 0) {
+		batch_json.transactions.push({
+			"to": "0x5E8422345238F34275888049021821E8E08CAa1f",
+			"value": "0",
+			"data": null,
+			"contractMethod": {
+				"inputs": [
+					{
+					  "internalType": "address",
+					  "name": "spender",
+					  "type": "address"
+					},
+					{
+					  "internalType": "uint256",
+					  "name": "amount",
+					  "type": "uint256"
+					}
+				],
+				"name": "approve",
+				"payable": false
+			},
+			"contractInputsValues": {
+				"spender": "0xac3E018457B222d93114458476f3E3416Abbe38F",
+				"amount": frxETH_balance.toString(),
+			}
+		});
+	
+		// frxETH to sfrxETH deposit
+		// =====================================
+		batch_json.transactions.push({
+			"to": "0xac3E018457B222d93114458476f3E3416Abbe38F",
+			"value": "0",
+			"data": null,
+			"contractMethod": {
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "assets",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "receiver",
+						"type": "address"
+					}
+				],
+				"name": "deposit",
+				"payable": false
+			},
+			"contractInputsValues": {
+				"assets": frxETH_balance.toString(),
+				"receiver": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+			}
+		});
+	}
+	
 
 
 	// ===============================================================
