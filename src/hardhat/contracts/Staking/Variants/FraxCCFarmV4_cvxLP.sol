@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "../FraxCrossChainFarmV4_ERC20.sol";
 
-contract FraxCCFarmV4_cvxUSDPlusFRAXBP is FraxCrossChainFarmV4_ERC20 {
+contract FraxCCFarmV4_cvxLP is FraxCrossChainFarmV4_ERC20 {
     string public farm_type = "FraxCCFarmV4_cvxLP";
 
     constructor (

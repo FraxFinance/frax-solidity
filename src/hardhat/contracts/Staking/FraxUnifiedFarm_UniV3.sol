@@ -339,7 +339,10 @@ contract FraxUnifiedFarm_UniV3 is FraxUnifiedFarmTemplate {
         uint256 token0_min_in, 
         uint256 token1_min_in,
         bool use_balof_override // Use balanceOf Override
-    ) updateRewardAndBalanceMdf(msg.sender, true) public {
+    )  public { 
+        // Claim rewards at the old balance first
+        _getReward(msg.sender, msg.sender, true);
+        
         // Get the stake and its index
         (LockedNFT memory thisNFT, uint256 theArrayIndex) = _getStake(msg.sender, token_id);
 
