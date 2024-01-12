@@ -28,7 +28,7 @@ pragma abicoder v2;
 // Justin Moore: https://github.com/0xJM
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v3-core/contracts/libraries/SafeCast.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IWETH.sol";
@@ -46,7 +46,7 @@ contract FraxswapRouterMultihop is ReentrancyGuard, Ownable {
     IWETH WETH9;
     address FRAX;
 
-    constructor(IWETH _WETH9, address _FRAX) {
+    constructor(IWETH _WETH9, address _FRAX) Ownable(msg.sender) {
         WETH9 = _WETH9;
         FRAX = _FRAX;
     }

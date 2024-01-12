@@ -50,9 +50,10 @@ import "../Oracle/AggregatorV3Interface.sol"; // Balancer frxETH-bb-a-WETH Gauge
 import '../Misc_AMOs/convex/IConvexCvxLPRewardPoolCombo.sol'; // Convex cvxLP/RewardPool Combo
 import '../Misc_AMOs/curve/ICurveChildLiquidityGauge.sol'; // Convex cvxLP/RewardPool Combo
 // import '../Misc_AMOs/curve/I2pool.sol'; // Curve 2-token
-import '../Misc_AMOs/curve/I2poolTokenNoLending.sol'; // Curve 2-token (No Lending)
+// import '../Misc_AMOs/curve/I2poolTokenNoLending.sol'; // Curve 2-token (No Lending)
 // import '../Misc_AMOs/curve/I3pool.sol'; // Curve 3-token
 // import '../Misc_AMOs/curve/I3poolAndToken.sol'; // Curve 3-token with pool
+import '../Misc_AMOs/curve/ICurveStableSwapNG.sol'; // Curve 2-token Stable NG
 // import '../Misc_AMOs/kyberswap/elastic/IKSElasticLMV2.sol'; // KyberSwap Elastic
 // import '../Misc_AMOs/kyberswap/elastic/IKyberSwapFarmingToken.sol'; // KyberSwap Elastic
 // import '../Misc_AMOs/kyberswap/elastic/IKSReinvestmentTokenPool.sol'; // KyberSwap Elastic
@@ -112,19 +113,19 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
 
     // Balancer frxETH-bb-a-WETH Gauge or Convex frxETH/XXXETH
     // IBalancerChildLiquidityGauge public stakingToken; // Balancer frxETH-bb-a-WETH Gauge
-    AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612); // For Balancer frxETH-bb-a-WETH Gauge
-    function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
-        require(_eth_usd_oracle_address != address(0), "Zero address detected");
+    // AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612); // For Balancer frxETH-bb-a-WETH Gauge
+    // function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
+    //     require(_eth_usd_oracle_address != address(0), "Zero address detected");
 
-        priceFeedETHUSD = AggregatorV3Interface(_eth_usd_oracle_address);
-    }
-    function getLatestETHPriceE8() public view returns (int) {
-        // Returns in E8
-        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
-        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+    //     priceFeedETHUSD = AggregatorV3Interface(_eth_usd_oracle_address);
+    // }
+    // function getLatestETHPriceE8() public view returns (int) {
+    //     // Returns in E8
+    //     (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
+    //     require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
         
-        return price;
-    }
+    //     return price;
+    // }
     
     /// @notice The token being staked
     // I2pool public stakingToken; // Curve 2-token
@@ -253,14 +254,17 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
     /// @notice If staking is paused
     bool public stakingPaused; // For emergencies
     
-    /// @notice If reward collection on withdrawal is disabled
-    bool public collectRewardsOnWithdrawalPaused;
+    // For emergencies if a token is overemitted or something else. Only callable once.
+    // Bypasses certain logic, which will cause reward calculations to be off
+    // But the goal is for the users to recover LP, and they couldn't claim the erroneous rewards anyways.
+    // Reward reimbursement claims would be handled with pre-issue earned() snapshots and a claim contract, or similar.
+    bool public withdrawalOnlyShutdown; 
     
     /// @notice If this contract has been initialized
     bool public isInitialized;
 
     /// @notice Version
-    string public version = "0.0.8";
+    string public version = "0.0.9";
 
     /* ========== STRUCTS ========== */
     
@@ -300,7 +304,7 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
 
     /// @notice Staking should not be paused
     modifier notStakingPaused() {
-        require(stakingPaused == false, "Staking paused");
+        require(!stakingPaused, "Staking paused");
         _;
     }
 
@@ -462,16 +466,25 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
 
         // Convex cvxfrxETH/XXXETH
         // ============================================
-        {
-            // Get the pool
-            ICurveChildLiquidityGauge gauge = ICurveChildLiquidityGauge(stakingToken.curveGauge());
-            I2poolTokenNoLending pool = I2poolTokenNoLending(gauge.lp_token());
+        // {
+        //     // Get the pool
+        //     ICurveChildLiquidityGauge gauge = ICurveChildLiquidityGauge(stakingToken.curveGauge());
+        //     I2poolTokenNoLending pool = I2poolTokenNoLending(gauge.lp_token());
 
-            // Assume frxETH = ETH for pricing purposes
-            // Get the USD value of the frxETH per LP token
-            uint256 frxETH_in_pool = IERC20(0x178412e79c25968a32e89b11f63B33F733770c2A).balanceOf(address(pool));
-            uint256 frxETH_usd_val_per_lp_e8 = (frxETH_in_pool * uint256(getLatestETHPriceE8())) / pool.totalSupply();
-            frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here
+        //     // Assume frxETH = ETH for pricing purposes
+        //     // Get the USD value of the frxETH per LP token
+        //     uint256 frxETH_in_pool = IERC20(0x178412e79c25968a32e89b11f63B33F733770c2A).balanceOf(address(pool));
+        //     uint256 frxETH_usd_val_per_lp_e8 = (frxETH_in_pool * uint256(getLatestETHPriceE8())) / pool.totalSupply();
+        //     frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here
+        // }
+
+        // Convex FRAX/FXB
+        // ============================================
+        {
+            // Count both FRAX and FXB as both are beneficial
+            ICurveChildLiquidityGauge gauge = ICurveChildLiquidityGauge(stakingToken.curveGauge());
+            ICurveStableSwapNG curvePool = ICurveStableSwapNG(gauge.lp_token());
+            frax_per_lp_token = curvePool.get_virtual_price(); 
         }
 
         // Curve 2-token (No Lending)
@@ -774,14 +787,16 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
     /// @return locked_stake The stake information, as a LockedStake
     /// @return arr_idx The array index of the stake
     function _getStake(address staker_address, bytes32 kek_id) internal view returns (LockedStake memory locked_stake, uint256 arr_idx) {
-        for (uint256 i = 0; i < lockedStakes[staker_address].length; i++) { 
-            if (kek_id == lockedStakes[staker_address][i].kek_id){
-                locked_stake = lockedStakes[staker_address][i];
-                arr_idx = i;
-                break;
+        if (kek_id != 0) {
+            for (uint256 i = 0; i < lockedStakes[staker_address].length; i++) { 
+                if (kek_id == lockedStakes[staker_address][i].kek_id){
+                    locked_stake = lockedStakes[staker_address][i];
+                    arr_idx = i;
+                    break;
+                }
             }
         }
-        require(locked_stake.kek_id == kek_id, "Stake not found");
+        require(kek_id != 0 && locked_stake.kek_id == kek_id, "Stake not found");
         
     }
 
@@ -790,16 +805,19 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
     /// @param sync_too If the non-user state should be synced too
     /// @param pre_sync_vemxstored The pre-sync veFXS multiplier
     function _updateRewardAndBalance(address account, bool sync_too, bool pre_sync_vemxstored) internal {
-        // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
-        if (sync_too){
-            sync();
+        // Skip certain functions if we are in an emergency shutdown
+        if (!withdrawalOnlyShutdown) {
+            // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
+            if (sync_too){
+                sync();
+            }
         }
-
+        
         // Used to make sure the veFXS multiplier is correct if a stake is increased, before calcCurCombinedWeight
         if (pre_sync_vemxstored){
             _vefxsMultiplierStored[account] = veFXSMultiplier(account);
         }
-        
+
         if (account != address(0)) {
             // To keep the math correct, the user's combined weight must be recomputed to account for their
             // ever-changing veFXS balance.
@@ -810,7 +828,8 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
             ) = calcCurCombinedWeight(account);
 
             // Calculate the earnings first
-            _syncEarned(account);
+            // Skip if we are in emergency shutdown
+            if (!withdrawalOnlyShutdown) _syncEarned(account);
 
             // Update the user's stored veFXS multipliers
             _vefxsMultiplierStored[account] = new_vefxs_multiplier;
@@ -836,13 +855,14 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
         // Make sure staking isn't paused
         require(!stakingPaused, "Staking paused");
 
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
+
         // Claim rewards at the old balance first
         _getReward(msg.sender, msg.sender);
         
         // Get the stake and its index
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(msg.sender, kek_id);
-
-        // Claim rewards at the old rate first
 
         // Calculate the new amount
         uint256 new_amt = thisStake.liquidity + addl_liq;
@@ -878,6 +898,9 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
     function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant public {
         // Make sure staking isn't paused
         require(!stakingPaused, "Staking paused");
+
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
 
         // Claim rewards at the old balance first
         _getReward(msg.sender, msg.sender);
@@ -963,6 +986,7 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
         uint256 start_timestamp
     ) internal updateRewardAndBalance(staker_address, true) {
         require(!stakingPaused || valid_migrators[msg.sender] == true, "Staking paused or in migration");
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
         require(liquidity > 0, "Must stake more than zero");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
@@ -992,30 +1016,31 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
 
     /// @notice Withdraw a stake. 
     /// @param kek_id The id for the stake
-    /// @param claim_rewards Whether you want to claim rewards during withdrawal
+    /// @param claim_rewards_deprecated DEPRECATED, has no effect (always claims rewards regardless)
     /// @dev Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
-    function withdrawLocked(bytes32 kek_id, bool claim_rewards) nonReentrant public {
+    function withdrawLocked(bytes32 kek_id, bool claim_rewards_deprecated) nonReentrant public {
         require(withdrawalsPaused == false, "Withdrawals paused");
-        _withdrawLocked(msg.sender, msg.sender, kek_id, claim_rewards);
+        _withdrawLocked(msg.sender, msg.sender, kek_id, claim_rewards_deprecated);
     }
 
     /// @notice No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper functions like withdraw(), migrator_withdraw_unlocked() and migrator_withdraw_locked()
     /// @param staker_address The address of the staker
     /// @param destination_address Destination address for the withdrawn LP
     /// @param kek_id The id for the stake
-    /// @param claim_rewards Whether you want to claim rewards during withdrawal
-    function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id, bool claim_rewards) internal  {
+    /// @param claim_rewards_deprecated DEPRECATED, has no effect (always claims rewards regardless)
+    function _withdrawLocked(address staker_address, address destination_address, bytes32 kek_id, bool claim_rewards_deprecated) internal  {
         // Collect rewards first and then update the balances
-        // collectRewardsOnWithdrawalPaused to be used in an emergency situation if reward is overemitted or not available
-        // and the user can forfeit rewards to get their principal back. User can also specify it in withdrawLocked
-        if (claim_rewards || !collectRewardsOnWithdrawalPaused) _getReward(staker_address, destination_address);
+        // withdrawalOnlyShutdown to be used in an emergency situation if reward is overemitted or not available
+        // and the user can forfeit rewards to get their principal back. 
+        if (withdrawalOnlyShutdown) {
+            // Do nothing.
+        }
         else {
-            // Sync the rewards at least
-            _updateRewardAndBalance(staker_address, true, false);
+            // Get the rewards
+            _getReward(staker_address, destination_address);
         }
         
         (LockedStake memory thisStake, uint256 theArrayIndex) = _getStake(staker_address, kek_id);
-        require(thisStake.kek_id == kek_id, "Stake not found");
         require(block.timestamp >= thisStake.ending_timestamp || stakesUnlocked == true || valid_migrators[msg.sender] == true, "Stake is still locked!");
 
         uint256 liquidity = thisStake.liquidity;
@@ -1054,6 +1079,9 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
     /// @return _rtnRewards The amounts of collected reward tokens
     /// @dev No withdrawer == msg.sender check needed since this is only internally callable. This distinction is important for the migrator
     function _getReward(address rewardee, address destination_address) internal updateRewardAndBalance(rewardee, true) returns (uint256[] memory _rtnRewards) {
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
+        
         _rtnRewards = new uint256[](rewardTokens.length);
         for (uint256 i = 0; i < rewardTokens.length; i++) { 
             _rtnRewards[i] = rewards[rewardee][i];
@@ -1137,6 +1165,9 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
     /// @notice Sync the contract
     function sync() public {
         require(isInitialized, "Contract not initialized");
+
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
 
         // Make sure the rewardRates are synced to the current reward token balances
         syncRewards();
@@ -1248,9 +1279,9 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
         migrationsOn = !migrationsOn;
     }
 
-    /// @notice Toggle reward collection upon withdrawal
-    function toggleCollectRewardsOnWithdrawal() external onlyByOwnGov {
-        collectRewardsOnWithdrawalPaused = !collectRewardsOnWithdrawalPaused;
+    /// @notice Only settable to true
+    function initiateWithdrawalOnlyShutdown() external onlyByOwnGov {
+        withdrawalOnlyShutdown = true;
     }
 
     /// @notice Toggle the ability to stake

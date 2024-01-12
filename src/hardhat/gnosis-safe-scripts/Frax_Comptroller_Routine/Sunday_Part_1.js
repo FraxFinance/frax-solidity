@@ -7,7 +7,7 @@ const { BigNumber } = require("@ethersproject/bignumber");
 const util = require("util");
 const chalk = require("chalk");
 const fse = require("fs-extra");
-const { formatUnits } = require("ethers/lib/utils");
+const { formatUnits } = require("ethers/lib.commonjs/utils");
 const { BIG6, BIG18, stringifyReplacer, serializeJSONObject, calculateChecksum, GetCVXMintAmount } = require("../utils/utils");
 global.artifacts = artifacts;
 global.web3 = web3;
@@ -220,9 +220,9 @@ async function main() {
 	const crv_from_convex_frax_usdc = BigNumber.from(convex_frax_usdc_rewards[1][1]);
 	const cvx_from_convex_frax_usdc = BigNumber.from(convex_frax_usdc_rewards[1][2]);
 	
-	// FRAXBP rewards: 33.3% of CRV and 100% of CVX is saved/reinvested
-	summary_info.crv_to_save = summary_info.crv_to_save.add(crv_from_convex_frax_usdc.mul(333).div(1000));
-	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_usdc.mul(666).div(1000));
+	// FRAXBP rewards: 0% of CRV and 100% of CVX is saved/reinvested
+	summary_info.crv_to_save = summary_info.crv_to_save.add(crv_from_convex_frax_usdc.mul(0).div(1000)); // 0%
+	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_usdc.mul(1000).div(1000)); // 100%
 	summary_info.cvx_to_lock = summary_info.cvx_to_lock.add(cvx_from_convex_frax_usdc);
 	console.log(`----------- Convex Frax FRAX/USDC (stkcvxFRAXBP) -----------`);
 	console.log(`CRV: ${formatUnits(crv_from_convex_frax_usdc, 18)}`);
@@ -302,7 +302,11 @@ async function main() {
 	const convex_cvxalusd_frax3CRV = new ethers.Contract("0x26598e3E511ADFadefD70ab2C3475Ff741741104", IConvexBaseRewardPool_ABI).connect(owner);
 	const convex_cvxgusd_frax3CRV = new ethers.Contract("0x47809eE386D1dEC29c0b13f21ba30F564517538B", IConvexBaseRewardPool_ABI).connect(owner);
 	const convex_cvxlusd_frax3CRV = new ethers.Contract("0x053e1dad223A206e6BCa24C77786bb69a10e427d", IConvexBaseRewardPool_ABI).connect(owner);
-	
+	const convex_cvxFRAXFPI = new ethers.Contract("0x062450B06EB92F1C4E227C41c987ed97c93Ae232", IConvexBaseRewardPool_ABI).connect(owner);
+	const convex_cvxFRAXPYUSD = new ethers.Contract("0xB10a6e39Ed8a66fEd3aAef3866a95611a49B9a95", IConvexBaseRewardPool_ABI).connect(owner);
+	const convex_cvxFRAXsDAI = new ethers.Contract("0xE627082369689b2B86D948c377A4aE4e739C59eE", IConvexBaseRewardPool_ABI).connect(owner);
+
+
 	// Get earned CRV
 	const cvx_crv_claim_all_rews = await Promise.all([
 		convex_cvxcrvfrax_brp.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
@@ -310,16 +314,23 @@ async function main() {
 		convex_cvxalusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
 		convex_cvxgusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
 		convex_cvxlusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
+		convex_cvxFRAXFPI.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
+		convex_cvxFRAXPYUSD.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
+		convex_cvxFRAXsDAI.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
 	])
 
 	// FRAXBP rewards get saved/reinvested, everything else is sold.
 	// CRV
-	summary_info.crv_to_save = summary_info.crv_to_save.add(cvx_crv_claim_all_rews[0]);
+	// summary_info.crv_to_save = summary_info.crv_to_save.add(cvx_crv_claim_all_rews[0]);
 	summary_info.crv_to_sell = summary_info.crv_to_sell
+		.add(cvx_crv_claim_all_rews[0])
 		.add(cvx_crv_claim_all_rews[1])
 		.add(cvx_crv_claim_all_rews[2])
 		.add(cvx_crv_claim_all_rews[3])
-		.add(cvx_crv_claim_all_rews[4]);
+		.add(cvx_crv_claim_all_rews[4])
+		.add(cvx_crv_claim_all_rews[5])
+		.add(cvx_crv_claim_all_rews[6])
+		.add(cvx_crv_claim_all_rews[7]);
 
 	// CVX
 	summary_info.cvx_to_lock = summary_info.cvx_to_lock.add(GetCVXMintAmount(cvx_crv_claim_all_rews[0], cvx_total_supply))
@@ -327,7 +338,10 @@ async function main() {
 		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[1], cvx_total_supply))
 		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[2], cvx_total_supply))
 		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[3], cvx_total_supply))
-		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[4], cvx_total_supply));
+		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[4], cvx_total_supply))
+		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[5], cvx_total_supply))
+		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[6], cvx_total_supply))
+		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[7], cvx_total_supply));
 
 	console.log(`----------- Convex Curve Others -----------`);
 	console.log(`convex_cvxcrvfrax_brp: ${formatUnits(cvx_crv_claim_all_rews[0], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[0], cvx_total_supply), 18)} CVX`); 
@@ -335,6 +349,10 @@ async function main() {
 	console.log(`convex_cvxalusd_frax3CRV: ${formatUnits(cvx_crv_claim_all_rews[2], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[2], cvx_total_supply), 18)} CVX`); 
 	console.log(`convex_cvxgusd_frax3CRV: ${formatUnits(cvx_crv_claim_all_rews[3], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[3], cvx_total_supply), 18)} CVX`); 
 	console.log(`convex_cvxlusd_frax3CRV: ${formatUnits(cvx_crv_claim_all_rews[4], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[4], cvx_total_supply), 18)} CVX`); 
+	console.log(`convex_cvxFRAXFPI: ${formatUnits(cvx_crv_claim_all_rews[5], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[5], cvx_total_supply), 18)} CVX`); 
+	console.log(`convex_cvxFRAXPYUSD: ${formatUnits(cvx_crv_claim_all_rews[6], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[6], cvx_total_supply), 18)} CVX`); 
+	console.log(`convex_cvxFRAXsDAI: ${formatUnits(cvx_crv_claim_all_rews[7], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[7], cvx_total_supply), 18)} CVX`); 
+
 
 	batch_json.transactions.push({
 		"to": "0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516",
@@ -392,7 +410,7 @@ async function main() {
 			"payable": false
 		},
 		"contractInputsValues": {
-			"rewardContracts": "[\"0x7e880867363A7e321f5d260Cade2B0Bb2F717B02\", \"0x6991C1CD588c4e6f6f1de3A0bac5B8BbAb7aAF6d\", \"0x26598e3E511ADFadefD70ab2C3475Ff741741104\", \"0x47809eE386D1dEC29c0b13f21ba30F564517538B\", \"0x053e1dad223A206e6BCa24C77786bb69a10e427d\"]",
+			"rewardContracts": "[\"0x7e880867363A7e321f5d260Cade2B0Bb2F717B02\", \"0x6991C1CD588c4e6f6f1de3A0bac5B8BbAb7aAF6d\", \"0x26598e3E511ADFadefD70ab2C3475Ff741741104\", \"0x47809eE386D1dEC29c0b13f21ba30F564517538B\", \"0x053e1dad223A206e6BCa24C77786bb69a10e427d\", \"0x062450B06EB92F1C4E227C41c987ed97c93Ae232\", \"0xB10a6e39Ed8a66fEd3aAef3866a95611a49B9a95\", \"0xE627082369689b2B86D948c377A4aE4e739C59eE\"]",
 			"extraRewardContracts": "[]",
 			"tokenRewardContracts": "[]",
 			"tokenRewardTokens": "[]",
@@ -853,7 +871,7 @@ async function main() {
 	// ===============================================================================
 	// CRV (For SAVED CRV, 100% goes to voter proxy for now. We are not adding to our cvxCRV stake)
 	summary_info.crv_to_convert_to_cvxcrv = summary_info.crv_to_save.mul(0).div(100); // 0%
-	summary_info.crv_to_send_to_curve_voter_proxy = summary_info.crv_to_save.mul(100).div(100); // 100%
+	summary_info.crv_to_send_to_curve_voter_proxy = summary_info.crv_to_save.mul(0).div(100); // 0%
 	summary_info.crv_to_save = BigNumber.from(0);
 
 	console.log(`\n----------- Post Reward Collection Status -----------`);
@@ -865,52 +883,55 @@ async function main() {
 
 	// Curve Voter Proxy (transfer CRV to proxy)
 	// =====================================
-	batch_json.transactions.push({
-		"to": "0xD533a949740bb3306d119CC777fa900bA034cd52",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [
-				{
-					"name": "_to",
-					"type": "address"
-				},
-				{
-					"name": "_value",
-					"type": "uint256"
-				}
-			],
-			"name": "transfer",
-			"payable": false
-		},
-		"contractInputsValues": {
-			"_to": "0x847FA1A5337C7f24D7066E467F2e2A0f969Ca79F",
-			"_value": summary_info.crv_to_send_to_curve_voter_proxy.toString(),
-		}
-	});
-
-	// Curve Voter Proxy Lock
-	// =====================================
-	batch_json.transactions.push({
-		"to": "0x847FA1A5337C7f24D7066E467F2e2A0f969Ca79F",
-		"value": "0",
-		"data": null,
-		"contractMethod": {
-			"inputs": [
-				{
-					"internalType": "uint256",
-					"name": "_value",
-					"type": "uint256"
-				}
-			],
-			"name": "increaseAmount",
-			"payable": false
-		},
-		"contractInputsValues": {
-			"_value": summary_info.crv_to_send_to_curve_voter_proxy.toString(),
-		}
-	});
-	summary_info.crv_to_send_to_curve_voter_proxy = BigNumber.from(0);
+	if (summary_info.crv_to_send_to_curve_voter_proxy > 0){
+		batch_json.transactions.push({
+			"to": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+			"value": "0",
+			"data": null,
+			"contractMethod": {
+				"inputs": [
+					{
+						"name": "_to",
+						"type": "address"
+					},
+					{
+						"name": "_value",
+						"type": "uint256"
+					}
+				],
+				"name": "transfer",
+				"payable": false
+			},
+			"contractInputsValues": {
+				"_to": "0x847FA1A5337C7f24D7066E467F2e2A0f969Ca79F",
+				"_value": summary_info.crv_to_send_to_curve_voter_proxy.toString(),
+			}
+		});
+	
+		// Curve Voter Proxy Lock
+		// =====================================
+		batch_json.transactions.push({
+			"to": "0x847FA1A5337C7f24D7066E467F2e2A0f969Ca79F",
+			"value": "0",
+			"data": null,
+			"contractMethod": {
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_value",
+						"type": "uint256"
+					}
+				],
+				"name": "increaseAmount",
+				"payable": false
+			},
+			"contractInputsValues": {
+				"_value": summary_info.crv_to_send_to_curve_voter_proxy.toString(),
+			}
+		});
+		summary_info.crv_to_send_to_curve_voter_proxy = BigNumber.from(0);
+	}
+	
 	summary_info.crv_new_voter_proxy_add_done = true;
 
 	// Convex Re-lock (should already be approved)

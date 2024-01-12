@@ -38,7 +38,7 @@ pragma solidity ^0.8.4;
 ** - Operators do not have enough time to pause the chain after a fake proposal. Avoided by requiring a minimal amount of time between sending the proposal and executing it.
 */
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 

@@ -7,8 +7,8 @@ pragma solidity ^0.8.4;
 - User sends FRAX to the contract on L1 and can specify the max cummulative FRAX. This way they can be sure there is enough FRAX on L2
 - User provides proofs of the L1 payment on L2 and gets the FRAX.
 */
-
-import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
+import "../ERC20/IERC20.sol";
+import "../Uniswap/TransferHelperV2.sol";
 import "../Fraxoracle/interface/IStateRootOracle.sol";
 import "../Fraxoracle/library/MerkleTreeProver.sol";
 import "hardhat/console.sol";
@@ -57,7 +57,7 @@ contract FerryOnL2 {
    
    function captainDeposit(uint amount) external {
       CaptainData storage data = captainData[msg.sender];
-      TransferHelper.safeTransferFrom(address(token),msg.sender,address(this),amount); 
+      TransferHelperV2.safeTransferFrom(address(token),msg.sender,address(this),amount); 
       data.balance+=amount;
    }
    
@@ -73,7 +73,7 @@ contract FerryOnL2 {
       uint toWithdraw=data.withdrawAmount>data.balance?data.balance:data.withdrawAmount;
       data.balance-=toWithdraw;
       data.withdrawAmount=0;
-      TransferHelper.safeTransfer(address(token),msg.sender,toWithdraw);
+      TransferHelperV2.safeTransfer(address(token),msg.sender,toWithdraw);
    }
    
    function disembark(address captain, uint32 index, uint blockNumber, bytes[] memory _proofAccount,bytes[][] memory _proofValue) external {
@@ -91,7 +91,7 @@ contract FerryOnL2 {
          data.balance-=amount;
          data.cummAmount+=amount;
          emit Disembark(captain,index,recipient,amount);
-         TransferHelper.safeTransfer(address(token),recipient,amount);
+         TransferHelperV2.safeTransfer(address(token),recipient,amount);
       }
    }
    
@@ -99,13 +99,13 @@ contract FerryOnL2 {
    // ************* L2 => L1
    
    function embarkWithRecipient(uint amount, uint tip, address recipient, uint32 deadline) public {
-      TransferHelper.safeTransferFrom(address(token),msg.sender,address(this),amount+tip); 
+      TransferHelperV2.safeTransferFrom(address(token),msg.sender,address(this),amount+tip); 
       emit Embark(recipient,uint32(transactions.length),amount,tip,block.timestamp);
       transactions.push(Transaction(recipient,amount,tip,deadline,false));   
    }
    
    function increaseTip(uint32 index, uint tip) external {
-      TransferHelper.safeTransferFrom(address(token),msg.sender,address(this),tip); 
+      TransferHelperV2.safeTransferFrom(address(token),msg.sender,address(this),tip); 
       emit IncreaseTip(index,tip);
       transactions[index].tip+=tip;
    }   
@@ -121,10 +121,10 @@ contract FerryOnL2 {
       uint256 value = MerkleTreeProver.proofStorageSlotValue(accountPool.storageRoot, slot, _proofValue).value;
       if (value==0) { // Not disembarked, return the funds
          if (blockInfo.timestamp<transaction.deadline) revert("Too soon");
-         TransferHelper.safeTransfer(address(token),transaction.recipient,transaction.amount+transaction.tip);
+         TransferHelperV2.safeTransfer(address(token),transaction.recipient,transaction.amount+transaction.tip);
       } else {
          address captain = address(uint160(value));  
-         TransferHelper.safeTransfer(address(token),captain,transaction.amount+transaction.tip);
+         TransferHelperV2.safeTransfer(address(token),captain,transaction.amount+transaction.tip);
       }
    }
    

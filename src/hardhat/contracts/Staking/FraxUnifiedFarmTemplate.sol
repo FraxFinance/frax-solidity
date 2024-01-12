@@ -44,9 +44,19 @@ import "../Utils/ReentrancyGuard.sol";
 import "./Owned.sol";
 
 // Extra rewards
-import "../Misc_AMOs/bunni/IBunniGauge.sol";
-import "../Misc_AMOs/bunni/IBunniLens.sol";
-import "../Misc_AMOs/bunni/IBunniMinter.sol";
+// Balancer
+// ====================
+import "../Misc_AMOs/balancer/IAuraGauge.sol";
+import "../Misc_AMOs/balancer/IBalancerMinter.sol";
+
+// BUNNI
+// ====================
+// import "../Misc_AMOs/bunni/IBunniGauge.sol";
+// import "../Misc_AMOs/bunni/IBunniLens.sol";
+// import "../Misc_AMOs/bunni/IBunniMinter.sol";
+
+// CONVEX
+// ====================
 // import "../Misc_AMOs/convex/IConvexBaseRewardPool.sol";
 
 contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
@@ -54,7 +64,11 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // -------------------- VARIES --------------------
 
-    // // Bunni
+    // Balancer
+    IAuraGauge public stakingToken;
+    IBalancerMinter public minter = IBalancerMinter(0x239e55F427D44C3cc793f49bFB507ebe76638a2b);
+
+    // Bunni
     // IBunniGauge public stakingToken;
     // IBunniLens public lens = IBunniLens(0xb73F303472C4fD4FF3B9f59ce0F9b13E47fbfD19);
     // IBunniMinter public minter = IBunniMinter(0xF087521Ffca0Fa8A43F5C445773aB37C5f574DA0);
@@ -134,10 +148,15 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     bool internal withdrawalsPaused; // For emergencies
     bool internal rewardsCollectionPaused; // For emergencies
     bool internal stakingPaused; // For emergencies
-    bool internal collectRewardsOnWithdrawalPaused; // For emergencies if a token is overemitted
+
+    // For emergencies if a token is overemitted or something else. Only callable once.
+    // Bypasses certain logic, which will cause reward calculations to be off
+    // But the goal is for the users to recover LP, and they couldn't claim the erroneous rewards anyways.
+    // Reward reimbursement claims would be handled with pre-issue earned() snapshots and a claim contract, or similar.
+    bool public withdrawalOnlyShutdown; 
 
     // Version
-    string public version = "1.0.5";
+    string public version = "1.0.6";
 
     /* ========== STRUCTS ========== */
     // In children...
@@ -494,11 +513,14 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     function _updateRewardAndBalance(address account, bool sync_too, bool pre_sync_vemxstored) internal {
-        // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
-        if (sync_too){
-            sync();
+        // Skip certain functions if we are in an emergency shutdown
+        if (!withdrawalOnlyShutdown) {
+            // Need to retro-adjust some things if the period hasn't been renewed, then start a new one
+            if (sync_too){
+                sync();
+            }
         }
-
+        
         // Used to make sure the veFXS multiplier is correct if a stake is increased, before calcCurCombinedWeight
         if (pre_sync_vemxstored){
             _vefxsMultiplierStored[account] = veFXSMultiplier(account);
@@ -514,7 +536,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
             ) = calcCurCombinedWeight(account);
 
             // Calculate the earnings first
-            _syncEarned(account);
+            if (!withdrawalOnlyShutdown) _syncEarned(account);
 
             // Update the user's stored veFXS multipliers
             _vefxsMultiplierStored[account] = new_vefxs_multiplier;
@@ -556,6 +578,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     /// @notice A function that can be overridden to add extra logic to the getReward function
     /// @param destination_address The address to send the rewards to
     function getRewardExtraLogic(address destination_address) public nonReentrant {
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
         require(rewardsCollectionPaused == false, "Rewards collection paused");
         return _getRewardExtraLogic(msg.sender, destination_address);
     }
@@ -583,11 +606,14 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     // No withdrawer == msg.sender check needed since this is only internally callable
     function _getReward(address rewardee, address destination_address, bool do_extra_logic) internal updateRewardAndBalanceMdf(rewardee, true) returns (uint256[] memory rewards_before) {
-        // Update the last reward claim time first, as an extra reentrancy safeguard
-        lastRewardClaimTime[rewardee] = block.timestamp;
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
         
         // Make sure rewards collection isn't paused
         require(rewardsCollectionPaused == false, "Rewards collection paused");
+
+        // Update the last reward claim time first, as an extra reentrancy safeguard
+        lastRewardClaimTime[rewardee] = block.timestamp;
         
         // Update the rewards array and distribute rewards
         rewards_before = new uint256[](rewardTokens.length);
@@ -641,11 +667,27 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // lastUpdateTime = periodFinish;
         periodFinish = periodFinish + ((num_periods_elapsed + 1) * rewardsDuration);
 
-        // // Bunni oLIT rewards
-        // // ==========================================
-        // // Pull in rewards and set the reward rate for one week, based off of that
-        // // If the rewards get messed up for some reason, set this to 0 and it will skip
-        // // Should only be called once per week max
+        // Balancer Gauge Rewards
+        // ==========================================
+        // Pull in rewards and set the reward rate for one week, based off of that
+        // If the rewards get messed up for some reason, set this to 0 and it will skip
+        // Should only be called once per week max
+        if (rewardRatesManual[1] != 0) {
+            // BAL
+            // ====================================
+            uint256 bal_before = IERC20(rewardTokens[1]).balanceOf(address(this));
+            minter.mint(address(stakingToken));
+            uint256 bal_after = IERC20(rewardTokens[1]).balanceOf(address(this));
+
+            // Set the new reward rate
+            rewardRatesManual[1] = (bal_after - bal_before) / rewardsDuration;
+        }
+
+        // Bunni oLIT rewards
+        // ==========================================
+        // Pull in rewards and set the reward rate for one week, based off of that
+        // If the rewards get messed up for some reason, set this to 0 and it will skip
+        // Should only be called once per week max
         // if (rewardRatesManual[1] != 0) {
         //     // oLIT
         //     // ====================================
@@ -713,6 +755,9 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
     /// @notice Updates gauge weights, fraxPerLP, pulls in new rewards or updates rewards
     function sync() public {
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
+
         // Sync the gauge weight, if applicable
         sync_gauge_weights(false);
 
@@ -738,17 +783,20 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     /// @param _stakingPaused Whether staking is paused
     /// @param _withdrawalsPaused Whether withdrawals are paused
     /// @param _rewardsCollectionPaused Whether rewards collection is paused
-    /// @param _collectRewardsOnWithdrawalPaused Whether collectRewardsOnWithdrawal is paused
+    /// @param _withdrawalOnlyShutdown Whether you can only withdraw. Only settable once
     function setPauses(
         bool _stakingPaused,
         bool _withdrawalsPaused,
         bool _rewardsCollectionPaused,
-        bool _collectRewardsOnWithdrawalPaused
+        bool _withdrawalOnlyShutdown
     ) external onlyByOwnGov {
         stakingPaused = _stakingPaused;
         withdrawalsPaused = _withdrawalsPaused;
         rewardsCollectionPaused = _rewardsCollectionPaused;
-        collectRewardsOnWithdrawalPaused = _collectRewardsOnWithdrawalPaused;
+
+        // Only settable once. Rewards math will be permanently wrong afterwards, so only use
+        // for recovering LP
+        if(_withdrawalOnlyShutdown && !withdrawalOnlyShutdown) withdrawalOnlyShutdown = true;
     }
 
     /* ========== RESTRICTED FUNCTIONS - Owner or timelock only ========== */

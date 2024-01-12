@@ -1,7 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.4;
 
-import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
+import "../ERC20/IERC20.sol";
+import "../Uniswap/TransferHelperV2.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "hardhat/console.sol";
 
@@ -52,7 +53,7 @@ contract FerryOnL1 {
       }
       require (amount>fee,"Amount too low");
       require (amount/REDUCED_DECIMALS<=type(uint64).max,"Amount too high");
-      TransferHelper.safeTransferFrom(address(token),msg.sender,address(this),amount); 
+      TransferHelperV2.safeTransferFrom(address(token),msg.sender,address(this),amount); 
       uint64 amountAfterFee = uint64((amount-fee)/REDUCED_DECIMALS);
       emit Embark(recipient,transactionsIn[_captain].length,amount,amountAfterFee*REDUCED_DECIMALS,block.timestamp,_captain);
       transactionsIn[_captain].push(TransactionIn(recipient,amountAfterFee,uint32(block.timestamp)));   
@@ -78,7 +79,7 @@ contract FerryOnL1 {
       CaptainInfo storage captain = captains[msg.sender];
       uint withdrawAmount=captain.balance;
       captain.balance=0;
-      TransferHelper.safeTransfer(address(token),msg.sender,withdrawAmount); 
+      TransferHelperV2.safeTransfer(address(token),msg.sender,withdrawAmount); 
    }
    
    // ************* L2 => L1
@@ -86,7 +87,7 @@ contract FerryOnL1 {
       if (block.timestamp>=deadline) revert("Deadline");
       bytes32 hash = keccak256(abi.encodePacked(amount,recipient,index));
       if (transactionsOut[hash]!=address(0)) revert("Already disembarked");
-      TransferHelper.safeTransferFrom(address(token),msg.sender,recipient,amount); 
+      TransferHelperV2.safeTransferFrom(address(token),msg.sender,recipient,amount); 
       emit Disembark(captain,index,recipient,amount);
       transactionsOut[hash]=captain;
    }

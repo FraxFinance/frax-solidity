@@ -121,7 +121,7 @@ contract CommunalFarm is Owned, ReentrancyGuard {
     }
 
     modifier notStakingPaused() {
-        require(stakingPaused == false, "Staking paused");
+        require(!stakingPaused, "Staking paused");
         _;
     }
 

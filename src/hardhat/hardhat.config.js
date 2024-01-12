@@ -6,9 +6,9 @@ require('hardhat-deploy');
 require('hardhat-contract-sizer');
 require('hardhat-gas-reporter');
 require("hardhat-tracer");
-require("@matterlabs/hardhat-zksync-deploy");
-require("@matterlabs/hardhat-zksync-solc");
-require("@nomiclabs/hardhat-waffle");
+// require("@matterlabs/hardhat-zksync-deploy");
+// require("@matterlabs/hardhat-zksync-solc");
+// require("@nomicfoundation/hardhat-waffle");
 require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-etherscan");
@@ -60,7 +60,9 @@ module.exports = {
 				// Also see src/hardhat/justin-scripts/instructions.txt
 				// url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`, // Ethereum (alternate)
 
-				blockNumber: 149451388 // Pin the block to allow caching
+				// Pin the block to allow caching
+				// blockNumber: 167152063 // ARBITRUM
+				blockNumber: 18936285 // ETHEREUM
 				
 			},
 			accounts: {
@@ -75,7 +77,7 @@ module.exports = {
 			},
 			chainId: 42161,
 			gas: "auto",
-			gasPrice: 150000000, // 0.15 Gwei
+			gasPrice: 170000000, // 0.17 Gwei
 			gasMultiplier: 1.2
 		},
 		aurora: {
@@ -125,7 +127,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 50000000000, // 50 Gwei
+			gasPrice: 40000000000, // 40 Gwei
 			gasMultiplier: 1.2,
 		},
 		evmos: {
@@ -284,18 +286,18 @@ module.exports = {
 			gasPrice: "auto",
 			gasMultiplier: 1.2
 		},
-		zksync: {
-			url: process.env.ZKSYNC_NETWORK_ENDPOINT,
-			accounts: {
-				mnemonic: process.env.ZKSYNC_MNEMONIC_PHRASE
-			},
-			chainId: 324,
-			gas: "auto",
-			gasPrice: "auto",
-			// gasPrice: 3000000000, // 3 Gwei
-			gasMultiplier: 1.2,
-			zksync: true
-		},
+		// zksync: {
+		// 	url: process.env.ZKSYNC_NETWORK_ENDPOINT,
+		// 	accounts: {
+		// 		mnemonic: process.env.ZKSYNC_MNEMONIC_PHRASE
+		// 	},
+		// 	chainId: 324,
+		// 	gas: "auto",
+		// 	gasPrice: "auto",
+		// 	// gasPrice: 3000000000, // 3 Gwei
+		// 	gasMultiplier: 1.2,
+		// 	zksync: true
+		// },
     },
 	solidity: {
 		compilers: [

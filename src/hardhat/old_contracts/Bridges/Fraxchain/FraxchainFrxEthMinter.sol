@@ -20,7 +20,7 @@ pragma solidity ^0.8.0;
 // Travis Moore: https://github.com/FortisFortuna
 
 import { IfrxETH } from "../../FraxETH/IfrxETH.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../Staking/Owned.sol";
 

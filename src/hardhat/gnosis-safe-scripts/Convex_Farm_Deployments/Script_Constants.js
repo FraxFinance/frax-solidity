@@ -7,7 +7,6 @@ const { BigNumber } = require("@ethersproject/bignumber");
 const util = require("util");
 const chalk = require("chalk");
 const fse = require("fs-extra");
-const { formatUnits } = require("ethers/lib/utils");
 const { BIG6, BIG18, stringifyReplacer, serializeJSONObject, calculateChecksum } = require("../utils/utils");
 const constants = require(path.join(__dirname, '../../../../dist/types/constants'));
 const CONTRACT_ADDRESSES = constants.CONTRACT_ADDRESSES;
@@ -17,19 +16,25 @@ let ADDRS_ETH_FARMS = ADDRS_ETH.staking_contracts;
 
 
 const wrapperAddrs = [
-	// ADDRS_ETH_LPS['Convex stkcvxtriSDT'],
-	// ADDRS_ETH_LPS['Convex stkcvxmkUSDFRAXBP'],
-	ADDRS_ETH_LPS['Convex stkcvxfrxETHpETH'],
-	// ADDRS_ETH_LPS['Convex stkcvxfrxETHzETH'],
-	// ADDRS_ETH_LPS['Convex stkcvxGRAIFRAXBP']
+	// ADDRS_ETH_LPS['Convex stkcvxFRAXFPI_NG'],
+	// ADDRS_ETH_LPS['Convex stkcvxFRAXPYUSD'],
+	// ADDRS_ETH_LPS['Convex stkcvxFRAXsDAI'],
+	// ADDRS_ETH_LPS['Convex stkcvxFRAXFXB_20240630'],
+	// ADDRS_ETH_LPS['Convex stkcvxFRAXFXB_20241231'],
+	// ADDRS_ETH_LPS['Convex stkcvxFRAXFXB_20261231'],
+	ADDRS_ETH_LPS['Convex stkcvxfrxETHpxETH'],
+	// ADDRS_ETH_LPS['Convex stkcvxtricryptoFRAX'],
 ];
 
 const farmAddrs = [
-	// ADDRS_ETH_FARMS['Convex stkcvxtriSDT'],
-	// ADDRS_ETH_FARMS['Convex stkcvxmkUSDFRAXBP'],
-	ADDRS_ETH_FARMS['Convex stkcvxfrxETHpETH'],
-	// ADDRS_ETH_FARMS['Convex stkcvxfrxETHzETH'],
-	// ADDRS_ETH_FARMS['Convex stkcvxGRAIFRAXBP']
+	// ADDRS_ETH_FARMS['Convex stkcvxFRAXFPI_NG'],
+	// ADDRS_ETH_FARMS['Convex stkcvxFRAXPYUSD'],
+	// ADDRS_ETH_FARMS['Convex stkcvxFRAXsDAI'],
+	// ADDRS_ETH_FARMS['Convex stkcvxFRAXFXB_20240630'],
+	// ADDRS_ETH_FARMS['Convex stkcvxFRAXFXB_20241231'],
+	// ADDRS_ETH_FARMS['Convex stkcvxFRAXFXB_20261231'],
+	ADDRS_ETH_FARMS['Convex stkcvxfrxETHpxETH'],
+	// ADDRS_ETH_FARMS['Convex stkcvxtricryptoFRAX'],
 ];
 
 

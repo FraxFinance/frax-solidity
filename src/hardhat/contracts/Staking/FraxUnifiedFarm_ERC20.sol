@@ -18,17 +18,25 @@ import "./FraxUnifiedFarmTemplate.sol";
 
 // -------------------- VARIES --------------------
 
+// Balancer
+// import "../Misc_AMOs/balancer/IAuraGauge.sol";
+
 // Bunni
 // import "../Misc_AMOs/bunni/IBunniGauge.sol";
 
 // Convex wrappers
-import "../Curve/ICurvefrxETHETHPool.sol";
-import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
+// import "../Curve/ICurvefrxETHETHPool.sol";
+// import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
 // import "../Misc_AMOs/convex/IDepositToken.sol";
 // import "../Misc_AMOs/curve/I2pool.sol";
-import "../Misc_AMOs/curve/I2poolToken.sol";
+// import "../Misc_AMOs/curve/I2poolToken.sol";
 // import "../Misc_AMOs/curve/I2poolTokenNoLending.sol";
+// import "../Misc_AMOs/curve/ICurveStableSwapNG.sol";
 // import "../Misc_AMOs/curve/ICurveTricryptoOptimizedWETH.sol";
+
+// Convex FXB
+// import "../Misc_AMOs/curve/ICurveStableSwapNG.sol";
+// import '../FXB/IFXB.sol';
 
 // Fraxlend
 // import '../Fraxlend/IFraxlendPair.sol';
@@ -68,17 +76,25 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // -------------------- VARIES --------------------
 
+    // Bunni
+    // Declared in FraxUnifiedFarmTemplate.sol
+
+    // Balancer
+    // Declared in FraxUnifiedFarmTemplate.sol
+
     // Convex crvUSD/FRAX
     // IConvexStakingWrapperFrax public stakingToken;
     // I2poolTokenNoLending public curveToken;
     // ICurvefrxETHETHPool public curvePool;
 
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
-    IConvexStakingWrapperFrax public stakingToken;
-    I2poolToken public curveToken;
+    // IConvexStakingWrapperFrax public stakingToken;
+    // I2poolToken public curveToken;
+    // ICurveStableSwapNG public curveToken;
     // ICurveTricryptoOptimizedWETH public curveToken;
     // I2pool public curvePool;
-    ICurvefrxETHETHPool public curvePool;
+    // ICurvefrxETHETHPool public curvePool;
+    // ICurveStableSwapNG public curvePool;
     // ICurveTricryptoOptimizedWETH public curvePool;
 
     // Fraxswap
@@ -186,6 +202,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     function fraxPerLPToken() public virtual view override returns (uint256) {
         // Get the amount of FRAX 'inside' of the lp tokens
         uint256 frax_per_lp_token;
+
+        // Balancer
+        // ============================================
+        // USE CHILD
 
         // Bunni
         // ============================================
@@ -427,14 +447,16 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     }
 
     function _getStake(address staker_address, bytes32 kek_id) internal view returns (LockedStake memory locked_stake, uint256 arr_idx) {
-        for (uint256 i = 0; i < lockedStakes[staker_address].length; i++){ 
-            if (kek_id == lockedStakes[staker_address][i].kek_id){
-                locked_stake = lockedStakes[staker_address][i];
-                arr_idx = i;
-                break;
+        if (kek_id != 0) {
+            for (uint256 i = 0; i < lockedStakes[staker_address].length; i++){ 
+                if (kek_id == lockedStakes[staker_address][i].kek_id){
+                    locked_stake = lockedStakes[staker_address][i];
+                    arr_idx = i;
+                    break;
+                }
             }
         }
-        require(locked_stake.kek_id == kek_id, "Stake not found");
+        require(kek_id != 0 && locked_stake.kek_id == kek_id, "Stake not found");
         
     }
 
@@ -442,6 +464,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant public {
         // Make sure staking isn't paused
         require(!stakingPaused, "Staking paused");
+
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
 
         // Claim rewards at the old balance first
         _getReward(msg.sender, msg.sender, true);
@@ -477,6 +502,9 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant public {
         // Make sure staking isn't paused
         require(!stakingPaused, "Staking paused");
+
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
 
         // Claim rewards at the old balance first
         _getReward(msg.sender, msg.sender, true);
@@ -528,7 +556,8 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalanceMdf(staker_address, true) returns (bytes32) {
-        require(stakingPaused == false, "Staking paused");
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
+        require(!stakingPaused, "Staking paused");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
 
@@ -559,26 +588,35 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
     // ------ WITHDRAWING ------
 
-    // Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for proxies)
-    function withdrawLocked(bytes32 kek_id, address destination_address, bool claim_rewards) nonReentrant external returns (uint256) {
+    /// @notice Withdraw a stake. 
+    /// @param kek_id The id for the stake
+    /// @param claim_rewards_deprecated DEPRECATED, has no effect (always claims rewards regardless)
+    /// @dev Two different withdrawLocked functions are needed because of delegateCall and msg.sender issues (important for migration)
+    function withdrawLocked(bytes32 kek_id, address destination_address, bool claim_rewards_deprecated) nonReentrant external returns (uint256) {
         require(withdrawalsPaused == false, "Withdrawals paused");
-        return _withdrawLocked(msg.sender, destination_address, kek_id, claim_rewards);
+        return _withdrawLocked(msg.sender, destination_address, kek_id, claim_rewards_deprecated);
     }
 
-    // No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper
+    /// @notice No withdrawer == msg.sender check needed since this is only internally callable and the checks are done in the wrapper functions like withdraw(), migrator_withdraw_unlocked() and migrator_withdraw_locked()
+    /// @param staker_address The address of the staker
+    /// @param destination_address Destination address for the withdrawn LP
+    /// @param kek_id The id for the stake
+    /// @param claim_rewards_deprecated DEPRECATED, has no effect (always claims rewards regardless)
     function _withdrawLocked(
         address staker_address,
         address destination_address,
         bytes32 kek_id,
-        bool claim_rewards
+        bool claim_rewards_deprecated
     ) internal returns (uint256) {
         // Collect rewards first and then update the balances
-        // collectRewardsOnWithdrawalPaused to be used in an emergency situation if reward is overemitted or not available
-        // and the user can forfeit rewards to get their principal back. User can also specify it in withdrawLocked
-        if (claim_rewards || !collectRewardsOnWithdrawalPaused) _getReward(staker_address, destination_address, true);
+        // withdrawalOnlyShutdown to be used in an emergency situation if reward is overemitted or not available
+        // and the user can forfeit rewards to get their principal back. 
+        if (withdrawalOnlyShutdown) {
+            // Do nothing.
+        }
         else {
-            // Sync the rewards at least
-            _updateRewardAndBalance(staker_address, true, false);
+            // Get the reward
+            _getReward(staker_address, destination_address, true);
         }
 
         // Get the stake and its index
