@@ -6,15 +6,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import { ILegacyMintableERC20, IOptimismMintableERC20 } from "@eth-optimism/contracts-bedrock/contracts/universal/IOptimismMintableERC20.sol";
-import { Semver } from "@eth-optimism/contracts-bedrock/contracts/universal/Semver.sol";
+import { ILegacyMintableERC20, IOptimismMintableERC20 } from "./IOptimismMintableERC20.sol";
+import { ISemver } from "./ISemver.sol";
 import "../Staking/OwnedV2.sol";
 
 /// @title Parent contract for frxETH.sol, but also CrossChainCanonicalV2
 /** @notice Combines Openzeppelin's ERC20Permit and ERC20Burnable with Synthetix's Owned and Optimism's OptimismMintableERC20. 
     Also includes a list of authorized minters */
 /// @dev ERC20PermitPermissionedOptiMintable adheres to EIP-712/EIP-2612 and can use permits
-contract ERC20PermitPermissionedOptiMintable is ERC20Permit, ERC20Burnable, OwnedV2, IOptimismMintableERC20, ILegacyMintableERC20, Semver {
+contract ERC20PermitPermissionedOptiMintable is ERC20Permit, ERC20Burnable, OwnedV2, IOptimismMintableERC20, ILegacyMintableERC20, ISemver {
     
     /// @notice The timelock address
     address public timelock_address;
@@ -24,6 +24,9 @@ contract ERC20PermitPermissionedOptiMintable is ERC20Permit, ERC20Burnable, Owne
 
     /// @notice Address of the corresponding version of this token on the remote chain.
     address public immutable REMOTE_TOKEN;
+    
+    /// @notice Version
+    string public constant version = "1.0.0";
 
     /// @notice Array of the non-bridge minters
     address[] public minters_array;
@@ -52,7 +55,6 @@ contract ERC20PermitPermissionedOptiMintable is ERC20Permit, ERC20Burnable, Owne
     ERC20(_name, _symbol)
     ERC20Permit(_name) 
     OwnedV2(_creator_address)
-    Semver(1, 0, 0)
     {
         REMOTE_TOKEN = _remoteToken;
         BRIDGE = _bridge;

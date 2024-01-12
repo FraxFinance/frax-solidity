@@ -11,11 +11,11 @@ const chai = require('chai');
 const chaiAlmost = require('chai-almost');
 chai.use(chaiAlmost());
 
+
 const constants = require(path.join(__dirname, '../../../../dist/types/constants'));
 const utilities = require(path.join(__dirname, '../../../../dist/misc/utilities'));
 
-// Set provider for all later instances to use
-Contract.setProvider('http://127.0.0.1:7545');
+
 
 global.artifacts = artifacts;
 global.web3 = web3;
@@ -31,7 +31,7 @@ const ERC20 = artifacts.require("contracts/ERC20/ERC20.sol:ERC20");
 const IConvexCvxLPRewardPoolCombo = artifacts.require("Misc_AMOs/convex/IConvexCvxLPRewardPoolCombo");
 
 // Staking contracts
-const FraxCCFarmV4_cvxUSDPlusFRAXBP = artifacts.require("Staking/Variants/FraxCCFarmV4_cvxUSDPlusFRAXBP");
+const FraxCCFarmV4_cvxLP = artifacts.require("Staking/Variants/FraxCCFarmV4_cvxLP");
 
 const BIG6 = new BigNumber("1e6");
 const BIG18 = new BigNumber("1e18");
@@ -100,7 +100,6 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 	let rew_tkn_earned = structuredClone(rew_tkn_bals_before); // [token index][account][phase]
 
     beforeEach(async() => {
-
 		await hre.network.provider.request({
 			method: "hardhat_impersonateAccount",
 			params: [process.env.FRAX_ONE_ADDRESS]
@@ -127,7 +126,7 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 		lp_tkn_instance = await IConvexCvxLPRewardPoolCombo.at(CHAIN_ADDRESSES.bearer_tokens.cvxUSDPlusFRAXBP);
 
 		// Fill the staking rewards instances
-		staking_instance = await FraxCCFarmV4_cvxUSDPlusFRAXBP.deployed();
+		staking_instance = await FraxCCFarmV4_cvxLP.deployed();
 
 		// Fill reward token instances and info
 		for (let i = 0; i < REWARD_TOKEN_SEED_AMOUNTS.length; i++) {
@@ -207,8 +206,8 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 		// Print reward token balances
 		for (let i = 0; i < rew_addresses.length; i++) {
 			// Get reward token balances before everything starts
-			rew_tkn_bals_before[i][1]['time0'] = new BigNumber(await rew_instances[i].balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber()
-			rew_tkn_bals_before[i][9]['time0'] = new BigNumber(await rew_instances[i].balanceOf(accounts[9])).div(BIG18).toNumber()
+			rew_tkn_bals_before[i][1]['time0'] = new BigNumber(await rew_instances[i].balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+			rew_tkn_bals_before[i][9]['time0'] = new BigNumber(await rew_instances[i].balanceOf(accounts[9])).div(BIG18).toNumber();
 
 			console.log(`Farm ${rew_symbols[i]} balance: ${new BigNumber(await rew_instances[i].balanceOf(staking_instance.address)).div(BIG18).toNumber()}`);
 			console.log(`Farm ${rew_symbols[i]} owed: ${new BigNumber(await staking_instance.ttlRewsOwed(i)).div(BIG18).toNumber()}`);
@@ -217,6 +216,10 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 
 		await utilities.printCalcCurCombinedWeight(staking_instance, COLLATERAL_FRAX_AND_FXS_OWNER);
 		await utilities.printCalcCurCombinedWeight(staking_instance, accounts[9]);
+
+		// Note initial LP balances
+		const lp_initial_bal_1 = new BigNumber(await lp_tkn_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const lp_initial_bal_9 = new BigNumber(await lp_tkn_instance.balanceOf(accounts[9])).div(BIG18).toNumber();
 
 		// Need to approve first so the staking can use transfer
 		const uni_pool_locked_1 = new BigNumber("75e17");
@@ -276,7 +279,7 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 		console.log("---- LOCKED [9]: ", locked_balance_9.toString());
 
 		console.log("TRY AN EARLY WITHDRAWAL (SHOULD FAIL)");
-		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_1_0[0].kek_id, true, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
+		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_1_0[0].kek_id, false, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
 		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_9_0[0].kek_id, true, { from: accounts[9] }));
 		await time.advanceBlock();
 
@@ -379,7 +382,7 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 		}
 
 		console.log(chalk.hex("#ff8b3d")("===================================================================="));
-		console.log(chalk.hex("#ff8b3d")("WAIT UNTIL THE END OF THE PERIOD (WHICH IS NEW DUE TO ROLLING"));
+		console.log(chalk.hex("#ff8b3d")("WAIT UNTIL THE END OF THE PERIOD (WHICH IS NEW DUE TO ROLLING 7 DAYS)"));
 		console.log(chalk.hex("#ff8b3d")("===================================================================="));
 		// Sync beforehand
 		await staking_instance.sync({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
@@ -465,7 +468,7 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 		console.log("TRY WITHDRAWING AGAIN");
 		console.log("[1] SHOULD SUCCEED, [9] SHOULD FAIL");
 		await staking_instance.withdrawLocked(locked_stake_structs_1_0[0].kek_id, true, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
-		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_9_0[0].kek_id, true, { from: accounts[9] }));
+		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_9_0[0].kek_id, false, { from: accounts[9] }));
 
 		// Claim [9]
 		await staking_instance.getReward({ from: accounts[9] });
@@ -566,8 +569,9 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 			console.log(`Expected yearly reward after 5 weeks [${rew_symbols[i]}]: ${yearly_reward_tkn}`);
 
 			// Make sure nothing emitted
+			// Note: CRV/CVX might, if you are running this test live after deployment
 			const expected_tkn_amount = 0;
-			expect(reward_week_5).to.be.almost(expected_tkn_amount, .01);
+			expect(reward_week_5).to.be.almost(expected_tkn_amount, 1);
 		}
 
 		console.log(chalk.yellow.bold("===================================================================="));
@@ -651,8 +655,9 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 			console.log(`Expected yearly reward after 5 weeks (post refill) [${rew_symbols[i]}]: ${yearly_reward_tkn}`);
 
 			// Make sure nothing emitted
+			// Note: CRV/CVX might, if you are running this test live after deployment
 			const expected_tkn_amount = 0;
-			expect(reward_week_5_PR).to.be.almost(expected_tkn_amount, .01);
+			expect(reward_week_5_PR).to.be.almost(expected_tkn_amount, 1);
 		}
 
 
@@ -708,8 +713,9 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 			console.log(`Expected yearly reward after 6 weeks (post refill) [${rew_symbols[i]}]: ${yearly_reward_tkn}`);
 
 			// Make sure emissions happened properly
+			// Note: CRV/CVX might have some emissions, if you are running this test live after deployment
 			const expected_tkn_amount = new BigNumber(REWARD_TOKEN_REFILL_AMOUNTS[i]).div(BIG18).toNumber();
-			expect(reward_week_6).to.be.almost(expected_tkn_amount, .001 * expected_tkn_amount);
+			expect(reward_week_6).to.be.almost(expected_tkn_amount, .01 * expected_tkn_amount);
 		}
 
 
@@ -720,7 +726,7 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 		// Account 9 withdraws and claims its locked stake
 		await staking_instance.withdrawLocked(locked_stake_structs_9_0[0].kek_id, true, { from: accounts[9] });
 		await staking_instance.getReward({ from: accounts[9] });
-		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_1_0[1].kek_id, true, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
+		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_1_0[1].kek_id, false, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
 
 		const _total_liquidity_locked_1 = new BigNumber(await staking_instance.totalLiquidityLocked.call()).div(BIG18);
 		const _total_combined_weight_1 = new BigNumber(await staking_instance.totalCombinedWeight.call()).div(BIG18);
@@ -729,7 +735,21 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 
 		console.log("UNLOCKING ALL STAKES");
 		await staking_instance.unlockStakes({ from: STAKING_OWNER });
-		await staking_instance.withdrawLocked(locked_stake_structs_1_0[1].kek_id, true, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Account 1 withdraws last stake with claim_rewards false (but should still get rewards because it is deprecated)
+		const withdrawNoClaim_FxsBefore = new BigNumber(await rew_instances[0].balanceOf(staking_instance.address)).div(BIG18).toNumber();
+		await staking_instance.withdrawLocked(locked_stake_structs_1_0[1].kek_id, false, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		const withdrawNoClaim_FxsAfter1 = new BigNumber(await rew_instances[0].balanceOf(staking_instance.address)).div(BIG18).toNumber();
+		
+		// FXS should have came out still
+		expect(withdrawNoClaim_FxsAfter1).to.be.lt(withdrawNoClaim_FxsBefore);
+
+		// Account 1 now simply claims
+		await staking_instance.getReward({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		const withdrawNoClaim_FxsAfter2 = new BigNumber(await rew_instances[0].balanceOf(staking_instance.address)).div(BIG18).toNumber();
+
+		// No FXS should have came out
+		expect(withdrawNoClaim_FxsAfter2).to.be.eq(withdrawNoClaim_FxsAfter1);
 
 		await utilities.printCalcCurCombinedWeight(staking_instance, COLLATERAL_FRAX_AND_FXS_OWNER);
 		await utilities.printCalcCurCombinedWeight(staking_instance, accounts[9]);
@@ -808,6 +828,234 @@ contract('FraxCrossChainFarmV3_ERC20-Tests', async (accounts) => {
 			expect(reward_week_6_PW).to.be.almost(expected_tkn_amount, .001);
 		}
 
+		console.log(chalk.hex("#ff8b3d")("===================================================================="));
+		console.log(chalk.hex("#ff8b3d")("FINAL TOKEN BALANCE CHECKS"));
+		console.log(chalk.hex("#ff8b3d")("===================================================================="));
+
+		// Note final LP balances
+		const lp_final_bal_1 = new BigNumber(await lp_tkn_instance.balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+		const lp_final_bal_9 = new BigNumber(await lp_tkn_instance.balanceOf(accounts[9])).div(BIG18).toNumber();
+
+		// Make sure initial and final user LP balances are the same
+		expect(lp_final_bal_1).to.be.eq(lp_initial_bal_1);
+		expect(lp_final_bal_9).to.be.eq(lp_initial_bal_9);
+
+		// Make sure all the tokens that were seeded and refilled went to the users, no shortage or overemission
+		for (let i = 0; i < rew_addresses.length; i++) {
+			// Get reward token balances before everything starts
+			const all_tkns_before = rew_tkn_bals_before[i][1]['time0'] + rew_tkn_bals_before[i][9]['time0'];
+			let all_tkns_after = new BigNumber(await rew_instances[i].balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber();
+			all_tkns_after += new BigNumber(await rew_instances[i].balanceOf(accounts[9])).div(BIG18).toNumber();
+			const all_tkns_to_users = all_tkns_after - all_tkns_before;
+			const all_tkns_placed_in_farm = new BigNumber(REWARD_TOKEN_SEED_AMOUNTS[i]).div(BIG18).toNumber() + new BigNumber(REWARD_TOKEN_REFILL_AMOUNTS[i]).div(BIG18).toNumber();
+
+			console.log(`${rew_symbols[i]} emitted to users: ${all_tkns_to_users}`);
+			console.log(`${rew_symbols[i]} placed in farm: ${all_tkns_placed_in_farm}`);
+
+			// Make sure emitted tokens = placed-in tokens
+			expect(all_tkns_to_users).to.be.almost(all_tkns_placed_in_farm, all_tkns_to_users * .01);
+		}
+	});
+
+	it('Withdrawal only shutdown test', async () => {
+		console.log(chalk.hex("#ff8b3d").bold("===================================================================="));
+		console.log(chalk.hex("#ff8b3d").bold("TRY TESTS WITH LOCKED STAKES."));
+		console.log(chalk.hex("#ff8b3d").bold("===================================================================="));
+
+		// Print reward token balances
+		for (let i = 0; i < rew_addresses.length; i++) {
+			// Get reward token balances before everything starts
+			rew_tkn_bals_before[i][1]['time0'] = new BigNumber(await rew_instances[i].balanceOf(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18).toNumber()
+			rew_tkn_bals_before[i][9]['time0'] = new BigNumber(await rew_instances[i].balanceOf(accounts[9])).div(BIG18).toNumber()
+
+			console.log(`Farm ${rew_symbols[i]} balance: ${new BigNumber(await rew_instances[i].balanceOf(staking_instance.address)).div(BIG18).toNumber()}`);
+			console.log(`Farm ${rew_symbols[i]} owed: ${new BigNumber(await staking_instance.ttlRewsOwed(i)).div(BIG18).toNumber()}`);
+			console.log(`Farm ${rew_symbols[i]} paid: ${new BigNumber(await staking_instance.ttlRewsPaid(i)).div(BIG18).toNumber()}`);
+		}
+
+		await utilities.printCalcCurCombinedWeight(staking_instance, COLLATERAL_FRAX_AND_FXS_OWNER);
+		await utilities.printCalcCurCombinedWeight(staking_instance, accounts[9]);
+
+		// Need to approve first so the staking can use transfer
+		const uni_pool_locked_1 = new BigNumber("75e17");
+		const uni_pool_locked_1_sum = new BigNumber("10e18");
+		const uni_pool_locked_9 = new BigNumber("25e17");
+		await lp_tkn_instance.approve(staking_instance.address, uni_pool_locked_1_sum, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await lp_tkn_instance.approve(staking_instance.address, uni_pool_locked_9, { from: accounts[9] });
+		
+		// // Note the FRAX amounts before
+		// const frax_before_1_locked = new BigNumber(await canFRAX_instance.balanceOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		// const frax_before_9_locked = new BigNumber(await canFRAX_instance.balanceOf.call(accounts[9])).div(BIG18);
+		// console.log("FRAX_USDC Uniswap Liquidity Tokens BEFORE [1]: ", frax_before_1_locked.toString());
+		// console.log("FRAX_USDC Uniswap Liquidity Tokens BEFORE [9]: ", frax_before_9_locked.toString());
+
+		// Get the original starting time and period finish
+		const original_start_timestamp = (new BigNumber(await time.latest())).toNumber();
+		const original_period_end = (new BigNumber(await staking_instance.periodFinish.call())).toNumber();
+		console.log("original_start_timestamp: ", original_start_timestamp);
+		console.log("original_period_end: ", original_period_end);
+
+		// Stake Locked
+		// account[1]
+		await staking_instance.stakeLocked(uni_pool_locked_1, 6.95 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 7 days
+		await staking_instance.stakeLocked(new BigNumber ("25e17"), 548 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }); // 270 days
+		
+		// account[9]
+		await staking_instance.stakeLocked(uni_pool_locked_9, 27.95 * 86400, { from: accounts[9] });
+		await time.advanceBlock();
+
+		// Show the stake structs
+		const locked_stake_structs_1_0 = await staking_instance.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+		const locked_stake_structs_9_0 = await staking_instance.lockedStakesOf.call(accounts[9]);
+		console.log("LOCKED STAKES [1] (before withdrawal): ", locked_stake_structs_1_0);
+		console.log("LOCKED STAKES [9] (before withdrawal): ", locked_stake_structs_9_0);
+
+		// Note the UNI POOL and FXS amount after staking
+		const regular_balance_1 = new BigNumber(await staking_instance.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const boosted_balance_1 = new BigNumber(await staking_instance.combinedWeightOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const locked_balance_1 = new BigNumber(await staking_instance.lockedLiquidityOf.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const regular_balance_9 = new BigNumber(await staking_instance.lockedLiquidityOf.call(accounts[9])).div(BIG18);
+		const boosted_balance_9 = new BigNumber(await staking_instance.combinedWeightOf.call(accounts[9])).div(BIG18);
+		const locked_balance_9 = new BigNumber(await staking_instance.lockedLiquidityOf.call(accounts[9])).div(BIG18);
+		console.log("LOCKED LIQUIDITY [1]: ", regular_balance_1.toString());
+		console.log("COMBINED WEIGHT [1]: ", boosted_balance_1.toString());
+		console.log("---- LOCKED [1]: ", locked_balance_1.toString());
+		console.log("LOCKED LIQUIDITY [9]: ", regular_balance_9.toString());
+		console.log("COMBINED WEIGHT [9]: ", boosted_balance_9.toString());
+		console.log("---- LOCKED [9]: ", locked_balance_9.toString());
+
+		await time.advanceBlock();
+
+		await utilities.printCalcCurCombinedWeight(staking_instance, COLLATERAL_FRAX_AND_FXS_OWNER);
+		await utilities.printCalcCurCombinedWeight(staking_instance, accounts[9]);
+
+		const user_min_vefxs_for_max_boost_1_0 = new BigNumber(await staking_instance.minVeFXSForMaxBoost.call(COLLATERAL_FRAX_AND_FXS_OWNER)).div(BIG18);
+		const user_min_vefxs_for_max_boost_9_0 = new BigNumber(await staking_instance.minVeFXSForMaxBoost.call(accounts[9])).div(BIG18);
+		console.log("user_min_vefxs_for_max_boost_1_0: ", user_min_vefxs_for_max_boost_1_0.toString());
+		console.log("user_min_vefxs_for_max_boost_9_0: ", user_min_vefxs_for_max_boost_9_0.toString());
+
+		const _total_liquidity_locked_0 = new BigNumber(await staking_instance.totalLiquidityLocked.call()).div(BIG18);
+		const _total_combined_weight_0 = new BigNumber(await staking_instance.totalCombinedWeight.call()).div(BIG18);
+		const frax_per_lp_token_0 = new BigNumber(await staking_instance.fraxPerLPToken.call()).div(BIG18);
+		console.log("_total_liquidity_locked GLOBAL: ", _total_liquidity_locked_0.toString());
+		console.log("_total_combined_weight GLOBAL: ", _total_combined_weight_0.toString());
+		console.log("frax_per_lp_token_0 GLOBAL: ", frax_per_lp_token_0.toString());
+
+
+		console.log(chalk.hex("#ff8b3d")("===================================================================="));
+		console.log(chalk.hex("#ff8b3d")("MID-WEEK-SYNC AND [9] CLAIMS"));
+		console.log(chalk.hex("#ff8b3d")("===================================================================="));
+		await time.increase(2 * 86400);
+		await time.advanceBlock();
+
+		// Sync
+		await staking_instance.sync({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Print reward token balances
+		console.log(chalk.yellow("--- Before claim ---"));
+		for (let i = 0; i < rew_addresses.length; i++) {
+			console.log(`Farm ${rew_symbols[i]} balance: ${new BigNumber(await rew_instances[i].balanceOf(staking_instance.address)).div(BIG18).toNumber()}`);
+			console.log(`Farm ${rew_symbols[i]} owed: ${new BigNumber(await staking_instance.ttlRewsOwed(i)).div(BIG18).toNumber()}`);
+			console.log(`Farm ${rew_symbols[i]} paid: ${new BigNumber(await staking_instance.ttlRewsPaid(i)).div(BIG18).toNumber()}`);
+		
+			// Balance tracking
+			rew_tkn_bals_before[i][9]["mid0"] = new BigNumber(await rew_instances[i].balanceOf(accounts[9])).div(BIG18).toNumber();
+			console.log(`accounts[9] ${rew_symbols[i]} balance: ${rew_tkn_bals_before[i][9]["mid0"]}`);
+		}
+
+		// [9] claims
+		console.log(chalk.yellow("--- Claim ---"));
+		await staking_instance.getReward({ from: accounts[9] });
+
+		// Print reward token balances
+		console.log(chalk.yellow("--- After claim ---"));
+		for (let i = 0; i < rew_addresses.length; i++) {
+			console.log(`Farm ${rew_symbols[i]} balance: ${new BigNumber(await rew_instances[i].balanceOf(staking_instance.address)).div(BIG18).toNumber()}`);
+			console.log(`Farm ${rew_symbols[i]} owed: ${new BigNumber(await staking_instance.ttlRewsOwed(i)).div(BIG18).toNumber()}`);
+			console.log(`Farm ${rew_symbols[i]} paid: ${new BigNumber(await staking_instance.ttlRewsPaid(i)).div(BIG18).toNumber()}`);
+		
+			// Balance tracking
+			rew_tkn_bals_after[i][9]["mid0"] = new BigNumber(await rew_instances[i].balanceOf(accounts[9])).div(BIG18).toNumber();
+			console.log(`accounts[9] ${rew_symbols[i]} balance: ${rew_tkn_bals_after[i][9]["mid0"]}`);
+
+			// Earnings tracking
+			rew_tkn_earned[i][9]["mid0"] = (rew_tkn_bals_after[i][9]["mid0"]) - (rew_tkn_bals_before[i][9]["mid0"]);
+			console.log(`accounts[9] mid-week part 0 earnings ${rew_symbols[i]}: ${(rew_tkn_earned[i][9]["mid0"])}`);
+		}
+
+		console.log(chalk.hex("#ff8b3d")("===================================================================="));
+		console.log(chalk.hex("#ff8b3d")("TRIGGER THE SHUTDOWN"));
+		console.log(chalk.hex("#ff8b3d")("===================================================================="));
+		await time.increase(2 * 86400);
+		await time.advanceBlock();
+
+		// Sync
+		await staking_instance.sync({ from: COLLATERAL_FRAX_AND_FXS_OWNER });
+
+		// Trigger the shutdown
+		await staking_instance.initiateWithdrawalOnlyShutdown({ from: STAKING_OWNER });
+
+		// Staking should fail
+		await lp_tkn_instance.approve(staking_instance.address, uni_pool_locked_1_sum, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await expectRevert(
+			staking_instance.stakeLocked(uni_pool_locked_1, 6.95 * 86400, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			"Only withdrawals allowed"
+		);
+
+		// Claiming should fail
+		await expectRevert(
+			staking_instance.getReward({ from: accounts[9] }),
+			"Only withdrawals allowed"
+		);
+
+		// lockAdditional should fail
+		const addl_amt_add = new BigNumber("1e18");
+		let add_more_before = await staking_instance.lockedStakes.call(COLLATERAL_FRAX_AND_FXS_OWNER, 2);
+		await lp_tkn_instance.approve(staking_instance.address, addl_amt_add, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		await expectRevert(
+			staking_instance.lockAdditional(add_more_before.kek_id, addl_amt_add, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			"Only withdrawals allowed"
+		);
+		
+		// lockLonger should fail
+		let new_end_timestamp = (await time.latest()).toNumber() + 1209600;
+		await expectRevert(
+			staking_instance.lockLonger(add_more_before.kek_id, new_end_timestamp, { from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			"Only withdrawals allowed"
+		);
+
+		// Syncing should fail
+		await expectRevert(
+			staking_instance.sync({ from: COLLATERAL_FRAX_AND_FXS_OWNER }),
+			"Only withdrawals allowed"
+		);
+
+		// Withdrawing should SUCCEED.
+		staking_instance.withdrawLocked(locked_stake_structs_1_0[2].kek_id, true, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		staking_instance.withdrawLocked(locked_stake_structs_1_0[3].kek_id, true, { from: COLLATERAL_FRAX_AND_FXS_OWNER });
+		staking_instance.withdrawLocked(locked_stake_structs_9_0[1].kek_id, false, { from: accounts[9] });
+
+		// Advance a block
+		await time.increase(15);
+		await time.advanceBlock();
+
+		// Show the stake structs
+		const locked_stake_structs_1_1 = await staking_instance.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+		const locked_stake_structs_9_1 = await staking_instance.lockedStakesOf.call(accounts[9]);
+		console.log("LOCKED STAKES [1] (after withdrawal): ", locked_stake_structs_1_1);
+		console.log("LOCKED STAKES [9] (after withdrawal): ", locked_stake_structs_9_1);
+
+		// Withdrawing again should FAIL
+		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_1_0[2].kek_id, true, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
+		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_1_0[3].kek_id, true, { from: COLLATERAL_FRAX_AND_FXS_OWNER }));
+		await expectRevert.unspecified(staking_instance.withdrawLocked(locked_stake_structs_9_0[1].kek_id, true, { from: accounts[9] }));
+		
+		// Show the stake structs again
+		const locked_stake_structs_1_2 = await staking_instance.lockedStakesOf.call(COLLATERAL_FRAX_AND_FXS_OWNER);
+		const locked_stake_structs_9_2 = await staking_instance.lockedStakesOf.call(accounts[9]);
+		console.log("LOCKED STAKES [1] (after withdrawal again): ", locked_stake_structs_1_2);
+		console.log("LOCKED STAKES [9] (after withdrawal again): ", locked_stake_structs_9_2);
+		
 	});
 
 

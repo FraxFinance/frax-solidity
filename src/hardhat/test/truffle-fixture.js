@@ -25,7 +25,7 @@ const CrossChainOracle = artifacts.require("Oracle/CrossChainOracle");
 // const FraxCCFarmV2_ArbiCurveVSTFRAX = artifacts.require("Staking/Variants/FraxCCFarmV2_ArbiCurveVSTFRAX");
 // const FraxCCFarmV2_SaddleArbUSDv2 = artifacts.require("Staking/Variants/FraxCCFarmV2_SaddleArbUSDv2");
 // const FraxCCFarmV3_ArbiSaddleL2D4 = artifacts.require("Staking/Variants/FraxCCFarmV3_ArbiSaddleL2D4");
-const FraxCCFarmV4_cvxUSDPlusFRAXBP = artifacts.require("Staking/Variants/FraxCCFarmV4_cvxUSDPlusFRAXBP");
+const FraxCCFarmV4_cvxLP = artifacts.require("Staking/Variants/FraxCCFarmV4_cvxLP");
 
 // AMOs
 const SushiSwapLiquidityAMO_ARBI = artifacts.require("Misc_AMOs/__CROSSCHAIN/Arbitrum/SushiSwapLiquidityAMO_ARBI.sol");
@@ -56,7 +56,7 @@ module.exports = async (deployer) => {
     // let FraxCCFarmV2_ArbiCurveVSTFRAX_instance;
     // let FraxCCFarmV2_SaddleArbUSDv2_instance;
     // let FraxCCFarmV3_ArbiSaddleL2D4_instance;
-    let FraxCCFarmV4_cvxUSDPlusFRAXBP_instance;
+    let FraxCCFarmV4_cvxLP_instance;
     
     // AMOs
     let curve_amo_arbi_instance;
@@ -209,9 +209,9 @@ module.exports = async (deployer) => {
     //     "0x0000000000000000000000000000000000000000", // Rewarder
     // );
 
-    console.log(chalk.yellow("========== FraxCCFarmV4_cvxUSDPlusFRAXBP =========="));
-    // FraxCCFarmV4_cvxUSDPlusFRAXBP 
-    FraxCCFarmV4_cvxUSDPlusFRAXBP_instance = await FraxCCFarmV4_cvxUSDPlusFRAXBP.new(
+    console.log(chalk.yellow("========== FraxCCFarmV4_cvxLP =========="));
+    // FraxCCFarmV4_cvxLP 
+    FraxCCFarmV4_cvxLP_instance = await FraxCCFarmV4_cvxLP.new(
         THE_ACCOUNTS[6], // After initializing, switch to CONTRACT_ADDRESSES.arbitrum.multisigs.Comptrollers, 
         [
             CONTRACT_ADDRESSES.arbitrum.canonicals.FXS,
@@ -271,7 +271,7 @@ module.exports = async (deployer) => {
     // FraxCCFarmV2_ArbiCurveVSTFRAX.setAsDeployed(FraxCCFarmV2_ArbiCurveVSTFRAX_instance);
     // FraxCCFarmV2_SaddleArbUSDv2.setAsDeployed(FraxCCFarmV2_SaddleArbUSDv2_instance);
     // FraxCCFarmV3_ArbiSaddleL2D4.setAsDeployed(FraxCCFarmV3_ArbiSaddleL2D4_instance);
-    FraxCCFarmV4_cvxUSDPlusFRAXBP.setAsDeployed(FraxCCFarmV4_cvxUSDPlusFRAXBP_instance);
+    FraxCCFarmV4_cvxLP.setAsDeployed(FraxCCFarmV4_cvxLP_instance);
     // SushiSwapLiquidityAMO_ARBI.setAsDeployed(sushiswap_liquidity_amo_arbi_instance);
     // CurveAMO_ARBI.setAsDeployed(curve_amo_arbi_instance);
 }

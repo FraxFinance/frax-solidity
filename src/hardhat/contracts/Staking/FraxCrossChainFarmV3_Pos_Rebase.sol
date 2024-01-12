@@ -179,7 +179,7 @@ contract FraxCrossChainFarmV3_ERC20_Pos_Rebase is Owned, ReentrancyGuard {
     }
 
     modifier notStakingPaused() {
-        require(stakingPaused == false, "Staking paused");
+        require(!stakingPaused, "Staking paused");
         _;
     }
 

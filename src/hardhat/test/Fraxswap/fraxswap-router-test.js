@@ -54,7 +54,7 @@ CPITrackerOracle: 0x7086F2aCB5558043fF9cE3df346D8E3FB4F4f452
 const fraxMinterOwner = "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27";
 const fraxMinter = "0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241";
 const fraxMinterAbi = require("../../manual_jsons/FRAX_MINTER_ABI.json");
-const { formatUnits } = require("ethers/lib/utils");
+// const { formatUnits } = require("ethers/utils/units");
 
 const ERC20Abi =
   require("../../artifacts/contracts/Fraxswap/core/FraxswapPair.sol/FraxswapPair").abi;
@@ -509,7 +509,7 @@ describe("Router Tests", function () {
       .sub(totalGasCost)
       .sub(outputAmountRecieved);
     console.log("diff", diff);
-    console.log("diff", formatUnits(diff));
+    console.log("diff", ethers.utils.formatUnits(diff));
   });
 
   it("Swap ETH => WETH => FRAX => FXS directly", async function () {

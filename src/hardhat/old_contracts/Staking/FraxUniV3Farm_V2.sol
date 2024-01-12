@@ -622,11 +622,13 @@ contract FraxUniV3Farm_Stable is Owned, ReentrancyGuard {
     }
 
     function _getStake(address staker_address, bytes32 kek_id) internal view returns (LockedStake memory locked_stake, uint256 arr_idx) {
-        for (uint256 i = 0; i < lockedStakes[staker_address].length; i++){ 
-            if (kek_id == lockedStakes[staker_address][i].kek_id){
-                locked_stake = lockedStakes[staker_address][i];
-                arr_idx = i;
-                break;
+        if (kek_id != 0) {
+            for (uint256 i = 0; i < lockedStakes[staker_address].length; i++){ 
+                if (kek_id == lockedStakes[staker_address][i].kek_id){
+                    locked_stake = lockedStakes[staker_address][i];
+                    arr_idx = i;
+                    break;
+                }
             }
         }
         require(locked_stake.kek_id == kek_id, "Stake not found");

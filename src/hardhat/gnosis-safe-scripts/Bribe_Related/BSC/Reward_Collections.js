@@ -7,7 +7,6 @@ const { BigNumber } = require("@ethersproject/bignumber");
 const util = require("util");
 const chalk = require("chalk");
 const fse = require("fs-extra");
-const { formatUnits } = require("ethers/lib/utils");
 const constants = require(path.join(__dirname, '../../../../../dist/types/constants'));
 
 global.artifacts = artifacts;

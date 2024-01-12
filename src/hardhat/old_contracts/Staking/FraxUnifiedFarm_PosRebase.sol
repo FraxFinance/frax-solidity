@@ -242,14 +242,16 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplateClone {
     // ------ STAKING ------
 
     function _getStake(address staker_address, bytes32 kek_id) internal view returns (LockedStake memory locked_stake, uint256 arr_idx) {
-        for (uint256 i = 0; i < lockedStakes[staker_address].length; i++){ 
-            if (kek_id == lockedStakes[staker_address][i].kek_id){
-                locked_stake = lockedStakes[staker_address][i];
-                arr_idx = i;
-                break;
+        if (kek_id != 0) {
+            for (uint256 i = 0; i < lockedStakes[staker_address].length; i++){ 
+                if (kek_id == lockedStakes[staker_address][i].kek_id){
+                    locked_stake = lockedStakes[staker_address][i];
+                    arr_idx = i;
+                    break;
+                }
             }
         }
-        require(locked_stake.kek_id == kek_id, "Stake not found");
+        require(kek_id != 0 && locked_stake.kek_id == kek_id, "Stake not found");
         
     }
 
@@ -258,6 +260,9 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplateClone {
     function lockAdditional(bytes32 kek_id, uint256 addl_liq) nonReentrant public {
         // Make sure staking isn't paused
         require(!stakingPaused, "Staking paused");
+
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
 
         // Claim rewards at the old balance first
         _getReward(msg.sender, msg.sender, true);
@@ -307,6 +312,9 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplateClone {
     function lockLonger(bytes32 kek_id, uint256 new_ending_ts) nonReentrant public {
         // Make sure staking isn't paused
         require(!stakingPaused, "Staking paused");
+
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
 
         // Claim rewards at the old balance first
         _getReward(msg.sender, msg.sender, true);
@@ -358,7 +366,8 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplateClone {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalanceMdf(staker_address, true) returns (bytes32) {
-        require(stakingPaused == false, "Staking paused");
+        require(!stakingPaused, "Staking paused");
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
 
@@ -414,12 +423,20 @@ contract FraxUnifiedFarm_PosRebase is FraxUnifiedFarmTemplateClone {
         bool claim_rewards
     ) internal returns (uint256) {
         // Collect rewards first and then update the balances
-        // collectRewardsOnWithdrawalPaused to be used in an emergency situation if reward is overemitted or not available
-        // and the user can forfeit rewards to get their principal back. User can also specify it in withdrawLocked
-        if (claim_rewards || !collectRewardsOnWithdrawalPaused) _getReward(staker_address, destination_address, true);
+        // withdrawalOnlyShutdown to be used in an emergency situation if reward is overemitted or not available
+        // and the user can forfeit rewards to get their principal back. 
+        // User can also specify no claiming in withdrawLocked if they want to simply save gas for a later time
+        if (withdrawalOnlyShutdown) {
+            // Do nothing.
+            /// TODO MARK claim_rewards AS DEPRECATED
+            /// TODO MARK claim_rewards AS DEPRECATED
+            /// TODO MARK claim_rewards AS DEPRECATED
+            /// TODO MARK claim_rewards AS DEPRECATED
+            /// TODO MARK claim_rewards AS DEPRECATED
+        }
         else {
-            // Sync the rewards at least
-            _updateRewardAndBalance(staker_address, true);
+            // Get rewards
+            _getReward(staker_address, destination_address, true);
         }
 
         // Get the stake and its index

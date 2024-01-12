@@ -279,14 +279,16 @@ contract FraxUnifiedFarm_KyberSwapElastic is FraxUnifiedFarmTemplate {
     }
 
     function _getStake(address staker_address, uint256 token_id) internal view returns (LockedNFT memory locked_nft, uint256 arr_idx) {
-        for (uint256 i = 0; i < lockedNFTs[staker_address].length; i++){ 
-            if (token_id == lockedNFTs[staker_address][i].token_id){
-                locked_nft = lockedNFTs[staker_address][i];
-                arr_idx = i;
-                break;
+        if (token_id != 0) {
+            for (uint256 i = 0; i < lockedNFTs[staker_address].length; i++){ 
+                if (token_id == lockedNFTs[staker_address][i].token_id){
+                    locked_nft = lockedNFTs[staker_address][i];
+                    arr_idx = i;
+                    break;
+                }
             }
         }
-        require(locked_nft.token_id == token_id, "Stake not found");
+        require(token_id != 0 && locked_nft.token_id == token_id, "Stake not found");
         
     }
 
@@ -302,6 +304,9 @@ contract FraxUnifiedFarm_KyberSwapElastic is FraxUnifiedFarmTemplate {
         uint256 token1_min_in,
         bool use_balof_override // Use balanceOf Override
     ) nonReentrant public {
+        // Make sure you are not in shutdown
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
+
         // Make sure staking isn't paused
         require(!stakingPaused, "Staking paused");
 
@@ -372,7 +377,8 @@ contract FraxUnifiedFarm_KyberSwapElastic is FraxUnifiedFarmTemplate {
         uint256 secs,
         uint256 start_timestamp
     ) internal updateRewardAndBalanceMdf(staker_address, true) {
-        require(stakingPaused == false, "Staking paused");
+        require(!withdrawalOnlyShutdown, "Only withdrawals allowed");
+        require(!stakingPaused, "Staking paused");
         require(secs >= lock_time_min, "Minimum stake time not met");
         require(secs <= lock_time_for_max_multiplier,"Trying to lock for too long");
 
@@ -424,12 +430,19 @@ contract FraxUnifiedFarm_KyberSwapElastic is FraxUnifiedFarmTemplate {
         // If it bugs out, the user's NFT could be permanently stuck in this farm
         // They can always just manually get the LP fees on Kyber's UI once their NFT is withdrawn
         // Collect rewards first and then update the balances
-        // collectRewardsOnWithdrawalPaused to be used in an emergency situation if reward is overemitted or not available
-        // and the user can forfeit rewards to get their principal back. User can also specify it in withdrawLocked
-        if (claim_rewards || !collectRewardsOnWithdrawalPaused) _getReward(staker_address, destination_address, true);
+        // withdrawalOnlyShutdown to be used in an emergency situation if reward is overemitted or not available
+        // and the user can forfeit rewards to get their principal back. 
+        if (withdrawalOnlyShutdown) {
+            // Do nothing.
+            /// TODO MARK claim_rewards AS DEPRECATED
+            /// TODO MARK claim_rewards AS DEPRECATED
+            /// TODO MARK claim_rewards AS DEPRECATED
+            /// TODO MARK claim_rewards AS DEPRECATED
+            /// TODO MARK claim_rewards AS DEPRECATED
+        }
         else {
-            // Sync the rewards at least
-            _updateRewardAndBalance(staker_address, true);
+            // Get rewards
+            _getReward(staker_address, destination_address, true);
         }
 
         LockedNFT memory thisNFT;

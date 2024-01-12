@@ -128,7 +128,7 @@ contract FraxFarmBSC_Dual_V5 is Owned, ReentrancyGuard {
     }
 
     modifier notStakingPaused() {
-        require(stakingPaused == false, "Staking paused");
+        require(!stakingPaused, "Staking paused");
         _;
     }
 
