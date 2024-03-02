@@ -1,4 +1,4 @@
-const {constants, BigNumber, utils} = require('ethers');
+const {constants, BigNumber, utils} = require('ethers-v5');
 
 // https://github.com/ethers-io/ethers.js/blob/master/packages/bignumber/src.ts/bignumber.ts
 const BIG6 = BigNumber.from("1000000");
