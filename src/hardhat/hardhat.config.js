@@ -44,9 +44,10 @@ module.exports = {
 				// url: `${process.env.AVALANCHE_FORKING_NETWORK_ENDPOINT}`, // Avalanche
 				// url: `${process.env.BOBA_NETWORK_ENDPOINT}`, // Boba
 				// url: `${process.env.BSC_NETWORK_ENDPOINT}`, // BSC
-				url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}`, // Ethereum
+				// url: `${process.env.ETHEREUM_NETWORK_ENDPOINT}`, // Ethereum
 				// url: `${process.env.EVMOS_NETWORK_ENDPOINT}`, // Evmos
 				// url: `${process.env.FANTOM_FORKING_NETWORK_ENDPOINT}`, // Fantom
+				url: `${process.env.FRAXTAL_NETWORK_ENDPOINT}`, // Fraxtal
 				// url: `${process.env.FUSE_NETWORK_ENDPOINT}`, // Fuse
 				// url: `${process.env.HARMONY_NETWORK_ENDPOINT}`, // Harmony
 				// url: `${process.env.MOONBEAM_NETWORK_ENDPOINT}`, // Moonbeam
@@ -62,7 +63,7 @@ module.exports = {
 
 				// Pin the block to allow caching
 				// blockNumber: 167152063 // ARBITRUM
-				blockNumber: 18936285 // ETHEREUM
+				// blockNumber: 18936285 // ETHEREUM
 				
 			},
 			accounts: {
@@ -174,6 +175,19 @@ module.exports = {
 			chainId: 2521,
 			gas: "auto",
 			gasPrice: 2000000000, // 2 Gwei
+			gasMultiplier: 1.2,
+		},
+		fraxtal: {
+			url:`${process.env.FRAXTAL_NETWORK_ENDPOINT}`,
+			accounts: {
+				mnemonic: process.env.MNEMONIC_PHRASE,
+			},
+			// httpHeaders: {
+			// 	"Cookie": `${process.env.FRAXCHAIN_DEVNET_COOKIE}`
+			// },
+			chainId: 252,
+			gas: "auto",
+			gasPrice: 2500000, // 0.0025 Gwei
 			gasMultiplier: 1.2,
 		},
 		// fuse: {
@@ -500,11 +514,26 @@ module.exports = {
       timeout: 50000000
 	},
 	etherscan: {
-		// apiKey: process.env.BSCSCAN_API_KEY // BSC
-		apiKey: process.env.ETHERSCAN_API_KEY, // ETH Mainnet
-		// apiKey: process.env.FTMSCAN_API_KEY // Fantom
-		// apiKey: process.env.OPTIMISM_API_KEY, // Optimism
-		// apiKey: process.env.POLYGONSCAN_API_KEY // Polygon
+		apiKey: {
+			bsc: process.env.BSCSCAN_API_KEY,
+			mainnet: process.env.ETHERSCAN_API_KEY,
+			// fantom: process.env.FTMSCAN_API_KEY,
+			fraxtal: process.env.FRAXTAL_API_KEY,
+			// optimisticEthereum: process.env.OPTIMISM_API_KEY,
+			polygon: process.env.POLYGONSCAN_API_KEY,
+		},
+		customChains: [
+			{
+			  network: "fraxtal",
+			  chainId: 252,
+			  urls: {
+				apiURL: "https://api.fraxscan.com",
+				browserURL: "https://fraxscan.com"
+			  }
+			}
+		  ]
+
+		
 	},
 	gasReporter: {
 		currency: 'USD',

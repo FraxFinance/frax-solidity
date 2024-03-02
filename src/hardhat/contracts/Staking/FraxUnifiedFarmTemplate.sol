@@ -46,8 +46,8 @@ import "./Owned.sol";
 // Extra rewards
 // Balancer
 // ====================
-import "../Misc_AMOs/balancer/IAuraGauge.sol";
-import "../Misc_AMOs/balancer/IBalancerMinter.sol";
+import "../Misc_AMOs/balancer/IAuraDeposit.sol";
+import "../Misc_AMOs/balancer/IAuraDepositVault.sol";
 
 // BUNNI
 // ====================
@@ -65,8 +65,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // -------------------- VARIES --------------------
 
     // Balancer
-    IAuraGauge public stakingToken;
-    IBalancerMinter public minter = IBalancerMinter(0x239e55F427D44C3cc793f49bFB507ebe76638a2b);
+    IAuraDeposit public stakingToken;
+    IAuraDepositVault public aura_deposit_vault = IAuraDepositVault(0xE557658e3D13d074961265756dC2eFB6c903A763);
 
     // Bunni
     // IBunniGauge public stakingToken;
@@ -96,7 +96,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     uint256 public lock_max_multiplier = uint256(2e18); // E18. 1x = e18
     uint256 public lock_time_for_max_multiplier = 1 * 1095 * 86400; // 3 years
     // uint256 public lock_time_for_max_multiplier = 2 * 86400; // 2 days
-    uint256 public lock_time_min = 0; // 0 sec
+    uint256 public lock_time_min = 1; // 1 seconds. If 0, calcCurrLockMultiplier could div by 0
 
     // veFXS related
     uint256 public vefxs_boost_scale_factor = uint256(4e18); // E18. 4x = 4e18; 100 / scale_factor = % vefxs supply needed for max boost
@@ -667,20 +667,23 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // lastUpdateTime = periodFinish;
         periodFinish = periodFinish + ((num_periods_elapsed + 1) * rewardsDuration);
 
-        // Balancer Gauge Rewards
+        // Aura & Balancer Gauge Rewards
         // ==========================================
         // Pull in rewards and set the reward rate for one week, based off of that
         // If the rewards get messed up for some reason, set this to 0 and it will skip
         // Should only be called once per week max
         if (rewardRatesManual[1] != 0) {
-            // BAL
+            // AURA & BAL
             // ====================================
-            uint256 bal_before = IERC20(rewardTokens[1]).balanceOf(address(this));
-            minter.mint(address(stakingToken));
-            uint256 bal_after = IERC20(rewardTokens[1]).balanceOf(address(this));
+            uint256 aura_before = IERC20(rewardTokens[1]).balanceOf(address(this));
+            uint256 bal_before = IERC20(rewardTokens[2]).balanceOf(address(this));
+            aura_deposit_vault.getReward(address(this), true);
+            uint256 aura_after = IERC20(rewardTokens[1]).balanceOf(address(this));
+            uint256 bal_after = IERC20(rewardTokens[2]).balanceOf(address(this));
 
-            // Set the new reward rate
-            rewardRatesManual[1] = (bal_after - bal_before) / rewardsDuration;
+            // Set the new reward rates
+            rewardRatesManual[1] = (aura_after - aura_before) / rewardsDuration; // AURA
+            rewardRatesManual[2] = (bal_after - bal_before) / rewardsDuration; // BAL
         }
 
         // Bunni oLIT rewards
@@ -825,6 +828,12 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
                 (isRewTkn && rewardManagers[tokenAddress] == msg.sender)
                 || (!isRewTkn && (msg.sender == owner))
             ) {
+
+            // Aura & Balancer
+            // Withdraw the tokens from the Aura vault. Do not claim
+            // =========================================
+            if (tokenAddress == address(stakingToken)) aura_deposit_vault.withdraw(tokenAmount, false);
+
             TransferHelper.safeTransfer(tokenAddress, msg.sender, tokenAmount);
             return;
         }
@@ -853,8 +862,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // [5] uint256 _lock_time_min
     ) external onlyByOwnGov {
         require(_misc_vars[0] >= MULTIPLIER_PRECISION, "Must be >= MUL PREC");
-        require((_misc_vars[1] >= 0) && (_misc_vars[2] >= 0) && (_misc_vars[3] >= 0) && (_misc_vars[5] >= 0), "Must be >= 0");
-        require((_misc_vars[4] >= 1), "Must be >= 1");
+        require((_misc_vars[1] >= 0) && (_misc_vars[2] >= 0) && (_misc_vars[3] >= 0), "Must be >= 0");
+        require((_misc_vars[4] >= 1) && (_misc_vars[5] >= 1), "Must be >= 1");
 
         lock_max_multiplier = _misc_vars[0];
         vefxs_max_multiplier = _misc_vars[1];

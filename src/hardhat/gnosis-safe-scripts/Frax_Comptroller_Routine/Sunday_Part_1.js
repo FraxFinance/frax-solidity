@@ -3,11 +3,11 @@ const envPath = path.join(process.cwd(), "../../../.env");
 require("dotenv").config({ path: envPath });
 const { ethers } = require("hardhat");
 
-const { BigNumber } = require("@ethersproject/bignumber");
+// const { BigNumber } = require("@ethersproject/bignumber");
 const util = require("util");
 const chalk = require("chalk");
 const fse = require("fs-extra");
-const { formatUnits } = require("ethers/lib.commonjs/utils");
+const { formatUnits } = require("ethers");
 const { BIG6, BIG18, stringifyReplacer, serializeJSONObject, calculateChecksum, GetCVXMintAmount } = require("../utils/utils");
 global.artifacts = artifacts;
 global.web3 = web3;
@@ -36,16 +36,16 @@ async function main() {
 
 	// Useful info to use later
 	const summary_info = {
-		crv_to_save: BigNumber.from(0),
-		crv_to_convert_to_cvxcrv: BigNumber.from(0),
-		crv_to_send_to_curve_voter_proxy: BigNumber.from(0),
+		crv_to_save: BigInt(0),
+		crv_to_convert_to_cvxcrv: BigInt(0),
+		crv_to_send_to_curve_voter_proxy: BigInt(0),
 		crv_new_voter_proxy_add_done: false,
-		crv_to_sell: BigNumber.from(0),
-		cvx_to_lock: BigNumber.from(0),
+		crv_to_sell: BigInt(0),
+		cvx_to_lock: BigInt(0),
 		cvx_new_lock_done: false,
-		cvx_to_sell: BigNumber.from(0),
-		"3crv_direct_collected": BigNumber.from(0),
-		cvxcrv_direct_collected: BigNumber.from(0),
+		cvx_to_sell: BigInt(0),
+		"3crv_direct_collected": BigInt(0),
+		cvxcrv_direct_collected: BigInt(0),
 	}
 
 	console.log(`Using env file from ${envPath}`);
@@ -118,7 +118,7 @@ async function main() {
 	const ERC20_json_path = path.join(__dirname, '../../artifacts/contracts/ERC20/ERC20.sol/ERC20.json');
 	const { abi: ERC20_ABI } = JSON.parse( await fse.readFileSync(ERC20_json_path, 'utf-8'));
 	const cvx = new ethers.Contract("0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b", ERC20_ABI).connect(owner);
-	const cvx_total_supply = BigNumber.from(await cvx.totalSupply());
+	const cvx_total_supply = BigInt(await cvx.totalSupply());
 	// console.log(cvx_total_supply.toString());
 
 	// // Get CRV rewards
@@ -126,7 +126,7 @@ async function main() {
 	// const { abi: IConvexAMO_Old_ABI } = JSON.parse( await fse.readFileSync(IConvexAMO_Old_json_path, 'utf-8'));
 	// const convex_amo = new ethers.Contract("0x49ee75278820f409ecd67063D8D717B38d66bd71", IConvexAMO_Old_ABI).connect(owner);
 	// const convex_amo_rewards = await convex_amo.showRewards();
-	// const crv_from_convex_amo = BigNumber.from(convex_amo_rewards[0]);
+	// const crv_from_convex_amo = BigInt(convex_amo_rewards[0]);
 	// const cvx_from_convex_amo = GetCVXMintAmount(crv_from_convex_amo, cvx_total_supply);
 	// console.log(`----------- Convex AMO (FRAX3CRV) -----------`);
 	// console.log(`CRV: ${formatUnits(crv_from_convex_amo, 18)}`);
@@ -217,13 +217,13 @@ async function main() {
 	const { abi: IStakingProxyConvex_ABI } = JSON.parse( await fse.readFileSync(IStakingProxyConvex, 'utf-8'));
 	const convex_frax_usdc_staking_proxy = new ethers.Contract("0x2AA609715488B09EFA93883759e8B089FBa11296", IStakingProxyConvex_ABI).connect(owner);
 	const convex_frax_usdc_rewards = await convex_frax_usdc_staking_proxy.earned();
-	const crv_from_convex_frax_usdc = BigNumber.from(convex_frax_usdc_rewards[1][1]);
-	const cvx_from_convex_frax_usdc = BigNumber.from(convex_frax_usdc_rewards[1][2]);
+	const crv_from_convex_frax_usdc = BigInt(convex_frax_usdc_rewards[1][1]);
+	const cvx_from_convex_frax_usdc = BigInt(convex_frax_usdc_rewards[1][2]);
 	
 	// FRAXBP rewards: 0% of CRV and 100% of CVX is saved/reinvested
-	summary_info.crv_to_save = summary_info.crv_to_save.add(crv_from_convex_frax_usdc.mul(0).div(1000)); // 0%
-	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_usdc.mul(1000).div(1000)); // 100%
-	summary_info.cvx_to_lock = summary_info.cvx_to_lock.add(cvx_from_convex_frax_usdc);
+	summary_info.crv_to_save = summary_info.crv_to_save + ((crv_from_convex_frax_usdc * BigInt(0)) / BigInt(1000)); // 0%
+	summary_info.crv_to_sell = summary_info.crv_to_sell + ((crv_from_convex_frax_usdc * BigInt(1000)) / BigInt(1000)); // 100%
+	summary_info.cvx_to_lock = summary_info.cvx_to_lock + (cvx_from_convex_frax_usdc);
 	console.log(`----------- Convex Frax FRAX/USDC (stkcvxFRAXBP) -----------`);
 	console.log(`CRV: ${formatUnits(crv_from_convex_frax_usdc, 18)}`);
 	console.log(`CVX: ${formatUnits(cvx_from_convex_frax_usdc, 18)}`);
@@ -245,13 +245,13 @@ async function main() {
 	// Convex Frax FRAX/USDP (stkcvxFRAXUSDP) rewards
 	// ================================================================
 	const convex_frax_usdp_staking_proxy = new ethers.Contract("0xD25D60aBafC220dd6F7BA37baD23e1105Db05a06", IStakingProxyConvex_ABI).connect(owner);
-	const convex_frax_usdp_rewards = await convex_frax_usdp_staking_proxy.callStatic.earned();
-	const crv_from_convex_frax_usdp = BigNumber.from(convex_frax_usdp_rewards[1][1]);
-	const cvx_from_convex_frax_usdp = BigNumber.from(convex_frax_usdp_rewards[1][2]);
+	const convex_frax_usdp_rewards = await convex_frax_usdp_staking_proxy.earned.staticCall();
+	const crv_from_convex_frax_usdp = BigInt(convex_frax_usdp_rewards[1][1]);
+	const cvx_from_convex_frax_usdp = BigInt(convex_frax_usdp_rewards[1][2]);
 	
 	// FRAXUSDP Rewards: Sell all
-	summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_usdp);
-	summary_info.cvx_to_sell = summary_info.cvx_to_sell.add(cvx_from_convex_frax_usdp);
+	summary_info.crv_to_sell = summary_info.crv_to_sell + crv_from_convex_frax_usdp;
+	summary_info.cvx_to_sell = summary_info.cvx_to_sell + cvx_from_convex_frax_usdp;
 	console.log(`----------- Convex Frax FRAX/USDP (stkcvxFRAXUSDP) -----------`);
 	console.log(`CRV: ${formatUnits(crv_from_convex_frax_usdp, 18)}`);
 	console.log(`CVX: ${formatUnits(cvx_from_convex_frax_usdp, 18)}`);
@@ -273,8 +273,8 @@ async function main() {
 	// // Convex Frax Frax/FPI (stkcvxFPIFRAX) rewards
 	// const convex_frax_fpi_staking_proxy = new ethers.Contract("0x2df2378103baB456457329D4C603440B92b9c0bd", IStakingProxyConvex_ABI).connect(owner);
 	// const convex_frax_fpi_rewards = await convex_frax_fpi_staking_proxy.earned();
-	// const crv_from_convex_frax_fpi = BigNumber.from(convex_frax_fpi_rewards[1][1]);
-	// const cvx_from_convex_frax_fpi = BigNumber.from(convex_frax_fpi_rewards[1][2]);
+	// const crv_from_convex_frax_fpi = BigInt(convex_frax_fpi_rewards[1][1]);
+	// const cvx_from_convex_frax_fpi = BigInt(convex_frax_fpi_rewards[1][2]);
 	// summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_fpi);
 	// summary_info.cvx_to_sell = summary_info.cvx_to_sell.add(cvx_from_convex_frax_fpi);
 	// console.log(`----------- Convex Frax FRAX/FPI (stkcvxFPIFRAX) -----------`);
@@ -323,25 +323,25 @@ async function main() {
 	// CRV
 	// summary_info.crv_to_save = summary_info.crv_to_save.add(cvx_crv_claim_all_rews[0]);
 	summary_info.crv_to_sell = summary_info.crv_to_sell
-		.add(cvx_crv_claim_all_rews[0])
-		.add(cvx_crv_claim_all_rews[1])
-		.add(cvx_crv_claim_all_rews[2])
-		.add(cvx_crv_claim_all_rews[3])
-		.add(cvx_crv_claim_all_rews[4])
-		.add(cvx_crv_claim_all_rews[5])
-		.add(cvx_crv_claim_all_rews[6])
-		.add(cvx_crv_claim_all_rews[7]);
+		 + cvx_crv_claim_all_rews[0]
+		 + cvx_crv_claim_all_rews[1]
+		 + cvx_crv_claim_all_rews[2]
+		 + cvx_crv_claim_all_rews[3]
+		 + cvx_crv_claim_all_rews[4]
+		 + cvx_crv_claim_all_rews[5]
+		 + cvx_crv_claim_all_rews[6]
+		 + cvx_crv_claim_all_rews[7];
 
 	// CVX
-	summary_info.cvx_to_lock = summary_info.cvx_to_lock.add(GetCVXMintAmount(cvx_crv_claim_all_rews[0], cvx_total_supply))
-	summary_info.cvx_to_sell = summary_info.cvx_to_sell
-		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[1], cvx_total_supply))
-		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[2], cvx_total_supply))
-		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[3], cvx_total_supply))
-		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[4], cvx_total_supply))
-		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[5], cvx_total_supply))
-		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[6], cvx_total_supply))
-		.add(GetCVXMintAmount(cvx_crv_claim_all_rews[7], cvx_total_supply));
+	summary_info.cvx_to_lock = summary_info.cvx_to_lock + GetCVXMintAmount(cvx_crv_claim_all_rews[0], cvx_total_supply)
+	summary_info.cvx_to_sell = summary_info.cvx_to_sell 
+		+ GetCVXMintAmount(cvx_crv_claim_all_rews[1], cvx_total_supply)
+		+ GetCVXMintAmount(cvx_crv_claim_all_rews[2], cvx_total_supply)
+		+ GetCVXMintAmount(cvx_crv_claim_all_rews[3], cvx_total_supply)
+		+ GetCVXMintAmount(cvx_crv_claim_all_rews[4], cvx_total_supply)
+		+ GetCVXMintAmount(cvx_crv_claim_all_rews[5], cvx_total_supply)
+		+ GetCVXMintAmount(cvx_crv_claim_all_rews[6], cvx_total_supply)
+		+ GetCVXMintAmount(cvx_crv_claim_all_rews[7], cvx_total_supply);
 
 	console.log(`----------- Convex Curve Others -----------`);
 	console.log(`convex_cvxcrvfrax_brp: ${formatUnits(cvx_crv_claim_all_rews[0], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[0], cvx_total_supply), 18)} CVX`); 
@@ -451,7 +451,7 @@ async function main() {
 	const { abi: ICvxLockerV2_ABI } = JSON.parse( await fse.readFileSync(ICvxLockerV2_json_path, 'utf-8'));
 	let cvx_locker = new ethers.Contract("0x72a19342e8F1838460eBFCCEf09F6585e32db86E", ICvxLockerV2_ABI).connect(owner);;
 	const locked_cvx_rewards = await cvx_locker.claimableRewards("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27");
-	summary_info.cvxcrv_direct_collected = summary_info.cvxcrv_direct_collected.add(locked_cvx_rewards[0][1]);
+	summary_info.cvxcrv_direct_collected = summary_info.cvxcrv_direct_collected + locked_cvx_rewards[0][1];
 	console.log(`----------- Convex Curve Others -----------`);
 	console.log(`cvxcrv_direct_collected: ${formatUnits(locked_cvx_rewards[0][1], 18)} cvxCRV`); 
 
@@ -501,7 +501,7 @@ async function main() {
 	// =====================================
 	// Determine if you need to process expired locks
 	const cvx_lock_status = await cvx_locker.lockedBalances("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27");
-	const PROCESS_EXPIRED_LOCKS = (BigNumber.from(cvx_lock_status.unlockable).gt(0));
+	const PROCESS_EXPIRED_LOCKS = (BigInt(cvx_lock_status.unlockable) > BigInt(0));
 	if (PROCESS_EXPIRED_LOCKS) {
 		batch_json.transactions.push({
 			"to": "0x72a19342e8F1838460eBFCCEf09F6585e32db86E",
@@ -526,6 +526,32 @@ async function main() {
 	else {
 		console.log("No expired locks to process")
 	}
+
+	// ===============================================================
+	// ============================ PRISMA ===========================
+	// ===============================================================
+
+	// PRISMA rewards
+	// =====================================
+	batch_json.transactions.push({
+		"to": "0xC72bc1a8cf9b1A218386df641d8bE99B40436A0f",
+		"value": "0",
+		"data": null,
+		"contractMethod": {
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "account",
+					"type": "address"
+				}
+			],
+			"name": "claim",
+			"payable": false
+		},
+		"contractInputsValues": {
+			"account": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+		}
+	});
 	
 
 	// ===============================================================
@@ -870,9 +896,9 @@ async function main() {
 	// ============================= CALCULATE SELL STUFF ============================
 	// ===============================================================================
 	// CRV (For SAVED CRV, 100% goes to voter proxy for now. We are not adding to our cvxCRV stake)
-	summary_info.crv_to_convert_to_cvxcrv = summary_info.crv_to_save.mul(0).div(100); // 0%
-	summary_info.crv_to_send_to_curve_voter_proxy = summary_info.crv_to_save.mul(0).div(100); // 0%
-	summary_info.crv_to_save = BigNumber.from(0);
+	summary_info.crv_to_convert_to_cvxcrv = (summary_info.crv_to_save * BigInt(0)) / (BigInt(100)); // 0%
+	summary_info.crv_to_send_to_curve_voter_proxy = (summary_info.crv_to_save * BigInt(0)) / (BigInt(100)); // 0%
+	summary_info.crv_to_save = BigInt(0);
 
 	console.log(`\n----------- Post Reward Collection Status -----------`);
 	console.log(summary_info);
@@ -929,7 +955,7 @@ async function main() {
 				"_value": summary_info.crv_to_send_to_curve_voter_proxy.toString(),
 			}
 		});
-		summary_info.crv_to_send_to_curve_voter_proxy = BigNumber.from(0);
+		summary_info.crv_to_send_to_curve_voter_proxy = BigInt(0);
 	}
 	
 	summary_info.crv_new_voter_proxy_add_done = true;
@@ -967,7 +993,7 @@ async function main() {
 			"_spendRatio": "0",
 		}
 	});
-	summary_info.cvx_to_lock = BigNumber.from(0);
+	summary_info.cvx_to_lock = BigInt(0);
 	summary_info.cvx_new_lock_done = true;
 
 
@@ -981,7 +1007,7 @@ async function main() {
 
 	// // Swap CRV for cvxCRV
 	// // =====================================
-	// if (summary_info.crv_to_convert_to_cvxcrv.gt(BigNumber.from(0))) {
+	// if (summary_info.crv_to_convert_to_cvxcrv.gt(BigInt(0))) {
 	// 	const I2PoolcvxCRVCRV_json_path = path.join(__dirname, '../../artifacts/contracts/Misc_AMOs/curve/I2PoolcvxCRVCRV.sol/I2PoolcvxCRVCRV.json');
 	// 	const { abi: I2PoolcvxCRVCRV_ABI } = JSON.parse( await fse.readFileSync(I2PoolcvxCRVCRV_json_path, 'utf-8'));
 	// 	let cvxcrvcrv = new ethers.Contract("0x971add32ea87f10bd192671630be3be8a11b8623", I2PoolcvxCRVCRV_ABI).connect(owner);
@@ -1020,7 +1046,7 @@ async function main() {
 	// 			"_min_dy": slipped_cvxcrv_out.toString(),
 	// 		}
 	// 	});
-	// 	summary_info.crv_to_convert_to_cvxcrv = BigNumber.from(0);
+	// 	summary_info.crv_to_convert_to_cvxcrv = BigInt(0);
 	// 	summary_info.cvxcrv_direct_collected = summary_info.cvxcrv_direct_collected.add(slipped_cvxcrv_out);
 	
 	// 	// Lock the cvxCRV in Convex (approve)
@@ -1078,8 +1104,8 @@ async function main() {
 	// 			"_to": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
 	// 		}
 	// 	});
-	// 	summary_info.crv_to_convert_to_cvxcrv = BigNumber.from(0);
-	// 	summary_info.cvxcrv_direct_collected = BigNumber.from(0);
+	// 	summary_info.crv_to_convert_to_cvxcrv = BigInt(0);
+	// 	summary_info.cvxcrv_direct_collected = BigInt(0);
 	
 	// 	console.log(`\n----------- Post cvxCRV Handling Status -----------`);
 	// 	console.log(summary_info);

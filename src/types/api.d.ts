@@ -1,6 +1,6 @@
 import { CollateralDetailsPack, GovernanceHistoryCodes } from './constants';
 import Web3 from 'web3';
-import SolanaWeb3 from '@solana/web3.js';
+// import SolanaWeb3 from '@solana/web3.js';
 import BigNumber from 'bignumber.js';
 
 /**
@@ -152,7 +152,7 @@ declare global {
         moonriver: Web3;
         optimism: Web3;
         polygon: Web3;
-        solana: SolanaWeb3.Connection;
+        // solana: SolanaWeb3.Connection;
     }
 
     export interface BlockNumPack {
