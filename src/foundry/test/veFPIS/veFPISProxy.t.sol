@@ -12,7 +12,7 @@ pragma solidity ^0.8.13;
 
 import { console } from "forge-std/console.sol";
 import "forge-std/Test.sol";
-import "../../hardhat/contracts/Curve/veFPISProxy.sol";
+import "../../../hardhat/contracts/Curve/veFPISProxy.sol";
 // import "../../contracts/Curve/IveFPIS.sol";
 
 address constant FPIS_COMPTROLLER = 0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502;

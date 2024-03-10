@@ -3,7 +3,6 @@ const envPath = path.join(process.cwd(), "../../../.env");
 require("dotenv").config({ path: envPath });
 const { ethers } = require("hardhat");
 
-const { BigNumber } = require("@ethersproject/bignumber");
 const util = require("util");
 const chalk = require("chalk");
 const fse = require("fs-extra");
@@ -16,8 +15,8 @@ let ADDRS_ETH_FARMS = ADDRS_ETH.staking_contracts;
 global.artifacts = artifacts;
 global.web3 = web3;
 
-const BIG6 = BigNumber.from(10).pow(6);
-const BIG18 = BigNumber.from(10).pow(18);
+const BIG6 = BigInt("1000000");
+const BIG18 = BigInt("1000000000000000000");
 
 const stringifyReplacer = (_, value) => (value === undefined ? null : value)
 
@@ -54,29 +53,29 @@ const calculateChecksum = (batchFile) => {
 // From https://docs.convexfinance.com/convexfinanceintegration/cvx-minting
 const GetCVXMintAmount = ( crvEarned, cvxTotalSupply ) => {
 	// Constants
-	let cliffSize = BigNumber.from("1000000000000000000").mul(100000); // New cliff every 100000 tokens
-	let cliffCount = BigNumber.from("1000"); // 1,000 cliffs
-	let maxSupply = BigNumber.from("1000000000000000000").mul(100000000); // 100 mil max supply
+	let cliffSize = BigInt("1000000000000000000") *  BigInt("100000"); // New cliff every 100000 tokens
+	let cliffCount = BigInt("1000"); // 1,000 cliffs
+	let maxSupply = BigInt("1000000000000000000") *  BigInt("100000000"); // 100 mil max supply
     
     // Get current cliff
-    let currentCliff = cvxTotalSupply.div(cliffSize);
+    let currentCliff = cvxTotalSupply / cliffSize;
     
     // If current cliff is under the max
-    if(currentCliff.lt(cliffCount)){
+    if(currentCliff < cliffCount){
         // Get remaining cliffs
-        let remaining = cliffCount.sub(currentCliff);
+        let remaining = cliffCount - currentCliff;
         
         // Multiply ratio of remaining cliffs to total cliffs against amount CRV received
-        var cvxEarned = (crvEarned.mul(remaining)).div(cliffCount);
+        var cvxEarned = (crvEarned * remaining) / (cliffCount);
     
         // Double check we have not gone over the max supply
-        var amountTillMax = maxSupply.sub(cvxTotalSupply);
-        if(cvxEarned.gt(amountTillMax)){
+        var amountTillMax = maxSupply - cvxTotalSupply;
+        if(cvxEarned > amountTillMax){
             cvxEarned = amountTillMax;
         }
         return cvxEarned;
     }
-    return BigNumber.from(0);
+    return BigInt(0);
 }
 
 module.exports = {

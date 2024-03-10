@@ -19,7 +19,7 @@ import "./FraxUnifiedFarmTemplate.sol";
 // -------------------- VARIES --------------------
 
 // Balancer
-// import "../Misc_AMOs/balancer/IAuraGauge.sol";
+// import "../Misc_AMOs/balancer/IBalancerGauge.sol";
 
 // Bunni
 // import "../Misc_AMOs/bunni/IBunniGauge.sol";
@@ -483,6 +483,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Pull the tokens from the sender
         TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);
 
+        // Aura & Balancer
+        // Deposit the tokens into the Aura vault
+        // =========================================
+        stakingToken.approve(address(aura_deposit_vault), addl_liq);
+        aura_deposit_vault.stake(addl_liq);
+
         // Update the stake
         lockedStakes[msg.sender][theArrayIndex] = LockedStake(
             kek_id,
@@ -565,6 +571,12 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Varies per farm
         TransferHelper.safeTransferFrom(address(stakingToken), source_address, address(this), liquidity);
 
+        // Aura & Balancer
+        // Deposit the tokens into the Aura vault
+        // =========================================
+        stakingToken.approve(address(aura_deposit_vault), liquidity);
+        aura_deposit_vault.stake(liquidity);
+
         // Get the lock multiplier and kek_id
         uint256 lock_multiplier = lockMultiplier(secs);
         bytes32 kek_id = keccak256(abi.encodePacked(staker_address, start_timestamp, liquidity, _locked_liquidity[staker_address]));
@@ -625,6 +637,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         uint256 liquidity = thisStake.liquidity;
 
         if (liquidity > 0) {
+
+            // Aura & Balancer
+            // Withdraw the tokens from the Aura vault. Do not claim
+            // =========================================
+            aura_deposit_vault.withdraw(liquidity, false);
 
             // Give the tokens to the destination_address
             // Should throw if insufficient balance
