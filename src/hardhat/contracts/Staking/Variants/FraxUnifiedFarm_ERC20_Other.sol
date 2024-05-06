@@ -49,9 +49,9 @@ contract FraxUnifiedFarm_ERC20_Other is FraxUnifiedFarm_ERC20 {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
         
         // Balancer
-        stakingToken = IAuraDeposit(_stakingToken);
-        bal_vanilla_lp_tkn = IComposableStablePool(0xB06bFBD7b50F80c8d9dA57Fc4cF5CBD5B3E2f148);
-        bal_vanilla_vault = IBalancerVault(bal_vanilla_lp_tkn.getVault());
+        // stakingToken = IAuraDeposit(_stakingToken);
+        // bal_vanilla_lp_tkn = IComposableStablePool(0xB06bFBD7b50F80c8d9dA57Fc4cF5CBD5B3E2f148);
+        // bal_vanilla_vault = IBalancerVault(bal_vanilla_lp_tkn.getVault());
 
         // Bunni
         // stakingToken = IBunniGauge(_stakingToken);
@@ -99,19 +99,19 @@ contract FraxUnifiedFarm_ERC20_Other is FraxUnifiedFarm_ERC20 {
 
         // Aura / Balancer frxETH-pxETH
         // ============================================
-        {
-            // Get the pool ID
-            bytes32 _poolId = bal_vanilla_lp_tkn.getPoolId();
+        // {
+        //     // Get the pool ID
+        //     bytes32 _poolId = bal_vanilla_lp_tkn.getPoolId();
 
-            // Get the balances of each token in the pool
-            ( , uint256[] memory balances, ) = bal_vanilla_vault.getPoolTokens(_poolId);
-            uint256 frxETH_in_pool = balances[1];
-            uint256 frxETH_usd_value_e36 = (1e10) * (frxETH_in_pool * uint256(getLatestETHPriceE8()));
+        //     // Get the balances of each token in the pool
+        //     ( , uint256[] memory balances, ) = bal_vanilla_vault.getPoolTokens(_poolId);
+        //     uint256 frxETH_in_pool = balances[1];
+        //     uint256 frxETH_usd_value_e36 = (1e10) * (frxETH_in_pool * uint256(getLatestETHPriceE8()));
 
-            // Calculate the frxETH value per "actual" LP
-            // Balancer vault to Aura deposit vault is 1:1
-            frax_per_lp_token = (frxETH_usd_value_e36) / bal_vanilla_lp_tkn.getActualSupply();
-        }
+        //     // Calculate the frxETH value per "actual" LP
+        //     // Balancer vault to Aura deposit vault is 1:1
+        //     frax_per_lp_token = (frxETH_usd_value_e36) / bal_vanilla_lp_tkn.getActualSupply();
+        // }
 
         // Bunni FRAX/USDC Gauge
         // ============================================

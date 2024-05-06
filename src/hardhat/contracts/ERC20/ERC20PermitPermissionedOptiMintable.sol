@@ -159,7 +159,7 @@ contract ERC20PermitPermissionedOptiMintable is ERC20Permit, ERC20Burnable, Owne
     /// @param b_address Address of the account to burn from
     /// @param b_amount Amount of tokens to burn
     function minter_burn_from(address b_address, uint256 b_amount) public onlyMinters {
-        super.burnFrom(b_address, b_amount);
+        super._burn(b_address, b_amount);
         emit TokenMinterBurned(b_address, msg.sender, b_amount);
     }
 

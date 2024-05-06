@@ -48,7 +48,7 @@ contract ERC20PermissionedMint is ERC20, ERC20Burnable, Owned {
 
     // Used by minters when user redeems
     function minter_burn_from(address b_address, uint256 b_amount) public onlyMinters {
-        super.burnFrom(b_address, b_amount);
+        super._burn(b_address, b_amount);
         emit TokenMinterBurned(b_address, msg.sender, b_amount);
     }
 

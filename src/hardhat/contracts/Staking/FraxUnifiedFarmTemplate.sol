@@ -46,8 +46,8 @@ import "./Owned.sol";
 // Extra rewards
 // Balancer
 // ====================
-import "../Misc_AMOs/balancer/IAuraDeposit.sol";
-import "../Misc_AMOs/balancer/IAuraDepositVault.sol";
+// import "../Misc_AMOs/balancer/IAuraDeposit.sol";
+// import "../Misc_AMOs/balancer/IAuraDepositVault.sol";
 
 // BUNNI
 // ====================
@@ -57,7 +57,7 @@ import "../Misc_AMOs/balancer/IAuraDepositVault.sol";
 
 // CONVEX
 // ====================
-// import "../Misc_AMOs/convex/IConvexBaseRewardPool.sol";
+import "../Misc_AMOs/convex/IConvexBaseRewardPool.sol";
 
 contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
 
@@ -65,8 +65,8 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     // -------------------- VARIES --------------------
 
     // Balancer
-    IAuraDeposit public stakingToken;
-    IAuraDepositVault public aura_deposit_vault = IAuraDepositVault(0xE557658e3D13d074961265756dC2eFB6c903A763);
+    // IAuraDeposit public stakingToken;
+    // IAuraDepositVault public aura_deposit_vault = IAuraDepositVault(0xE557658e3D13d074961265756dC2eFB6c903A763);
 
     // Bunni
     // IBunniGauge public stakingToken;
@@ -672,19 +672,19 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         // Pull in rewards and set the reward rate for one week, based off of that
         // If the rewards get messed up for some reason, set this to 0 and it will skip
         // Should only be called once per week max
-        if (rewardRatesManual[1] != 0) {
-            // AURA & BAL
-            // ====================================
-            uint256 aura_before = IERC20(rewardTokens[1]).balanceOf(address(this));
-            uint256 bal_before = IERC20(rewardTokens[2]).balanceOf(address(this));
-            aura_deposit_vault.getReward(address(this), true);
-            uint256 aura_after = IERC20(rewardTokens[1]).balanceOf(address(this));
-            uint256 bal_after = IERC20(rewardTokens[2]).balanceOf(address(this));
+        // if (rewardRatesManual[1] != 0) {
+        //     // AURA & BAL
+        //     // ====================================
+        //     uint256 aura_before = IERC20(rewardTokens[1]).balanceOf(address(this));
+        //     uint256 bal_before = IERC20(rewardTokens[2]).balanceOf(address(this));
+        //     aura_deposit_vault.getReward(address(this), true);
+        //     uint256 aura_after = IERC20(rewardTokens[1]).balanceOf(address(this));
+        //     uint256 bal_after = IERC20(rewardTokens[2]).balanceOf(address(this));
 
-            // Set the new reward rates
-            rewardRatesManual[1] = (aura_after - aura_before) / rewardsDuration; // AURA
-            rewardRatesManual[2] = (bal_after - bal_before) / rewardsDuration; // BAL
-        }
+        //     // Set the new reward rates
+        //     rewardRatesManual[1] = (aura_after - aura_before) / rewardsDuration; // AURA
+        //     rewardRatesManual[2] = (bal_after - bal_before) / rewardsDuration; // BAL
+        // }
 
         // Bunni oLIT rewards
         // ==========================================
@@ -829,10 +829,10 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
                 || (!isRewTkn && (msg.sender == owner))
             ) {
 
-            // Aura & Balancer
-            // Withdraw the tokens from the Aura vault. Do not claim
-            // =========================================
-            if (tokenAddress == address(stakingToken)) aura_deposit_vault.withdraw(tokenAmount, false);
+            // // Aura & Balancer
+            // // Withdraw the tokens from the Aura vault. Do not claim
+            // // =========================================
+            // if (tokenAddress == address(stakingToken)) aura_deposit_vault.withdraw(tokenAmount, false);
 
             TransferHelper.safeTransfer(tokenAddress, msg.sender, tokenAmount);
             return;
