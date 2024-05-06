@@ -269,29 +269,88 @@ async function main() {
 		"contractInputsValues": null
 	});
 
+	// Convex Frax FRAX/sDAI (stkcvxFRAXsDAI) rewards
+	// ================================================================
+	const convex_frax_sdai_staking_proxy = new ethers.Contract("0x9145880B721eC3DA9d8a9fA595A34562F139AC69", IStakingProxyConvex_ABI).connect(owner);
+	const convex_frax_sdai_rewards = await convex_frax_sdai_staking_proxy.earned.staticCall();
+	const crv_from_convex_frax_sdai = BigInt(convex_frax_sdai_rewards[1][1]);
+	const cvx_from_convex_frax_sdai = BigInt(convex_frax_sdai_rewards[1][2]);
+	
+	// FRAXsDAI Rewards: Sell all
+	summary_info.crv_to_sell = summary_info.crv_to_sell + crv_from_convex_frax_sdai;
+	summary_info.cvx_to_sell = summary_info.cvx_to_sell + cvx_from_convex_frax_sdai;
+	console.log(`----------- Convex Frax FRAX/sDAI (stkcvxFRAXsDAI) -----------`);
+	console.log(`CRV: ${formatUnits(crv_from_convex_frax_sdai, 18)}`);
+	console.log(`CVX: ${formatUnits(cvx_from_convex_frax_sdai, 18)}`);
 
-	// // Convex Frax Frax/FPI (stkcvxFPIFRAX) rewards
-	// const convex_frax_fpi_staking_proxy = new ethers.Contract("0x2df2378103baB456457329D4C603440B92b9c0bd", IStakingProxyConvex_ABI).connect(owner);
-	// const convex_frax_fpi_rewards = await convex_frax_fpi_staking_proxy.earned();
-	// const crv_from_convex_frax_fpi = BigInt(convex_frax_fpi_rewards[1][1]);
-	// const cvx_from_convex_frax_fpi = BigInt(convex_frax_fpi_rewards[1][2]);
-	// summary_info.crv_to_sell = summary_info.crv_to_sell.add(crv_from_convex_frax_fpi);
-	// summary_info.cvx_to_sell = summary_info.cvx_to_sell.add(cvx_from_convex_frax_fpi);
-	// console.log(`----------- Convex Frax FRAX/FPI (stkcvxFPIFRAX) -----------`);
-	// console.log(`CRV: ${formatUnits(crv_from_convex_frax_fpi, 18)}`);
-	// console.log(`CVX: ${formatUnits(cvx_from_convex_frax_fpi, 18)}`);
-	// // =====================================
-	// batch_json.transactions.push({
-	// 	"to": "0x2df2378103baB456457329D4C603440B92b9c0bd",
-	// 	"value": "0",
-	// 	"data": null,
-	// 	"contractMethod": {
-	// 		"inputs": [],
-	// 		"name": "getReward",
-	// 		"payable": false
-	// 	},
-	// 	"contractInputsValues": null
-	// });
+	// =====================================
+	batch_json.transactions.push({
+		"to": "0x9145880B721eC3DA9d8a9fA595A34562F139AC69",
+		"value": "0",
+		"data": null,
+		"contractMethod": {
+			"inputs": [],
+			"name": "getReward",
+			"payable": false
+		},
+		"contractInputsValues": null
+	});
+
+	// Convex Frax FRAX/pyUSD (stkcvxFRAXpyUSD) rewards
+	// ================================================================
+	const convex_frax_pyusd_staking_proxy = new ethers.Contract("0x0C150631A996716e11F71f8BA77BF8CF6c2D047c", IStakingProxyConvex_ABI).connect(owner);
+	const convex_frax_pyusd_rewards = await convex_frax_pyusd_staking_proxy.earned.staticCall();
+	const crv_from_convex_frax_pyusd = BigInt(convex_frax_pyusd_rewards[1][1]);
+	const cvx_from_convex_frax_pyusd = BigInt(convex_frax_pyusd_rewards[1][2]);
+	
+	// FRAXpyUSD Rewards: Sell all
+	summary_info.crv_to_sell = summary_info.crv_to_sell + crv_from_convex_frax_pyusd;
+	summary_info.cvx_to_sell = summary_info.cvx_to_sell + cvx_from_convex_frax_pyusd;
+	console.log(`----------- Convex Frax FRAX/pyUSD (stkcvxFRAXpyUSD) -----------`);
+	console.log(`CRV: ${formatUnits(crv_from_convex_frax_pyusd, 18)}`);
+	console.log(`CVX: ${formatUnits(cvx_from_convex_frax_pyusd, 18)}`);
+
+	// =====================================
+	batch_json.transactions.push({
+		"to": "0x0C150631A996716e11F71f8BA77BF8CF6c2D047c",
+		"value": "0",
+		"data": null,
+		"contractMethod": {
+			"inputs": [],
+			"name": "getReward",
+			"payable": false
+		},
+		"contractInputsValues": null
+	});
+
+	// Convex Frax FRAX/FPI (stkcvxFRAXFPI) rewards
+	// ================================================================
+	const convex_frax_fpi_staking_proxy = new ethers.Contract("0x9592CD5dA20184Cbbf884C5892B150e575674aD0", IStakingProxyConvex_ABI).connect(owner);
+	const convex_frax_fpi_rewards = await convex_frax_fpi_staking_proxy.earned.staticCall();
+	const crv_from_convex_frax_fpi = BigInt(convex_frax_fpi_rewards[1][1]);
+	const cvx_from_convex_frax_fpi = BigInt(convex_frax_fpi_rewards[1][2]);
+	
+	// FRAXFPI Rewards: Sell all
+	summary_info.crv_to_sell = summary_info.crv_to_sell + crv_from_convex_frax_fpi;
+	summary_info.cvx_to_sell = summary_info.cvx_to_sell + cvx_from_convex_frax_fpi;
+	console.log(`----------- Convex Frax FRAX/FPI (stkcvxFRAXFPI) -----------`);
+	console.log(`CRV: ${formatUnits(crv_from_convex_frax_fpi, 18)}`);
+	console.log(`CVX: ${formatUnits(cvx_from_convex_frax_fpi, 18)}`);
+
+	// =====================================
+	batch_json.transactions.push({
+		"to": "0x9592CD5dA20184Cbbf884C5892B150e575674aD0",
+		"value": "0",
+		"data": null,
+		"contractMethod": {
+			"inputs": [],
+			"name": "getReward",
+			"payable": false
+		},
+		"contractInputsValues": null
+	});
+
+
 
 	// Convex Curve (cvxLP) Claim All (excluding cvxCRV and locked CVX)
 	// =====================================
@@ -305,18 +364,19 @@ async function main() {
 	const convex_cvxFRAXFPI = new ethers.Contract("0x062450B06EB92F1C4E227C41c987ed97c93Ae232", IConvexBaseRewardPool_ABI).connect(owner);
 	const convex_cvxFRAXPYUSD = new ethers.Contract("0xB10a6e39Ed8a66fEd3aAef3866a95611a49B9a95", IConvexBaseRewardPool_ABI).connect(owner);
 	const convex_cvxFRAXsDAI = new ethers.Contract("0xE627082369689b2B86D948c377A4aE4e739C59eE", IConvexBaseRewardPool_ABI).connect(owner);
-
+	const convex_cvxFRAXUSDe = new ethers.Contract("0xc030b717b96B83bf4EC4a075dD547614953968FD", IConvexBaseRewardPool_ABI).connect(owner);
 
 	// Get earned CRV
 	const cvx_crv_claim_all_rews = await Promise.all([
-		convex_cvxcrvfrax_brp.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
-		convex_cvxcrvfrax_usdp_brp.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
-		convex_cvxalusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
-		convex_cvxgusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
-		convex_cvxlusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
-		convex_cvxFRAXFPI.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
-		convex_cvxFRAXPYUSD.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
-		convex_cvxFRAXsDAI.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"),
+		convex_cvxcrvfrax_brp.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"), // [0]
+		convex_cvxcrvfrax_usdp_brp.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"), // [1]
+		convex_cvxalusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"), // [2]
+		convex_cvxgusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"), // [3]
+		convex_cvxlusd_frax3CRV.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"), // [4]
+		convex_cvxFRAXFPI.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"), // [5]
+		convex_cvxFRAXPYUSD.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"), // [6]
+		convex_cvxFRAXsDAI.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"), // [7]
+		convex_cvxFRAXUSDe.earned("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"), // [8]
 	])
 
 	// FRAXBP rewards get saved/reinvested, everything else is sold.
@@ -330,10 +390,14 @@ async function main() {
 		 + cvx_crv_claim_all_rews[4]
 		 + cvx_crv_claim_all_rews[5]
 		 + cvx_crv_claim_all_rews[6]
-		 + cvx_crv_claim_all_rews[7];
+		 + cvx_crv_claim_all_rews[7]
+		 + cvx_crv_claim_all_rews[8];
 
 	// CVX
-	summary_info.cvx_to_lock = summary_info.cvx_to_lock + GetCVXMintAmount(cvx_crv_claim_all_rews[0], cvx_total_supply)
+	// Keep FRAXBP
+	summary_info.cvx_to_lock = summary_info.cvx_to_lock + GetCVXMintAmount(cvx_crv_claim_all_rews[0], cvx_total_supply);
+
+	// Sell the rest
 	summary_info.cvx_to_sell = summary_info.cvx_to_sell 
 		+ GetCVXMintAmount(cvx_crv_claim_all_rews[1], cvx_total_supply)
 		+ GetCVXMintAmount(cvx_crv_claim_all_rews[2], cvx_total_supply)
@@ -341,7 +405,8 @@ async function main() {
 		+ GetCVXMintAmount(cvx_crv_claim_all_rews[4], cvx_total_supply)
 		+ GetCVXMintAmount(cvx_crv_claim_all_rews[5], cvx_total_supply)
 		+ GetCVXMintAmount(cvx_crv_claim_all_rews[6], cvx_total_supply)
-		+ GetCVXMintAmount(cvx_crv_claim_all_rews[7], cvx_total_supply);
+		+ GetCVXMintAmount(cvx_crv_claim_all_rews[7], cvx_total_supply)
+		+ GetCVXMintAmount(cvx_crv_claim_all_rews[8], cvx_total_supply);
 
 	console.log(`----------- Convex Curve Others -----------`);
 	console.log(`convex_cvxcrvfrax_brp: ${formatUnits(cvx_crv_claim_all_rews[0], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[0], cvx_total_supply), 18)} CVX`); 
@@ -352,6 +417,7 @@ async function main() {
 	console.log(`convex_cvxFRAXFPI: ${formatUnits(cvx_crv_claim_all_rews[5], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[5], cvx_total_supply), 18)} CVX`); 
 	console.log(`convex_cvxFRAXPYUSD: ${formatUnits(cvx_crv_claim_all_rews[6], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[6], cvx_total_supply), 18)} CVX`); 
 	console.log(`convex_cvxFRAXsDAI: ${formatUnits(cvx_crv_claim_all_rews[7], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[7], cvx_total_supply), 18)} CVX`); 
+	console.log(`convex_cvxFRAXUSDe: ${formatUnits(cvx_crv_claim_all_rews[8], 18)} CRV, ${formatUnits(GetCVXMintAmount(cvx_crv_claim_all_rews[8], cvx_total_supply), 18)} CVX`); 
 
 
 	batch_json.transactions.push({
@@ -500,32 +566,32 @@ async function main() {
 	// Relock expired locked CVX
 	// =====================================
 	// Determine if you need to process expired locks
-	const cvx_lock_status = await cvx_locker.lockedBalances("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27");
-	const PROCESS_EXPIRED_LOCKS = (BigInt(cvx_lock_status.unlockable) > BigInt(0));
-	if (PROCESS_EXPIRED_LOCKS) {
-		batch_json.transactions.push({
-			"to": "0x72a19342e8F1838460eBFCCEf09F6585e32db86E",
-			"value": "0",
-			"data": null,
-			"contractMethod": {
-				"inputs": [
-					{
-						"internalType": "bool",
-						"name": "_relock",
-						"type": "bool"
-					}
-				],
-				"name": "processExpiredLocks",
-				"payable": false
-			},
-			"contractInputsValues": {
-				"_relock": true,
-			}
-		});
-	}
-	else {
-		console.log("No expired locks to process")
-	}
+	// const cvx_lock_status = await cvx_locker.lockedBalances("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27");
+	// const PROCESS_EXPIRED_LOCKS = (BigInt(cvx_lock_status.unlockable) > BigInt(0));
+	// if (PROCESS_EXPIRED_LOCKS) {
+	// 	batch_json.transactions.push({
+	// 		"to": "0x72a19342e8F1838460eBFCCEf09F6585e32db86E",
+	// 		"value": "0",
+	// 		"data": null,
+	// 		"contractMethod": {
+	// 			"inputs": [
+	// 				{
+	// 					"internalType": "bool",
+	// 					"name": "_relock",
+	// 					"type": "bool"
+	// 				}
+	// 			],
+	// 			"name": "processExpiredLocks",
+	// 			"payable": false
+	// 		},
+	// 		"contractInputsValues": {
+	// 			"_relock": true,
+	// 		}
+	// 	});
+	// }
+	// else {
+	// 	console.log("No expired locks to process")
+	// }
 
 	// ===============================================================
 	// ============================ PRISMA ===========================

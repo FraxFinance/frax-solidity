@@ -46,15 +46,16 @@ import "../ERC20/SafeERC20.sol";
 // import '../Misc_AMOs/balancer/IBalancerChildLiquidityGauge.sol'; // Balancer frxETH-bb-a-WETH Gauge
 // import '../Misc_AMOs/balancer/IL2BalancerPseudoMinter.sol'; // Balancer frxETH-bb-a-WETH Gauge
 // import '../Misc_AMOs/balancer/IStablePool.sol'; // Balancer frxETH-bb-a-WETH Gauge
-// import "../Oracle/AggregatorV3Interface.sol"; // Balancer frxETH-bb-a-WETH Gauge and Convex frxETH/XXXETH
-// import '../Misc_AMOs/convex/IConvexCvxLPRewardPoolCombo.sol'; // Convex cvxLP/RewardPool Combo
-// import '../Misc_AMOs/curve/ICurveChildLiquidityGauge.sol'; // Convex cvxLP/RewardPool Combo
+import "../Oracle/AggregatorV3Interface.sol"; // Balancer frxETH-bb-a-WETH Gauge and Convex frxETH/XXXETH
+import '../Misc_AMOs/convex/IConvexCvxLPRewardPoolCombo.sol'; // Convex cvxLP/RewardPool Combo
+import '../Misc_AMOs/curve/ICurveChildLiquidityGauge.sol'; // Convex cvxLP/RewardPool Combo
+import '../Misc_AMOs/curve/ICurveTwocryptoOptimized.sol'; // Fraxtal Curve 2-token XXX/wfrxETH
 // import '../Misc_AMOs/curve/I2pool.sol'; // Curve 2-token
 // import '../Misc_AMOs/curve/I2poolTokenNoLending.sol'; // Curve 2-token (No Lending)
 // import '../Misc_AMOs/curve/I3pool.sol'; // Curve 3-token
 // import '../Misc_AMOs/curve/I3poolAndToken.sol'; // Curve 3-token with pool
 // import '../Misc_AMOs/curve/ICurveStableSwapNG.sol'; // Curve 2-token Stable NG
-import '../Fraxswap/core/interfaces/IFraxswapPair.sol'; // Fraxswap V2
+// import '../Fraxswap/core/interfaces/IFraxswapPair.sol'; // Fraxswap V2
 // import '../Misc_AMOs/kyberswap/elastic/IKSElasticLMV2.sol'; // KyberSwap Elastic
 // import '../Misc_AMOs/kyberswap/elastic/IKyberSwapFarmingToken.sol'; // KyberSwap Elastic
 // import '../Misc_AMOs/kyberswap/elastic/IKSReinvestmentTokenPool.sol'; // KyberSwap Elastic
@@ -113,6 +114,7 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
 
 
     // Balancer frxETH-bb-a-WETH Gauge or Convex frxETH/XXXETH
+    // ================================================
     // IBalancerChildLiquidityGauge public stakingToken; // Balancer frxETH-bb-a-WETH Gauge
     // AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612); // For Balancer frxETH-bb-a-WETH Gauge
     // function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
@@ -127,13 +129,30 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
         
     //     return price;
     // }
+
+    // Convex XXX/wfrxETH Volatile [Fraxtal]
+    // ================================================
+    IConvexCvxLPRewardPoolCombo public stakingToken; // Convex cvxLP/RewardPool combo
+    AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x89e60b56efD70a1D4FBBaE947bC33cae41e37A72); // For Balancer frxETH-bb-a-WETH Gauge
+    function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
+        require(_eth_usd_oracle_address != address(0), "Zero address detected");
+
+        priceFeedETHUSD = AggregatorV3Interface(_eth_usd_oracle_address);
+    }
+    function getLatestETHPriceE8() public view returns (int) {
+        // Returns in E8
+        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
+        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+        
+        return price;
+    }
     
     /// @notice The token being staked
     // I2pool public stakingToken; // Curve 2-token
     // I3pool public stakingToken; // Curve 3-token
     // I3poolAndToken public stakingToken; // Curve 3-token with pool
     // IConvexCvxLPRewardPoolCombo public stakingToken; // Convex cvxLP/RewardPool combo
-    IFraxswapPair public stakingToken; // Fraxswap V2
+    // IFraxswapPair public stakingToken; // Fraxswap V2
     // IStableXPair public stakingToken; // Impossible
     // IFeederPool public stakingToken; // mStable
     // ISaddleLPToken public stakingToken; // Saddle L2D4
@@ -357,13 +376,13 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
         }
 
         // stakingToken = IBalancerChildLiquidityGauge(_stakingToken); // Balancer frxETH-bb-a-WETH Gauge
-        // stakingToken = IConvexCvxLPRewardPoolCombo(_stakingToken);
+        stakingToken = IConvexCvxLPRewardPoolCombo(_stakingToken);
         // stakingToken = I2pool(_stakingToken);
         // stakingToken = I3pool(_stakingToken);
         // stakingToken = I3poolAndToken(_stakingToken);
         // stakingToken = IStableXPair(_stakingToken);
         // stakingToken = IFeederPool(_stakingToken);
-        stakingToken = IFraxswapPair(_stakingToken);
+        // stakingToken = IFraxswapPair(_stakingToken);
         // stakingToken = ISaddleLPToken(_stakingToken);
         // stakingToken = ILToken(_stakingToken);
         // stakingToken = ILPToken(_stakingToken);
@@ -375,9 +394,9 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
 
         // Uniswap V2 / Impossible ONLY
         // Need to know which token FRAX is (0 or 1)
-        address token0 = stakingToken.token0();
-        if (token0 == fraxAddress) frax_is_token0 = true;
-        else frax_is_token0 = false;
+        // address token0 = stakingToken.token0();
+        // if (token0 == fraxAddress) frax_is_token0 = true;
+        // else frax_is_token0 = false;
         
         // Other booleans
         migrationsOn = false;
@@ -457,7 +476,7 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
         //     frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here. Scale up to E18
         // }
 
-        // Convex cvxLP/RewardPool Combo
+        // Convex cvxLP/RewardPool Combo (FRAXBP)
         // ============================================
         // {
         //     // Half of the LP is FRAXBP. Half of that should be FRAX.
@@ -466,6 +485,31 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
         //     I3pool pool = I3pool(gauge.lp_token());
         //     frax_per_lp_token = pool.get_virtual_price() / 4; 
         // }
+
+        // Convex cvxLP/RewardPool Combo (HFXB/FRAX)
+        // ============================================
+        // {
+        //     // All of the LP constituents are Frax ecosystem related
+        //     // LP price is roughly 1
+        //     ICurveChildLiquidityGauge gauge = ICurveChildLiquidityGauge(stakingToken.curveGauge());
+        //     I2pool pool = I2pool(gauge.lp_token());
+        //     frax_per_lp_token = pool.get_virtual_price(); 
+        // }
+
+
+        // Convex <VOLATILE>/wfrxETH [Fraxtal]
+        // ============================================
+        {
+            // Get the pool
+            ICurveChildLiquidityGauge gauge = ICurveChildLiquidityGauge(stakingToken.curveGauge());
+            ICurveTwocryptoOptimized pool = ICurveTwocryptoOptimized(gauge.lp_token());
+
+            // Assume wfrxETH = ETH for pricing purposes
+            // Get the USD value of the frxETH per LP token
+            uint256 wfrxETH_in_pool = IERC20(0xFC00000000000000000000000000000000000006).balanceOf(address(pool));
+            uint256 frxETH_usd_val_per_lp_e8 = (wfrxETH_in_pool * uint256(getLatestETHPriceE8())) / pool.totalSupply();
+            frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here
+        }
 
         // Convex cvxfrxETH/XXXETH
         // ============================================
@@ -537,19 +581,19 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
 
         // Fraxswap V2
         // ============================================
-        {
-            uint256 total_frax_reserves;
-            // Technically getReserveAfterTwamm is more accurate, but if the TWAMM becomes paused, it will eventually gas out
-            // (uint256 _reserve0, uint256 _reserve1, , ,) = (stakingToken.getReserveAfterTwamm(block.timestamp));
-            (uint256 _reserve0, uint256 _reserve1, ) = (stakingToken.getReserves());
-            if (frax_is_token0) total_frax_reserves = _reserve0;
-            else total_frax_reserves = _reserve1;
+        // {
+        //     uint256 total_frax_reserves;
+        //     // Technically getReserveAfterTwamm is more accurate, but if the TWAMM becomes paused, it will eventually gas out
+        //     // (uint256 _reserve0, uint256 _reserve1, , ,) = (stakingToken.getReserveAfterTwamm(block.timestamp));
+        //     (uint256 _reserve0, uint256 _reserve1, ) = (stakingToken.getReserves());
+        //     if (frax_is_token0) total_frax_reserves = _reserve0;
+        //     else total_frax_reserves = _reserve1;
 
-            frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
+        //     frax_per_lp_token = (total_frax_reserves * 1e18) / stakingToken.totalSupply();
 
-            // Multiply by two since both sides (for FRAX/wfrxETH and FRAX/FXS) are beneficial to Frax
-            frax_per_lp_token *= 2;
-        }
+        //     // Multiply by two since both sides (for FRAX/wfrxETH and FRAX/FXS) are beneficial to Frax
+        //     frax_per_lp_token *= 2;
+        // }
 
         // KyberSwap Elastic
         // ============================================
@@ -1141,9 +1185,8 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
 
                 // Convex cvxLP/RewardPool Combo
                 // =========================
-                // stakingToken.getReward(address(this));
+                stakingToken.getReward(address(this));
             }
-
 
             lastRewardPull = block.timestamp;
         }

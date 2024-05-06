@@ -24,7 +24,7 @@ contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Volatile is FraxUnifiedFarm_ERC20 {
     {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
-        // // Convex stkcvxFPIFRAX and stkcvxFRAXBP. Also Volatile/FRAXBP
+        // Convex stkcvxFPIFRAX and stkcvxFRAXBP. Also Volatile/FRAXBP
         // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
         // curveToken = I2poolToken(stakingToken.curveToken());
         // curvePool = I2pool(curveToken.minter());
@@ -35,8 +35,8 @@ contract FraxUnifiedFarm_ERC20_Convex_FRAXBP_Volatile is FraxUnifiedFarm_ERC20 {
     function fraxPerLPToken() public view override returns (uint256 frax_per_lp_token) {
         // COMMENTED OUT SO COMPILER DOESNT COMPLAIN. UNCOMMENT WHEN DEPLOYING
 
-        // // Convex Volatile/FRAXBP
-        // // ============================================
+        // Convex Volatile/FRAXBP
+        // ============================================
         // {
         //     // Half of the LP is FRAXBP. Half of that should be FRAX.
         //     // Using 0.25 * lp price for gas savings

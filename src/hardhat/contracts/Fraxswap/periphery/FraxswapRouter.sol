@@ -14,6 +14,7 @@ pragma solidity ^0.8.0;
 // TWAMM Router
 // Inspired by https://www.paradigm.xyz/2021/07/twamm
 // https://github.com/para-dave/twamm
+// 2.0.1: UInt112 fixes
 
 // Frax Finance: https://github.com/FraxFinance
 
@@ -44,6 +45,8 @@ contract FraxswapRouter is IUniswapV2Router02V5 {
 
     address public immutable override factory;
     address public immutable override WETH;
+
+    string constant public version = "2.0.1";
 
     modifier ensure(uint deadline) {
         require(deadline >= block.timestamp, 'FraxswapV1Router: EXPIRED');
@@ -362,7 +365,7 @@ contract FraxswapRouter is IUniswapV2Router02V5 {
             { // scope to avoid stack too deep errors
                 (uint reserveInput, uint reserveOutput, uint twammReserveInput, uint twammReserveOutput) =  FraxswapRouterLibrary.getReservesWithTwamm(factory, input, output);
                 amountInput = IERC20(input).balanceOf(address(pair)) - reserveInput - twammReserveInput;
-                amountOutput = pair.getAmountOut(amountInput, input);
+                amountOutput = FraxswapRouterLibrary.getAmountOutU112Fixed(address(pair), amountInput, input);
             }
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
             address to = i < path.length - 2 ? FraxswapRouterLibrary.pairFor(factory, output, path[i + 2]) : _to;

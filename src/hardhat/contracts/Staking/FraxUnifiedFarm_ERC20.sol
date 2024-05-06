@@ -26,12 +26,13 @@ import "./FraxUnifiedFarmTemplate.sol";
 
 // Convex wrappers
 // import "../Curve/ICurvefrxETHETHPool.sol";
-// import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
+import "../Misc_AMOs/convex/IConvexStakingWrapperFrax.sol";
 // import "../Misc_AMOs/convex/IDepositToken.sol";
 // import "../Misc_AMOs/curve/I2pool.sol";
 // import "../Misc_AMOs/curve/I2poolToken.sol";
 // import "../Misc_AMOs/curve/I2poolTokenNoLending.sol";
-// import "../Misc_AMOs/curve/ICurveStableSwapNG.sol";
+import "../Misc_AMOs/curve/ICurveStableSwapNG.sol";
+// import "../Misc_AMOs/curve/ICurveStableSwapMetaNG.sol";
 // import "../Misc_AMOs/curve/ICurveTricryptoOptimizedWETH.sol";
 
 // Convex FXB
@@ -83,18 +84,20 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
     // Declared in FraxUnifiedFarmTemplate.sol
 
     // Convex crvUSD/FRAX
-    // IConvexStakingWrapperFrax public stakingToken;
+    IConvexStakingWrapperFrax public stakingToken;
     // I2poolTokenNoLending public curveToken;
     // ICurvefrxETHETHPool public curvePool;
 
     // Convex stkcvxFPIFRAX, stkcvxFRAXBP, etc
     // IConvexStakingWrapperFrax public stakingToken;
     // I2poolToken public curveToken;
-    // ICurveStableSwapNG public curveToken;
+    ICurveStableSwapNG public curveToken;
+    // ICurveStableSwapMetaNG public curveToken;
     // ICurveTricryptoOptimizedWETH public curveToken;
     // I2pool public curvePool;
     // ICurvefrxETHETHPool public curvePool;
-    // ICurveStableSwapNG public curvePool;
+    ICurveStableSwapNG public curvePool;
+    // ICurveStableSwapMetaNG public curvePool;
     // ICurveTricryptoOptimizedWETH public curvePool;
 
     // Fraxswap
@@ -483,11 +486,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Pull the tokens from the sender
         TransferHelper.safeTransferFrom(address(stakingToken), msg.sender, address(this), addl_liq);
 
-        // Aura & Balancer
-        // Deposit the tokens into the Aura vault
-        // =========================================
-        stakingToken.approve(address(aura_deposit_vault), addl_liq);
-        aura_deposit_vault.stake(addl_liq);
+        // // Aura & Balancer
+        // // Deposit the tokens into the Aura vault
+        // // =========================================
+        // stakingToken.approve(address(aura_deposit_vault), addl_liq);
+        // aura_deposit_vault.stake(addl_liq);
 
         // Update the stake
         lockedStakes[msg.sender][theArrayIndex] = LockedStake(
@@ -571,11 +574,11 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
         // Varies per farm
         TransferHelper.safeTransferFrom(address(stakingToken), source_address, address(this), liquidity);
 
-        // Aura & Balancer
-        // Deposit the tokens into the Aura vault
-        // =========================================
-        stakingToken.approve(address(aura_deposit_vault), liquidity);
-        aura_deposit_vault.stake(liquidity);
+        // // Aura & Balancer
+        // // Deposit the tokens into the Aura vault
+        // // =========================================
+        // stakingToken.approve(address(aura_deposit_vault), liquidity);
+        // aura_deposit_vault.stake(liquidity);
 
         // Get the lock multiplier and kek_id
         uint256 lock_multiplier = lockMultiplier(secs);
@@ -638,10 +641,10 @@ contract FraxUnifiedFarm_ERC20 is FraxUnifiedFarmTemplate {
 
         if (liquidity > 0) {
 
-            // Aura & Balancer
-            // Withdraw the tokens from the Aura vault. Do not claim
-            // =========================================
-            aura_deposit_vault.withdraw(liquidity, false);
+            // // Aura & Balancer
+            // // Withdraw the tokens from the Aura vault. Do not claim
+            // // =========================================
+            // aura_deposit_vault.withdraw(liquidity, false);
 
             // Give the tokens to the destination_address
             // Should throw if insufficient balance

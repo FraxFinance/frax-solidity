@@ -37,9 +37,9 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH_V2 is FraxUnifiedFarm_ERC20_V2 {
         // // frax_is_token0 = false; // Doesn't matter for frxETH
 
         // Convex swETHfrxETH
-        stakingToken = IConvexStakingWrapperFrax(_stakingToken);
-        curveToken = I2poolToken(stakingToken.curveToken());
-        curvePool = ICurvefrxETHETHPool(curveToken.minter());
+        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        // curveToken = I2poolToken(stakingToken.curveToken());
+        // curvePool = ICurvefrxETHETHPool(curveToken.minter());
         // address token0 = curvePool.coins(0);
         // frax_is_token0 = false; // Doesn't matter for frxETH
     }

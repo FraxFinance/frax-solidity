@@ -35,7 +35,7 @@ import '../../core/interfaces/IFraxswapPair.sol';
 
 library FraxswapRouterLibrary {
 
-    bytes public constant INIT_CODE_HASH = hex'46dd19aa7d926c9d41df47574e3c09b978a1572918da0e3da18ad785c1621d48'; // init code / init hash
+    bytes public constant INIT_CODE_HASH = hex'676b4c9b92980c4e7823b43031b17d7299896d1cd7d147104ad8e21692123fa1'; // init code / init hash
 
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
@@ -91,7 +91,7 @@ library FraxswapRouterLibrary {
         for (uint i; i < path.length - 1; i++) {
             IFraxswapPair pair = IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, path[i], path[i + 1]));
             require(pair.twammUpToDate(), 'twamm out of date');
-            amounts[i + 1] = pair.getAmountOut(amounts[i], path[i]);
+            amounts[i + 1] = getAmountOutU112Fixed(address(pair), amounts[i], path[i]);
         }
     }
 
@@ -103,7 +103,7 @@ library FraxswapRouterLibrary {
         for (uint i = path.length - 1; i > 0; i--) {
             IFraxswapPair pair = IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, path[i - 1], path[i]));
             require(pair.twammUpToDate(), 'twamm out of date');
-            amounts[i - 1] = pair.getAmountIn(amounts[i], path[i - 1]);
+            amounts[i - 1] = getAmountInU112Fixed(address(pair), amounts[i], path[i - 1]);
         }
     }
 
@@ -115,7 +115,7 @@ library FraxswapRouterLibrary {
         for (uint i; i < path.length - 1; i++) {
             IFraxswapPair pair = IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, path[i], path[i + 1]));
             pair.executeVirtualOrders(block.timestamp);
-            amounts[i + 1] = pair.getAmountOut(amounts[i], path[i]);
+            amounts[i + 1] = getAmountOutU112Fixed(address(pair), amounts[i], path[i]);
         }
     }
 
@@ -127,7 +127,35 @@ library FraxswapRouterLibrary {
         for (uint i = path.length - 1; i > 0; i--) {
             IFraxswapPair pair = IFraxswapPair(FraxswapRouterLibrary.pairFor(factory, path[i - 1], path[i]));
             pair.executeVirtualOrders(block.timestamp);
-            amounts[i - 1] = pair.getAmountIn(amounts[i], path[i - 1]);
+            amounts[i - 1] = getAmountInU112Fixed(address(pair), amounts[i], path[i - 1]);
         }
+    }
+
+
+    // Fixes overflow issues with some tokens
+    // =====================================================
+
+    // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
+    function getAmountInU112Fixed(address _pairAddress, uint _amountOut, address _tokenOut) internal view returns (uint) {
+        IFraxswapPair pair = IFraxswapPair(_pairAddress);
+        (uint112 _reserve0, uint112 _reserve1, ) = pair.getReserves();
+        (uint112 _reserveIn, uint112 _reserveOut) = _tokenOut == pair.token0() ? (_reserve1, _reserve0) : (_reserve0, _reserve1);
+        require(_amountOut > 0 && _reserveIn > 0 && _reserveOut > 0); // INSUFFICIENT_OUTPUT_AMOUNT, INSUFFICIENT_LIQUIDITY
+        uint numerator = uint256(_reserveIn) * _amountOut * 10000;
+        uint denominator = (uint256(_reserveOut) - _amountOut) * pair.fee();
+        return (numerator / denominator) + 1;
+    }
+
+
+    // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
+    function getAmountOutU112Fixed(address _pairAddress, uint _amountIn, address _tokenIn) internal view returns (uint) { 
+        IFraxswapPair pair = IFraxswapPair(_pairAddress);
+        (uint112 _reserve0, uint112 _reserve1, ) = pair.getReserves();
+        (uint112 _reserveIn, uint112 _reserveOut) = _tokenIn == pair.token0() ? (_reserve0, _reserve1) : (_reserve1, _reserve0);
+        require(_amountIn > 0 && _reserveIn > 0 && _reserveOut > 0); // INSUFFICIENT_INPUT_AMOUNT, INSUFFICIENT_LIQUIDITY
+        uint amountInWithFee = uint256(_amountIn) * pair.fee();
+        uint numerator = amountInWithFee * uint256(_reserveOut);
+        uint denominator = (uint256(_reserveIn) * 10000) + amountInWithFee;
+        return numerator / denominator;
     }
 }
