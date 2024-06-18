@@ -128,7 +128,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 7000000000, // 7 Gwei
+			gasPrice: 18000000000, // 18 Gwei
 			gasMultiplier: 1.2,
 		},
 		evmos: {
@@ -187,7 +187,8 @@ module.exports = {
 			// },
 			chainId: 252,
 			gas: "auto",
-			gasPrice: 2500000, // 0.0025 Gwei
+			// gasPrice: 2500000, // 0.0025 Gwei
+			gasPrice: 15000, // 0.000015 Gwei
 			gasMultiplier: 1.2,
 		},
 		// fuse: {
@@ -300,18 +301,18 @@ module.exports = {
 			gasPrice: "auto",
 			gasMultiplier: 1.2
 		},
-		// zksync: {
-		// 	url: process.env.ZKSYNC_NETWORK_ENDPOINT,
-		// 	accounts: {
-		// 		mnemonic: process.env.ZKSYNC_MNEMONIC_PHRASE
-		// 	},
-		// 	chainId: 324,
-		// 	gas: "auto",
-		// 	gasPrice: "auto",
-		// 	// gasPrice: 3000000000, // 3 Gwei
-		// 	gasMultiplier: 1.2,
-		// 	zksync: true
-		// },
+		zksync: {
+			url: process.env.ZKSYNC_NETWORK_ENDPOINT,
+			accounts: {
+				mnemonic: process.env.ZKSYNC_MNEMONIC_PHRASE
+			},
+			chainId: 324,
+			gas: "auto",
+			gasPrice: "auto",
+			// gasPrice: 3000000000, // 3 Gwei
+			gasMultiplier: 1.2,
+			zksync: true
+		},
     },
 	solidity: {
 		compilers: [
@@ -473,6 +474,30 @@ module.exports = {
 			},
 			{
 				version: "0.8.23",
+				settings: {
+					// viaIR: true,
+					// optimizer: {
+					// 	enabled: true,
+					// 	runs: 200000,
+					// 	details: {
+					// 		orderLiterals: true,
+					// 		deduplicate: true,
+					// 		cse: true,
+					// 		constantOptimizer: true,
+					// 		yul: true,
+					// 		yulDetails: {
+					// 			stackAllocation: true
+					// 		}
+					// 	},
+					// }
+					optimizer: {
+						enabled: true,
+						runs: 100000
+					}
+				}
+			},
+			{
+				version: "0.8.26",
 				settings: {
 					// viaIR: true,
 					// optimizer: {

@@ -6,10 +6,10 @@ import "../../Oracle/AggregatorV3Interface.sol";
 
 // Balancer
 // =========================
-import "../../Misc_AMOs/balancer/IAuraDeposit.sol";
-import "../../Misc_AMOs/balancer/IAuraDepositVault.sol";
-import "../../Misc_AMOs/balancer/IBalancerVault.sol";
-import "../../Misc_AMOs/balancer/IComposableStablePool.sol";
+// import "../../Misc_AMOs/balancer/IAuraDeposit.sol";
+// import "../../Misc_AMOs/balancer/IAuraDepositVault.sol";
+// import "../../Misc_AMOs/balancer/IBalancerVault.sol";
+// import "../../Misc_AMOs/balancer/IComposableStablePool.sol";
 
 // Bunni
 // =========================
@@ -19,19 +19,25 @@ import "../../Misc_AMOs/balancer/IComposableStablePool.sol";
 // import "../../Misc_AMOs/bunni/IBunniMinter.sol";
 // import "../../Uniswap_V3/IUniswapV3Pool.sol";
 
+// Morpho
+// =========================
+import "../../Misc_AMOs/morpho/IMetaMorpho.sol";
 
 contract FraxUnifiedFarm_ERC20_Other is FraxUnifiedFarm_ERC20 {
 
     // frxETH Pricing
-    AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
+    // AggregatorV3Interface internal priceFeedETHUSD = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
 
     // Aura / Balancer
-    IComposableStablePool public bal_vanilla_lp_tkn;
-    IBalancerVault public bal_vanilla_vault;
+    // IComposableStablePool public bal_vanilla_lp_tkn;
+    // IBalancerVault public bal_vanilla_vault;
 
     // Bunni
     // IBunniTokenLP public lp_tkn;
     // IUniswapV3Pool public univ3_pool;
+
+    // Morpho
+
 
     string public farm_type = "ERC20_Convex_Other";
 
@@ -59,6 +65,10 @@ contract FraxUnifiedFarm_ERC20_Other is FraxUnifiedFarm_ERC20 {
         // univ3_pool = IUniswapV3Pool(lp_tkn.pool());
         // address token0 = univ3_pool.token0();
         // frax_is_token0 = (token0 == frax_address);
+
+        // Morpho
+        stakingToken = IMetaMorpho(_stakingToken);
+
     }
 
     // Aura & Balancer
@@ -77,16 +87,20 @@ contract FraxUnifiedFarm_ERC20_Other is FraxUnifiedFarm_ERC20 {
     //     minter.toggle_approve_mint(_claimer);
     // }
 
-
-    // frxETH pricing
+    // Morpho
     // ----------------------------------------
-    function getLatestETHPriceE8() public view returns (int) {
-        // Returns in E8
-        (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
-        require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
+    // Nothing
+
+
+    // // frxETH pricing
+    // // ----------------------------------------
+    // function getLatestETHPriceE8() public view returns (int) {
+    //     // Returns in E8
+    //     (uint80 roundID, int price, , uint256 updatedAt, uint80 answeredInRound) = priceFeedETHUSD.latestRoundData();
+    //     require(price >= 0 && updatedAt!= 0 && answeredInRound >= roundID, "Invalid chainlink price");
         
-        return price;
-    }
+    //     return price;
+    // }
 
     // function setETHUSDOracle(address _eth_usd_oracle_address) public onlyByOwnGov {
     //     require(_eth_usd_oracle_address != address(0), "Zero address detected");
@@ -128,6 +142,13 @@ contract FraxUnifiedFarm_ERC20_Other is FraxUnifiedFarm_ERC20 {
         //     if (frax_is_token0) frax_per_lp_token = amt0;
         //     else frax_per_lp_token = amt1;
         // }
+
+        // Morpho
+        // ============================================
+        {
+            // Convert 1e18 shares to FRAX
+            frax_per_lp_token = stakingToken.convertToAssets(1e18);
+        }
 
     }
 }

@@ -476,7 +476,7 @@ async function main() {
 			"payable": false
 		},
 		"contractInputsValues": {
-			"rewardContracts": "[\"0x7e880867363A7e321f5d260Cade2B0Bb2F717B02\", \"0x6991C1CD588c4e6f6f1de3A0bac5B8BbAb7aAF6d\", \"0x26598e3E511ADFadefD70ab2C3475Ff741741104\", \"0x47809eE386D1dEC29c0b13f21ba30F564517538B\", \"0x053e1dad223A206e6BCa24C77786bb69a10e427d\", \"0x062450B06EB92F1C4E227C41c987ed97c93Ae232\", \"0xB10a6e39Ed8a66fEd3aAef3866a95611a49B9a95\", \"0xE627082369689b2B86D948c377A4aE4e739C59eE\"]",
+			"rewardContracts": "[\"0x7e880867363A7e321f5d260Cade2B0Bb2F717B02\", \"0x6991C1CD588c4e6f6f1de3A0bac5B8BbAb7aAF6d\", \"0x26598e3E511ADFadefD70ab2C3475Ff741741104\", \"0x47809eE386D1dEC29c0b13f21ba30F564517538B\", \"0x053e1dad223A206e6BCa24C77786bb69a10e427d\", \"0x062450B06EB92F1C4E227C41c987ed97c93Ae232\", \"0xB10a6e39Ed8a66fEd3aAef3866a95611a49B9a95\", \"0xE627082369689b2B86D948c377A4aE4e739C59eE\", \"0xc030b717b96B83bf4EC4a075dD547614953968FD\"]",
 			"extraRewardContracts": "[]",
 			"tokenRewardContracts": "[]",
 			"tokenRewardTokens": "[]",
@@ -566,32 +566,32 @@ async function main() {
 	// Relock expired locked CVX
 	// =====================================
 	// Determine if you need to process expired locks
-	// const cvx_lock_status = await cvx_locker.lockedBalances("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27");
-	// const PROCESS_EXPIRED_LOCKS = (BigInt(cvx_lock_status.unlockable) > BigInt(0));
-	// if (PROCESS_EXPIRED_LOCKS) {
-	// 	batch_json.transactions.push({
-	// 		"to": "0x72a19342e8F1838460eBFCCEf09F6585e32db86E",
-	// 		"value": "0",
-	// 		"data": null,
-	// 		"contractMethod": {
-	// 			"inputs": [
-	// 				{
-	// 					"internalType": "bool",
-	// 					"name": "_relock",
-	// 					"type": "bool"
-	// 				}
-	// 			],
-	// 			"name": "processExpiredLocks",
-	// 			"payable": false
-	// 		},
-	// 		"contractInputsValues": {
-	// 			"_relock": true,
-	// 		}
-	// 	});
-	// }
-	// else {
-	// 	console.log("No expired locks to process")
-	// }
+	const cvx_lock_status = await cvx_locker.lockedBalances("0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27");
+	const PROCESS_EXPIRED_LOCKS = (BigInt(cvx_lock_status.unlockable) > BigInt(0));
+	if (PROCESS_EXPIRED_LOCKS) {
+		batch_json.transactions.push({
+			"to": "0x72a19342e8F1838460eBFCCEf09F6585e32db86E",
+			"value": "0",
+			"data": null,
+			"contractMethod": {
+				"inputs": [
+					{
+						"internalType": "bool",
+						"name": "_relock",
+						"type": "bool"
+					}
+				],
+				"name": "processExpiredLocks",
+				"payable": false
+			},
+			"contractInputsValues": {
+				"_relock": true,
+			}
+		});
+	}
+	else {
+		console.log("No expired locks to process")
+	}
 
 	// ===============================================================
 	// ============================ PRISMA ===========================

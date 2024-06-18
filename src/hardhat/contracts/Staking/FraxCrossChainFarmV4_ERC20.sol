@@ -356,7 +356,7 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
         fraxAddress = _fraxAddress;
         rewardTokens = _rewardTokens;
         
-        // Loop thought the reward tokens
+        // Loop through the reward tokens
         for (uint256 i = 0; i < _rewardTokens.length; i++) { 
             // For fast token address -> token ID lookups later
             rewardTokenAddrToIdx[_rewardTokens[i]] = i;
@@ -1138,7 +1138,7 @@ contract FraxCrossChainFarmV4_ERC20 is Owned, ReentrancyGuard {
 
     /// @notice Collect rewards (internal)
     /// @param rewardee The address of the staker
-    /// @param destination_address Destination address for the withdrawn LP
+    /// @param destination_address Destination address for the rewards
     /// @return _rtnRewards The amounts of collected reward tokens
     /// @dev No withdrawer == msg.sender check needed since this is only internally callable. This distinction is important for the migrator
     function _getReward(address rewardee, address destination_address) internal updateRewardAndBalance(rewardee, true) returns (uint256[] memory _rtnRewards) {

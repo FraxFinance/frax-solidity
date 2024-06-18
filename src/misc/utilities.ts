@@ -1,6 +1,7 @@
 import { CONTRACT_ADDRESSES, INVESTOR_ALLOCATIONS, INVESTOR_REWARDS, TOKEN_BALANCES, StakeChoices, ONE_E18, BIG6, BIG18 }  from '../types/constants';
 import { Pool, Position, FeeAmount, TickMath, encodeSqrtRatioX96, tickToPrice } from '@uniswap/v3-sdk';
 import { Token, Price } from '@uniswap/sdk-core';
+const {utils} = require('ethers-v5');
 const BigNumber = require('bignumber.js');
 const axios = require('axios').default;
 const chalk = require('chalk');
@@ -732,4 +733,16 @@ export const EMPTY_LENDING_AMOS_DATA = (): LendingAMOsData => {
         total_frax: 0,
 		total_profit: 0,
 	};
+}
+
+export const expandTo18Decimals = (amount) => {
+    return utils.parseUnits(`${amount.toLocaleString('fullwide', {useGrouping: false})}`, 18);
+}
+
+export const bigNumberify = (amount) => {
+    return utils.parseUnits(`${amount.toLocaleString('fullwide', {useGrouping: false})}`, 0);
+}
+
+export const sleep = (ms) => {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
