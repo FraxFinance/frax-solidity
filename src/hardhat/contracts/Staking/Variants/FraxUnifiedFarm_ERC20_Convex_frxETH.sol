@@ -42,9 +42,9 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
         // curvePool = ICurvefrxETHETHPool(stakingToken.curveToken());
 
         // Convex frxETH/XYZ NGs (TOKEN = MINTER / POOL))
-        stakingToken = IConvexStakingWrapperFrax(_stakingToken);
-        curveToken = ICurveStableSwapNG(stakingToken.curveToken());
-        curvePool = ICurveStableSwapNG(stakingToken.curveToken());
+        // stakingToken = IConvexStakingWrapperFrax(_stakingToken);
+        // curveToken = ICurveStableSwapNG(stakingToken.curveToken());
+        // curvePool = ICurveStableSwapNG(stakingToken.curveToken());
     }
 
     function getLatestETHPriceE8() public view returns (int) {
@@ -66,13 +66,13 @@ contract FraxUnifiedFarm_ERC20_Convex_frxETH is FraxUnifiedFarm_ERC20 {
 
         // Convex frxETH/XYZ
         // ============================================
-        {
-            // Assume frxETH = ETH for pricing purposes
-            // Get the USD value of the frxETH per LP token
-            uint256 frxETH_in_pool = IERC20(0x5E8422345238F34275888049021821E8E08CAa1f).balanceOf(address(curvePool));
-            uint256 frxETH_usd_val_per_lp_e8 = (frxETH_in_pool * uint256(getLatestETHPriceE8())) / curveToken.totalSupply();
-            frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here
-        }
+        // {
+        //     // Assume frxETH = ETH for pricing purposes
+        //     // Get the USD value of the frxETH per LP token
+        //     uint256 frxETH_in_pool = IERC20(0x5E8422345238F34275888049021821E8E08CAa1f).balanceOf(address(curvePool));
+        //     uint256 frxETH_usd_val_per_lp_e8 = (frxETH_in_pool * uint256(getLatestETHPriceE8())) / curveToken.totalSupply();
+        //     frax_per_lp_token = frxETH_usd_val_per_lp_e8 * (1e10); // We use USD as "Frax" here
+        // }
 
     }
 }
