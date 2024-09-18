@@ -32,7 +32,7 @@ contract FraxFarmRageQuitter_mStable is ReentrancyGuard {
    address fraxTreasuryAddress = 0xDCB5A4b6Ee39447D700F4FA3303B1d1c25Ea9cA7;
    uint256 treasuryPercentage = 2000; // 20%;
 
-   // Rewards tokens
+   // Reward tokens
    IERC20 fxsToken = IERC20(0x3e121107F6F22DA4911079845a470757aF4e1A1b);
    IERC20 mtaToken = IERC20(0xF501dd45a1198C2E1b5aEF5314A68B9006D842E0);
 
@@ -43,7 +43,7 @@ contract FraxFarmRageQuitter_mStable is ReentrancyGuard {
    function ragequitOne(bytes32 _kek_id) nonReentrant external {
       uint256 _liquidity;
 
-      // Get all locked stake of the user
+      // Get all locked stakes of the user
       IFarm.LockedStake[] memory lockedStakes = farm.lockedStakesOf(msg.sender);
 
       // Find stake with the correct kek_id
@@ -72,7 +72,7 @@ contract FraxFarmRageQuitter_mStable is ReentrancyGuard {
    function ragequitAll() nonReentrant external {  
       uint256 _totalLiquidity;
 
-      // Get all locked stake of the user
+      // Get all locked stakes of the user
       IFarm.LockedStake[] memory lockedStakes = farm.lockedStakesOf(msg.sender);
 
       for (uint256 i; i < lockedStakes.length; i++) {
@@ -89,7 +89,7 @@ contract FraxFarmRageQuitter_mStable is ReentrancyGuard {
       SafeERC20.safeTransfer(lp_token, fraxTreasuryAddress, liquidityToTreasury);
       SafeERC20.safeTransfer(lp_token, msg.sender, _totalLiquidity - liquidityToTreasury);
 
-      // All reward tokens collected during the migration are send to the user.
+      // All reward tokens collected during the migration are sent to the user.
       SafeERC20.safeTransfer(fxsToken,msg.sender,fxsToken.balanceOf(address(this)));
       SafeERC20.safeTransfer(mtaToken,msg.sender,mtaToken.balanceOf(address(this)));
    }
