@@ -177,27 +177,68 @@ interface IFraxFarmUniV3 is IFraxFarm, IFraxFarmUniV3TokenPositions {
         int24 tick_lower;
         int24 tick_upper;
     }
-
-    function uni_tick_lower() external view returns (int24);
-
-    function uni_tick_upper() external view returns (int24);
-
-    function uni_required_fee() external view returns (uint24);
-
-    function lockedNFTsOf(address account) external view returns (LockedNFT[] memory);
-
-    function lockedNFTsOfLength(address account) external view returns (uint256);
-
-    function lockAdditional(
-        uint256 token_id,
-        uint256 token0_amt,
-        uint256 token1_amt,
-        uint256 token0_min_in,
-        uint256 token1_min_in,
-        bool use_balof_override
-    ) external;
-
-    function stakeLocked(uint256 token_id, uint256 secs) external;
-
-    function withdrawLocked(uint256 token_id, address destination_address) external;
+    function acceptOwnership (  ) external;
+    function addMigrator ( address migrator_address ) external;
+    function bypassEmissionFactor (  ) external view returns ( bool );
+    function calcCurCombinedWeight ( address account ) external view returns ( uint256 old_combined_weight, uint256 new_vefxs_multiplier, uint256 new_combined_weight );
+    function combinedWeightOf ( address account ) external view returns ( uint256 );
+    function emissionFactor (  ) external view returns ( uint256 emission_factor );
+    function getReward (  ) external returns ( uint256 );
+    function getRewardForDuration (  ) external view returns ( uint256 );
+    function greylistAddress ( address _address ) external;
+    function ideal_tick (  ) external view returns ( int24 );
+    function initializeDefault (  ) external;
+    function lockMultiplier ( uint256 secs ) external view returns ( uint256 );
+    function lock_max_multiplier (  ) external view returns ( uint256 );
+    function lock_time_for_max_multiplier (  ) external view returns ( uint256 );
+    function lock_time_min (  ) external view returns ( uint256 );
+    function lockedLiquidityOf ( address account ) external view returns ( uint256 );
+    function lockedNFTsOf ( address account ) external view returns ( LockedNFT[] memory );
+    function migrationsOn (  ) external view returns ( bool );
+    function migrator_stakeLocked_for ( address staker_address, uint256 token_id, uint256 secs, uint256 start_timestamp ) external;
+    function migrator_withdraw_locked ( address staker_address, uint256 token_id ) external;
+    function minVeFXSForMaxBoost ( address account ) external view returns ( uint256 );
+    function nominateNewOwner ( address _owner ) external;
+    function nominatedOwner (  ) external view returns ( address );
+    function onERC721Received ( address, address, uint256, bytes memory ) external pure returns ( bytes4 );
+    function owner (  ) external view returns ( address );
+    function recoverERC20 ( address tokenAddress, uint256 tokenAmount ) external;
+    function recoverERC721 ( address tokenAddress, uint256 token_id ) external;
+    function removeMigrator ( address migrator_address ) external;
+    function rewardRate0 (  ) external view returns ( uint256 rwd_rate );
+    function reward_rate_manual (  ) external view returns ( uint256 );
+    function rewardsCollectionPaused (  ) external view returns ( bool );
+    function rewardsDuration (  ) external view returns ( uint256 );
+    function setGaugeController ( address _gauge_controller_address ) external;
+    function setLockedNFTTimeForMinAndMaxMultiplier ( uint256 _lock_time_for_max_multiplier, uint256 _lock_time_min ) external;
+    function setManualRewardRate ( uint256 _reward_rate_manual, bool sync_too ) external;
+    function setMultipliers ( uint256 _lock_max_multiplier, uint256 _vefxs_max_multiplier, uint256 _vefxs_per_frax_for_max_boost ) external;
+    function setPauses ( bool _stakingPaused, bool _withdrawalsPaused, bool _rewardsCollectionPaused ) external;
+    function setTWAP ( uint32 _new_twap_duration ) external;
+    function setTimelock ( address _new_timelock ) external;
+    function stakeLocked ( uint256 token_id, uint256 secs ) external;
+    function stakerAllowMigrator ( address migrator_address ) external;
+    function stakerDisallowMigrator ( address migrator_address ) external;
+    function stakesUnlocked (  ) external view returns ( bool );
+    function stakingPaused (  ) external view returns ( bool );
+    function sync (  ) external;
+    function sync_gauge_weight ( bool force_update ) external;
+    function timelock_address (  ) external view returns ( address );
+    function toggleEmissionFactorBypass (  ) external;
+    function toggleMigrations (  ) external;
+    function totalCombinedWeight (  ) external view returns ( uint256 );
+    function totalLiquidityLocked (  ) external view returns ( uint256 );
+    function twap_duration (  ) external view returns ( uint32 );
+    function uni_required_fee (  ) external view returns ( uint24 );
+    function uni_tick_lower (  ) external view returns ( int24 );
+    function uni_tick_upper (  ) external view returns ( int24 );
+    function uni_token0 (  ) external view returns ( address );
+    function uni_token1 (  ) external view returns ( address );
+    function unlockStakes (  ) external;
+    function userStakedFrax ( address account ) external view returns ( uint256 );
+    function veFXSMultiplier ( address account ) external view returns ( uint256 );
+    function vefxs_max_multiplier (  ) external view returns ( uint256 );
+    function vefxs_per_frax_for_max_boost (  ) external view returns ( uint256 );
+    function withdrawLocked ( uint256 token_id ) external;
+    function withdrawalsPaused (  ) external view returns ( bool );
 }

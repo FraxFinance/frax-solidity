@@ -128,7 +128,7 @@ module.exports = {
 			},
 			chainId: 1,
 			gas: "auto",
-			gasPrice: 18000000000, // 18 Gwei
+			gasPrice: 1600000000, // 1.6 Gwei
 			gasMultiplier: 1.2,
 		},
 		evmos: {

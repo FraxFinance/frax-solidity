@@ -437,6 +437,13 @@ contract UniV3LiquidityAMO_V2 is Owned {
 
     /* ========== EVENTS ========== */
 
+    /// @notice When ERC20 tokens were recovered
+    /// @param token Token address
+    /// @param amount Amount of tokens collected
     event RecoveredERC20(address token, uint256 amount);
-    event RecoveredERC721(address token, uint256 id);
+
+    /// @notice When NFTs were recovered
+    /// @param tknManagerAddr Address of the NFT manager
+    /// @param id NFT id
+    event RecoveredERC721(address tknManagerAddr, uint256 id);
 }
