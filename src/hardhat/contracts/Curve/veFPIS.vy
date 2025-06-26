@@ -1294,7 +1294,7 @@ def adminSetProxy(_proxy: address):
 def adminToggleHistoricalProxy(_proxy: address):
     """
     @dev Admin can manipulate a historical proxy if needed (normally done automatically in adminSetProxy)
-    @dev This is needed if the main current_proxy changes and and old proxy needs to pay back or liquidate a user
+    @dev This is needed if the main current_proxy changes and old proxy needs to pay back or liquidate a user
     @dev Or if there is something wrong with an older proxy
     @param _proxy The lending proxy address 
     """
