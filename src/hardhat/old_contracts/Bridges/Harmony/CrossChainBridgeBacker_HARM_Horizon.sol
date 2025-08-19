@@ -41,7 +41,7 @@ contract CrossChainBridgeBacker_HARM_Horizon is CrossChainBridgeBacker {
         payable(msg.sender).transfer(amount);
     }
 
-    // For withdrawing ONE from the the Harmony Bridge
+    // For withdrawing ONE from the Harmony Bridge
     function withdrawFromHarmonyBridge(uint256 amount) external onlyByOwnGov {
         deposit_contract.withdraw(payable(msg.sender), amount);
     }
