@@ -176,7 +176,7 @@ contract MIM_Convex_AMO is Owned {
         return [
             mim_in_contract, // [0] Free MIM in the contract
             mim_withdrawable, // [1] MIM withdrawable from the MIM3CRV tokens
-            mim_withdrawable.add(mim_in_contract), // [2] MIM withdrawable + free MIM in the the contract
+            mim_withdrawable.add(mim_in_contract), // [2] MIM withdrawable + free MIM in the contract
             usdc_in_contract, // [3] Free USDC
             usdc_withdrawable, // [4] USDC withdrawable from the MIM3CRV tokens
             usdc_subtotal, // [5] USDC Total
