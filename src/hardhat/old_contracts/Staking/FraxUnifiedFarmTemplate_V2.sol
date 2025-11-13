@@ -491,7 +491,7 @@ contract FraxUnifiedFarmTemplate_V2 is OwnedV2, ReentrancyGuardV2 {
         // Set the new proxy
         staker_designated_proxies[msg.sender] = proxy_address; 
 
-        // Add the the LP as well
+        // Add the LP as well
         proxy_lp_balances[proxy_address] += _locked_liquidity[msg.sender];
     }
 

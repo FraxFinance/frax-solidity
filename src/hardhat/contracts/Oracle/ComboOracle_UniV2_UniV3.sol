@@ -229,7 +229,7 @@ contract ComboOracle_UniV2_UniV3 is Owned {
         // Get the price of one of the tokens. Try token0 first.
         // After that, multiply the price by the reserves, then scale to E18
         // Then multiply by 2 since both sides are equal dollar value
-        // Then divide the the total number of LP tokens
+        // Then divide the total number of LP tokens
         uint256 precise_price;
         if (combo_oracle.has_info(lp_basic_info.token0)){
             (uint256 token_precise_price, , ) = combo_oracle.getTokenPrice(lp_basic_info.token0);
