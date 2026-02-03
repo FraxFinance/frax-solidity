@@ -260,7 +260,7 @@ contract LeveragePool {
     *  Add pools default pools
     **/
     function initializePools() external {
-        require (pools.length==0,"Pools allready initialized");
+        require (pools.length==0,"Pools already initialized");
         _addPool(1,true);
         _addPool(1,false);
         _addPool(-1,false);
