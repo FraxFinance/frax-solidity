@@ -341,7 +341,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
     }
 
     /// @notice Calculates the combined weight for an account
-    /// @notice Must be overriden by the child contract
+    /// @notice Must be overridden by the child contract
     /// @dev account The address of the account
     function calcCurCombinedWeight(address account) public virtual view 
         returns (
@@ -388,7 +388,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         return (veFXS.balanceOf(account) * MULTIPLIER_PRECISION * MULTIPLIER_PRECISION) / (vefxs_per_frax_for_max_boost * fraxPerLPStored);
     }
 
-    /// @notice Must be overriden to return the current FRAX per LP token
+    /// @notice Must be overridden to return the current FRAX per LP token
     /// @return The current number of FRAX per LP token
     function fraxPerLPToken() public virtual view returns (uint256) {
         revert("Need fPLPT logic");

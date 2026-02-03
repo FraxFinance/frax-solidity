@@ -207,7 +207,7 @@ contract FraxLiquidityBridger is Owned {
         }
     }
 
-    // Meant to be overriden
+    // Meant to be overridden
     function _bridgingLogic(uint256 token_type, address address_to_send_to, uint256 token_amount) internal virtual {
         revert("Need bridging logic");
     }

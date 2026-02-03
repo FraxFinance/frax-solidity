@@ -276,7 +276,7 @@ contract CrossChainBridgeBacker is Owned {
             // Defaults to sending to this contract's address on the other side
             address address_to_send_to = address(this);
 
-            // See if there is an overriden destination
+            // See if there is an overridden destination
             if (destination_address_override != address(0)) address_to_send_to = destination_address_override;
 
             // Can be overridden
@@ -313,7 +313,7 @@ contract CrossChainBridgeBacker is Owned {
         }
     }
 
-    // Meant to be overriden
+    // Meant to be overridden
     function _bridgingLogic(uint256 token_type, address address_to_send_to, uint256 token_amount) internal virtual {
         revert("Need bridging logic");
     }
