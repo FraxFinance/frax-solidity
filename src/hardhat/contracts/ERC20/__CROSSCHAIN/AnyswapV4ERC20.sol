@@ -284,7 +284,7 @@ contract AnyswapV4ERC20 is IAnyswapV3ERC20 {
             require(_decimals == IERC20(_underlying).decimals());
         }
 
-        // Use init to allow for CREATE2 accross all chains
+        // Use init to allow for CREATE2 across all chains
         _init = true;
 
         // Disable/Enable swapout for v1 tokens vs mint/burn for v3 tokens
