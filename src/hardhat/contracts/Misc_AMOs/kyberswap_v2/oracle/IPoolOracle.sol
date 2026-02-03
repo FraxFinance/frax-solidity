@@ -40,7 +40,7 @@ interface IPoolOracle {
     external
     returns (uint16 indexUpdated, uint16 cardinalityUpdated);
 
-  /// @notice Write a new oracle entry into the array, take the latest observaion data as inputs
+  /// @notice Write a new oracle entry into the array, take the latest observation data as inputs
   ///   and update the observation index and cardinality
   /// Read the Oralce.write function for more details
   function write(
