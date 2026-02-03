@@ -151,7 +151,7 @@ contract KashiAMO is Owned {
     }
 
     /// @notice For potential Reward incentives in the future
-    /// @return reward SUSHI reward recieved by KashiAMO
+    /// @return reward SUSHI reward received by KashiAMO
     function showRewards() external view returns (uint256 reward) {
         reward = SUSHI.balanceOf(address(this)); // SUSHI
     }

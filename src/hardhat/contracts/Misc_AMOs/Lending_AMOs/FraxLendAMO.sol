@@ -138,7 +138,7 @@ contract FraxLendAMO is Owned {
     }
 
     /// @notice For potential Reward incentives in the future
-    /// @return reward FXS reward recieved by FraxLendAMO
+    /// @return reward FXS reward received by FraxLendAMO
     function showRewards() external view returns (uint256 reward) {
         reward = FXS.balanceOf(address(this)); // FXS
     }
