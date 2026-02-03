@@ -130,8 +130,8 @@ contract AaveAMO_V2 is Owned {
     }
 
     /// @notice 
-    /// @return frax_val_e18 Frax valume 
-    /// @return collat_val_e18 Frax collateral valume 
+    /// @return frax_val_e18 Frax value
+    /// @return collat_val_e18 Frax collateral value 
     function dollarBalances() public view returns (uint256 frax_val_e18, uint256 collat_val_e18) {
         frax_val_e18 = showAllocations()[2];
         collat_val_e18 = (frax_val_e18).mul(FRAX.global_collateral_ratio()).div(PRICE_PRECISION);
