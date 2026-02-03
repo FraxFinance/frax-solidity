@@ -21,14 +21,14 @@ interface IPoolOracle {
     uint16 observationCardinalityNextNew
   );
 
-  /// @notice Initalize observation data for the caller.
+  /// @notice Initialize observation data for the caller.
   function initializeOracle(uint32 time)
     external
     returns (uint16 cardinality, uint16 cardinalityNext);
 
   /// @notice Write a new oracle entry into the array
   ///   and update the observation index and cardinality
-  /// Read the Oralce.write function for more details
+  /// Read the Oracle.write function for more details
   function writeNewEntry(
     uint16 index,
     uint32 blockTimestamp,
@@ -42,7 +42,7 @@ interface IPoolOracle {
 
   /// @notice Write a new oracle entry into the array, take the latest observaion data as inputs
   ///   and update the observation index and cardinality
-  /// Read the Oralce.write function for more details
+  /// Read the Oracle.write function for more details
   function write(
     uint32 blockTimestamp,
     int24 tick,
