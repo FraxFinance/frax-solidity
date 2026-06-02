@@ -10,6 +10,8 @@
 
 📖 **Documentation** – https://docs.frax.finance
 
+🔐 **Security** – Please see [SECURITY.md](./SECURITY.md) before reporting vulnerabilities.
+
 📲 **Telegram** – https://t.me/fraxfinance
 </p>
 
