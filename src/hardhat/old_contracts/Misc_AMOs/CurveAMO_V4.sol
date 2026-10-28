@@ -170,7 +170,7 @@ contract CurveAMO_V4 is Owned {
         return [
             frax_in_contract, // [0] Free FRAX in the contract
             frax_withdrawable, // [1] FRAX withdrawable from the FRAX3CRV tokens
-            frax_withdrawable.add(frax_in_contract), // [2] FRAX withdrawable + free FRAX in the the contract
+            frax_withdrawable.add(frax_in_contract), // [2] FRAX withdrawable + free FRAX in the contract
             usdc_in_contract, // [3] Free USDC
             usdc_withdrawable, // [4] USDC withdrawable from the FRAX3CRV tokens
             usdc_subtotal, // [5] USDC subtotal assuming FRAX drops to the CR and all reserves are arbed
