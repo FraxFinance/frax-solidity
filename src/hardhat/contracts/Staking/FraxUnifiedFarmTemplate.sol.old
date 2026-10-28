@@ -414,7 +414,7 @@ contract FraxUnifiedFarmTemplate is Owned, ReentrancyGuard {
         require(proxy_allowed_stakers[proxy_address][msg.sender], "Proxy has not allowed you yet");
         staker_designated_proxies[msg.sender] = proxy_address; 
 
-        // Add the the LP as well
+        // Add the LP as well
         proxy_lp_balances[proxy_address] += _locked_liquidity[msg.sender];
     }
 
