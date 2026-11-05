@@ -277,7 +277,7 @@ contract FraxPoolV3 is Owned {
             uint256 available = max.sub(cur);
 
             if (theo >= available) {
-                // If the the theoretical is more than the available, return the available
+                // If the theoretical is more than the available, return the available
                 return available;
             }
             else {
